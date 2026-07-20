@@ -2,3 +2,11 @@
 __pycache__/
 *.pyc
 .env
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
