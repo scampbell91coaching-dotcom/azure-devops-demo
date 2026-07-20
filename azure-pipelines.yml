@@ -1,0 +1,53 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: self
+
+  - script: |
+      python3 -m pip install --upgrade pip
+      pip install -r requirements.txt
+    displayName: Install Python dependencies
+
+  - script: |
+      python3 -m py_compile app.py
+    displayName: Validate Python syntax
+
+  - script: |
+      docker build \
+        --tag flask-web:$(Build.BuildId) \
+        --tag flask-web:latest \
+        .
+    displayName: Build Docker image
+
+  - script: |
+      docker run -d \
+        --name flask-ci-test \
+        -p 127.0.0.1:5000:5000 \
+        flask-web:$(Build.BuildId)
+
+      for attempt in {1..10}; do
+        if curl --fail http://127.0.0.1:5000/health; then
+          exit 0
+        fi
+        sleep 2
+      done
+
+      docker logs flask-ci-test
+      exit 1
+    displayName: Test container health endpoint
+
+  - script: |
+      docker rm -f flask-ci-test 2>/dev/null || true
+    displayName: Clean up test container
+    condition: always()
