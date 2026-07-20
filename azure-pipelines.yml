@@ -1,142 +1,122 @@
 trigger:
-  branches:
-    include:
-      - main
+- main
 
-pr:
-  branches:
-    include:
-      - main
+pool:
+  vmImage: ubuntu-latest
 
-stages:
-  - stage: CI
-    displayName: Build and test
-    jobs:
-      - job: BuildAndTest
-        displayName: Build and test application
-        pool:
-          vmImage: ubuntu-latest
+steps:
 
-        steps:
-          - checkout: self
+# Checkout repository
+- checkout: self
 
-          - script: |
-              python3 -m pip install --upgrade pip
-              pip install -r requirements.txt
-            displayName: Install Python dependencies
+# Install Python
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.12'
 
-          - script: |
-              python3 -m py_compile app.py
-            displayName: Validate Python syntax
+# Install dependencies
+- script: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+  displayName: Install Python dependencies
 
-          - script: |
-              docker build \
-                --tag flask-web:$(Build.BuildId) \
-                --tag flask-web:latest \
-                .
-            displayName: Build Docker image
+# Validate Python
+- script: |
+    python -m py_compile app.py
+  displayName: Validate Python syntax
 
-          - script: |
-              docker run -d \
-                --name flask-ci-test \
-                -p 127.0.0.1:5000:5000 \
-                flask-web:$(Build.BuildId)
+# Build Docker image
+- script: |
+    docker build \
+      -t flask-web:$(Build.BuildId) \
+      -t flask-web:latest \
+      .
+  displayName: Build Docker image
 
-              for attempt in {1..10}; do
-                if curl --fail http://127.0.0.1:5000/health; then
-                  exit 0
-                fi
+# Start temporary test container
+- script: |
+    docker run -d \
+      --name flask-ci-test \
+      -p 127.0.0.1:5000:5000 \
+      flask-web:$(Build.BuildId)
+  displayName: Start test container
 
-                sleep 2
-              done
+# Wait for health check
+- script: |
+    for i in {1..15}; do
+      if curl --fail http://127.0.0.1:5000/health; then
+        echo "Health check passed"
+        exit 0
+      fi
+      sleep 2
+    done
 
-              docker logs flask-ci-test
-              exit 1
-            displayName: Test container health endpoint
+    docker logs flask-ci-test
+    exit 1
+  displayName: Test application health
 
-          - script: |
-              docker rm -f flask-ci-test 2>/dev/null || true
-            displayName: Clean up test container
-            condition: always()
+# Remove test container
+- script: |
+    docker rm -f flask-ci-test || true
+  displayName: Remove test container
+  condition: always()
 
-  - stage: CD
-    displayName: Deploy to Azure VM
-    dependsOn: CI
-    condition: |
-      and(
-        succeeded(),
-        eq(variables['Build.SourceBranch'], 'refs/heads/main'),
-        ne(variables['Build.Reason'], 'PullRequest')
-      )
+# Copy files to production VM
+- task: CopyFilesOverSSH@0
+  displayName: Copy application to VM
+  inputs:
+    sshEndpoint: vm-web-ssh
+    sourceFolder: '$(Build.SourcesDirectory)'
+    contents: |
+      app.py
+      requirements.txt
+      Dockerfile
+      .dockerignore
+    targetFolder: '/home/azureadmin/app'
+    cleanTargetFolder: true
+    overwrite: true
 
-    jobs:
-      - deployment: DeployToVM
-        displayName: Deploy Flask container
-        environment: production
+# Deploy on VM
+- task: SSH@0
+  displayName: Deploy application
+  inputs:
+    sshEndpoint: vm-web-ssh
+    runOptions: inline
+    inline: |
+      set -e
 
-        pool:
-          vmImage: ubuntu-latest
+      cd /home/azureadmin/app
 
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - checkout: self
+      echo "Building production image..."
 
-                - task: CopyFilesOverSSH@0
-                  displayName: Copy application files to VM
-                  inputs:
-                    sshEndpoint: vm-web-ssh
-                    sourceFolder: $(Build.SourcesDirectory)
-                    contents: |
-                      app.py
-                      requirements.txt
-                      Dockerfile
-                    targetFolder: /home/azureadmin/app
-                    overwrite: true
+      docker build \
+        -t flask-web:$(Build.BuildId) \
+        -t flask-web:latest \
+        .
 
-                - task: SSH@0
-                  displayName: Rebuild and deploy container
-                  inputs:
-                    sshEndpoint: vm-web-ssh
-                    runOptions: inline
-                    inline: |
-                      set -e
+      echo "Stopping old container..."
 
-                      cd /home/azureadmin/app
+      docker rm -f flask-web || true
 
-                      docker build \
-                        --tag flask-web:$(Build.BuildId) \
-                        --tag flask-web:latest \
-                        .
+      echo "Starting new container..."
 
-                      docker rm -f flask-web 2>/dev/null || true
+      docker run -d \
+        --name flask-web \
+        --restart unless-stopped \
+        -p 127.0.0.1:5000:5000 \
+        flask-web:$(Build.BuildId)
 
-                      docker run -d \
-                        --name flask-web \
-                        -p 127.0.0.1:5000:5000 \
-                        --restart unless-stopped \
-                        flask-web:$(Build.BuildId)
+      echo "Waiting for application..."
 
-                      for attempt in $(seq 1 15); do
-                        if curl --fail --silent http://127.0.0.1:5000/health; then
-                          echo "Deployment health check passed"
-                          exit 0
-                        fi
+      for i in {1..15}; do
+        if curl --fail http://127.0.0.1:5000/health; then
+          echo "Deployment successful"
+          exit 0
+        fi
+        sleep 2
+      done
 
-                        sleep 2
-                      done
+      docker logs flask-web
+      exit 1
 
-                      echo "Deployment health check failed"
-                      docker logs flask-web
-                      exit 1
-                    readyTimeout: '20000'
-
-                - task: SSH@0
-                  displayName: Remove unused Docker images
-                  condition: succeeded()
-                  inputs:
-                    sshEndpoint: vm-web-ssh
-                    runOptions: inline
-                    inline: |
-                      docker image prune -f
+    readyTimeout: '20000'
