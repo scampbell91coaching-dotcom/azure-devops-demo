@@ -42,14 +42,11 @@ jobs:
 
       - name: Terraform Validate
         run: terraform validate
-            - name: Debug runner filesystem
+
+      - name: Debug runner filesystem
         run: |
           echo "PWD:"
           pwd
-
-          echo ""
-          echo "Repository root:"
-          ls -la ..
 
           echo ""
           echo "Current directory:"
@@ -59,9 +56,6 @@ jobs:
           echo "Find tfvars:"
           find .. -name terraform.tfvars
 
-          echo ""
-          echo "Current git commit:"
-          git rev-parse HEAD
       - name: Terraform Plan
         run: |
           terraform plan \
