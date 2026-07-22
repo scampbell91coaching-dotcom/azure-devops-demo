@@ -42,7 +42,12 @@ jobs:
 
       - name: Terraform Validate
         run: terraform validate
-
+         - name: Debug working directory
+        run: |
+          pwd
+          ls -la
+          find . -maxdepth 3 -type f
+          ls -la environments/dev
       - name: Terraform Plan
         run: |
           terraform plan \
