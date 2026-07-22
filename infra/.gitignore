@@ -1,5 +1,35 @@
+# Terraform
 .terraform/
 *.tfstate
 *.tfstate.*
 crash.log
+crash.*.log
+
+# Terraform plans
 *.tfplan
+plan.out
+
+# Variable files
+*.auto.tfvars
+*.auto.tfvars.json
+
+# Sensitive files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI config
+.terraformrc
+terraform.rc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log

@@ -1,13 +1,13 @@
 resource "azurerm_linux_virtual_machine" "web" {
   name                = "vm-web"
   computer_name       = "vm-web"
-  resource_group_name = azurerm_resource_group.main.name
+  resource_group_name = var.resource_group_name
   location            = var.location
   size                = "Standard_D2s_v7"
   admin_username      = "azureadmin"
 
   network_interface_ids = [
-    azurerm_network_interface.web.id
+    var.network_interface_id
   ]
 
   disable_password_authentication = true
@@ -41,6 +41,10 @@ resource "azurerm_linux_virtual_machine" "web" {
   }
 
   boot_diagnostics {}
+
+  identity {
+    type = "SystemAssigned"
+  }
 
   tags = {}
 }

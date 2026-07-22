@@ -1,14 +1,14 @@
 variable "subscription_id" {
-  type    = string
-  default = "abac1d73-0524-4172-a292-64f8a7595728"
+  description = "Azure Subscription ID"
+  type        = string
 }
 
 variable "resource_group_name" {
-  type    = string
-  default = "rg-devops-assessment-lab"
+  description = "Resource Group name"
+  type        = string
 }
 
 variable "location" {
-  type    = string
-  default = "eastus2"
+  description = "Azure region"
+  type        = string
 }

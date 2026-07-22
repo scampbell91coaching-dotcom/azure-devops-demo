@@ -1,7 +1,7 @@
 resource "azurerm_virtual_network" "main" {
   name                = "vnet-devops-lab"
   location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
+  resource_group_name = var.resource_group_name
 
   address_space = [
     "10.0.0.0/16"
@@ -10,7 +10,7 @@ resource "azurerm_virtual_network" "main" {
 
 resource "azurerm_subnet" "web" {
   name                 = "snet-web"
-  resource_group_name  = azurerm_resource_group.main.name
+  resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.main.name
 
   address_prefixes = [
@@ -20,7 +20,7 @@ resource "azurerm_subnet" "web" {
 
 resource "azurerm_subnet" "database" {
   name                 = "snet-database"
-  resource_group_name  = azurerm_resource_group.main.name
+  resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.main.name
 
   address_prefixes = [
@@ -31,7 +31,7 @@ resource "azurerm_subnet" "database" {
 resource "azurerm_network_security_group" "web" {
   name                = "nsg-web"
   location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
+  resource_group_name = var.resource_group_name
 
   security_rule {
     name                       = "Allow-HTTPS"
@@ -78,7 +78,7 @@ resource "azurerm_subnet_network_security_group_association" "web" {
 resource "azurerm_public_ip" "web" {
   name                = "pip-web"
   location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
+  resource_group_name = var.resource_group_name
 
   allocation_method       = "Static"
   sku                     = "Standard"
@@ -88,7 +88,7 @@ resource "azurerm_public_ip" "web" {
 resource "azurerm_network_interface" "web" {
   name                = "nic-web"
   location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
+  resource_group_name = var.resource_group_name
 
   ip_configuration {
     name                          = "internal"
