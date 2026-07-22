@@ -6,6 +6,13 @@ module "resource_group" {
   tags     = {}
 }
 
+module "network" {
+  source = "./modules/network"
+
+  resource_group_name = module.resource_group.name
+  location            = module.resource_group.location
+}
+
 module "compute" {
   source = "./modules/compute"
 
