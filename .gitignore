@@ -10,3 +10,6 @@ __pycache__/
 crash.log
 crash.*.log
 *.tfplan
+
+# Local Azure credentials
+.github/azure-credential.json
