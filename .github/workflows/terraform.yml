@@ -19,6 +19,10 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   ARM_USE_OIDC: true
   ARM_USE_AZUREAD: true
@@ -29,6 +33,7 @@ env:
 jobs:
   plan:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     defaults:
       run:
@@ -54,15 +59,20 @@ jobs:
       - name: Terraform Init
         run: |
           terraform init \
+            -input=false \
             -backend-config=environments/dev/backend.hcl
 
       - name: Terraform Validate
-        run: terraform validate
+        run: terraform validate -no-color
 
       - name: Terraform Plan
+        timeout-minutes: 10
         run: |
           terraform plan \
-            -var-file=environments/dev/terraform.tfvars \
+            -input=false \
+            -lock-timeout=60s \
+            -no-color \
+            -var-file=environments/dev.tfvars \
             -out=tfplan
 
       - name: Upload Terraform Plan
@@ -77,13 +87,10 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: plan
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     environment:
       name: production
-
-    concurrency:
-      group: terraform-production
-      cancel-in-progress: false
 
     defaults:
       run:
@@ -106,6 +113,7 @@ jobs:
       - name: Terraform Init
         run: |
           terraform init \
+            -input=false \
             -backend-config=environments/dev/backend.hcl
 
       - name: Download Terraform Plan
@@ -115,4 +123,5 @@ jobs:
           path: infra
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        timeout-minutes: 10
+        run: terraform apply -input=false -auto-approve tfplan
