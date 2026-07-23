@@ -1,19 +1,22 @@
 import os
 import socket
 
-from flask import Flask, jsonify
 from azure.monitor.opentelemetry import configure_azure_monitor
 
 
 def configure_monitoring() -> None:
-    """Enable Azure Monitor only when a connection string is available."""
+    """Enable Azure Monitor when a connection string is available."""
     if os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
         configure_azure_monitor()
 
 
-def create_app() -> Flask:
-    configure_monitoring()
+# Configure instrumentation before importing Flask.
+configure_monitoring()
 
+from flask import Flask, jsonify  # noqa: E402
+
+
+def create_app() -> Flask:
     flask_app = Flask(__name__)
 
     @flask_app.get("/")
