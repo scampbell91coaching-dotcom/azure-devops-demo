@@ -7,6 +7,7 @@ on:
     paths:
       - "app/**"
       - "tests/**"
+      - "scripts/**"
       - "Dockerfile"
       - "pytest.ini"
       - ".dockerignore"
@@ -16,6 +17,7 @@ on:
     paths:
       - "app/**"
       - "tests/**"
+      - "scripts/**"
       - "Dockerfile"
       - "pytest.ini"
       - ".dockerignore"
@@ -61,17 +63,18 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
 
+    outputs:
+      image: ${{ steps.meta.outputs.full_sha_tag }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Generate image metadata
         id: meta
-        shell: bash
         run: |
           SHORT_SHA="${GITHUB_SHA::7}"
 
-          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
           echo "sha_tag=${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
           echo "full_sha_tag=${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
           echo "latest_tag=${ACR_LOGIN_SERVER}/${IMAGE_NAME}:latest" >> "$GITHUB_OUTPUT"
@@ -79,8 +82,8 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-            --tag "${{ steps.meta.outputs.sha_tag }}" \
-            --tag "${{ steps.meta.outputs.full_sha_tag }}" \
+            -t "${{ steps.meta.outputs.sha_tag }}" \
+            -t "${{ steps.meta.outputs.full_sha_tag }}" \
             .
 
       - name: Scan image with Trivy
@@ -91,9 +94,8 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
-          scanners: vuln
 
-      - name: Azure login using OIDC
+      - name: Azure Login
         if: github.event_name != 'pull_request'
         uses: azure/login@v3
         with:
@@ -101,52 +103,70 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Get temporary ACR access token
+      - name: Get ACR token
         if: github.event_name != 'pull_request'
-        id: acr-token
-        shell: bash
+        id: acr
         run: |
-          ACR_TOKEN="$(
-            az acr login \
-              --name "$ACR_NAME" \
-              --expose-token \
-              --output tsv \
-              --query accessToken
-          )"
+          TOKEN=$(az acr login \
+            --name "$ACR_NAME" \
+            --expose-token \
+            --query accessToken \
+            -o tsv)
 
-          echo "::add-mask::$ACR_TOKEN"
-          echo "token=$ACR_TOKEN" >> "$GITHUB_OUTPUT"
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
 
-      - name: Log in to ACR
+      - name: Login to ACR
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v4
         with:
           registry: ${{ env.ACR_LOGIN_SERVER }}
           username: 00000000-0000-0000-0000-000000000000
-          password: ${{ steps.acr-token.outputs.token }}
+          password: ${{ steps.acr.outputs.token }}
 
-      - name: Push immutable image tags
+      - name: Push images
         if: github.event_name != 'pull_request'
         run: |
           docker push "${{ steps.meta.outputs.sha_tag }}"
           docker push "${{ steps.meta.outputs.full_sha_tag }}"
 
-      - name: Tag and push latest
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
           docker tag \
             "${{ steps.meta.outputs.full_sha_tag }}" \
             "${{ steps.meta.outputs.latest_tag }}"
 
           docker push "${{ steps.meta.outputs.latest_tag }}"
 
-      - name: Publish image summary
-        if: github.event_name != 'pull_request'
+  deploy:
+    name: Deploy to Azure VM
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy
+        env:
+          IMAGE: ${{ needs.build-and-push.outputs.image }}
         run: |
-          {
-            echo "## Container image published"
-            echo
-            echo "\`${{ steps.meta.outputs.full_sha_tag }}\`"
-            echo
-            echo "\`${{ steps.meta.outputs.sha_tag }}\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          SCRIPT=$(base64 -w0 scripts/deploy-vm.sh)
+
+          az vm run-command invoke \
+            --resource-group rg-devops-assessment-lab \
+            --name vm-web \
+            --command-id RunShellScript \
+            --scripts "
+              echo '$SCRIPT' | base64 -d >/tmp/deploy-vm.sh
+              chmod +x /tmp/deploy-vm.sh
+              /tmp/deploy-vm.sh '$IMAGE'
+            "
