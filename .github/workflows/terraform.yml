@@ -1,4 +1,4 @@
-name: Terraform CI
+name: Terraform CI/CD
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  terraform:
+  plan:
     runs-on: ubuntu-latest
 
     defaults:
@@ -43,20 +43,60 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
-      - name: Debug runner filesystem
-        run: |
-          echo "PWD:"
-          pwd
-
-          echo ""
-          echo "Current directory:"
-          ls -la
-
-          echo ""
-          echo "Find tfvars:"
-          find .. -name terraform.tfvars
-
       - name: Terraform Plan
         run: |
           terraform plan \
-            -var-file=environments/dev/terraform.tfvars
+            -var-file=environments/dev/terraform.tfvars \
+            -out=tfplan
+
+      - name: Upload Terraform Plan
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: infra/tfplan
+          retention-days: 1
+
+  apply:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: plan
+    runs-on: ubuntu-latest
+
+    environment:
+      name: production
+
+    concurrency:
+      group: terraform-production
+      cancel-in-progress: false
+
+    defaults:
+      run:
+        working-directory: infra
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config=environments/dev/backend.hcl
+
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+          path: infra
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
