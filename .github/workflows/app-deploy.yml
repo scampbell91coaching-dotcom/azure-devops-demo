@@ -247,3 +247,87 @@ jobs:
 
           print("Production smoke test passed: application is healthy.")
           PY
+
+  rollback:
+    name: Roll back failed production deployment
+    needs:
+      - deploy
+      - smoke-test
+    runs-on: ubuntu-latest
+
+    if: >
+      always() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.deploy.result == 'success' &&
+      needs.smoke-test.result == 'failure'
+
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Restore previous container image
+        run: |
+          set -euo pipefail
+
+          SCRIPT=$(base64 -w0 scripts/rollback-vm.sh)
+
+          az vm run-command invoke \
+            --resource-group rg-devops-assessment-lab \
+            --name vm-web \
+            --command-id RunShellScript \
+            --scripts "
+              set -e
+              echo '$SCRIPT' | base64 -d > /tmp/rollback-vm.sh
+              chmod +x /tmp/rollback-vm.sh
+              /tmp/rollback-vm.sh
+            "
+
+      - name: Verify restored public endpoint
+        run: |
+          set -euo pipefail
+
+          HEALTH_URL="${APP_URL}/health"
+          RESPONSE_FILE=$(mktemp)
+
+          curl \
+            --insecure \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --location \
+            --retry 12 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            --connect-timeout 10 \
+            --max-time 20 \
+            --output "${RESPONSE_FILE}" \
+            "${HEALTH_URL}"
+
+          cat "${RESPONSE_FILE}"
+          echo
+
+          python - "${RESPONSE_FILE}" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          response_file = pathlib.Path(sys.argv[1])
+          payload = json.loads(response_file.read_text())
+
+          if payload.get("status") != "healthy":
+              raise SystemExit(
+                  f"Rollback endpoint is not healthy: {payload!r}"
+              )
+
+          print("External rollback verification passed.")
+          PY

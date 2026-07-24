@@ -6,6 +6,8 @@ IMAGE="${1:?Usage: deploy-vm.sh <image>}"
 CONTAINER_NAME="flask-web"
 ACR_NAME="stevedevopslab6280"
 ENV_FILE="/etc/flask-web/flask-web.env"
+STATE_DIR="/var/lib/flask-web"
+PREVIOUS_IMAGE_FILE="${STATE_DIR}/previous-image"
 
 echo "========================================="
 echo "Deploying image:"
@@ -18,6 +20,8 @@ if [[ ! -f "${ENV_FILE}" ]]; then
     exit 1
 fi
 
+mkdir -p "${STATE_DIR}"
+
 echo "Logging into Azure with Managed Identity..."
 az login --identity --allow-no-subscriptions >/dev/null
 
@@ -28,6 +32,7 @@ echo "Pulling image..."
 docker pull "${IMAGE}"
 
 PREVIOUS_IMAGE=""
+
 if docker inspect "${CONTAINER_NAME}" >/dev/null 2>&1; then
     PREVIOUS_IMAGE=$(docker inspect \
         --format='{{.Config.Image}}' \
@@ -36,8 +41,12 @@ if docker inspect "${CONTAINER_NAME}" >/dev/null 2>&1; then
     echo "Previous image:"
     echo "  ${PREVIOUS_IMAGE}"
 
+    printf '%s\n' "${PREVIOUS_IMAGE}" > "${PREVIOUS_IMAGE_FILE}"
+
     docker stop "${CONTAINER_NAME}" || true
     docker rm "${CONTAINER_NAME}" || true
+else
+    rm -f "${PREVIOUS_IMAGE_FILE}"
 fi
 
 rollback() {
@@ -51,12 +60,16 @@ rollback() {
         echo "Rolling back to:"
         echo "  ${PREVIOUS_IMAGE}"
 
+        docker pull "${PREVIOUS_IMAGE}"
+
         docker run -d \
             --name "${CONTAINER_NAME}" \
             --restart unless-stopped \
             --env-file "${ENV_FILE}" \
             -p 5000:5000 \
             "${PREVIOUS_IMAGE}"
+    else
+        echo "No previous image is available for rollback."
     fi
 
     exit 1
@@ -75,7 +88,6 @@ echo
 echo "Waiting for application..."
 
 for i in {1..30}; do
-
     if curl -fsS http://127.0.0.1:5000/health >/dev/null; then
         echo
         echo "Deployment successful."
@@ -85,6 +97,7 @@ for i in {1..30}; do
         exit 0
     fi
 
+    echo "Health check attempt ${i}/30 failed. Retrying..."
     sleep 2
 done
 
