@@ -93,7 +93,6 @@ for i in {1..30}; do
         echo "Deployment successful."
 
         docker image prune -f
-
         exit 0
     fi
 

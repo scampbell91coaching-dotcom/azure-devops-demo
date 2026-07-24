@@ -21,14 +21,12 @@ if [[ ! -s "${PREVIOUS_IMAGE_FILE}" ]]; then
     exit 1
 fi
 
-PREVIOUS_IMAGE=$(cat "${PREVIOUS_IMAGE_FILE}")
+PREVIOUS_IMAGE=$(<"${PREVIOUS_IMAGE_FILE}")
 
 if [[ -z "${PREVIOUS_IMAGE}" ]]; then
     echo "ERROR: Previous image value is empty."
     exit 1
 fi
-
-CURRENT_IMAGE=""
 
 if docker inspect "${CONTAINER_NAME}" >/dev/null 2>&1; then
     CURRENT_IMAGE=$(docker inspect \
@@ -72,8 +70,7 @@ for i in {1..30}; do
     sleep 2
 done
 
-echo "ERROR: The previous image was restored but did not become healthy."
+echo "ERROR: Restored image did not become healthy."
 
 docker logs "${CONTAINER_NAME}" 2>/dev/null || true
-
 exit 1
