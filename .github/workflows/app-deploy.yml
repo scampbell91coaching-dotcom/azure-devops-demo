@@ -33,6 +33,7 @@ env:
   ACR_NAME: stevedevopslab6280
   ACR_LOGIN_SERVER: stevedevopslab6280.azurecr.io
   IMAGE_NAME: flask-web
+  APP_URL: https://23.102.98.97
 
 jobs:
   test:
@@ -52,11 +53,15 @@ jobs:
 
       - name: Install dependencies
         run: |
+          set -euo pipefail
+
           python -m pip install --upgrade pip
           pip install -r app/requirements-dev.txt
 
       - name: Run tests
-        run: pytest -v
+        run: |
+          set -euo pipefail
+          pytest -v
 
   build-and-push:
     name: Build, scan and publish image
@@ -73,6 +78,8 @@ jobs:
       - name: Generate image metadata
         id: meta
         run: |
+          set -euo pipefail
+
           SHORT_SHA="${GITHUB_SHA::7}"
 
           echo "sha_tag=${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
@@ -81,6 +88,8 @@ jobs:
 
       - name: Build Docker image
         run: |
+          set -euo pipefail
+
           docker build \
             -t "${{ steps.meta.outputs.sha_tag }}" \
             -t "${{ steps.meta.outputs.full_sha_tag }}" \
@@ -107,11 +116,13 @@ jobs:
         if: github.event_name != 'pull_request'
         id: acr
         run: |
+          set -euo pipefail
+
           TOKEN=$(az acr login \
             --name "$ACR_NAME" \
             --expose-token \
             --query accessToken \
-            -o tsv)
+            --output tsv)
 
           echo "::add-mask::$TOKEN"
           echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
@@ -127,6 +138,8 @@ jobs:
       - name: Push images
         if: github.event_name != 'pull_request'
         run: |
+          set -euo pipefail
+
           docker push "${{ steps.meta.outputs.sha_tag }}"
           docker push "${{ steps.meta.outputs.full_sha_tag }}"
 
@@ -146,7 +159,8 @@ jobs:
     environment: production
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Azure Login
         uses: azure/login@v3
@@ -155,10 +169,12 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy
+      - name: Deploy application
         env:
           IMAGE: ${{ needs.build-and-push.outputs.image }}
         run: |
+          set -euo pipefail
+
           SCRIPT=$(base64 -w0 scripts/deploy-vm.sh)
 
           az vm run-command invoke \
@@ -166,7 +182,68 @@ jobs:
             --name vm-web \
             --command-id RunShellScript \
             --scripts "
-              echo '$SCRIPT' | base64 -d >/tmp/deploy-vm.sh
+              set -e
+              echo '$SCRIPT' | base64 -d > /tmp/deploy-vm.sh
               chmod +x /tmp/deploy-vm.sh
               /tmp/deploy-vm.sh '$IMAGE'
             "
+
+  smoke-test:
+    name: Verify production deployment
+    needs: deploy
+    runs-on: ubuntu-latest
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Wait for application health endpoint
+        run: |
+          set -euo pipefail
+
+          HEALTH_URL="${APP_URL}/health"
+          RESPONSE_FILE=$(mktemp)
+
+          echo "Testing production endpoint: ${HEALTH_URL}"
+
+          # The IP address does not match a normal public TLS certificate,
+          # so --insecure is currently required. Remove it after adding a
+          # proper DNS hostname and trusted certificate.
+          curl \
+            --insecure \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --location \
+            --retry 12 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            --connect-timeout 10 \
+            --max-time 20 \
+            --output "$RESPONSE_FILE" \
+            "$HEALTH_URL"
+
+          echo "Health endpoint response:"
+          cat "$RESPONSE_FILE"
+          echo
+
+          python - "$RESPONSE_FILE" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          response_file = pathlib.Path(sys.argv[1])
+
+          try:
+              payload = json.loads(response_file.read_text())
+          except json.JSONDecodeError as exc:
+              raise SystemExit(
+                  f"Health endpoint did not return valid JSON: {exc}"
+              )
+
+          if payload.get("status") != "healthy":
+              raise SystemExit(
+                  f"Unexpected health response: {payload!r}"
+              )
+
+          print("Production smoke test passed: application is healthy.")
+          PY
