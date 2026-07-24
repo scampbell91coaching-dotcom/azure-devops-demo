@@ -1,15 +1,18 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
-.env
 
 # Terraform
-**/.terraform/*
-*.tfstate
-*.tfstate.*
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfplan
 crash.log
 crash.*.log
-*.tfplan
 
-# Local Azure credentials
-.github/azure-credential.json
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
