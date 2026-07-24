@@ -240,7 +240,7 @@ jobs:
                   f"Health endpoint did not return valid JSON: {exc}"
               )
 
-          if payload.get("status") != "rollback-test":
+          if payload.get("status") != "healthy":
               raise SystemExit(
                   f"Unexpected health response: {payload!r}"
               )
