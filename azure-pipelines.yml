@@ -84,11 +84,76 @@ stages:
           latest
 
 # -------------------------
+# Scan container image
+# -------------------------
+- stage: Security
+  displayName: Scan Container Image
+  dependsOn: Build
+  condition: succeeded()
+
+  jobs:
+  - job: TrivyScan
+    displayName: Trivy vulnerability scan
+
+    steps:
+    - checkout: self
+
+    - task: Docker@2
+      displayName: Sign in to ACR
+      inputs:
+        command: login
+        containerRegistry: acr-connection
+
+    - script: |
+        set -euo pipefail
+
+        echo "Installing Trivy..."
+        sudo apt-get update
+        sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+
+        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key           | gpg --dearmor           | sudo tee /usr/share/keyrings/trivy.gpg >/dev/null
+
+        echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main"           | sudo tee /etc/apt/sources.list.d/trivy.list
+
+        sudo apt-get update
+        sudo apt-get install -y trivy
+
+        trivy --version
+      displayName: Install Trivy
+
+    - script: |
+        set -euo pipefail
+
+        IMAGE="$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY):$(Build.SourceVersion)"
+
+        echo "Scanning $IMAGE"
+
+        trivy image           --scanners vuln           --severity HIGH,CRITICAL           --ignore-unfixed           --format table           --output trivy-report.txt           "$IMAGE"
+
+        cat trivy-report.txt
+      displayName: Generate Trivy report
+
+    - publish: trivy-report.txt
+      artifact: trivy-security-report
+      displayName: Publish Trivy report
+      condition: always()
+
+    - script: |
+        set -euo pipefail
+
+        IMAGE="$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY):$(Build.SourceVersion)"
+
+        echo "Enforcing critical vulnerability policy..."
+
+        trivy image           --scanners vuln           --severity CRITICAL           --ignore-unfixed           --exit-code 1           --no-progress           "$IMAGE"
+      displayName: Block fixable critical vulnerabilities
+
+# -------------------------
 # Deploy to AKS
 # -------------------------
 - stage: Deploy
   displayName: Deploy to AKS
-  dependsOn: Build
+  dependsOn: Security
   condition: succeeded()
 
   jobs:
