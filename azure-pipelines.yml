@@ -204,7 +204,7 @@ stages:
           - task: HelmInstaller@1
             displayName: Install Helm
             inputs:
-              helmVersionToInstall: 3.22.0
+              helmVersionToInstall: 3.21.2
 
           - task: AzureCLI@2
             displayName: Helm deploy to demo
@@ -232,7 +232,7 @@ stages:
                   --set-string image.tag="$(Build.SourceVersion)" \
                   --set-string application.message="$FLASK_DEMO_MESSAGE" \
                   --wait \
-                  --rollback-on-failure \
+                  --atomic \
                   --timeout 5m \
                   --history-max 10
 
@@ -347,7 +347,7 @@ stages:
           - task: HelmInstaller@1
             displayName: Install Helm
             inputs:
-              helmVersionToInstall: 3.22.0
+              helmVersionToInstall: 3.21.2
 
           - task: AzureCLI@2
             displayName: Helm deploy to production
@@ -376,7 +376,7 @@ stages:
                   --set-string image.tag="$(Build.SourceVersion)" \
                   --set-string application.message="$FLASK_DEMO_MESSAGE" \
                   --wait \
-                  --rollback-on-failure \
+                  --atomic \
                   --timeout 5m \
                   --history-max 10
 
