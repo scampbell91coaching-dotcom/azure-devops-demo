@@ -54,8 +54,8 @@ stages:
             inputs:
               connectionType: Azure Resource Manager
               azureSubscription: azure-service-connection
-              azureResourceGroup: YOUR_RESOURCE_GROUP
-              kubernetesCluster: YOUR_AKS_CLUSTER
+              azureResourceGroup: rg-devops-assessment-lab
+              kubernetesCluster: aks-devops-lab
               namespace: demo
               command: upgrade
               chartType: FilePath
