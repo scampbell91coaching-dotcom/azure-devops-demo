@@ -28,15 +28,6 @@ stages:
     steps:
     - checkout: self
 
-          - task: AzureKeyVault@2
-            displayName: Retrieve application secrets
-            inputs:
-              azureSubscription: azure-devops-connection
-              KeyVaultName: stevedevopskv30841
-              SecretsFilter: flask-demo-message
-              RunAsPreJob: false
-
-
     - task: HelmInstaller@1
       displayName: Install Helm
       inputs:
@@ -50,9 +41,8 @@ stages:
 
         echo "Rendering Helm chart..."
         helm template $(HELM_RELEASE) $(CHART_PATH) \
-          --set image.repository=$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY) \
-          --set image.tag=$(Build.SourceVersion)
-                application.message=$(flask-demo-message) \
+          --set-string image.repository="$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY)" \
+          --set-string image.tag="$(Build.SourceVersion)" \
           > rendered-manifests.yaml
 
         echo "Checking for empty critical fields..."
@@ -82,15 +72,6 @@ stages:
     steps:
     - checkout: self
 
-          - task: AzureKeyVault@2
-            displayName: Retrieve application secrets
-            inputs:
-              azureSubscription: azure-devops-connection
-              KeyVaultName: stevedevopskv30841
-              SecretsFilter: flask-demo-message
-              RunAsPreJob: false
-
-
     - task: Docker@2
       displayName: Build and push image
       inputs:
@@ -116,15 +97,6 @@ stages:
 
     steps:
     - checkout: self
-
-          - task: AzureKeyVault@2
-            displayName: Retrieve application secrets
-            inputs:
-              azureSubscription: azure-devops-connection
-              KeyVaultName: stevedevopskv30841
-              SecretsFilter: flask-demo-message
-              RunAsPreJob: false
-
 
     - task: Docker@2
       displayName: Sign in to ACR
@@ -202,7 +174,6 @@ stages:
               KeyVaultName: stevedevopskv30841
               SecretsFilter: flask-demo-message
               RunAsPreJob: false
-
 
           - task: HelmInstaller@1
             displayName: Install Helm
@@ -333,7 +304,6 @@ stages:
               KeyVaultName: stevedevopskv30841
               SecretsFilter: flask-demo-message
               RunAsPreJob: false
-
 
           - task: HelmInstaller@1
             displayName: Install Helm
