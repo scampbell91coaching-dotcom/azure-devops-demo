@@ -204,7 +204,7 @@ stages:
           - task: HelmInstaller@1
             displayName: Install Helm
             inputs:
-              helmVersionToInstall: latest
+              helmVersionToInstall: 3.22.0
 
           - task: AzureCLI@2
             displayName: Helm deploy to demo
@@ -347,7 +347,7 @@ stages:
           - task: HelmInstaller@1
             displayName: Install Helm
             inputs:
-              helmVersionToInstall: latest
+              helmVersionToInstall: 3.22.0
 
           - task: AzureCLI@2
             displayName: Helm deploy to production
