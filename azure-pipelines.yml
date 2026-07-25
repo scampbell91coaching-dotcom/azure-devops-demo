@@ -6,66 +6,200 @@ pool:
 
 variables:
   ACR_NAME: stevedevopslab6280
+  IMAGE_REPOSITORY: flask-web
+  AKS_RESOURCE_GROUP: rg-devops-assessment-lab
+  AKS_CLUSTER: aks-devops-lab
+  K8S_NAMESPACE: demo
+  HELM_RELEASE: flask-web
+  CHART_PATH: flask-app
 
 stages:
 
+# -------------------------
+# Validate application/chart
+# -------------------------
+- stage: Validate
+  displayName: Validate Application and Helm
+
+  jobs:
+  - job: Validate
+    displayName: Run validation checks
+
+    steps:
+    - checkout: self
+
+    - task: HelmInstaller@1
+      displayName: Install Helm
+      inputs:
+        helmVersionToInstall: latest
+
+    - script: |
+        set -euo pipefail
+
+        echo "Linting Helm chart..."
+        helm lint $(CHART_PATH)
+
+        echo "Rendering Helm chart..."
+        helm template $(HELM_RELEASE) $(CHART_PATH) \
+          --set image.repository=$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY) \
+          --set image.tag=$(Build.SourceVersion) \
+          > rendered-manifests.yaml
+
+        echo "Checking for empty critical fields..."
+        if grep -Eq 'containerPort:[[:space:]]*$|targetPort:[[:space:]]*$|timeoutSeconds:[[:space:]]*$|failureThreshold:[[:space:]]*$' rendered-manifests.yaml; then
+          echo "ERROR: Rendered manifests contain empty required values."
+          exit 1
+        fi
+
+        echo "Helm validation completed successfully."
+      displayName: Lint and render Helm chart
+
+    - publish: rendered-manifests.yaml
+      artifact: rendered-manifests
+      displayName: Publish rendered manifests
+
+# -------------------------
+# Build and push container
+# -------------------------
 - stage: Build
-  displayName: Build & Push Image
+  displayName: Build and Push Image
+  dependsOn: Validate
 
   jobs:
   - job: Docker
+    displayName: Build Docker image
 
     steps:
+    - checkout: self
 
     - task: Docker@2
-      displayName: Build and Push Image
+      displayName: Build and push image
       inputs:
         containerRegistry: acr-connection
-        repository: flask-web
+        repository: $(IMAGE_REPOSITORY)
         command: buildAndPush
         Dockerfile: Dockerfile
         tags: |
           $(Build.SourceVersion)
+          latest
 
+# -------------------------
+# Deploy to AKS
+# -------------------------
 - stage: Deploy
   displayName: Deploy to AKS
-
   dependsOn: Build
+  condition: succeeded()
 
   jobs:
   - deployment: Deploy
-
+    displayName: Helm deployment
     environment: demo
 
     strategy:
       runOnce:
-
         deploy:
-
           steps:
-
           - checkout: self
 
           - task: HelmInstaller@1
+            displayName: Install Helm
             inputs:
               helmVersionToInstall: latest
 
           - task: HelmDeploy@0
-            displayName: Helm Upgrade
-
+            displayName: Helm upgrade
             inputs:
               connectionType: Azure Resource Manager
               azureSubscription: azure-devops-connection
-              azureResourceGroup: rg-devops-assessment-lab
-              kubernetesCluster: aks-devops-lab
-              namespace: demo
+              azureResourceGroup: $(AKS_RESOURCE_GROUP)
+              kubernetesCluster: $(AKS_CLUSTER)
+              namespace: $(K8S_NAMESPACE)
               command: upgrade
               chartType: FilePath
-              chartPath: flask-app
-              releaseName: flask-web
-
+              chartPath: $(CHART_PATH)
+              releaseName: $(HELM_RELEASE)
               overrideValues: |
-                image.repository=$(ACR_NAME).azurecr.io/flask-web
+                image.repository=$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY)
                 image.tag=$(Build.SourceVersion)
+              arguments: >-
+                --install
+                --atomic
+                --wait
+                --timeout 5m
+                --history-max 10
 
-              install: true
+# -------------------------
+# Verify live deployment
+# -------------------------
+- stage: Verify
+  displayName: Verify Deployment
+  dependsOn: Deploy
+  condition: succeeded()
+
+  jobs:
+  - job: SmokeTest
+    displayName: Run smoke tests
+
+    steps:
+    - task: AzureCLI@2
+      displayName: Test deployed application
+      inputs:
+        azureSubscription: azure-devops-connection
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+
+          az aks get-credentials \
+            --resource-group $(AKS_RESOURCE_GROUP) \
+            --name $(AKS_CLUSTER) \
+            --overwrite-existing
+
+          echo "Waiting for deployment rollout..."
+          kubectl rollout status \
+            deployment/$(HELM_RELEASE)-flask-app \
+            --namespace $(K8S_NAMESPACE) \
+            --timeout=180s
+
+          echo "Waiting for external IP..."
+          EXTERNAL_IP=""
+
+          for attempt in {1..30}; do
+            EXTERNAL_IP=$(kubectl get service \
+              $(HELM_RELEASE)-flask-app \
+              --namespace $(K8S_NAMESPACE) \
+              --output jsonpath='{.status.loadBalancer.ingress[0].ip}')
+
+            if [ -n "$EXTERNAL_IP" ]; then
+              break
+            fi
+
+            echo "External IP not ready. Attempt $attempt/30..."
+            sleep 10
+          done
+
+          if [ -z "$EXTERNAL_IP" ]; then
+            echo "ERROR: Service did not receive an external IP."
+            exit 1
+          fi
+
+          echo "Testing http://$EXTERNAL_IP/health"
+
+          for attempt in {1..12}; do
+            if curl --fail --silent --show-error \
+              --max-time 10 \
+              "http://$EXTERNAL_IP/health"; then
+              echo
+              echo "Smoke test passed."
+              exit 0
+            fi
+
+            echo "Health endpoint not ready. Attempt $attempt/12..."
+            sleep 10
+          done
+
+          echo "ERROR: Smoke test failed."
+          kubectl get pods,services,deployments \
+            --namespace $(K8S_NAMESPACE)
+          exit 1
