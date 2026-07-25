@@ -375,10 +375,25 @@ stages:
                   --set-string image.repository="$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY)" \
                   --set-string image.tag="$(Build.SourceVersion)" \
                   --set-string application.message="$FLASK_DEMO_MESSAGE" \
-                  --wait \
-                  --atomic \
-                  --timeout 5m \
                   --history-max 10
+
+                echo "Waiting for production Deployment rollout..."
+
+                if ! kubectl rollout status \
+                  deployment/flask-web-prod-flask-app \
+                  --namespace production \
+                  --timeout=180s; then
+
+                  echo "ERROR: Production rollout failed."
+                  kubectl get pods,services,deployments \
+                    --namespace production \
+                    --output wide
+
+                  kubectl describe pods \
+                    --namespace production
+
+                  exit 1
+                fi
 
                 helm status flask-web-prod \
                   --namespace production
