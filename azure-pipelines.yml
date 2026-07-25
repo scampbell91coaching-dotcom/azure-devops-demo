@@ -12,12 +12,13 @@ variables:
   K8S_NAMESPACE: demo
   HELM_RELEASE: flask-web
   CHART_PATH: flask-app
+  KEY_VAULT_NAME: stevedevopskv30841
 
 stages:
 
-# -------------------------
-# Validate application/chart
-# -------------------------
+# =========================================================
+# VALIDATE
+# =========================================================
 - stage: Validate
   displayName: Validate Application and Helm
 
@@ -36,17 +37,25 @@ stages:
     - script: |
         set -euo pipefail
 
+        echo "Helm version:"
+        helm version
+
         echo "Linting Helm chart..."
-        helm lint $(CHART_PATH)
+        helm lint "$(CHART_PATH)"
 
         echo "Rendering Helm chart..."
-        helm template $(HELM_RELEASE) $(CHART_PATH) \
+        helm template "$(HELM_RELEASE)" "$(CHART_PATH)" \
+          --namespace "$(K8S_NAMESPACE)" \
           --set-string image.repository="$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY)" \
           --set-string image.tag="$(Build.SourceVersion)" \
           > rendered-manifests.yaml
 
-        echo "Checking for empty critical fields..."
-        if grep -Eq 'containerPort:[[:space:]]*$|targetPort:[[:space:]]*$|timeoutSeconds:[[:space:]]*$|failureThreshold:[[:space:]]*$' rendered-manifests.yaml; then
+        test -s rendered-manifests.yaml
+
+        echo "Checking rendered manifests for empty critical values..."
+        if grep -Eq \
+          'containerPort:[[:space:]]*$|targetPort:[[:space:]]*$|timeoutSeconds:[[:space:]]*$|failureThreshold:[[:space:]]*$' \
+          rendered-manifests.yaml; then
           echo "ERROR: Rendered manifests contain empty required values."
           exit 1
         fi
@@ -58,34 +67,38 @@ stages:
       artifact: rendered-manifests
       displayName: Publish rendered manifests
 
-# -------------------------
-# Build and push container
-# -------------------------
+
+# =========================================================
+# BUILD
+# =========================================================
 - stage: Build
   displayName: Build and Push Image
   dependsOn: Validate
+  condition: succeeded()
 
   jobs:
-  - job: Docker
+  - job: Build
     displayName: Build Docker image
 
     steps:
     - checkout: self
 
     - task: Docker@2
-      displayName: Build and push image
+      displayName: Build and push image to ACR
       inputs:
+        command: buildAndPush
         containerRegistry: acr-connection
         repository: $(IMAGE_REPOSITORY)
-        command: buildAndPush
         Dockerfile: Dockerfile
+        buildContext: .
         tags: |
           $(Build.SourceVersion)
           latest
 
-# -------------------------
-# Scan container image
-# -------------------------
+
+# =========================================================
+# SECURITY
+# =========================================================
 - stage: Security
   displayName: Scan Container Image
   dependsOn: Build
@@ -107,13 +120,15 @@ stages:
     - script: |
         set -euo pipefail
 
-        echo "Installing Trivy..."
         sudo apt-get update
-        sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+        sudo apt-get install -y wget apt-transport-https gnupg
 
-        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key           | gpg --dearmor           | sudo tee /usr/share/keyrings/trivy.gpg >/dev/null
+        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
+          | gpg --dearmor \
+          | sudo tee /usr/share/keyrings/trivy.gpg >/dev/null
 
-        echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main"           | sudo tee /etc/apt/sources.list.d/trivy.list
+        echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" \
+          | sudo tee /etc/apt/sources.list.d/trivy.list
 
         sudo apt-get update
         sudo apt-get install -y trivy
@@ -126,9 +141,15 @@ stages:
 
         IMAGE="$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY):$(Build.SourceVersion)"
 
-        echo "Scanning $IMAGE"
+        echo "Generating security report for $IMAGE"
 
-        trivy image           --scanners vuln           --severity HIGH,CRITICAL           --ignore-unfixed           --format table           --output trivy-report.txt           "$IMAGE"
+        trivy image \
+          --scanners vuln \
+          --severity HIGH,CRITICAL \
+          --ignore-unfixed \
+          --format table \
+          --output trivy-report.txt \
+          "$IMAGE"
 
         cat trivy-report.txt
       displayName: Generate Trivy report
@@ -143,22 +164,27 @@ stages:
 
         IMAGE="$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY):$(Build.SourceVersion)"
 
-        echo "Enforcing critical vulnerability policy..."
-
-        trivy image           --scanners vuln           --severity CRITICAL           --ignore-unfixed           --exit-code 1           --no-progress           "$IMAGE"
+        trivy image \
+          --scanners vuln \
+          --severity CRITICAL \
+          --ignore-unfixed \
+          --exit-code 1 \
+          --no-progress \
+          "$IMAGE"
       displayName: Block fixable critical vulnerabilities
 
-# -------------------------
-# Deploy to AKS
-# -------------------------
+
+# =========================================================
+# DEPLOY DEMO
+# =========================================================
 - stage: Deploy
-  displayName: Deploy to AKS
+  displayName: Deploy to AKS Demo
   dependsOn: Security
   condition: succeeded()
 
   jobs:
-  - deployment: Deploy
-    displayName: Helm deployment
+  - deployment: DeployDemo
+    displayName: Deploy demo with Helm
     environment: demo
 
     strategy:
@@ -168,10 +194,10 @@ stages:
           - checkout: self
 
           - task: AzureKeyVault@2
-            displayName: Retrieve application secrets
+            displayName: Retrieve application secret
             inputs:
               azureSubscription: azure-devops-connection
-              KeyVaultName: stevedevopskv30841
+              KeyVaultName: $(KEY_VAULT_NAME)
               SecretsFilter: flask-demo-message
               RunAsPreJob: false
 
@@ -180,57 +206,55 @@ stages:
             inputs:
               helmVersionToInstall: latest
 
-          - script: |
-              echo "HELM_RELEASE=$(HELM_RELEASE)"
-              echo "CHART_PATH=$(CHART_PATH)"
-              echo "Working directory:"
-              pwd
-              echo "Repository contents:"
-              ls -la
-              echo "Chart contents:"
-              ls -la "$(CHART_PATH)"
-              echo "Chart metadata:"
-              cat "$(CHART_PATH)/Chart.yaml"
-            displayName: Debug Helm inputs
-
-          - task: HelmDeploy@0
-            displayName: Helm upgrade
+          - task: AzureCLI@2
+            displayName: Helm deploy to demo
+            env:
+              FLASK_DEMO_MESSAGE: $(flask-demo-message)
             inputs:
-              connectionType: Azure Resource Manager
               azureSubscription: azure-devops-connection
-              azureResourceGroup: $(AKS_RESOURCE_GROUP)
-              kubernetesCluster: $(AKS_CLUSTER)
-              namespace: $(K8S_NAMESPACE)
-              command: upgrade
-              chartType: FilePath
-              chartPath: $(CHART_PATH)
-              releaseName: $(HELM_RELEASE)
-              overrideValues: |
-                image.repository=$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY)
-                image.tag=$(Build.SourceVersion)
-                application.message=$(flask-demo-message)
-              arguments: >-
-                --install
-                --atomic
-                --wait
-                --timeout 5m
-                --history-max 10
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
 
-# -------------------------
-# Verify live deployment
-# -------------------------
+                az aks get-credentials \
+                  --resource-group "$(AKS_RESOURCE_GROUP)" \
+                  --name "$(AKS_CLUSTER)" \
+                  --overwrite-existing
+
+                echo "Deploying release $(HELM_RELEASE) to $(K8S_NAMESPACE)..."
+
+                helm upgrade "$(HELM_RELEASE)" "$(CHART_PATH)" \
+                  --install \
+                  --namespace "$(K8S_NAMESPACE)" \
+                  --create-namespace \
+                  --set-string image.repository="$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY)" \
+                  --set-string image.tag="$(Build.SourceVersion)" \
+                  --set-string application.message="$FLASK_DEMO_MESSAGE" \
+                  --wait \
+                  --rollback-on-failure \
+                  --timeout 5m \
+                  --history-max 10
+
+                helm status "$(HELM_RELEASE)" \
+                  --namespace "$(K8S_NAMESPACE)"
+
+
+# =========================================================
+# VERIFY DEMO
+# =========================================================
 - stage: Verify
-  displayName: Verify Deployment
+  displayName: Verify Demo Deployment
   dependsOn: Deploy
   condition: succeeded()
 
   jobs:
   - job: SmokeTest
-    displayName: Run smoke tests
+    displayName: Run demo smoke test
 
     steps:
     - task: AzureCLI@2
-      displayName: Test deployed application
+      displayName: Test demo application
       inputs:
         azureSubscription: azure-devops-connection
         scriptType: bash
@@ -239,61 +263,63 @@ stages:
           set -euo pipefail
 
           az aks get-credentials \
-            --resource-group $(AKS_RESOURCE_GROUP) \
-            --name $(AKS_CLUSTER) \
+            --resource-group "$(AKS_RESOURCE_GROUP)" \
+            --name "$(AKS_CLUSTER)" \
             --overwrite-existing
 
-          echo "Waiting for deployment rollout..."
           kubectl rollout status \
             deployment/$(HELM_RELEASE)-flask-app \
-            --namespace $(K8S_NAMESPACE) \
+            --namespace "$(K8S_NAMESPACE)" \
             --timeout=180s
 
-          echo "Waiting for external IP..."
           EXTERNAL_IP=""
 
           for attempt in {1..30}; do
             EXTERNAL_IP=$(kubectl get service \
-              $(HELM_RELEASE)-flask-app \
-              --namespace $(K8S_NAMESPACE) \
-              --output jsonpath='{.status.loadBalancer.ingress[0].ip}')
+              "$(HELM_RELEASE)-flask-app" \
+              --namespace "$(K8S_NAMESPACE)" \
+              --output jsonpath='{.status.loadBalancer.ingress[0].ip}' \
+              2>/dev/null || true)
 
             if [ -n "$EXTERNAL_IP" ]; then
               break
             fi
 
-            echo "External IP not ready. Attempt $attempt/30..."
+            echo "Waiting for demo external IP: $attempt/30"
             sleep 10
           done
 
           if [ -z "$EXTERNAL_IP" ]; then
-            echo "ERROR: Service did not receive an external IP."
+            echo "ERROR: Demo service did not receive an external IP."
+            kubectl get all --namespace "$(K8S_NAMESPACE)"
             exit 1
           fi
 
-          echo "Testing http://$EXTERNAL_IP/health"
-
           for attempt in {1..12}; do
-            if curl --fail --silent --show-error \
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
               --max-time 10 \
               "http://$EXTERNAL_IP/health"; then
               echo
-              echo "Smoke test passed."
+              echo "Demo smoke test passed."
               exit 0
             fi
 
-            echo "Health endpoint not ready. Attempt $attempt/12..."
+            echo "Waiting for demo endpoint: $attempt/12"
             sleep 10
           done
 
-          echo "ERROR: Smoke test failed."
+          echo "ERROR: Demo smoke test failed."
           kubectl get pods,services,deployments \
-            --namespace $(K8S_NAMESPACE)
+            --namespace "$(K8S_NAMESPACE)"
           exit 1
 
-# -------------------------
-# Deploy to production
-# -------------------------
+
+# =========================================================
+# DEPLOY PRODUCTION
+# =========================================================
 - stage: DeployProduction
   displayName: Deploy to Production
   dependsOn: Verify
@@ -301,7 +327,7 @@ stages:
 
   jobs:
   - deployment: DeployProduction
-    displayName: Production Helm deployment
+    displayName: Deploy production with Helm
     environment: production
 
     strategy:
@@ -311,10 +337,10 @@ stages:
           - checkout: self
 
           - task: AzureKeyVault@2
-            displayName: Retrieve application secrets
+            displayName: Retrieve application secret
             inputs:
               azureSubscription: azure-devops-connection
-              KeyVaultName: stevedevopskv30841
+              KeyVaultName: $(KEY_VAULT_NAME)
               SecretsFilter: flask-demo-message
               RunAsPreJob: false
 
@@ -323,46 +349,44 @@ stages:
             inputs:
               helmVersionToInstall: latest
 
-          - script: |
-              echo "HELM_RELEASE=$(HELM_RELEASE)"
-              echo "CHART_PATH=$(CHART_PATH)"
-              echo "Working directory:"
-              pwd
-              echo "Repository contents:"
-              ls -la
-              echo "Chart contents:"
-              ls -la "$(CHART_PATH)"
-              echo "Chart metadata:"
-              cat "$(CHART_PATH)/Chart.yaml"
-            displayName: Debug Helm inputs
-
-          - task: HelmDeploy@0
-            displayName: Helm upgrade production
+          - task: AzureCLI@2
+            displayName: Helm deploy to production
+            env:
+              FLASK_DEMO_MESSAGE: $(flask-demo-message)
             inputs:
-              connectionType: Azure Resource Manager
               azureSubscription: azure-devops-connection
-              azureResourceGroup: $(AKS_RESOURCE_GROUP)
-              kubernetesCluster: $(AKS_CLUSTER)
-              namespace: production
-              command: upgrade
-              chartType: FilePath
-              chartPath: $(CHART_PATH)
-              releaseName: flask-web-prod
-              valueFile: flask-app/values-production.yaml
-              overrideValues: |
-                image.repository=$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY)
-                image.tag=$(Build.SourceVersion)
-                application.message=$(flask-demo-message)
-              arguments: >-
-                --install
-                --atomic
-                --wait
-                --timeout 5m
-                --history-max 10
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
 
-# -------------------------
-# Verify production
-# -------------------------
+                az aks get-credentials \
+                  --resource-group "$(AKS_RESOURCE_GROUP)" \
+                  --name "$(AKS_CLUSTER)" \
+                  --overwrite-existing
+
+                echo "Deploying production release..."
+
+                helm upgrade flask-web-prod "$(CHART_PATH)" \
+                  --install \
+                  --namespace production \
+                  --create-namespace \
+                  --values "$(CHART_PATH)/values-production.yaml" \
+                  --set-string image.repository="$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY)" \
+                  --set-string image.tag="$(Build.SourceVersion)" \
+                  --set-string application.message="$FLASK_DEMO_MESSAGE" \
+                  --wait \
+                  --rollback-on-failure \
+                  --timeout 5m \
+                  --history-max 10
+
+                helm status flask-web-prod \
+                  --namespace production
+
+
+# =========================================================
+# VERIFY PRODUCTION
+# =========================================================
 - stage: VerifyProduction
   displayName: Verify Production
   dependsOn: DeployProduction
@@ -370,7 +394,7 @@ stages:
 
   jobs:
   - job: ProductionSmokeTest
-    displayName: Run production smoke tests
+    displayName: Run production smoke test
 
     steps:
     - task: AzureCLI@2
@@ -383,11 +407,9 @@ stages:
           set -euo pipefail
 
           az aks get-credentials \
-            --resource-group $(AKS_RESOURCE_GROUP) \
-            --name $(AKS_CLUSTER) \
+            --resource-group "$(AKS_RESOURCE_GROUP)" \
+            --name "$(AKS_CLUSTER)" \
             --overwrite-existing
-
-          echo "Waiting for production rollout..."
 
           kubectl rollout status \
             deployment/flask-web-prod-flask-app \
@@ -400,13 +422,14 @@ stages:
             EXTERNAL_IP=$(kubectl get service \
               flask-web-prod-flask-app \
               --namespace production \
-              --output jsonpath='{.status.loadBalancer.ingress[0].ip}')
+              --output jsonpath='{.status.loadBalancer.ingress[0].ip}' \
+              2>/dev/null || true)
 
             if [ -n "$EXTERNAL_IP" ]; then
               break
             fi
 
-            echo "Production external IP not ready. Attempt $attempt/30..."
+            echo "Waiting for production external IP: $attempt/30"
             sleep 10
           done
 
@@ -416,10 +439,11 @@ stages:
             exit 1
           fi
 
-          echo "Testing production health endpoint..."
-
           for attempt in {1..12}; do
-            if curl --fail --silent --show-error \
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
               --max-time 10 \
               "http://$EXTERNAL_IP/health"; then
               echo
@@ -427,10 +451,11 @@ stages:
               exit 0
             fi
 
-            echo "Production endpoint not ready. Attempt $attempt/12..."
+            echo "Waiting for production endpoint: $attempt/12"
             sleep 10
           done
 
           echo "ERROR: Production smoke test failed."
-          kubectl get pods,services,deployments --namespace production
+          kubectl get pods,services,deployments \
+            --namespace production
           exit 1
