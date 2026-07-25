@@ -20,7 +20,7 @@ stages:
     - task: Docker@2
       displayName: Build and Push Image
       inputs:
-        containerRegistry: acr-service-connection
+        containerRegistry: acr-connection
         repository: flask-web
         command: buildAndPush
         Dockerfile: Dockerfile
@@ -44,6 +44,8 @@ stages:
 
           steps:
 
+          - checkout: self
+
           - task: HelmInstaller@1
             inputs:
               helmVersionToInstall: latest
@@ -53,7 +55,7 @@ stages:
 
             inputs:
               connectionType: Azure Resource Manager
-              azureSubscription: azure-service-connection
+              azureSubscription: azure-devops-connection
               azureResourceGroup: rg-devops-assessment-lab
               kubernetesCluster: aks-devops-lab
               namespace: demo
