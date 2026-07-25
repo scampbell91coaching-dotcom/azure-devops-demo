@@ -180,6 +180,19 @@ stages:
             inputs:
               helmVersionToInstall: latest
 
+          - script: |
+              echo "HELM_RELEASE=$(HELM_RELEASE)"
+              echo "CHART_PATH=$(CHART_PATH)"
+              echo "Working directory:"
+              pwd
+              echo "Repository contents:"
+              ls -la
+              echo "Chart contents:"
+              ls -la "$(CHART_PATH)"
+              echo "Chart metadata:"
+              cat "$(CHART_PATH)/Chart.yaml"
+            displayName: Debug Helm inputs
+
           - task: HelmDeploy@0
             displayName: Helm upgrade
             inputs:
@@ -309,6 +322,19 @@ stages:
             displayName: Install Helm
             inputs:
               helmVersionToInstall: latest
+
+          - script: |
+              echo "HELM_RELEASE=$(HELM_RELEASE)"
+              echo "CHART_PATH=$(CHART_PATH)"
+              echo "Working directory:"
+              pwd
+              echo "Repository contents:"
+              ls -la
+              echo "Chart contents:"
+              ls -la "$(CHART_PATH)"
+              echo "Chart metadata:"
+              cat "$(CHART_PATH)/Chart.yaml"
+            displayName: Debug Helm inputs
 
           - task: HelmDeploy@0
             displayName: Helm upgrade production
