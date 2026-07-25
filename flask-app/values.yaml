@@ -1,0 +1,19 @@
+replicaCount: 1
+
+image:
+  repository: stevedevopslab6280.azurecr.io/flask-web
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 5000
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
