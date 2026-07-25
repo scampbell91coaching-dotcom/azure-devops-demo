@@ -203,3 +203,125 @@ stages:
           kubectl get pods,services,deployments \
             --namespace $(K8S_NAMESPACE)
           exit 1
+
+# -------------------------
+# Deploy to production
+# -------------------------
+- stage: DeployProduction
+  displayName: Deploy to Production
+  dependsOn: Verify
+  condition: succeeded()
+
+  jobs:
+  - deployment: DeployProduction
+    displayName: Production Helm deployment
+    environment: production
+
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: HelmInstaller@1
+            displayName: Install Helm
+            inputs:
+              helmVersionToInstall: latest
+
+          - task: HelmDeploy@0
+            displayName: Helm upgrade production
+            inputs:
+              connectionType: Azure Resource Manager
+              azureSubscription: azure-devops-connection
+              azureResourceGroup: $(AKS_RESOURCE_GROUP)
+              kubernetesCluster: $(AKS_CLUSTER)
+              namespace: production
+              command: upgrade
+              chartType: FilePath
+              chartPath: $(CHART_PATH)
+              releaseName: flask-web-prod
+              valueFile: flask-app/values-production.yaml
+              overrideValues: |
+                image.repository=$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY)
+                image.tag=$(Build.SourceVersion)
+              arguments: >-
+                --install
+                --atomic
+                --wait
+                --timeout 5m
+                --history-max 10
+
+# -------------------------
+# Verify production
+# -------------------------
+- stage: VerifyProduction
+  displayName: Verify Production
+  dependsOn: DeployProduction
+  condition: succeeded()
+
+  jobs:
+  - job: ProductionSmokeTest
+    displayName: Run production smoke tests
+
+    steps:
+    - task: AzureCLI@2
+      displayName: Test production application
+      inputs:
+        azureSubscription: azure-devops-connection
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+
+          az aks get-credentials \
+            --resource-group $(AKS_RESOURCE_GROUP) \
+            --name $(AKS_CLUSTER) \
+            --overwrite-existing
+
+          echo "Waiting for production rollout..."
+
+          kubectl rollout status \
+            deployment/flask-web-prod-flask-app \
+            --namespace production \
+            --timeout=180s
+
+          EXTERNAL_IP=""
+
+          for attempt in {1..30}; do
+            EXTERNAL_IP=$(kubectl get service \
+              flask-web-prod-flask-app \
+              --namespace production \
+              --output jsonpath='{.status.loadBalancer.ingress[0].ip}')
+
+            if [ -n "$EXTERNAL_IP" ]; then
+              break
+            fi
+
+            echo "Production external IP not ready. Attempt $attempt/30..."
+            sleep 10
+          done
+
+          if [ -z "$EXTERNAL_IP" ]; then
+            echo "ERROR: Production service did not receive an external IP."
+            kubectl get all --namespace production
+            exit 1
+          fi
+
+          echo "Testing production health endpoint..."
+
+          for attempt in {1..12}; do
+            if curl --fail --silent --show-error \
+              --max-time 10 \
+              "http://$EXTERNAL_IP/health"; then
+              echo
+              echo "Production smoke test passed."
+              exit 0
+            fi
+
+            echo "Production endpoint not ready. Attempt $attempt/12..."
+            sleep 10
+          done
+
+          echo "ERROR: Production smoke test failed."
+          kubectl get pods,services,deployments --namespace production
+          exit 1
