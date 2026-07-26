@@ -271,49 +271,35 @@ stages:
             deployment/$(HELM_RELEASE)-flask-app \
             --namespace "$(K8S_NAMESPACE)" \
             --timeout=180s
+          echo "Starting port-forward for demo smoke test..."
 
-          EXTERNAL_IP=""
+          kubectl port-forward             service/flask-web-flask-app             8080:80             --namespace "$(K8S_NAMESPACE)"             > /tmp/demo-port-forward.log 2>&1 &
 
-          for attempt in {1..30}; do
-            EXTERNAL_IP=$(kubectl get service \
-              "$(HELM_RELEASE)-flask-app" \
-              --namespace "$(K8S_NAMESPACE)" \
-              --output jsonpath='{.status.loadBalancer.ingress[0].ip}' \
-              2>/dev/null || true)
+          PORT_FORWARD_PID=$!
 
-            if [ -n "$EXTERNAL_IP" ]; then
-              break
-            fi
+          cleanup() {
+            kill "$PORT_FORWARD_PID" 2>/dev/null || true
+          }
 
-            echo "Waiting for demo external IP: $attempt/30"
-            sleep 10
-          done
-
-          if [ -z "$EXTERNAL_IP" ]; then
-            echo "ERROR: Demo service did not receive an external IP."
-            kubectl get all --namespace "$(K8S_NAMESPACE)"
-            exit 1
-          fi
+          trap cleanup EXIT
 
           for attempt in {1..12}; do
-            if curl \
-              --fail \
-              --silent \
-              --show-error \
-              --max-time 10 \
-              "http://$EXTERNAL_IP/health"; then
+            if curl               --fail               --silent               --show-error               --max-time 10               "http://127.0.0.1:8080/health"; then
               echo
               echo "Demo smoke test passed."
               exit 0
             fi
 
             echo "Waiting for demo endpoint: $attempt/12"
-            sleep 10
+            sleep 5
           done
 
           echo "ERROR: Demo smoke test failed."
-          kubectl get pods,services,deployments \
-            --namespace "$(K8S_NAMESPACE)"
+          echo "Port-forward log:"
+          cat /tmp/demo-port-forward.log || true
+
+          kubectl get pods,services,deployments,hpa             --namespace "$(K8S_NAMESPACE)"
+
           exit 1
 
 
