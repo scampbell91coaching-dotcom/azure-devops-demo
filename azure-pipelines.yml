@@ -375,6 +375,9 @@ stages:
                   --set-string image.repository="$(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY)" \
                   --set-string image.tag="$(Build.SourceVersion)" \
                   --set-string application.message="$FLASK_DEMO_MESSAGE" \
+                  --wait \
+                  --atomic \
+                  --timeout 5m \
                   --history-max 10
 
                 echo "Waiting for production Deployment rollout..."

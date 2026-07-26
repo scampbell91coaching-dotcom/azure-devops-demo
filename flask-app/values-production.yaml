@@ -12,6 +12,9 @@ service:
 
 containerPort: 5000
 
+application:
+  message: ""
+
 resources:
   requests:
     cpu: 250m
