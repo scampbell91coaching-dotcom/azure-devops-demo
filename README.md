@@ -1,257 +1,340 @@
-# Azure DevOps AKS Platform Demo
+# Production-Ready Azure Platform on AKS
 
-A production-style Azure DevOps CI/CD platform that builds, scans and deploys a containerised Flask application to Azure Kubernetes Service using Terraform, Docker, Helm and Azure Container Registry.
+A production-style Azure Platform Engineering project demonstrating Infrastructure as Code, Kubernetes, GitOps, CI/CD, secure secret management and observability.
 
-The project demonstrates Infrastructure as Code, automated CI/CD, Kubernetes workload management, container security scanning, environment promotion, deployment verification and horizontal autoscaling.
+---
 
-## Architecture
+# Overview
+
+This project provisions Azure infrastructure using Terraform and deploys a containerised Flask application to Azure Kubernetes Service (AKS).
+
+The deployment uses Helm for Kubernetes packaging, GitHub Actions for continuous integration, and Argo CD for GitOps-based continuous delivery.
+
+The platform also integrates Azure Key Vault for secure secret management, Managed Identity for authentication, Prometheus and Grafana for monitoring, and Azure Application Insights for application telemetry.
+
+---
+
+# Architecture
+
+Detailed architecture documentation can be found here:
+
+**docs/architecture.md**
+
+---
+
+# Technology Stack
+
+## Cloud
+
+- Microsoft Azure
+- Azure Kubernetes Service (AKS)
+- Azure Container Registry (ACR)
+- Azure Key Vault
+- Managed Identity
+- Azure Application Insights
+
+## Infrastructure
+
+- Terraform
+
+## Kubernetes
+
+- Kubernetes
+- Helm
+- Argo CD
+- NGINX Ingress Controller
+- cert-manager
+- Secrets Store CSI Driver
+- Horizontal Pod Autoscaler
+
+## CI/CD
+
+- GitHub
+- GitHub Actions
+- Docker
+- Trivy
+
+## Observability
+
+- Prometheus
+- Grafana
+- Azure Application Insights
+
+---
+
+# Features
+
+- Infrastructure as Code using Terraform
+- Kubernetes workloads deployed with Helm
+- GitOps continuous deployment using Argo CD
+- Automated Docker builds
+- Azure Container Registry integration
+- HTTPS with cert-manager
+- Azure Key Vault secret integration
+- Managed Identity authentication
+- Horizontal Pod Autoscaler
+- CPU and memory resource requests
+- Readiness probes
+- Liveness probes
+- Prometheus monitoring
+- Grafana dashboards
+- Application Insights telemetry
+
+---
+
+# Deployment Workflow
 
 ```text
 Developer
-    |
-    v
-Azure DevOps Repository
-    |
-    v
-Azure DevOps Pipeline
-    |
-    +--> Validate application and Helm chart
-    |
-    +--> Build Docker image
-    |
-    +--> Scan image with Trivy
-    |
-    +--> Push image to Azure Container Registry
-    |
-    +--> Deploy to Demo with Helm
-    |
-    +--> Verify and smoke test
-    |
-    +--> Production approval
-    |
-    +--> Deploy to Production with Helm
-    |
-    +--> Verify production deployment
-              |
-              v
-     Azure Kubernetes Service
-        |              |
-        v              v
- Demo namespace   Production namespace
-        |
-        v
- Horizontal Pod Autoscaler
+
+↓
+
+GitHub Repository
+
+↓
+
+GitHub Actions
+
+↓
+
+Docker Build
+
+↓
+
+Trivy Security Scan
+
+↓
+
+Azure Container Registry
+
+↓
+
+Argo CD
+
+↓
+
+Helm Chart
+
+↓
+
+Azure Kubernetes Service
+
+↓
+
+Flask Application
 ```
 
-## Technology Stack
+---
 
-- Microsoft Azure
-- Azure Kubernetes Service
-- Azure Container Registry
-- Azure DevOps Pipelines
-- Terraform
-- Docker
-- Kubernetes
-- Helm
-- Trivy
-- Flask
-- Bash
-- Git
+# GitOps Workflow
 
-## Key Features
+The Kubernetes application is managed entirely through Git.
 
-### Infrastructure as Code
+When changes are pushed:
 
-- Azure infrastructure managed with Terraform
-- AKS cluster provisioning
-- Azure Container Registry integration
-- Azure networking and resource configuration
-- Reproducible infrastructure definitions
+1. GitHub Actions builds a new container image.
+2. The image is pushed to Azure Container Registry.
+3. The Helm chart references the required image.
+4. Argo CD detects changes in Git.
+5. Kubernetes automatically reconciles to the desired state.
+6. Configuration drift is automatically repaired.
 
-### CI/CD Pipeline
+---
 
-The Azure DevOps multi-stage pipeline performs:
+# Security
 
-1. Application and Helm validation
-2. Docker image build
-3. Immutable image tagging using the Git commit SHA
-4. Push to Azure Container Registry
-5. Trivy vulnerability scanning
-6. Helm deployment to the Demo namespace
-7. Deployment rollout verification
-8. Automated smoke testing
-9. Production environment approval
-10. Helm deployment to Production
-11. Production rollout and endpoint verification
+Security features include:
 
-### Kubernetes and Helm
-
+- Azure Managed Identity
+- Azure Key Vault
+- Secrets Store CSI Driver
+- HTTPS via cert-manager
+- Trivy container image scanning
+- Kubernetes resource limits
 - Environment-specific Helm values
-- Demo and Production namespaces
-- Readiness and liveness probes
-- CPU and memory requests
-- CPU and memory limits
-- Kubernetes Secret templating
-- Safe Helm deployments using `--wait` and `--atomic`
-- Automated rollback on failed deployments
-- Helm release-history management
 
-### Horizontal Pod Autoscaling
+---
 
-The Horizontal Pod Autoscaler uses CPU utilisation to adjust the number of application pods.
+# Monitoring
 
-| Setting | Value |
-|---|---:|
-| Minimum replicas | 1 |
-| Maximum replicas | 5 |
-| Target CPU utilisation | 50% |
-| CPU request per pod | 100m |
-| Memory request per pod | 128Mi |
+Platform observability includes:
 
-Load testing successfully demonstrated automatic scaling from one pod to three pods, followed by scale-down after the load was removed.
+- Prometheus
+- Grafana
+- Azure Application Insights
 
-### Security
+These provide infrastructure, Kubernetes and application-level monitoring.
 
-- Trivy container-image vulnerability scanning
-- Kubernetes Secrets used for application configuration
-- Azure service connections for authenticated deployments
-- Immutable container-image tags
-- Non-root application container
-- Privilege escalation disabled
-- Deployment failures automatically rolled back
+---
 
-## Pipeline Flow
+# Repository Structure
 
 ```text
-Validate
-   |
-   v
-Build and Push
-   |
-   v
-Security Scan
-   |
-   v
-Deploy Demo
-   |
-   v
-Verify and Smoke Test
-   |
-   v
-Production Approval
-   |
-   v
-Deploy Production
-   |
-   v
-Production Verification
-```
-
-## Repository Structure
-
-```text
-azure-devops-demo/
-├── app/
+.
+├── terraform/
+│
 ├── flask-app/
 │   ├── templates/
-│   │   ├── deployment.yaml
-│   │   ├── hpa.yaml
-│   │   ├── secret.yaml
-│   │   └── service.yaml
-│   ├── Chart.yaml
 │   ├── values.yaml
 │   └── values-production.yaml
-├── terraform/
-├── azure-pipelines.yml
+│
+├── kubernetes/
+│   ├── argocd/
+│   ├── ingress/
+│   ├── keyvault/
+│   └── monitoring/
+│
+├── docs/
+│   ├── architecture.md
+│   └── images/
+│
+├── .github/
+│   └── workflows/
+│
 └── README.md
 ```
 
-## Deployment Reliability
+---
 
-The Helm deployment process includes:
+# Validation
 
-```text
---wait
---atomic
---timeout 5m
---history-max 10
-```
-
-This ensures that Helm waits for resources to become healthy, automatically rolls back failed releases, limits deployment duration and retains a controlled release history.
-
-## Troubleshooting Experience
-
-Several realistic deployment issues were diagnosed and resolved during development:
-
-- Kubernetes `CreateContainerConfigError`
-- Missing Kubernetes Secret references
-- Helm releases stuck in `pending-rollback`
-- Helm release-lock recovery
-- Azure LoadBalancer external-IP delays
-- ClusterIP and LoadBalancer service behaviour
-- Pipeline smoke tests for ClusterIP services
-- Kubernetes event inspection
-- Pod rollout and readiness troubleshooting
-- HPA configuration and CPU load testing
-
-## Validation Commands
-
-Check the application resources:
-
-```bash
-kubectl get deployments,pods,services,hpa -n demo
-```
-
-View live resource usage:
-
-```bash
-kubectl top pods -n demo
-```
-
-Inspect the autoscaler:
-
-```bash
-kubectl describe hpa flask-web-flask-app -n demo
-```
-
-Validate the Helm chart:
+Validate the Helm chart
 
 ```bash
 helm lint flask-app
 ```
 
-Render the Kubernetes manifests locally:
+Validate production values
 
 ```bash
-helm template flask-web flask-app --namespace demo
+helm lint flask-app \
+  -f flask-app/values-production.yaml
 ```
 
-## Future Enhancements
+Render production manifests
 
-- NGINX Ingress Controller
-- TLS certificates with cert-manager
-- PodDisruptionBudget
-- Kubernetes Network Policies
-- Prometheus and Grafana
-- Loki and Alertmanager
-- GitOps with Argo CD
-- Azure Key Vault CSI Driver
+```bash
+helm template flask-web-prod flask-app \
+  -f flask-app/values-production.yaml
+```
+
+---
+
+# Kubernetes Validation
+
+Check workloads
+
+```bash
+kubectl get pods,svc,ingress,hpa \
+  -n production
+```
+
+Check Key Vault integration
+
+```bash
+kubectl get secretproviderclass \
+  -n production
+```
+
+Check deployment
+
+```bash
+kubectl get deployment flask-web \
+  -n production
+```
+
+---
+
+# Argo CD Validation
+
+Check GitOps status
+
+```bash
+kubectl get applications \
+  -n argocd
+```
+
+Expected output
+
+```text
+SYNC STATUS     HEALTH STATUS
+
+Synced          Healthy
+```
+
+---
+
+# Lessons Learned
+
+During this project I gained practical experience with:
+
+- Terraform
+- Azure networking
+- AKS
+- Helm templating
+- GitHub Actions
+- Argo CD
+- GitOps
+- Azure Key Vault
+- Managed Identity
+- Kubernetes troubleshooting
+- Horizontal Pod Autoscaling
+- Prometheus
+- Grafana
+- Application Insights
+
+---
+
+# Future Improvements
+
+Potential future enhancements include:
+
 - Azure Workload Identity
-- Azure Policy for Kubernetes
+- Azure Policy
+- Kubernetes Network Policies
+- Pod Disruption Budgets
+- Alertmanager
+- Argo CD ApplicationSets
+- Progressive Delivery
+- Kubeconform validation
+- Helm unit testing
 
-## Screenshots
+---
 
-Planned screenshots:
+# Project Status
 
-- Successful Azure DevOps pipeline
-- HPA scaling from one to three pods
-- AKS workloads
-- Azure Container Registry
-- Azure resource deployment
-- Demo and Production environments
+✅ Terraform infrastructure
 
-## Author
+✅ Azure Kubernetes Service
+
+✅ Azure Container Registry
+
+✅ GitHub Actions CI
+
+✅ Helm deployment
+
+✅ Argo CD GitOps
+
+✅ Azure Key Vault
+
+✅ Managed Identity
+
+✅ HTTPS ingress
+
+✅ Prometheus
+
+✅ Grafana
+
+✅ Application Insights
+
+✅ Production-ready Kubernetes deployment
+
+---
+
+# Author
 
 **Stephen Campbell**
 
-Platform Engineering | Azure | Kubernetes | Terraform | DevOps
+Senior Observability & Platform Engineer
+
+Azure • Kubernetes • Terraform • DevOps • Platform Engineering
