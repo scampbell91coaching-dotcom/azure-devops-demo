@@ -16,3 +16,4 @@ crash.*.log
 
 # OS
 .DS_Store
+/argocd
