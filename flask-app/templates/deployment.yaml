@@ -1,59 +1,62 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "flask-app.fullname" . }}
-  labels:
-    {{- include "flask-app.labels" . | nindent 4 }}
-
+  name: flask-web
 spec:
-  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
-  {{- end }}
-
   selector:
     matchLabels:
-      {{- include "flask-app.selectorLabels" . | nindent 6 }}
-
+      app: flask-web
   template:
     metadata:
       labels:
-        {{- include "flask-app.selectorLabels" . | nindent 8 }}
-
+        app: flask-web
     spec:
       containers:
-        - name: flask-app
+        - name: flask-web
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          env:
+            - name: APPLICATIONINSIGHTS_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: flask-runtime-secrets
+                  key: APPLICATIONINSIGHTS_CONNECTION_STRING
 
           ports:
             - containerPort: {{ .Values.containerPort }}
 
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+{{ toYaml .Values.resources | indent 12 }}
 
           readinessProbe:
             httpGet:
-              path: /health
+              path: {{ .Values.readinessProbe.path }}
               port: {{ .Values.containerPort }}
-            initialDelaySeconds: 5
-            periodSeconds: 10
-            timeoutSeconds: 2
-            failureThreshold: 3
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
 
           livenessProbe:
             httpGet:
-              path: /health
+              path: {{ .Values.livenessProbe.path }}
               port: {{ .Values.containerPort }}
-            initialDelaySeconds: 15
-            periodSeconds: 20
-            timeoutSeconds: 2
-            failureThreshold: 3
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
 
-          {{- if .Values.application.message }}
-          env:
-            - name: FLASK_DEMO_MESSAGE
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "flask-app.fullname" . }}-application
-                  key: FLASK_DEMO_MESSAGE
-          {{- end }}
+          volumeMounts:
+            - name: secrets-store-inline
+              mountPath: /mnt/secrets-store
+              readOnly: true
+
+      volumes:
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: flask-keyvault-secrets

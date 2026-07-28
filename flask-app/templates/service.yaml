@@ -4,13 +4,10 @@ metadata:
   name: {{ include "flask-app.fullname" . }}
   labels:
     {{- include "flask-app.labels" . | nindent 4 }}
-
 spec:
   type: {{ .Values.service.type }}
-
   selector:
-    {{- include "flask-app.selectorLabels" . | nindent 4 }}
-
+    app: flask-web
   ports:
     - name: http
       port: {{ .Values.service.port }}
