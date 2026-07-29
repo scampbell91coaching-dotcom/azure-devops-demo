@@ -338,3 +338,64 @@ Potential future enhancements include:
 Senior Observability & Platform Engineer
 
 Azure • Kubernetes • Terraform • DevOps • Platform Engineering
+
+---
+
+## Platform Screenshots
+
+### GitHub Repository
+
+![GitHub repository overview](docs/images/github-repository-overview.png)
+
+### CI/CD Pipeline
+
+![GitHub Actions pipeline success](docs/images/github-actions-pipeline-success.png)
+
+### GitOps Deployment
+
+![Argo CD application healthy and synced](docs/images/argocd-application-healthy-synced.png)
+
+### Azure Infrastructure
+
+![Azure resource group overview](docs/images/azure-resource-group-overview.png)
+
+### Application Insights
+
+![Application Insights performance overview](docs/images/application-insights-overview.png)
+
+### Grafana Monitoring
+
+#### Grafana Home
+
+![Grafana home](docs/images/grafana-home.png)
+
+#### Kubernetes Cluster Dashboard
+
+![Grafana Kubernetes cluster dashboard](docs/images/grafana-kubernetes-cluster-dashboard.png)
+
+#### Kubernetes Namespace Dashboard
+
+![Grafana Kubernetes namespace dashboard](docs/images/grafana-kubernetes-namespace-dashboard.png)
+
+#### Kubernetes Pod Dashboard
+
+![Grafana Kubernetes pod dashboard](docs/images/grafana-kubernetes-pod-dashboard.png)
+
+### Prometheus
+
+#### Target Health
+
+![Prometheus targets](docs/images/prometheus-targets.png)
+
+#### Query Results
+
+![Prometheus query results](docs/images/prometheus-query-results.png)
+
+### Kubernetes Resources
+
+![Kubernetes production resources](docs/images/kubectl-production-resources.png)
+
+### HTTPS Application
+
+![Application running over HTTPS](docs/images/application-https.png)
+
