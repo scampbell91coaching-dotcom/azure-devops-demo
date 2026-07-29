@@ -7,6 +7,6 @@ acr_name            = "stevedevopslab6280"
 
 node_vm_size = "Standard_D2s_v3"
 
-node_count     = 1
+node_count     = 2
 min_node_count = 1
 max_node_count = 1
