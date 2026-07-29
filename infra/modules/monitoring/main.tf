@@ -23,19 +23,7 @@ resource "azurerm_application_insights" "main" {
     Project     = "Azure DevOps Assessment"
   }
 }
-resource "azurerm_virtual_machine_extension" "azure_monitor_agent" {
-  name                       = "AzureMonitorLinuxAgent"
-  virtual_machine_id         = var.virtual_machine_id
-  publisher                  = "Microsoft.Azure.Monitor"
-  type                       = "AzureMonitorLinuxAgent"
-  type_handler_version       = "1.30"
-  auto_upgrade_minor_version = true
 
-  tags = {
-    Environment = "Lab"
-    Project     = "Azure DevOps Assessment"
-  }
-}
 resource "azurerm_monitor_data_collection_rule" "linux_vm" {
   name                = "dcr-linux-vm"
   resource_group_name = var.resource_group_name
@@ -85,12 +73,4 @@ resource "azurerm_monitor_data_collection_rule" "linux_vm" {
     Environment = "Lab"
     Project     = "Azure DevOps Assessment"
   }
-}
-
-resource "azurerm_monitor_data_collection_rule_association" "linux_vm" {
-  name                    = "dcra-linux-vm"
-  target_resource_id      = var.virtual_machine_id
-  data_collection_rule_id = azurerm_monitor_data_collection_rule.linux_vm.id
-
-  description = "Associate VM with Linux DCR"
 }
