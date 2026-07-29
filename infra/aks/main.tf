@@ -8,10 +8,12 @@ data "azurerm_container_registry" "acr" {
 }
 
 resource "azurerm_kubernetes_cluster" "aks" {
-  name                = var.aks_name
-  location            = data.azurerm_resource_group.lab.location
-  resource_group_name = data.azurerm_resource_group.lab.name
-  dns_prefix          = var.dns_prefix
+  oidc_issuer_enabled       = true
+  workload_identity_enabled = true
+  name                      = var.aks_name
+  location                  = data.azurerm_resource_group.lab.location
+  resource_group_name       = data.azurerm_resource_group.lab.name
+  dns_prefix                = var.dns_prefix
 
   sku_tier = "Free"
 
