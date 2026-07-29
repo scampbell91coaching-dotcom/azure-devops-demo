@@ -16,14 +16,15 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
+  id-token: write
 
 concurrency:
-  group: terraform-${{ github.ref }}
+  group: terraform-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 env:
+  TERRAFORM_VERSION: "1.15.8"
   ARM_USE_OIDC: true
   ARM_USE_AZUREAD: true
   ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
@@ -31,20 +32,62 @@ env:
   ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
 jobs:
-  plan:
+  quality:
+    name: Terraform quality and security
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform format
+        run: terraform fmt -check -recursive infra
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Checkov
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install checkov
+
+      - name: Scan Terraform with Checkov
+        run: |
+          set -euo pipefail
+
+          checkov \
+            --directory infra \
+            --framework terraform \
+            --compact \
+            --quiet \
+            --soft-fail
+
+  root-plan:
+    name: Root infrastructure plan
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     defaults:
       run:
         working-directory: infra
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Azure Login
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
@@ -52,42 +95,97 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - name: Terraform Format
-        run: terraform fmt -check -recursive
-
-      - name: Terraform Init
+      - name: Terraform init
         run: |
           terraform init \
             -input=false \
             -backend-config=environments/dev/backend.hcl
 
-      - name: Terraform Validate
+      - name: Terraform validate
         run: terraform validate -no-color
 
-      - name: Terraform Plan
-        timeout-minutes: 10
+      - name: Terraform plan
         run: |
           terraform plan \
             -input=false \
             -lock-timeout=60s \
             -no-color \
-            -var-file=environments/dev.tfvars \
-            -out=tfplan
+            -var-file=environments/dev/terraform.tfvars \
+            -out=root.tfplan
 
-      - name: Upload Terraform Plan
+      - name: Upload root plan
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
-          name: terraform-plan
-          path: infra/tfplan
+          name: root-terraform-plan
+          path: infra/root.tfplan
           retention-days: 1
+          if-no-files-found: error
 
-  apply:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: plan
+  aks-plan:
+    name: AKS infrastructure plan
+    needs: quality
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: infra/aks
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform init
+        run: |
+          terraform init \
+            -input=false \
+            -backend-config=environments/dev/backend.hcl
+
+      - name: Terraform validate
+        run: terraform validate -no-color
+
+      - name: Terraform plan
+        run: |
+          terraform plan \
+            -input=false \
+            -lock-timeout=60s \
+            -no-color \
+            -var-file=environments/dev/terraform.tfvars \
+            -out=aks.tfplan
+
+      - name: Upload AKS plan
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: aks-terraform-plan
+          path: infra/aks/aks.tfplan
+          retention-days: 1
+          if-no-files-found: error
+
+  root-apply:
+    name: Root infrastructure apply
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - root-plan
+      - aks-plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     environment:
       name: production
@@ -97,11 +195,11 @@ jobs:
         working-directory: infra
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Azure Login
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
@@ -109,19 +207,65 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - name: Terraform Init
+      - name: Terraform init
         run: |
           terraform init \
             -input=false \
             -backend-config=environments/dev/backend.hcl
 
-      - name: Download Terraform Plan
+      - name: Download root plan
         uses: actions/download-artifact@v4
         with:
-          name: terraform-plan
+          name: root-terraform-plan
           path: infra
 
-      - name: Terraform Apply
-        timeout-minutes: 10
-        run: terraform apply -input=false -auto-approve tfplan
+      - name: Terraform apply
+        run: terraform apply -input=false -auto-approve root.tfplan
+
+  aks-apply:
+    name: AKS infrastructure apply
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: root-apply
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    environment:
+      name: production
+
+    defaults:
+      run:
+        working-directory: infra/aks
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform init
+        run: |
+          terraform init \
+            -input=false \
+            -backend-config=environments/dev/backend.hcl
+
+      - name: Download AKS plan
+        uses: actions/download-artifact@v4
+        with:
+          name: aks-terraform-plan
+          path: infra/aks
+
+      - name: Terraform apply
+        run: terraform apply -input=false -auto-approve aks.tfplan
