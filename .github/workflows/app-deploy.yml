@@ -7,7 +7,6 @@ on:
     paths:
       - "app/**"
       - "tests/**"
-      - "scripts/**"
       - "Dockerfile"
       - "pytest.ini"
       - ".dockerignore"
@@ -17,7 +16,6 @@ on:
     paths:
       - "app/**"
       - "tests/**"
-      - "scripts/**"
       - "Dockerfile"
       - "pytest.ini"
       - ".dockerignore"
@@ -29,11 +27,16 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: application-cicd-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   ACR_NAME: stevedevopslab6280
   ACR_LOGIN_SERVER: stevedevopslab6280.azurecr.io
   IMAGE_NAME: flask-web
-  APP_URL: https://23.102.98.97
+  VALUES_FILE: flask-app/values-production.yaml
+  APP_URL: https://traditionalstrength.co.uk
 
 jobs:
   test:
@@ -70,6 +73,7 @@ jobs:
 
     outputs:
       image: ${{ steps.meta.outputs.full_sha_tag }}
+      image_tag: ${{ steps.meta.outputs.image_tag }}
 
     steps:
       - name: Checkout repository
@@ -81,9 +85,11 @@ jobs:
           set -euo pipefail
 
           SHORT_SHA="${GITHUB_SHA::7}"
+          FULL_IMAGE="${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${GITHUB_SHA}"
 
+          echo "image_tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
           echo "sha_tag=${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "full_sha_tag=${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "full_sha_tag=${FULL_IMAGE}" >> "$GITHUB_OUTPUT"
           echo "latest_tag=${ACR_LOGIN_SERVER}/${IMAGE_NAME}:latest" >> "$GITHUB_OUTPUT"
 
       - name: Build Docker image
@@ -91,6 +97,8 @@ jobs:
           set -euo pipefail
 
           docker build \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --label "org.opencontainers.image.source=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
             -t "${{ steps.meta.outputs.sha_tag }}" \
             -t "${{ steps.meta.outputs.full_sha_tag }}" \
             .
@@ -149,185 +157,129 @@ jobs:
 
           docker push "${{ steps.meta.outputs.latest_tag }}"
 
-  deploy:
-    name: Deploy to Azure VM
+  promote:
+    name: Promote image through GitOps
     needs: build-and-push
     runs-on: ubuntu-latest
 
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
+    permissions:
+      contents: write
+
     environment: production
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Azure Login
-        uses: azure/login@v3
         with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ref: main
+          fetch-depth: 0
 
-      - name: Deploy application
+      - name: Update production image tag
         env:
-          IMAGE: ${{ needs.build-and-push.outputs.image }}
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
         run: |
           set -euo pipefail
 
-          SCRIPT=$(base64 -w0 scripts/deploy-vm.sh)
+          python - <<'PY'
+          import os
+          from pathlib import Path
 
-          az vm run-command invoke \
-            --resource-group rg-devops-assessment-lab \
-            --name vm-web \
-            --command-id RunShellScript \
-            --scripts "
-              set -e
-              echo '$SCRIPT' | base64 -d > /tmp/deploy-vm.sh
-              chmod +x /tmp/deploy-vm.sh
-              /tmp/deploy-vm.sh '$IMAGE'
-            "
+          values_file = Path("flask-app/values-production.yaml")
+          image_tag = os.environ["IMAGE_TAG"]
+
+          lines = values_file.read_text().splitlines()
+          updated = []
+          inside_image = False
+          tag_updated = False
+
+          for line in lines:
+              if line == "image:":
+                  inside_image = True
+                  updated.append(line)
+                  continue
+
+              if inside_image and line and not line.startswith((" ", "\t")):
+                  inside_image = False
+
+              if inside_image and line.lstrip().startswith("tag:"):
+                  indentation = line[:len(line) - len(line.lstrip())]
+                  updated.append(f"{indentation}tag: {image_tag}")
+                  tag_updated = True
+              else:
+                  updated.append(line)
+
+          if not tag_updated:
+              raise RuntimeError(
+                  f"Unable to locate image.tag in {values_file}"
+              )
+
+          values_file.write_text("\n".join(updated) + "\n")
+          PY
+
+          echo "Updated production image configuration:"
+          grep -A3 '^image:' "$VALUES_FILE"
+
+      - name: Commit GitOps promotion
+        env:
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- "$VALUES_FILE"; then
+            echo "Production values already reference ${IMAGE_TAG}"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add "$VALUES_FILE"
+
+          git commit \
+            -m "chore(gitops): promote flask-web ${IMAGE_TAG::7} [skip ci]"
+
+          git push origin HEAD:main
+
+      - name: Show promoted image
+        run: |
+          set -euo pipefail
+
+          echo "Promoted image:"
+          echo "${{ needs.build-and-push.outputs.image }}"
+
+          echo "Argo CD will reconcile the committed Helm values automatically."
 
   smoke-test:
-    name: Verify production deployment
-    needs: deploy
+    name: Verify GitOps deployment
+    needs: promote
     runs-on: ubuntu-latest
 
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
-      - name: Wait for application health endpoint
+      - name: Wait for production health endpoint
         run: |
           set -euo pipefail
 
           HEALTH_URL="${APP_URL}/health"
-          RESPONSE_FILE=$(mktemp)
 
-          echo "Testing production endpoint: ${HEALTH_URL}"
+          echo "Waiting for Argo CD to deploy the promoted image."
+          echo "Testing: ${HEALTH_URL}"
 
-          # The IP address does not match a normal public TLS certificate,
-          # so --insecure is currently required. Remove it after adding a
-          # proper DNS hostname and trusted certificate.
           curl \
-            --insecure \
             --fail-with-body \
             --silent \
             --show-error \
             --location \
-            --retry 12 \
-            --retry-delay 5 \
+            --retry 24 \
+            --retry-delay 10 \
             --retry-all-errors \
             --connect-timeout 10 \
             --max-time 20 \
-            --output "$RESPONSE_FILE" \
             "$HEALTH_URL"
 
-          echo "Health endpoint response:"
-          cat "$RESPONSE_FILE"
           echo
-
-          python - "$RESPONSE_FILE" <<'PY'
-          import json
-          import pathlib
-          import sys
-
-          response_file = pathlib.Path(sys.argv[1])
-
-          try:
-              payload = json.loads(response_file.read_text())
-          except json.JSONDecodeError as exc:
-              raise SystemExit(
-                  f"Health endpoint did not return valid JSON: {exc}"
-              )
-
-          if payload.get("status") != "healthy":
-              raise SystemExit(
-                  f"Unexpected health response: {payload!r}"
-              )
-
-          print("Production smoke test passed: application is healthy.")
-          PY
-
-  rollback:
-    name: Roll back failed production deployment
-    needs:
-      - deploy
-      - smoke-test
-    runs-on: ubuntu-latest
-
-    if: >
-      always() &&
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      needs.deploy.result == 'success' &&
-      needs.smoke-test.result == 'failure'
-
-    environment: production
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Azure Login
-        uses: azure/login@v3
-        with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Restore previous container image
-        run: |
-          set -euo pipefail
-
-          SCRIPT=$(base64 -w0 scripts/rollback-vm.sh)
-
-          az vm run-command invoke \
-            --resource-group rg-devops-assessment-lab \
-            --name vm-web \
-            --command-id RunShellScript \
-            --scripts "
-              set -e
-              echo '$SCRIPT' | base64 -d > /tmp/rollback-vm.sh
-              chmod +x /tmp/rollback-vm.sh
-              /tmp/rollback-vm.sh
-            "
-
-      - name: Verify restored public endpoint
-        run: |
-          set -euo pipefail
-
-          HEALTH_URL="${APP_URL}/health"
-          RESPONSE_FILE=$(mktemp)
-
-          curl \
-            --insecure \
-            --fail-with-body \
-            --silent \
-            --show-error \
-            --location \
-            --retry 12 \
-            --retry-delay 5 \
-            --retry-all-errors \
-            --connect-timeout 10 \
-            --max-time 20 \
-            --output "${RESPONSE_FILE}" \
-            "${HEALTH_URL}"
-
-          cat "${RESPONSE_FILE}"
-          echo
-
-          python - "${RESPONSE_FILE}" <<'PY'
-          import json
-          import pathlib
-          import sys
-
-          response_file = pathlib.Path(sys.argv[1])
-          payload = json.loads(response_file.read_text())
-
-          if payload.get("status") != "healthy":
-              raise SystemExit(
-                  f"Rollback endpoint is not healthy: {payload!r}"
-              )
-
-          print("External rollback verification passed.")
-          PY
+          echo "Production health check passed."
