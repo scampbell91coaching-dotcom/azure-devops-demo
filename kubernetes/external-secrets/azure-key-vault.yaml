@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: external-secrets-kv
+  namespace: production
+  annotations:
+    azure.workload.identity/client-id: "f7877367-3d28-42a6-9af3-f3aafea95aee"
+    azure.workload.identity/tenant-id: "74d2fd2d-dd77-4db5-949c-232b3f50d865"
+---
+apiVersion: external-secrets.io/v1
+kind: SecretStore
+metadata:
+  name: azure-key-vault
+  namespace: production
+spec:
+  provider:
+    azurekv:
+      authType: WorkloadIdentity
+      vaultUrl: "https://stevedevopskv30841.vault.azure.net"
+      serviceAccountRef:
+        name: external-secrets-kv
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: flask-runtime-secrets
+  namespace: production
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: azure-key-vault
+    kind: SecretStore
+  target:
+    name: flask-runtime-secrets
+    creationPolicy: Owner
+  data:
+    - secretKey: APPLICATIONINSIGHTS_CONNECTION_STRING
+      remoteRef:
+        key: applicationinsights-connection-string

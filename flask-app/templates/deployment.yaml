@@ -47,16 +47,3 @@ spec:
             periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
-
-          volumeMounts:
-            - name: secrets-store-inline
-              mountPath: /mnt/secrets-store
-              readOnly: true
-
-      volumes:
-        - name: secrets-store-inline
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: flask-keyvault-secrets
