@@ -5,7 +5,3 @@ variable "resource_group_name" {
 variable "location" {
   type = string
 }
-
-variable "virtual_machine_id" {
-  type = string
-}
