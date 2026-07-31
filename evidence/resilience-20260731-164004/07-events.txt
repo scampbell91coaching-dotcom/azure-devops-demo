@@ -1,7 +1,7 @@
 44m         Normal    Started                        pod/flask-web-88bd7867f-c8wjv                      Container started
 38m         Normal    SuccessfulDelete               replicaset/flask-web-88bd7867f                     Deleted pod: flask-web-88bd7867f-c8wjv
 38m         Normal    Killing                        pod/flask-web-88bd7867f-c8wjv                      Stopping container flask-web
-38m         Normal    Pulled                         pod/flask-web-88bd7867f-rwjqx                      Container image "stevedevopslab6280.azurecr.io/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
+38m         Normal    Pulled                         pod/flask-web-88bd7867f-rwjqx                      Container image "<REDACTED_ACR>/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
 38m         Normal    Created                        pod/flask-web-88bd7867f-rwjqx                      Container created
 38m         Normal    Started                        pod/flask-web-88bd7867f-rwjqx                      Container started
 32m         Normal    SuccessfulDelete               replicaset/flask-web-88bd7867f                     Deleted pod: flask-web-88bd7867f-rwjqx
@@ -9,52 +9,52 @@
 32m         Normal    Killing                        pod/flask-web-88bd7867f-rwjqx                      Stopping container flask-web
 32m         Normal    ScalingReplicaSet              deployment/flask-web                               Scaled up replica set flask-web-88bd7867f from 1 to 2
 32m         Normal    Created                        pod/flask-web-88bd7867f-ddc4p                      Container created
-32m         Normal    Pulled                         pod/flask-web-88bd7867f-ddc4p                      Container image "stevedevopslab6280.azurecr.io/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
+32m         Normal    Pulled                         pod/flask-web-88bd7867f-ddc4p                      Container image "<REDACTED_ACR>/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
 32m         Normal    Started                        pod/flask-web-88bd7867f-ddc4p                      Container started
 26m         Normal    Killing                        pod/flask-web-88bd7867f-ddc4p                      Stopping container flask-web
 26m         Normal    SuccessfulDelete               replicaset/flask-web-88bd7867f                     Deleted pod: flask-web-88bd7867f-ddc4p
 26m         Normal    Started                        pod/flask-web-88bd7867f-szg9w                      Container started
-26m         Normal    Pulled                         pod/flask-web-88bd7867f-szg9w                      Container image "stevedevopslab6280.azurecr.io/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
+26m         Normal    Pulled                         pod/flask-web-88bd7867f-szg9w                      Container image "<REDACTED_ACR>/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
 26m         Normal    Created                        pod/flask-web-88bd7867f-szg9w                      Container created
 20m         Normal    Killing                        pod/flask-web-88bd7867f-szg9w                      Stopping container flask-web
 20m         Normal    SuccessfulDelete               replicaset/flask-web-88bd7867f                     Deleted pod: flask-web-88bd7867f-szg9w
-20m         Normal    Pulled                         pod/flask-web-88bd7867f-jwdft                      Container image "stevedevopslab6280.azurecr.io/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
+20m         Normal    Pulled                         pod/flask-web-88bd7867f-jwdft                      Container image "<REDACTED_ACR>/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
 20m         Normal    Created                        pod/flask-web-88bd7867f-jwdft                      Container created
 20m         Normal    Started                        pod/flask-web-88bd7867f-jwdft                      Container started
 14m         Normal    Killing                        pod/flask-web-88bd7867f-jwdft                      Stopping container flask-web
 14m         Normal    Started                        pod/flask-web-88bd7867f-t7zdf                      Container started
 14m         Normal    Created                        pod/flask-web-88bd7867f-t7zdf                      Container created
-14m         Normal    Pulled                         pod/flask-web-88bd7867f-t7zdf                      Container image "stevedevopslab6280.azurecr.io/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
+14m         Normal    Pulled                         pod/flask-web-88bd7867f-t7zdf                      Container image "<REDACTED_ACR>/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
 8m51s       Normal    SuccessfulRescale              horizontalpodautoscaler/flask-web-prod-flask-app   New size: 1; reason: All metrics below target
 8m51s       Normal    Killing                        pod/flask-web-88bd7867f-t7zdf                      Stopping container flask-web
 8m49s       Normal    Started                        pod/flask-web-88bd7867f-bhjw2                      Container started
 8m49s       Normal    DeletingLoadBalancer           service/flask-web-prod-flask-app                   Deleting load balancer
 8m49s       Normal    Created                        pod/flask-web-88bd7867f-bhjw2                      Container created
-8m49s       Normal    Pulled                         pod/flask-web-88bd7867f-bhjw2                      Container image "stevedevopslab6280.azurecr.io/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
-8m48s       Warning   Unhealthy                      pod/flask-web-88bd7867f-t7zdf                      Readiness probe failed: Get "http://10.224.0.48:5000/health": dial tcp 10.224.0.48:5000: connect: connection refused
+8m49s       Normal    Pulled                         pod/flask-web-88bd7867f-bhjw2                      Container image "<REDACTED_ACR>/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
+8m48s       Warning   Unhealthy                      pod/flask-web-88bd7867f-t7zdf                      Readiness probe failed: Get "http://<REDACTED_IP>:5000/health": dial tcp <REDACTED_IP>:5000: connect: connection refused
 8m29s       Normal    DeletedLoadBalancer            service/flask-web-prod-flask-app                   Deleted load balancer
 6m20s       Normal    Killing                        pod/flask-web-88bd7867f-bhjw2                      Stopping container flask-web
 6m20s       Normal    SuccessfulCreate               replicaset/flask-web-9dddbcf5f                     Created pod: flask-web-9dddbcf5f-pvwpj
 6m20s       Normal    SuccessfulDelete               replicaset/flask-web-88bd7867f                     (combined from similar events): Deleted pod: flask-web-88bd7867f-bhjw2
 6m20s       Normal    ScalingReplicaSet              deployment/flask-web                               Scaled down replica set flask-web-88bd7867f from 2 to 1
 6m19s       Normal    Created                        pod/flask-web-9dddbcf5f-pvwpj                      Container created
-6m19s       Normal    Pulled                         pod/flask-web-9dddbcf5f-pvwpj                      Container image "stevedevopslab6280.azurecr.io/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
+6m19s       Normal    Pulled                         pod/flask-web-9dddbcf5f-pvwpj                      Container image "<REDACTED_ACR>/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
 6m19s       Normal    Started                        pod/flask-web-9dddbcf5f-pvwpj                      Container started
 6m13s       Normal    Killing                        pod/flask-web-88bd7867f-6kzd4                      Stopping container flask-web
 4m16s       Normal    SuccessfulCreate               replicaset/flask-web-67b7b8c54                     Created pod: flask-web-67b7b8c54-mpplj
 4m15s       Normal    Started                        pod/flask-web-67b7b8c54-mpplj                      Container started
-4m15s       Normal    Pulled                         pod/flask-web-67b7b8c54-mpplj                      Container image "stevedevopslab6280.azurecr.io/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
+4m15s       Normal    Pulled                         pod/flask-web-67b7b8c54-mpplj                      Container image "<REDACTED_ACR>/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
 4m15s       Normal    Created                        pod/flask-web-67b7b8c54-mpplj                      Container created
 4m10s       Normal    SuccessfulDelete               replicaset/flask-web-9dddbcf5f                     Deleted pod: flask-web-9dddbcf5f-pvwpj
 4m10s       Normal    Killing                        pod/flask-web-9dddbcf5f-pvwpj                      Stopping container flask-web
-3m43s       Warning   Unhealthy                      pod/flask-web-9dddbcf5f-pvwpj                      Readiness probe failed: Get "http://10.224.0.45:5000/health": dial tcp 10.224.0.45:5000: connect: connection refused
+3m43s       Warning   Unhealthy                      pod/flask-web-9dddbcf5f-pvwpj                      Readiness probe failed: Get "http://<REDACTED_IP>:5000/health": dial tcp <REDACTED_IP>:5000: connect: connection refused
 2m50s       Warning   FailedGetResourceMetric        horizontalpodautoscaler/flask-web-prod-flask-app   failed to get cpu utilization: did not receive metrics for targeted pods (pods might be unready)
 2m50s       Warning   FailedComputeMetricsReplicas   horizontalpodautoscaler/flask-web-prod-flask-app   invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: did not receive metrics for targeted pods (pods might be unready)
 2m45s       Normal    Valid                          secretstore/azure-key-vault                        store validated
 63s         Normal    Killing                        pod/flask-web-67b7b8c54-mpplj                      Stopping container flask-web
 63s         Normal    SuccessfulCreate               replicaset/flask-web-67b7b8c54                     Created pod: flask-web-67b7b8c54-ds4jz
 62s         Normal    Created                        pod/flask-web-67b7b8c54-ds4jz                      Container created
-62s         Normal    Pulled                         pod/flask-web-67b7b8c54-ds4jz                      Container image "stevedevopslab6280.azurecr.io/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
+62s         Normal    Pulled                         pod/flask-web-67b7b8c54-ds4jz                      Container image "<REDACTED_ACR>/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559" already present on machine and can be accessed by the pod
 62s         Normal    Started                        pod/flask-web-67b7b8c54-ds4jz                      Container started
 50s         Warning   FailedGetResourceMetric        horizontalpodautoscaler/flask-web-prod-flask-app   failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
 50s         Warning   FailedComputeMetricsReplicas   horizontalpodautoscaler/flask-web-prod-flask-app   invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
