@@ -80,3 +80,7 @@ podSecurityContext:
 containerSecurityContext:
   # Set true only after confirming the application writes nowhere in the image filesystem.
   readOnlyRootFilesystem: false
+
+topologySpreadConstraints: []
+
+affinity: {}
