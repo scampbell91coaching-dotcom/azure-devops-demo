@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Observability{% endblock %}
+{% block heading %}Observability{% endblock %}
+{% block subtitle %}Metrics and telemetry readiness{% endblock %}
+{% block content %}
+<section class="grid metrics">
+  <article class="card"><div class="label">Metrics API</div><div class="value small" data-field="metrics">—</div></article>
+  <article class="card"><div class="label">ServiceMonitor</div><div class="value small" data-field="servicemonitor">—</div></article>
+  <article class="card"><div class="label">Health telemetry</div><div class="value small" data-field="healthtelemetry">—</div></article>
+  <article class="card"><div class="label">Latency sample</div><div class="value small" data-field="latencysample">—</div></article>
+</section>
+<div class="note">Prometheus/Grafana and OpenTelemetry/Application Insights remain the detailed telemetry systems. This portal provides a sanitised operational summary.</div>
+<section class="section"><h2>Observability controls</h2><div class="table-wrap"><table><thead><tr><th>Area</th><th>Control</th><th>Status</th><th>Detail</th></tr></thead><tbody id="checks"></tbody></table></div></section>
+{% endblock %}

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Traditional Strength Platform{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body data-page="{{ page }}">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">Traditional Strength Platform</div>
+      <div class="brand-sub">Operations Portal</div>
+      <nav class="nav" aria-label="Portal navigation">
+        <a href="/" class="{% if page == 'overview' %}active{% endif %}">Overview</a>
+        <a href="/infrastructure" class="{% if page == 'infrastructure' %}active{% endif %}">Infrastructure</a>
+        <a href="/security" class="{% if page == 'security' %}active{% endif %}">Security</a>
+        <a href="/performance" class="{% if page == 'performance' %}active{% endif %}">Performance</a>
+        <a href="/gitops" class="{% if page == 'gitops' %}active{% endif %}">GitOps</a>
+        <a href="/observability" class="{% if page == 'observability' %}active{% endif %}">Observability</a>
+        <a href="/resilience" class="{% if page == 'resilience' %}active{% endif %}">Resilience</a>
+      </nav>
+    </aside>
+    <main class="main">
+      <header class="header">
+        <div>
+          <h1>{% block heading %}{% endblock %}</h1>
+          <p class="sub">{% block subtitle %}{% endblock %}</p>
+        </div>
+        <div class="sub" id="generated">Loading status…</div>
+      </header>
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

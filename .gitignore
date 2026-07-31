@@ -29,3 +29,6 @@ evidence/**/live-*.yaml
 
 # Generated local operational dashboard
 dashboard/
+
+# Generated live portal data
+portal/data/platform-status.json

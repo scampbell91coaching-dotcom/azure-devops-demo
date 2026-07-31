@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}GitOps{% endblock %}
+{% block heading %}GitOps{% endblock %}
+{% block subtitle %}Git and Argo CD desired-state status{% endblock %}
+{% block content %}
+<section class="grid metrics">
+  <article class="card"><div class="label">Argo sync</div><div class="value small" data-field="sync">—</div></article>
+  <article class="card"><div class="label">Argo health</div><div class="value small" data-field="argohealth">—</div></article>
+  <article class="card"><div class="label">Git branch</div><div class="value small" data-field="branch">—</div></article>
+  <article class="card"><div class="label">Revision</div><div class="value small" data-field="revision">—</div></article>
+</section>
+<section class="section"><h2>Repository</h2><div class="card key-values" id="git-details"></div></section>
+<section class="section"><h2>GitOps controls</h2><div class="table-wrap"><table><thead><tr><th>Area</th><th>Control</th><th>Status</th><th>Detail</th></tr></thead><tbody id="checks"></tbody></table></div></section>
+{% endblock %}
