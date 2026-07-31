@@ -566,3 +566,13 @@ It combines:
 - Application telemetry
 
 The result is a reproducible, observable and production-inspired Azure application platform that demonstrates practical Platform Engineering and DevOps capability.
+---
+
+## Platform Documentation
+
+Detailed design and operational documentation:
+
+- [Platform Architecture](docs/architecture.md)
+- [Engineering Decisions](docs/engineering-decisions.md)
+- [Operational Runbook](docs/runbook.md)
+- [Limitations and Future Improvements](docs/limitations.md)
