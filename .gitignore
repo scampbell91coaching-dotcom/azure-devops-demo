@@ -17,3 +17,6 @@ crash.*.log
 # OS
 .DS_Store
 /argocd
+
+# Locally generated Azure federated credential definitions
+.github/azure-credential.json
