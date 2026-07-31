@@ -20,3 +20,4 @@ crash.*.log
 
 # Locally generated Azure federated credential definitions
 .github/azure-credential.json
+.core-task-backups/
