@@ -26,3 +26,6 @@ crash.*.log
 evidence/raw/
 evidence/**/live-*.txt
 evidence/**/live-*.yaml
+
+# Generated local operational dashboard
+dashboard/
