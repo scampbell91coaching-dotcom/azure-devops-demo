@@ -36,3 +36,21 @@ livenessProbe:
   periodSeconds: 20
   timeoutSeconds: 2
   failureThreshold: 3
+
+startupProbe:
+  path: /health
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 30
+
+terminationGracePeriodSeconds: 30
+preStopSleepSeconds: 10
+
+podSecurityContext:
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+
+containerSecurityContext:
+  # Set true only after confirming the application writes nowhere in the image filesystem.
+  readOnlyRootFilesystem: false

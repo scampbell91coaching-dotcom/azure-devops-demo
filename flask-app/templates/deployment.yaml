@@ -2,8 +2,20 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: flask-web
+  labels:
+    app: flask-web
+    {{- include "flask-app.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: flask-web
@@ -11,25 +23,59 @@ spec:
     metadata:
       labels:
         app: flask-web
+        {{- include "flask-app.selectorLabels" . | nindent 8 }}
     spec:
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds | default 30 }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.podSecurityContext.runAsUser | default 10001 }}
+        runAsGroup: {{ .Values.podSecurityContext.runAsGroup | default 10001 }}
+        fsGroup: {{ .Values.podSecurityContext.fsGroup | default 10001 }}
+        seccompProfile:
+          type: RuntimeDefault
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: flask-web
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: {{ .Values.containerSecurityContext.readOnlyRootFilesystem | default false }}
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: {{ .Values.containerPort }}
+              protocol: TCP
           env:
             - name: APPLICATIONINSIGHTS_CONNECTION_STRING
               valueFrom:
                 secretKeyRef:
                   name: flask-runtime-secrets
                   key: APPLICATIONINSIGHTS_CONNECTION_STRING
-
-          ports:
-            - containerPort: {{ .Values.containerPort }}
-
-          resources:
-{{ toYaml .Values.resources | indent 12 }}
-
+            {{- if .Values.application.message }}
+            - name: FLASK_DEMO_MESSAGE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "flask-app.fullname" . }}-application
+                  key: FLASK_DEMO_MESSAGE
+            {{- end }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.startupProbe.path }}
+              port: {{ .Values.containerPort }}
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
           readinessProbe:
             httpGet:
               path: {{ .Values.readinessProbe.path }}
@@ -38,7 +84,6 @@ spec:
             periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
-
           livenessProbe:
             httpGet:
               path: {{ .Values.livenessProbe.path }}
@@ -47,3 +92,12 @@ spec:
             periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - sleep {{ .Values.preStopSleepSeconds | default 10 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
