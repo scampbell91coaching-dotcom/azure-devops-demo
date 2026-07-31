@@ -1,5 +1,5 @@
 async function loadStatus() {
-  const response = await fetch("/api/status", { cache: "no-store" });
+  const response = await fetch("/api/v1/platform", { cache: "no-store" });
   if (!response.ok) throw new Error(`Status request failed: ${response.status}`);
   return response.json();
 }
