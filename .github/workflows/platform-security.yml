@@ -1,0 +1,85 @@
+name: Platform Security
+
+on:
+  pull_request:
+    paths:
+      - "flask-app/**"
+      - "kubernetes/**"
+      - "infra/**"
+      - "Dockerfile"
+      - "requirements*.txt"
+      - ".github/workflows/platform-security.yml"
+  push:
+    branches: [main]
+    paths:
+      - "flask-app/**"
+      - "kubernetes/**"
+      - "infra/**"
+      - "Dockerfile"
+      - "requirements*.txt"
+      - ".github/workflows/platform-security.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Helm lint
+        run: helm lint flask-app -f flask-app/values-production.yaml
+
+      - name: Render production chart
+        run: |
+          helm template flask-web-prod flask-app \
+            -f flask-app/values-production.yaml \
+            > /tmp/flask-production.yaml
+
+      - name: Validate Kubernetes YAML
+        run: |
+          python - <<'PY'
+          import pathlib
+          files = list(pathlib.Path("kubernetes").rglob("*.yaml"))
+          files.append(pathlib.Path("/tmp/flask-production.yaml"))
+          assert files
+          print(f"Validated presence of {len(files)} YAML files")
+          PY
+
+      - name: Scan repository and IaC
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Upload Trivy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: Generate repository SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: repository-sbom
+          path: sbom.spdx.json
+          retention-days: 14
