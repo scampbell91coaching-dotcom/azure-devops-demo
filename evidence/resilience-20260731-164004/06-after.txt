@@ -1,0 +1,17 @@
+NAME                        READY   UP-TO-DATE   AVAILABLE   AGE     CONTAINERS   IMAGES                                                                             SELECTOR
+deployment.apps/flask-web   1/1     1            1           3d13h   flask-web    stevedevopslab6280.azurecr.io/flask-web:c69864836193acc31a22d7c5eb288ad5e8481559   app=flask-web
+
+NAME                            READY   STATUS    RESTARTS   AGE   IP            NODE                             NOMINATED NODE   READINESS GATES
+pod/flask-web-67b7b8c54-ds4jz   1/1     Running   0          62s   10.224.0.57   aks-system-15111959-vmss000001   <none>           <none>
+
+NAME                               TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE     SELECTOR
+service/flask-web-prod-flask-app   ClusterIP   10.0.202.152   <none>        80/TCP    5d17h   app=flask-web
+
+NAME                                       CLASS   HOSTS                                                     ADDRESS           PORTS     AGE
+ingress.networking.k8s.io/flask-web-prod   nginx   traditionalstrength.co.uk,www.traditionalstrength.co.uk   135.237.236.202   80, 443   3d18h
+
+NAME                                                           REFERENCE              TARGETS              MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/flask-web-prod-flask-app   Deployment/flask-web   cpu: <unknown>/50%   1         5         1          4d20h
+
+NAME                                   MIN AVAILABLE   MAX UNAVAILABLE   ALLOWED DISRUPTIONS   AGE
+poddisruptionbudget.policy/flask-web   1               N/A               0                     42h
