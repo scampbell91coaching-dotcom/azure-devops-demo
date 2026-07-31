@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-https-egress
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: flask-web
+  policyTypes:
+    - Egress
+  egress:
+    # Azure Monitor/Application Insights uses HTTPS endpoints.
+    # Standard NetworkPolicy cannot restrict by FQDN, so this permits TCP/443.
+    - ports:
+        - protocol: TCP
+          port: 443
