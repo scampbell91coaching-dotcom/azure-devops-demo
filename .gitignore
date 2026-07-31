@@ -32,3 +32,4 @@ dashboard/
 
 # Generated live portal data
 portal/data/platform-status.json
+platform-portal/data/platform-status.json
