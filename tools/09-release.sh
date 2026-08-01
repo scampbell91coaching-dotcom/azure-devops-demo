@@ -2,7 +2,6 @@
 set -Eeuo pipefail
 
 REPO="${REPO:-$HOME/azure-devops-demo}"
-PORTAL="$REPO/platform-portal"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

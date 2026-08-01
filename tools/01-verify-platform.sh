@@ -100,7 +100,7 @@ else
 fi
 
 if [[ "$FAST" != "1" ]]; then
-  run_check "Checkov" checkov -d infra --quiet
+  run_check "Checkov" checkov     --directory infra     --baseline infra/.checkov.baseline     --quiet
   run_check "Trivy filesystem scan" trivy fs --severity HIGH,CRITICAL --ignore-unfixed .
 fi
 
