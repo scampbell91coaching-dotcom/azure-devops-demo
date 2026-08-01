@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from flask import Flask
@@ -10,6 +9,7 @@ from .api.health import health_bp
 from .api.history import history_bp
 from .api.platform import platform_bp
 from .api.recommendations import recommendations_bp
+from .database_config import resolve_database_uri
 from .extensions import db
 from .lead_magnets import lead_magnets_bp
 from .views import views_bp
@@ -21,23 +21,18 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         template_folder="../templates",
         static_folder="../static",
     )
-
     portal_root = Path(__file__).resolve().parents[1]
-    default_database = portal_root / "data" / "platform-history.db"
 
     app.config.from_mapping(
-        SQLALCHEMY_DATABASE_URI=os.getenv(
-            "DATABASE_URL",
-            f"sqlite:///{default_database}",
+        SQLALCHEMY_DATABASE_URI=resolve_database_uri(
+            application_root=portal_root,
+            local_filename="platform-history.db",
         ),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
     )
 
     if test_config:
         app.config.update(test_config)
-
-    default_database.parent.mkdir(parents=True, exist_ok=True)
-
     db.init_app(app)
 
     app.register_blueprint(health_bp)

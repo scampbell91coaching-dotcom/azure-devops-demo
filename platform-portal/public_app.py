@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from flask import Flask, jsonify
 
+from portal.database_config import resolve_database_uri
 from portal.extensions import db
 from portal.lead_magnets import lead_magnets_bp
 
@@ -20,17 +20,11 @@ def create_public_app(
         static_folder=str(root / "static"),
         static_url_path="/lead-static",
     )
-
-    local_database = root / "data" / "public-leads.db"
-
-    database_url = os.getenv("DATABASE_URL")
-
-    if database_url is None:
-        local_database.parent.mkdir(parents=True, exist_ok=True)
-        database_url = f"sqlite:///{local_database}"
-
     app.config.from_mapping(
-        SQLALCHEMY_DATABASE_URI=database_url,
+        SQLALCHEMY_DATABASE_URI=resolve_database_uri(
+            application_root=root,
+            local_filename="public-leads.db",
+        ),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         MAX_CONTENT_LENGTH=64 * 1024,
     )
