@@ -13,7 +13,6 @@ def create_public_app(
     test_config: dict[str, object] | None = None,
 ) -> Flask:
     root = Path(__file__).resolve().parent
-    local_database = root / "data" / "public-leads.db"
 
     app = Flask(
         __name__,
@@ -22,11 +21,16 @@ def create_public_app(
         static_url_path="/lead-static",
     )
 
+    local_database = root / "data" / "public-leads.db"
+
+    database_url = os.getenv("DATABASE_URL")
+
+    if database_url is None:
+        local_database.parent.mkdir(parents=True, exist_ok=True)
+        database_url = f"sqlite:///{local_database}"
+
     app.config.from_mapping(
-        SQLALCHEMY_DATABASE_URI=os.getenv(
-            "DATABASE_URL",
-            f"sqlite:///{local_database}",
-        ),
+        SQLALCHEMY_DATABASE_URI=database_url,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         MAX_CONTENT_LENGTH=64 * 1024,
     )
@@ -34,9 +38,8 @@ def create_public_app(
     if test_config:
         app.config.update(test_config)
 
-    local_database.parent.mkdir(parents=True, exist_ok=True)
-
     db.init_app(app)
+
     app.register_blueprint(lead_magnets_bp)
 
     @app.get("/health")
