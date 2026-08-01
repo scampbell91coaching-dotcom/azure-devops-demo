@@ -11,6 +11,7 @@ from .api.history import history_bp
 from .api.platform import platform_bp
 from .api.recommendations import recommendations_bp
 from .extensions import db
+from .lead_magnets import lead_magnets_bp
 from .views import views_bp
 
 
@@ -45,11 +46,14 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(platform_bp, url_prefix="/api/v1")
     app.register_blueprint(recommendations_bp, url_prefix="/api/v1")
     app.register_blueprint(views_bp)
+    app.register_blueprint(lead_magnets_bp)
 
     with app.app_context():
+        from .models.lead_capture import LeadCapture
         from .models.platform_snapshot import PlatformSnapshot
 
         _ = PlatformSnapshot
+        _ = LeadCapture
         db.create_all()
 
     return app
