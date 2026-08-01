@@ -87,10 +87,12 @@ jobs:
           SHORT_SHA="${GITHUB_SHA::7}"
           FULL_IMAGE="${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${GITHUB_SHA}"
 
-          echo "image_tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
-          echo "sha_tag=${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "full_sha_tag=${FULL_IMAGE}" >> "$GITHUB_OUTPUT"
-          echo "latest_tag=${ACR_LOGIN_SERVER}/${IMAGE_NAME}:latest" >> "$GITHUB_OUTPUT"
+          {
+            echo "image_tag=${GITHUB_SHA}"
+            echo "sha_tag=${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${SHORT_SHA}"
+            echo "full_sha_tag=${FULL_IMAGE}"
+            echo "latest_tag=${ACR_LOGIN_SERVER}/${IMAGE_NAME}:latest"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build Docker image
         run: |
