@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}History{% endblock %}
+{% block heading %}History{% endblock %}
+{% block subtitle %}Platform history capability{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="card">
+    <p id="history-status">Loading…</p>
+  </div>
+</section>
+<script src="{{ url_for('static', filename='js/history.js') }}"></script>
+{% endblock %}

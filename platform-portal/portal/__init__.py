@@ -1,7 +1,9 @@
 from flask import Flask
+
 from .api.health import health_bp
 from .api.platform import platform_bp
 from .views import views_bp
+
 
 def create_app() -> Flask:
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
