@@ -36,3 +36,8 @@ def observability():
 @views_bp.get("/resilience")
 def resilience():
     return render_template("resilience.html", page="resilience")
+
+
+@views_bp.get("/history")
+def history():
+    return render_template("history.html", page="history")

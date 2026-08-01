@@ -1,12 +1,97 @@
 {% extends "base.html" %}
+
 {% block title %}History{% endblock %}
-{% block heading %}History{% endblock %}
-{% block subtitle %}Platform history capability{% endblock %}
+{% block heading %}Platform History{% endblock %}
+{% block subtitle %}Historical health, latency and restart trends.{% endblock %}
+
 {% block content %}
-<section class="section">
-  <div class="card">
-    <p id="history-status">Loading…</p>
+<section class="history-toolbar">
+  <div>
+    <label for="history-range">Time range</label>
+    <select id="history-range">
+      <option value="6">Last 6 hours</option>
+      <option value="24" selected>Last 24 hours</option>
+      <option value="72">Last 3 days</option>
+      <option value="168">Last 7 days</option>
+      <option value="720">Last 30 days</option>
+    </select>
+  </div>
+  <button id="history-refresh" type="button">Refresh</button>
+  <p id="history-message" role="status" aria-live="polite">
+    Loading platform history…
+  </p>
+</section>
+
+<section class="history-metrics">
+  <article class="history-metric">
+    <span>Latest score</span>
+    <strong id="latest-score">—</strong>
+    <small id="score-change">No trend yet</small>
+  </article>
+  <article class="history-metric">
+    <span>Average latency</span>
+    <strong id="average-latency">—</strong>
+    <small id="latency-change">No trend yet</small>
+  </article>
+  <article class="history-metric">
+    <span>Maximum restarts</span>
+    <strong id="maximum-restarts">—</strong>
+    <small>Selected range</small>
+  </article>
+  <article class="history-metric">
+    <span>Snapshots</span>
+    <strong id="snapshot-count">—</strong>
+    <small id="history-freshness">Waiting for data</small>
+  </article>
+</section>
+
+<section class="history-grid">
+  <article class="history-panel history-panel-wide">
+    <h2>Platform score</h2>
+    <p>Overall operational health over time.</p>
+    <div class="history-chart">
+      <canvas id="platform-score-chart"></canvas>
+    </div>
+  </article>
+
+  <article class="history-panel">
+    <h2>Health latency</h2>
+    <p>Public health endpoint response time.</p>
+    <div class="history-chart">
+      <canvas id="latency-chart"></canvas>
+    </div>
+  </article>
+
+  <article class="history-panel">
+    <h2>Container restarts</h2>
+    <p>Restart count recorded in each snapshot.</p>
+    <div class="history-chart">
+      <canvas id="restart-chart"></canvas>
+    </div>
+  </article>
+</section>
+
+<section class="history-panel">
+  <h2>Recent snapshots</h2>
+  <p>The latest observations stored in SQLite.</p>
+  <div class="history-table-wrapper">
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>Recorded</th>
+          <th>Score</th>
+          <th>Latency</th>
+          <th>Restarts</th>
+          <th>Revision</th>
+        </tr>
+      </thead>
+      <tbody id="history-table-body">
+        <tr><td colspan="5">Loading snapshots…</td></tr>
+      </tbody>
+    </table>
   </div>
 </section>
-<script src="{{ url_for('static', filename='js/history.js') }}"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/history_dashboard.js') }}"></script>
 {% endblock %}

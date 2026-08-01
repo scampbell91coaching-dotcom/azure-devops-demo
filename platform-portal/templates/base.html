@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Traditional Strength Platform{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/history_dashboard.css') }}">
 </head>
 <body data-page="{{ page }}">
   <div class="shell">
@@ -19,7 +20,8 @@
         <a href="/gitops" class="{% if page == 'gitops' %}active{% endif %}">GitOps</a>
         <a href="/observability" class="{% if page == 'observability' %}active{% endif %}">Observability</a>
         <a href="/resilience" class="{% if page == 'resilience' %}active{% endif %}">Resilience</a>
-      </nav>
+        <a href="/history" class="{% if page == 'history' %}active{% endif %}">History</a>
+</nav>
     </aside>
     <main class="main">
       <header class="header">
