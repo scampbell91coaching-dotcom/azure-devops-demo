@@ -69,7 +69,6 @@ done
 require_repo
 SNAKE="$(snake "$NAME")"
 KEBAB="$(kebab "$NAME")"
-CLASS="$(pascal "$NAME")"
 API="$PORTAL/portal/api/${SNAKE}.py"
 TEST="$PORTAL/tests/test_${SNAKE}_api.py"
 

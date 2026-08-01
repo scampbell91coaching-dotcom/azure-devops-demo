@@ -62,7 +62,7 @@ DRY_RUN=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --repo) REPO="$2"; PORTAL="$REPO/platform-portal"; shift 2 ;;
+    --repo) REPO="$2"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
     --help|-h) usage; exit 0 ;;
     *) die "Unknown option: $1" ;;

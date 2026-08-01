@@ -5,6 +5,7 @@ cd "$REPO"
 PASS=0; FAIL=0
 check(){ local n="$1"; shift; echo; echo "== $n =="; if "$@"; then echo "PASS: $n"; PASS=$((PASS+1)); else echo "FAIL: $n"; FAIL=$((FAIL+1)); fi; }
 
+# shellcheck disable=SC2016
 check "Git tree clean" bash -c 'test -z "$(git status --porcelain)"'
 check "Terraform root fmt" terraform -chdir=infra fmt -check -recursive
 check "Terraform root validate" terraform -chdir=infra validate
