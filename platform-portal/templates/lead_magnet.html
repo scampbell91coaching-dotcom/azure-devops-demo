@@ -1,83 +1,36 @@
-{% extends "base.html" %}
-
-{% block title %}{{ content.title }}{% endblock %}
-{% block heading %}{% endblock %}
-{% block subtitle %}{% endblock %}
-
-{% block content %}
-<main class="lead-page">
-  <section class="lead-hero">
-    <div class="lead-copy">
-      <span class="lead-eyebrow">{{ content.eyebrow }}</span>
+{% extends "public_base.html" %}
+{% block public_content %}
+<main class="public-main">
+  <section class="public-hero">
+    <div>
+      <span class="eyebrow">{{ content.eyebrow }}</span>
       <h1>{{ content.title }}</h1>
-      <p class="lead-subtitle">{{ content.subtitle }}</p>
-      <span class="lead-audience">{{ content.accent_label }}</span>
+      <p class="subtitle">{{ content.subtitle }}</p>
+      <span class="audience">{{ content.accent_label }}</span>
     </div>
-
-    <aside class="lead-form-card" id="download">
+    <aside class="form-card" id="download">
       {% if success %}
-        <div class="lead-success" role="status">
-          <strong>Check your inbox</strong>
-          <p>Your request has been recorded. The guide delivery can now be connected to your email platform.</p>
-        </div>
+      <div class="success"><strong>Check your inbox</strong><p>Your request has been recorded.</p></div>
       {% else %}
-        <h2>{{ content.cta_heading }}</h2>
-        <p>{{ content.cta_copy }}</p>
-
-        <form method="post" action="/api/v1/lead-captures">
-          <input type="hidden" name="source_slug" value="{{ content.slug }}">
-
-          <label for="first-name">First name</label>
-          <input
-            id="first-name"
-            name="first_name"
-            type="text"
-            autocomplete="given-name"
-            required
-          >
-
-          <label for="email">Email address</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autocomplete="email"
-            required
-          >
-
-          <label class="lead-consent">
-            <input name="consent" type="checkbox">
-            <span>I would also like occasional training and coaching emails.</span>
-          </label>
-
-          <button type="submit">{{ content.button_text }}</button>
-        </form>
+      <h2>{{ content.cta_heading }}</h2>
+      <p>{{ content.cta_copy }}</p>
+      <form method="post" action="/api/v1/lead-captures">
+        <input type="hidden" name="source_slug" value="{{ content.slug }}">
+        <label for="first-name">First name</label>
+        <input id="first-name" name="first_name" type="text" required>
+        <label for="email">Email address</label>
+        <input id="email" name="email" type="email" required>
+        <label class="consent"><input name="consent" type="checkbox"><span>I would also like occasional coaching emails.</span></label>
+        <button type="submit">{{ content.button_text }}</button>
+      </form>
       {% endif %}
     </aside>
   </section>
-
-  <section class="lead-problem">
-    <div>
-      <span class="lead-section-label">What this guide covers</span>
-      <h2>{{ content.problem_heading }}</h2>
-      <p>{{ content.problem_copy }}</p>
-    </div>
-
-    <ul class="lead-benefits">
-      {% for benefit in content.benefits %}
-        <li>{{ benefit }}</li>
-      {% endfor %}
-    </ul>
+  <section class="problem">
+    <div><span class="eyebrow">Inside the guide</span><h2>{{ content.problem_heading }}</h2><p>{{ content.problem_copy }}</p></div>
+    <ul>{% for benefit in content.benefits %}<li>{{ benefit }}</li>{% endfor %}</ul>
   </section>
-
-  <section class="lead-proof">
-    <blockquote>“{{ content.testimonial }}”</blockquote>
-    <a href="#download">{{ content.button_text }}</a>
-  </section>
-
-  <footer class="lead-disclaimer">
-    <strong>Important</strong>
-    <p>{{ content.disclaimer }}</p>
-  </footer>
+  <section class="proof"><blockquote>“{{ content.testimonial }}”</blockquote><a href="#download">{{ content.button_text }}</a></section>
+  <section class="disclaimer"><strong>Important</strong><p>{{ content.disclaimer }}</p></section>
 </main>
 {% endblock %}

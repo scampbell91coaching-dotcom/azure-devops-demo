@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ content.title }} | Traditional Strength</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public_site.css') }}">
+</head>
+<body>
+  <header class="public-header">
+    <a href="https://traditionalstrength.co.uk" class="brand">Traditional Strength</a>
+    <a href="#download" class="header-cta">Get the free guide</a>
+  </header>
+  {% block public_content %}{% endblock %}
+  <footer class="public-footer">
+    <strong>Traditional Strength</strong>
+    <span>Evidence-informed coaching for strength athletes.</span>
+  </footer>
+</body>
+</html>
