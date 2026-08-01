@@ -1,0 +1,201 @@
+.executive-toolbar {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.executive-toolbar label {
+  display: block;
+  margin-bottom: .35rem;
+  color: var(--muted, #8b95a7);
+}
+
+.executive-toolbar select,
+.executive-toolbar button {
+  min-height: 2.65rem;
+  border: 1px solid var(--border, #30394a);
+  border-radius: .65rem;
+  padding: .55rem .8rem;
+  background: var(--panel, #151b26);
+  color: inherit;
+}
+
+.executive-toolbar p {
+  margin: 0 0 .6rem auto;
+  color: var(--muted, #8b95a7);
+}
+
+.executive-hero {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.executive-score-card,
+.executive-status-card,
+.executive-card,
+.executive-panel {
+  border: 1px solid var(--border, #30394a);
+  border-radius: 1rem;
+  background: var(--panel, #151b26);
+  padding: 1rem;
+}
+
+.executive-score-card strong,
+.executive-status-card strong {
+  display: block;
+  margin: .35rem 0;
+  font-size: 2.4rem;
+  text-transform: capitalize;
+}
+
+.executive-score-card span,
+.executive-score-card small,
+.executive-status-card span,
+.executive-status-card small,
+.executive-card span,
+.executive-card small,
+.executive-panel p,
+.executive-recommendation p,
+.executive-recommendation small {
+  color: var(--muted, #8b95a7);
+}
+
+.executive-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.executive-card strong {
+  display: block;
+  margin: .35rem 0;
+  font-size: 1.7rem;
+}
+
+.executive-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.executive-panel {
+  margin-bottom: 1rem;
+}
+
+.executive-panel header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.executive-panel header a {
+  white-space: nowrap;
+}
+
+.executive-trends {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+  margin-top: 1rem;
+}
+
+.executive-trends div {
+  border: 1px solid var(--border, #30394a);
+  border-radius: .75rem;
+  padding: .75rem;
+}
+
+.executive-trends span,
+.executive-details dt {
+  display: block;
+  color: var(--muted, #8b95a7);
+}
+
+.executive-trends strong {
+  display: block;
+  margin-top: .25rem;
+}
+
+.executive-details {
+  display: grid;
+  gap: .75rem;
+  margin: 1rem 0 0;
+}
+
+.executive-details div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.executive-details dd {
+  margin: 0;
+}
+
+.executive-recommendations {
+  display: grid;
+  gap: .75rem;
+  margin-top: 1rem;
+}
+
+.executive-recommendation {
+  border-left: .35rem solid var(--accent, #4f8cff);
+  border-radius: .75rem;
+  padding: .9rem 1rem;
+  background: rgba(255, 255, 255, .02);
+}
+
+.executive-critical {
+  border-left-color: #ef5b5b;
+}
+
+.executive-warning {
+  border-left-color: #f5a623;
+}
+
+.executive-info {
+  border-left-color: var(--accent, #4f8cff);
+}
+
+.executive-recommendation span {
+  text-transform: capitalize;
+  font-size: .8rem;
+}
+
+.executive-recommendation h3 {
+  margin: .35rem 0;
+}
+
+@media (max-width: 900px) {
+  .executive-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .executive-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .executive-hero,
+  .executive-grid,
+  .executive-trends {
+    grid-template-columns: 1fr;
+  }
+
+  .executive-toolbar p {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .executive-panel header {
+    flex-direction: column;
+  }
+}

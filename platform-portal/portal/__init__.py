@@ -5,6 +5,7 @@ from pathlib import Path
 
 from flask import Flask
 
+from .api.executive import executive_bp
 from .api.health import health_bp
 from .api.history import history_bp
 from .api.platform import platform_bp
@@ -39,6 +40,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     db.init_app(app)
 
     app.register_blueprint(health_bp)
+    app.register_blueprint(executive_bp, url_prefix="/api/v1")
     app.register_blueprint(history_bp, url_prefix="/api/v1")
     app.register_blueprint(platform_bp, url_prefix="/api/v1")
     app.register_blueprint(recommendations_bp, url_prefix="/api/v1")

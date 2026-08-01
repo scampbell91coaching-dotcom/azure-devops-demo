@@ -1,17 +1,152 @@
 {% extends "base.html" %}
-{% block title %}Platform Overview{% endblock %}
-{% block heading %}Platform Overview{% endblock %}
-{% block subtitle %}Executive operational summary{% endblock %}
+
+{% block title %}Overview{% endblock %}
+{% block heading %}Traditional Strength Platform{% endblock %}
+{% block subtitle %}
+Live operational overview for the Azure platform and production workloads.
+{% endblock %}
+
 {% block content %}
-<section class="grid metrics">
-  <article class="card"><div class="label">Platform score</div><div class="value" data-field="score">—</div></article>
-  <article class="card"><div class="label">Passing checks</div><div class="value good" data-field="pass">—</div></article>
-  <article class="card"><div class="label">Warnings</div><div class="value warning" data-field="warn">—</div></article>
-  <article class="card"><div class="label">Failures</div><div class="value danger" data-field="fail">—</div></article>
+<section class="executive-toolbar">
+  <div>
+    <label for="executive-range">Trend range</label>
+    <select id="executive-range">
+      <option value="6">Last 6 hours</option>
+      <option value="24" selected>Last 24 hours</option>
+      <option value="72">Last 3 days</option>
+      <option value="168">Last 7 days</option>
+    </select>
+  </div>
+
+  <button id="executive-refresh" type="button">Refresh</button>
+
+  <p id="executive-message" role="status" aria-live="polite">
+    Loading platform overview…
+  </p>
 </section>
-<div class="note">Sanitised status only: no secrets, IP addresses, node names, tenant IDs, client IDs, registry names, Key Vault names or raw manifests.</div>
-<section class="section">
-  <h2>All controls</h2>
-  <div class="table-wrap"><table><thead><tr><th>Area</th><th>Control</th><th>Status</th><th>Detail</th></tr></thead><tbody id="checks"></tbody></table></div>
+
+<section class="executive-hero">
+  <article class="executive-score-card">
+    <span>Platform score</span>
+    <strong id="executive-score">—</strong>
+    <small id="executive-score-trend">No trend available</small>
+  </article>
+
+  <article class="executive-status-card">
+    <span>Overall status</span>
+    <strong id="executive-status">—</strong>
+    <small id="executive-generated">Waiting for data</small>
+  </article>
 </section>
+
+<section class="executive-grid">
+  <article class="executive-card">
+    <span>AKS nodes</span>
+    <strong id="executive-nodes">—</strong>
+    <small>Ready / total</small>
+  </article>
+
+  <article class="executive-card">
+    <span>Application replicas</span>
+    <strong id="executive-replicas">—</strong>
+    <small>Ready / desired</small>
+  </article>
+
+  <article class="executive-card">
+    <span>GitOps</span>
+    <strong id="executive-gitops">—</strong>
+    <small id="executive-gitops-health">Waiting for Argo CD</small>
+  </article>
+
+  <article class="executive-card">
+    <span>Availability</span>
+    <strong id="executive-http">—</strong>
+    <small id="executive-latency">Waiting for latency</small>
+  </article>
+
+  <article class="executive-card">
+    <span>Container restarts</span>
+    <strong id="executive-restarts">—</strong>
+    <small id="executive-restart-trend">No trend available</small>
+  </article>
+
+  <article class="executive-card">
+    <span>Security checks passed</span>
+    <strong id="executive-security">—</strong>
+    <small id="executive-findings">Waiting for findings</small>
+  </article>
+</section>
+
+<section class="executive-split">
+  <article class="executive-panel">
+    <header>
+      <div>
+        <h2>Recent trend</h2>
+        <p>Platform score and latency movement.</p>
+      </div>
+      <a href="/history">View history</a>
+    </header>
+
+    <div class="executive-trends">
+      <div>
+        <span>Score change</span>
+        <strong id="trend-score-change">—</strong>
+      </div>
+      <div>
+        <span>Latency change</span>
+        <strong id="trend-latency-change">—</strong>
+      </div>
+      <div>
+        <span>Restart change</span>
+        <strong id="trend-restart-change">—</strong>
+      </div>
+    </div>
+  </article>
+
+  <article class="executive-panel">
+    <header>
+      <div>
+        <h2>Latest deployment state</h2>
+        <p>Current revision and branch.</p>
+      </div>
+      <a href="/gitops">View GitOps</a>
+    </header>
+
+    <dl class="executive-details">
+      <div>
+        <dt>Revision</dt>
+        <dd><code id="executive-revision">—</code></dd>
+      </div>
+      <div>
+        <dt>Branch</dt>
+        <dd id="executive-branch">—</dd>
+      </div>
+      <div>
+        <dt>Recorded</dt>
+        <dd id="executive-recorded">—</dd>
+      </div>
+    </dl>
+  </article>
+</section>
+
+<section class="executive-panel">
+  <header>
+    <div>
+      <h2>Priority recommendations</h2>
+      <p>Highest-value actions from the operational recommendation engine.</p>
+    </div>
+    <a href="/recommendations">View all recommendations</a>
+  </header>
+
+  <div id="executive-recommendations" class="executive-recommendations">
+    <article>
+      <h3>Loading recommendations…</h3>
+    </article>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/executive_dashboard.js') }}"></script>
 {% endblock %}
