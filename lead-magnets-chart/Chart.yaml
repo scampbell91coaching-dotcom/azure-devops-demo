@@ -1,0 +1,6 @@
+apiVersion: v2
+name: lead-magnets
+description: Public Traditional Strength lead magnet pages
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

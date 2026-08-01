@@ -38,3 +38,8 @@ platform-portal/data/platform-status.json
 platform-portal/data/*.db
 platform-portal/data/*.db-shm
 platform-portal/data/*.db-wal
+
+# Public lead magnet local database
+platform-portal/data/public-leads.db
+platform-portal/data/public-leads.db-shm
+platform-portal/data/public-leads.db-wal

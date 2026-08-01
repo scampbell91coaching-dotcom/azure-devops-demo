@@ -1,0 +1,42 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "lead-magnets.fullname" . }}
+  labels:
+    {{- include "lead-magnets.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "64k"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host }}
+      secretName: {{ .Values.ingress.tlsSecretName }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /guides
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "lead-magnets.fullname" . }}
+                port:
+                  name: http
+          - path: /api/v1/lead-captures
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "lead-magnets.fullname" . }}
+                port:
+                  name: http
+          - path: /lead-static
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "lead-magnets.fullname" . }}
+                port:
+                  name: http
+{{- end }}

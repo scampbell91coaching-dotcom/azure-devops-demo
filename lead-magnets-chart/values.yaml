@@ -1,0 +1,50 @@
+replicaCount: 1
+
+image:
+  repository: stevedevopslab6280.azurecr.io/lead-magnets
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+service:
+  port: 80
+  targetPort: 8080
+
+persistence:
+  enabled: true
+  storageClassName: ""
+  accessMode: ReadWriteOnce
+  size: 1Gi
+
+ingress:
+  enabled: true
+  className: nginx
+  host: traditionalstrength.co.uk
+  tlsSecretName: traditionalstrength-tls
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 96Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 100
+  runAsGroup: 101
+  fsGroup: 101
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+database:
+  path: /data/leads.db

@@ -1,0 +1,95 @@
+name: Lead Magnets Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "platform-portal/public_app.py"
+      - "platform-portal/Dockerfile.public"
+      - "platform-portal/portal/lead_magnets.py"
+      - "platform-portal/portal/models/lead_capture.py"
+      - "platform-portal/templates/lead_magnet.html"
+      - "platform-portal/static/css/lead_magnet.css"
+      - "platform-portal/content/lead_magnets/**"
+      - "platform-portal/requirements.txt"
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  ACR_LOGIN_SERVER: stevedevopslab6280.azurecr.io
+  IMAGE_NAME: lead-magnets
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name "${ACR_LOGIN_SERVER%%.*}"
+
+      - name: Build and push image
+        working-directory: platform-portal
+        run: |
+          set -euo pipefail
+
+          IMAGE="${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${GITHUB_SHA}"
+
+          docker build \
+            -f Dockerfile.public \
+            -t "$IMAGE" \
+            .
+
+          docker push "$IMAGE"
+
+      - name: Update GitOps image tag
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+
+          path = Path("lead-magnets-chart/values.yaml")
+          text = path.read_text()
+
+          text = re.sub(
+              r"(?m)^  tag: .+$",
+              f"  tag: {os.environ['GITHUB_SHA']}",
+              text,
+              count=1,
+          )
+
+          path.write_text(text)
+          PY
+
+      - name: Commit GitOps update
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add lead-magnets-chart/values.yaml
+
+          if git diff --cached --quiet; then
+            echo "No values change required."
+            exit 0
+          fi
+
+          git commit -m "chore(lead-magnets): deploy ${GITHUB_SHA::7}"
+          git push
