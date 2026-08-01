@@ -33,3 +33,8 @@ dashboard/
 # Generated live portal data
 portal/data/platform-status.json
 platform-portal/data/platform-status.json
+
+# Platform portal runtime database
+platform-portal/data/*.db
+platform-portal/data/*.db-shm
+platform-portal/data/*.db-wal
