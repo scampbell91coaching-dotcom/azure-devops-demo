@@ -6,6 +6,7 @@
   <title>{% block title %}Traditional Strength Platform{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/history_dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/recommendations.css') }}">
 </head>
 <body data-page="{{ page }}">
   <div class="shell">
@@ -21,6 +22,7 @@
         <a href="/observability" class="{% if page == 'observability' %}active{% endif %}">Observability</a>
         <a href="/resilience" class="{% if page == 'resilience' %}active{% endif %}">Resilience</a>
         <a href="/history" class="{% if page == 'history' %}active{% endif %}">History</a>
+  <a href="/recommendations" class="{% if page == 'recommendations' %}active{% endif %}">Recommendations</a>
 </nav>
     </aside>
     <main class="main">

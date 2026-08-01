@@ -41,3 +41,8 @@ def resilience():
 @views_bp.get("/history")
 def history():
     return render_template("history.html", page="history")
+
+
+@views_bp.get("/recommendations")
+def recommendations():
+    return render_template("recommendations.html", page="recommendations")

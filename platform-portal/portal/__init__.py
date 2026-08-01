@@ -8,6 +8,7 @@ from flask import Flask
 from .api.health import health_bp
 from .api.history import history_bp
 from .api.platform import platform_bp
+from .api.recommendations import recommendations_bp
 from .extensions import db
 from .views import views_bp
 
@@ -40,6 +41,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(health_bp)
     app.register_blueprint(history_bp, url_prefix="/api/v1")
     app.register_blueprint(platform_bp, url_prefix="/api/v1")
+    app.register_blueprint(recommendations_bp, url_prefix="/api/v1")
     app.register_blueprint(views_bp)
 
     with app.app_context():
