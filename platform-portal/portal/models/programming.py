@@ -2,7 +2,18 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from sqlalchemy import event, inspect, text
+
 from ..extensions import db
+
+PRESCRIPTION_TYPES = {
+    "rpe",
+    "fixed_load",
+    "load_capped",
+    "amrap",
+    "rep_range",
+    "single_target",
+}
 
 
 class TrainingBlock(db.Model):  # type: ignore[name-defined]
@@ -96,13 +107,175 @@ class ExercisePrescription(db.Model):  # type: ignore[name-defined]
     )
     exercise_name = db.Column(db.String(160), nullable=False)
     position = db.Column(db.Integer, nullable=False, default=1)
+    prescription_type = db.Column(db.String(40), nullable=True)
     sets = db.Column(db.Integer, nullable=True)
     reps = db.Column(db.String(40), nullable=True)
+    reps_min = db.Column(db.Integer, nullable=True)
+    reps_max = db.Column(db.Integer, nullable=True)
     load_kg = db.Column(db.Float, nullable=True)
+    load_cap_kg = db.Column(db.Float, nullable=True)
     percentage = db.Column(db.Float, nullable=True)
     rpe = db.Column(db.Float, nullable=True)
+    rpe_cap = db.Column(db.Float, nullable=True)
+    target_reps = db.Column(db.Integer, nullable=True)
+    target_rpe = db.Column(db.Float, nullable=True)
+    target_load_kg = db.Column(db.Float, nullable=True)
+    amrap = db.Column(db.Boolean, nullable=True)
     tempo = db.Column(db.String(40), nullable=True)
     rest_seconds = db.Column(db.Integer, nullable=True)
     notes = db.Column(db.Text, nullable=True)
 
     session = db.relationship("TrainingSession", back_populates="prescriptions")
+
+    def validate(self) -> None:
+        """Validate a typed prescription without changing legacy rows."""
+        if self.prescription_type is None:
+            return
+        if self.prescription_type not in PRESCRIPTION_TYPES:
+            raise ValueError(f"Unknown prescription type: {self.prescription_type}")
+
+        for name in ("sets", "reps_min", "reps_max", "target_reps"):
+            value = getattr(self, name)
+            if value is not None and value <= 0:
+                raise ValueError(f"{name} must be greater than zero")
+        for name in ("rpe", "rpe_cap", "target_rpe"):
+            value = getattr(self, name)
+            if value is not None and not 1 <= value <= 10:
+                raise ValueError(f"{name} must be between 1 and 10")
+        for name in ("load_kg", "load_cap_kg", "target_load_kg"):
+            value = getattr(self, name)
+            if value is not None and value < 0:
+                raise ValueError(f"{name} cannot be negative")
+        if (
+            self.reps_min is not None
+            and self.reps_max is not None
+            and self.reps_min > self.reps_max
+        ):
+            raise ValueError("reps_min cannot exceed reps_max")
+
+        required = {
+            "rpe": ("sets", "reps", "rpe"),
+            "fixed_load": ("sets", "reps", "load_kg"),
+            "load_capped": ("sets", "reps", "load_cap_kg"),
+            "rep_range": ("sets", "reps_min", "reps_max"),
+        }.get(self.prescription_type, ())
+        missing = [name for name in required if getattr(self, name) in (None, "")]
+        if missing:
+            raise ValueError(f"{self.prescription_type} requires {', '.join(missing)}")
+        if self.prescription_type == "amrap":
+            if self.sets is None:
+                raise ValueError("amrap requires sets")
+            if not self.amrap:
+                raise ValueError("amrap prescription requires amrap=True")
+        if self.prescription_type == "single_target" and all(
+            value is None
+            for value in (self.target_reps, self.target_rpe, self.target_load_kg)
+        ):
+            raise ValueError("single_target requires at least one target")
+
+    @property
+    def summary(self) -> str:
+        """Return a concise, human-readable prescription."""
+        if self.prescription_type is None:
+            parts = [self._sets_and_reps(self.reps)]
+            if self.load_kg is not None:
+                parts.append(f"{self._number(self.load_kg)} kg")
+            if self.rpe is not None:
+                parts.append(f"@ RPE {self._number(self.rpe)}")
+            return " ".join(part for part in parts if part)
+
+        reps = self.reps
+        if self.prescription_type == "rep_range":
+            reps = f"{self.reps_min}-{self.reps_max}"
+        parts = [self._sets_and_reps(reps)]
+        if self.prescription_type == "fixed_load":
+            parts.append(f"@ {self._number(self.load_kg)} kg")
+        elif self.prescription_type == "load_capped":
+            parts.append(f"up to {self._number(self.load_cap_kg)} kg")
+        elif self.prescription_type == "rpe":
+            parts.append(f"@ RPE {self._number(self.rpe)}")
+        elif self.prescription_type == "amrap":
+            parts.append("AMRAP")
+            if self.rpe_cap is not None:
+                parts.append(f"(cap RPE {self._number(self.rpe_cap)})")
+        elif self.prescription_type == "single_target":
+            targets = []
+            if self.target_reps is not None:
+                unit = "rep" if self.target_reps == 1 else "reps"
+                targets.append(f"{self.target_reps} {unit}")
+            if self.target_load_kg is not None:
+                targets.append(f"{self._number(self.target_load_kg)} kg")
+            if self.target_rpe is not None:
+                targets.append(f"RPE {self._number(self.target_rpe)}")
+            parts = ["Single target: " + " @ ".join(targets)]
+        return " ".join(part for part in parts if part)
+
+    def _sets_and_reps(self, reps: str | None) -> str:
+        if self.sets is not None and reps:
+            return f"{self.sets} x {reps}"
+        if self.sets is not None:
+            return f"{self.sets} sets"
+        return reps or ""
+
+    @staticmethod
+    def _number(value: float | None) -> str:
+        return f"{value:g}" if value is not None else ""
+
+    def copy_values(self) -> dict[str, object]:
+        """Return all prescription data fields for duplication workflows."""
+        names = (
+            "exercise_name",
+            "position",
+            "prescription_type",
+            "sets",
+            "reps",
+            "reps_min",
+            "reps_max",
+            "load_kg",
+            "load_cap_kg",
+            "percentage",
+            "rpe",
+            "rpe_cap",
+            "target_reps",
+            "target_rpe",
+            "target_load_kg",
+            "amrap",
+            "tempo",
+            "rest_seconds",
+            "notes",
+        )
+        return {name: getattr(self, name) for name in names}
+
+
+@event.listens_for(ExercisePrescription, "before_insert")
+@event.listens_for(ExercisePrescription, "before_update")
+def _validate_prescription(_mapper: object, _connection: object, item: object) -> None:
+    assert isinstance(item, ExercisePrescription)
+    item.validate()
+
+
+def ensure_prescription_mode_columns() -> None:
+    """Add nullable prescription-mode columns to existing databases."""
+    definitions = {
+        "prescription_type": "VARCHAR(40)",
+        "reps_min": "INTEGER",
+        "reps_max": "INTEGER",
+        "rpe_cap": "FLOAT",
+        "load_cap_kg": "FLOAT",
+        "target_reps": "INTEGER",
+        "target_rpe": "FLOAT",
+        "target_load_kg": "FLOAT",
+        "amrap": "BOOLEAN",
+    }
+    columns = {
+        column["name"]
+        for column in inspect(db.engine).get_columns("exercise_prescriptions")
+    }
+    for name, definition in definitions.items():
+        if name not in columns:
+            db.session.execute(
+                text(
+                    f"ALTER TABLE exercise_prescriptions ADD COLUMN {name} {definition}"
+                )
+            )
+    db.session.commit()

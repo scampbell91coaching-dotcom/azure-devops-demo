@@ -76,6 +76,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
             TrainingBlock,
             TrainingSession,
             TrainingWeek,
+            ensure_prescription_mode_columns,
         )
 
         _ = PlatformSnapshot
@@ -93,6 +94,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         _ = NutritionCheckIn
         db.create_all()
         ensure_exercise_knowledge_columns()
+        ensure_prescription_mode_columns()
         from .seed_programming_engine import seed_programming_engine
 
         seed_programming_engine()

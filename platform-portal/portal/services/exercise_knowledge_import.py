@@ -44,9 +44,7 @@ def import_exercise_knowledge_file(
 
     records = payload.get("exercises")
     if not isinstance(records, list):
-        raise TypeError(
-            "Exercise intelligence payload must contain an exercises list."
-        )
+        raise TypeError("Exercise intelligence payload must contain an exercises list.")
 
     return import_exercise_knowledge(records)
 
