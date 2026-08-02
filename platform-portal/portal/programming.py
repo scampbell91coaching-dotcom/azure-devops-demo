@@ -101,7 +101,15 @@ def session(session_id: int):
     item = db.session.get(TrainingSession, session_id)
     if item is None:
         abort(404)
-    return render_template("programming/session.html", session=item)
+    week = item.week
+    block = week.block
+
+    return render_template(
+        "programming/session.html",
+        session=item,
+        week=week,
+        block=block,
+    )
 
 
 @programming_bp.post("/programming/sessions/<int:session_id>/prescriptions")
