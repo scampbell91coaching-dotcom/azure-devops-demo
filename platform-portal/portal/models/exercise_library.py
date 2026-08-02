@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from sqlalchemy import inspect, text
+
 from ..extensions import db
 
 
@@ -12,9 +14,12 @@ class Exercise(db.Model):  # type: ignore[name-defined]
     name = db.Column(db.String(160), nullable=False, unique=True, index=True)
 
     movement = db.Column(db.String(40), nullable=False, index=True)
+    family = db.Column(db.String(120), nullable=True, index=True)
     category = db.Column(db.String(60), nullable=False, default="main")
     variation = db.Column(db.String(120), nullable=True)
     equipment = db.Column(db.String(120), nullable=True)
+    aliases = db.Column(db.Text, nullable=True)
+    occurrence_count = db.Column(db.Integer, nullable=True)
 
     primary_muscles = db.Column(db.String(255), nullable=True)
     secondary_muscles = db.Column(db.String(255), nullable=True)
@@ -41,6 +46,32 @@ class Exercise(db.Model):  # type: ignore[name-defined]
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
+
+
+def ensure_exercise_knowledge_columns() -> None:
+    """Add B1 knowledge columns to databases created before this release.
+
+    The portal uses ``create_all`` rather than a migration framework.  Adding
+    nullable columns preserves pre-existing exercise-library rows while making
+    the import available to existing SQLite deployments.
+    """
+
+    column_definitions = {
+        "family": "VARCHAR(120)",
+        "aliases": "TEXT",
+        "occurrence_count": "INTEGER",
+    }
+    existing_columns = {
+        column["name"] for column in inspect(db.engine).get_columns("exercises")
+    }
+
+    for column_name, definition in column_definitions.items():
+        if column_name not in existing_columns:
+            db.session.execute(
+                text(f"ALTER TABLE exercises ADD COLUMN {column_name} {definition}")
+            )
+
+    db.session.commit()
 
 
 class DayTemplate(db.Model):  # type: ignore[name-defined]

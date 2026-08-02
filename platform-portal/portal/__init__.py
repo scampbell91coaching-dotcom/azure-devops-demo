@@ -66,6 +66,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
             DayTemplate,
             DayTemplateExercise,
             Exercise,
+            ensure_exercise_knowledge_columns,
         )
         from .models.lead_capture import LeadCapture
         from .models.nutrition_checkin import NutritionCheckIn
@@ -91,8 +92,15 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         _ = Athlete
         _ = NutritionCheckIn
         db.create_all()
+        ensure_exercise_knowledge_columns()
         from .seed_programming_engine import seed_programming_engine
 
         seed_programming_engine()
+
+    from .services.exercise_knowledge_import import (
+        register_exercise_knowledge_import_command,
+    )
+
+    register_exercise_knowledge_import_command(app)
 
     return app
