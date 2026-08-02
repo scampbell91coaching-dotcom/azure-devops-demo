@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const saveStatus = document.querySelector("[data-save-status]");
   const reviewOutput = document.querySelector("[data-review-output]");
   let currentStep = 1;
+  let saveMessageTimer;
 
   const labels = {
     first_name: "First name",
@@ -105,7 +106,21 @@ document.addEventListener("DOMContentLoaded", () => {
     return field.value.trim();
   };
 
-  const saveProgress = () => {
+  const showSaveMessage = (message) => {
+    if (!saveStatus) {
+      return;
+    }
+
+    window.clearTimeout(saveMessageTimer);
+    saveStatus.textContent = message;
+    saveStatus.classList.add("is-visible");
+
+    saveMessageTimer = window.setTimeout(() => {
+      saveStatus.classList.remove("is-visible");
+    }, 1800);
+  };
+
+  const saveProgress = ({ announce = true } = {}) => {
     const payload = {};
 
     Array.from(form.elements).forEach((field) => {
@@ -118,11 +133,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     payload.currentStep = currentStep;
-
     localStorage.setItem(storageKey, JSON.stringify(payload));
 
-    if (saveStatus) {
-      saveStatus.textContent = "Progress saved.";
+    if (announce) {
+      showSaveMessage("Progress saved in this browser.");
     }
   };
 
@@ -130,7 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const raw = localStorage.getItem(storageKey);
 
     if (!raw) {
-      return;
+      return false;
     }
 
     try {
@@ -155,8 +169,10 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       currentStep = Math.min(Math.max(Number(saved.currentStep) || 1, 1), 5);
+      return true;
     } catch {
       localStorage.removeItem(storageKey);
+      return false;
     }
   };
 
@@ -175,7 +191,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  const showStep = (stepNumber) => {
+  const showStep = (stepNumber, { announceSave = false } = {}) => {
     currentStep = stepNumber;
 
     steps.forEach((step) => {
@@ -185,7 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     updateProgress();
-    saveProgress();
+    saveProgress({ announce: announceSave });
 
     const activeStep = steps.find(
       (step) => Number(step.dataset.step) === currentStep
@@ -279,8 +295,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  form.addEventListener("input", saveProgress);
-  form.addEventListener("change", saveProgress);
+  const restored = restoreProgress();
+
+  if (restored) {
+    showSaveMessage("Saved application restored.");
+  }
+
+  form.addEventListener("input", () => saveProgress());
+  form.addEventListener("change", () => saveProgress());
 
   form.querySelectorAll("[data-next-step]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -288,7 +310,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      showStep(Math.min(currentStep + 1, 4));
+      showStep(Math.min(currentStep + 1, 4), { announceSave: true });
     });
   });
 
@@ -304,7 +326,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     renderReview();
-    showStep(5);
+    showStep(5, { announceSave: true });
   });
 
   form.addEventListener("submit", (event) => {
@@ -315,8 +337,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     localStorage.removeItem(storageKey);
   });
-
-  restoreProgress();
 
   if (currentStep === 5) {
     renderReview();
