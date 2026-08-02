@@ -1,0 +1,64 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "programming" %}
+
+{% block title %}Block Factory | Traditional Strength{% endblock %}
+
+{% block head %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/block_factory.css') }}"
+>
+{% endblock %}
+
+{% block content %}
+<section class="coach-page block-factory-page">
+  <header class="coach-page__header">
+    <span class="coach-eyebrow">Programming engine</span>
+    <h1>Block Factory</h1>
+    <p>Generate a complete first draft, then edit what is unique to the athlete.</p>
+  </header>
+
+  <form class="coach-panel coach-form block-factory-form" method="post">
+    <label>
+      <span>Athlete</span>
+      <select name="athlete_id" required>
+        {% for athlete in athletes %}
+          <option value="{{ athlete.id }}">{{ athlete.full_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>
+      <span>Block name</span>
+      <input name="name" value="Development Block" required>
+    </label>
+
+    <label>
+      <span>Weeks</span>
+      <input name="week_count" type="number" min="1" max="24" value="4" required>
+    </label>
+
+    <label>
+      <span>Training days</span>
+      <input name="training_days" type="number" min="1" max="7" value="4" required>
+    </label>
+
+    <label>
+      <span>Primary day type</span>
+      <select name="template_type">
+        {% for item in template_types %}
+          <option value="{{ item }}" {% if item == "SBD" %}selected{% endif %}>
+            {{ item }}
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <div class="coach-form__actions">
+      <button class="coach-primary-button" type="submit">
+        Generate block
+      </button>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,19 @@
+.block-factory-page .coach-page__header h1 {
+  max-width: 10ch;
+}
+
+.block-factory-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.block-factory-form .coach-form__actions {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 720px) {
+  .block-factory-form {
+    grid-template-columns: 1fr;
+  }
+}

@@ -10,6 +10,7 @@ from .api.history import history_bp
 from .api.platform import platform_bp
 from .api.recommendations import recommendations_bp
 from .athletes import athletes_bp
+from .block_factory import block_factory_bp
 from .checkins import checkins_bp
 from .database_config import resolve_database_uri
 from .exercise_library import exercise_library_bp
@@ -50,6 +51,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(views_bp)
     app.register_blueprint(lead_magnets_bp)
     app.register_blueprint(programming_bp)
+    app.register_blueprint(block_factory_bp)
     app.register_blueprint(exercise_library_bp)
     app.register_blueprint(programming_engine_bp)
     app.register_blueprint(programming_pack2_bp)
