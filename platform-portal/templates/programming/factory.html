@@ -15,50 +15,201 @@
   <header class="coach-page__header">
     <span class="coach-eyebrow">Programming engine</span>
     <h1>Block Factory</h1>
-    <p>Generate a complete first draft, then edit what is unique to the athlete.</p>
+    <p>
+      Build the first draft from your mined programming history,
+      then edit what is unique to the athlete.
+    </p>
   </header>
 
-  <form class="coach-panel coach-form block-factory-form" method="post">
+  <form
+    class="coach-panel coach-form block-factory-form"
+    method="post"
+  >
     <label>
       <span>Athlete</span>
       <select name="athlete_id" required>
         {% for athlete in athletes %}
-          <option value="{{ athlete.id }}">{{ athlete.full_name }}</option>
+          <option
+            value="{{ athlete.id }}"
+            {% if form.get("athlete_id") | int == athlete.id %}selected{% endif %}
+          >
+            {{ athlete.full_name }}
+          </option>
         {% endfor %}
       </select>
     </label>
 
     <label>
       <span>Block name</span>
-      <input name="name" value="Development Block" required>
+      <input
+        name="name"
+        value="{{ form.get('name', 'Development Block') }}"
+        required
+      >
     </label>
 
     <label>
-      <span>Weeks</span>
-      <input name="week_count" type="number" min="1" max="24" value="4" required>
-    </label>
-
-    <label>
-      <span>Training days</span>
-      <input name="training_days" type="number" min="1" max="7" value="4" required>
-    </label>
-
-    <label>
-      <span>Primary day type</span>
-      <select name="template_type">
-        {% for item in template_types %}
-          <option value="{{ item }}" {% if item == "SBD" %}selected{% endif %}>
-            {{ item }}
+      <span>Goal</span>
+      <select name="goal">
+        {% for item in (
+          "hypertrophy",
+          "development",
+          "strength",
+          "peaking",
+          "offseason"
+        ) %}
+          <option
+            value="{{ item }}"
+            {% if form.get("goal", "development") == item %}selected{% endif %}
+          >
+            {{ item | title }}
           </option>
         {% endfor %}
       </select>
     </label>
 
+    <label>
+      <span>Split</span>
+      <select name="split">
+        {% for item, label in (
+          ("POWERLIFTING_3", "Powerlifting · 3 days"),
+          ("POWERLIFTING_4", "Powerlifting · 4 days"),
+          ("POWERLIFTING_5", "Powerlifting · 5 days"),
+          ("UPPER_LOWER", "Upper / Lower"),
+          ("SBD", "SBD"),
+          ("SB", "SB"),
+          ("BD", "BD")
+        ) %}
+          <option
+            value="{{ item }}"
+            {% if form.get("split", "POWERLIFTING_4") == item %}selected{% endif %}
+          >
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>
+      <span>Weeks</span>
+      <input
+        name="week_count"
+        type="number"
+        min="1"
+        max="24"
+        value="{{ form.get('week_count', 4) }}"
+        required
+      >
+    </label>
+
+    <label>
+      <span>Training days</span>
+      <input
+        name="training_days"
+        type="number"
+        min="1"
+        max="7"
+        value="{{ form.get('training_days', 4) }}"
+        required
+      >
+    </label>
+
+    <label>
+      <span>Squat frequency</span>
+      <input
+        name="squat_frequency"
+        type="number"
+        min="0"
+        max="5"
+        value="{{ form.get('squat_frequency', 2) }}"
+      >
+    </label>
+
+    <label>
+      <span>Bench frequency</span>
+      <input
+        name="bench_frequency"
+        type="number"
+        min="0"
+        max="7"
+        value="{{ form.get('bench_frequency', 3) }}"
+      >
+    </label>
+
+    <label>
+      <span>Deadlift frequency</span>
+      <input
+        name="deadlift_frequency"
+        type="number"
+        min="0"
+        max="3"
+        value="{{ form.get('deadlift_frequency', 1) }}"
+      >
+    </label>
+
+    <label>
+      <span>Deadlift style</span>
+      <select name="deadlift_style">
+        {% for item in ("conventional", "sumo") %}
+          <option
+            value="{{ item }}"
+            {% if form.get("deadlift_style", "conventional") == item %}selected{% endif %}
+          >
+            {{ item | title }}
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>
+      <span>Meet date (optional)</span>
+      <input
+        name="meet_date"
+        type="date"
+        value="{{ form.get('meet_date', '') }}"
+      >
+    </label>
+
     <div class="coach-form__actions">
-      <button class="coach-primary-button" type="submit">
+      <button
+        class="coach-link-button"
+        type="submit"
+        formaction="{{ url_for('block_factory.preview') }}"
+      >
+        Preview
+      </button>
+
+      <button
+        class="coach-primary-button"
+        type="submit"
+        formaction="{{ url_for('block_factory.generate') }}"
+      >
         Generate block
       </button>
     </div>
   </form>
+
+  {% if preview %}
+    <section class="coach-panel factory-preview">
+      <div class="coach-panel__heading">
+        <span class="coach-eyebrow">Preview</span>
+        <h2>{{ selected_athlete.full_name }}</h2>
+      </div>
+
+      <div class="factory-preview__grid">
+        {% for day in preview %}
+          <article class="factory-preview__day">
+            <span>Day {{ day.day }} · {{ day.day_type }}</span>
+
+            <ol>
+              {% for exercise in day.exercises %}
+                <li>{{ exercise }}</li>
+              {% endfor %}
+            </ol>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
 </section>
 {% endblock %}
