@@ -338,6 +338,51 @@ def _apply_deadlift_style(
     return result
 
 
+def _ensure_main_lifts(
+    exercises: list[str],
+    day_type: str,
+    deadlift_style: str,
+) -> list[str]:
+    """Return exactly the main lifts scheduled for this day."""
+    scheduled_lifts = (
+        set()
+        if day_type == ACCESSORY_DAY
+        else {code for code in day_type if code in {"S", "B", "D"}}
+    )
+
+    canonical: list[str] = []
+
+    if "S" in scheduled_lifts:
+        canonical.append("Competition Squat")
+
+    if "B" in scheduled_lifts:
+        canonical.append("Competition Bench Press")
+
+    if "D" in scheduled_lifts:
+        canonical.append(
+            "Sumo Deadlift" if deadlift_style == "sumo" else "Conventional Deadlift"
+        )
+
+    def movement_code(name: str) -> str | None:
+        lowered = name.casefold().strip()
+
+        if "squat" in lowered:
+            return "S"
+
+        if "bench" in lowered:
+            return "B"
+
+        if "deadlift" in lowered or "romanian" in lowered or lowered == "rdl":
+            return "D"
+
+        return None
+
+    # Strip mined S/B/D variants, then add back only scheduled main lifts.
+    accessories = [name for name in exercises if movement_code(name) is None]
+
+    return canonical + accessories
+
+
 def _week_rpe(
     factory: FactoryRequest,
     week_position: int,
@@ -389,6 +434,11 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
         )
         exercises = _apply_deadlift_style(
             exercises,
+            factory.deadlift_style,
+        )
+        exercises = _ensure_main_lifts(
+            exercises,
+            day_type,
             factory.deadlift_style,
         )
 
