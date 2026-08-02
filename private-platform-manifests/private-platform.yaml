@@ -1,0 +1,156 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: platform-portal-private-data
+  namespace: production
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platform-portal-private
+  namespace: production
+  labels:
+    app: platform-portal-private
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: platform-portal-private
+  template:
+    metadata:
+      labels:
+        app: platform-portal-private
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: portal
+          image: stevedevopslab6280.azurecr.io/platform-portal-private:entra-20260801235906
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              value: sqlite:////data/platform-history.db
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: platform-portal-private-data
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: platform-portal-private
+  namespace: production
+spec:
+  selector:
+    app: platform-portal-private
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platform-oauth2-proxy
+  namespace: production
+  labels:
+    app: platform-oauth2-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: platform-oauth2-proxy
+  template:
+    metadata:
+      labels:
+        app: platform-oauth2-proxy
+    spec:
+      containers:
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.9.0
+          args:
+            - --provider=oidc
+            - --oidc-issuer-url=https://login.microsoftonline.com/74d2fd2d-dd77-4db5-949c-232b3f50d865/v2.0","--client-id
+            - --client-id=19e10ae8-f9db-4325-993a-9d2bca621840","--client-secret
+            - --client-secret=$(CLIENT_SECRET)
+            - --cookie-secret=$(COOKIE_SECRET)
+            - --cookie-secure=true
+            - --cookie-samesite=lax
+            - --cookie-name=_platform_auth
+            - --email-domain=*
+            - --scope=openid profile email
+            - --http-address=0.0.0.0:4180
+            - --reverse-proxy=true
+            - --set-xauthrequest=true
+            - --pass-access-token=true
+            - --upstream=static://202
+            - --redirect-url=https://platform.traditionalstrength.co.uk/oauth2/callback
+          env:
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: platform-oauth2-proxy
+                  key: client-secret
+            - name: COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: platform-oauth2-proxy
+                  key: cookie-secret
+          ports:
+            - name: http
+              containerPort: 4180
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: platform-oauth2-proxy
+  namespace: production
+spec:
+  selector:
+    app: platform-oauth2-proxy
+  ports:
+    - name: http
+      port: 4180
+      targetPort: http
