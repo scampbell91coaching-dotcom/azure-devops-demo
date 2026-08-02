@@ -10,6 +10,7 @@ from .models.programming import (
     TrainingSession,
     TrainingWeek,
 )
+from .programming_templates import day_templates
 
 programming_bp = Blueprint("programming", __name__)
 
@@ -109,6 +110,7 @@ def session(session_id: int):
         session=item,
         week=week,
         block=block,
+        day_templates=day_templates(),
     )
 
 

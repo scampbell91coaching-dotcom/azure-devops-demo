@@ -1,0 +1,29 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "programming" %}
+{% block title %}Block Factory | Traditional Strength{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/programming_public_theme.css') }}">{% endblock %}
+{% block content %}
+<section class="coach-page programming-page programming-factory">
+  <header class="coach-page__header">
+    <a class="coach-back-link" href="/programming">← Programming</a>
+    <span class="coach-eyebrow">Block factory</span>
+    <h1>Build a block in minutes</h1>
+    <p>Choose weekly squat, bench and deadlift frequency. The factory creates SBD, SB, BD, B, S and D days automatically.</p>
+  </header>
+  <form class="coach-panel programming-factory-form" method="post" action="/programming/block-factory">
+    <div class="programming-factory-grid">
+      <label><span>Athlete</span><select name="athlete_id" required><option value="">Choose athlete</option>{% for athlete in athletes %}<option value="{{ athlete.id }}">{{ athlete.full_name }}</option>{% endfor %}</select></label>
+      <label><span>Block name</span><input name="name" placeholder="Offseason 1" required></label>
+      <label><span>Weeks</span><select name="weeks" required>{% for count in range(1, 13) %}<option value="{{ count }}" {% if count == 5 %}selected{% endif %}>{{ count }}</option>{% endfor %}</select></label>
+    </div>
+    <div class="frequency-grid">
+      <label class="frequency-card"><span>Squat days</span><strong>1–5</strong><select name="squat_days" required>{% for count in range(1, 6) %}<option value="{{ count }}" {% if count == 2 %}selected{% endif %}>{{ count }}</option>{% endfor %}</select></label>
+      <label class="frequency-card"><span>Bench days</span><strong>1–5</strong><select name="bench_days" required>{% for count in range(1, 6) %}<option value="{{ count }}" {% if count == 3 %}selected{% endif %}>{{ count }}</option>{% endfor %}</select></label>
+      <label class="frequency-card"><span>Deadlift days</span><strong>1–3</strong><select name="deadlift_days" required>{% for count in range(1, 4) %}<option value="{{ count }}" {% if count == 1 %}selected{% endif %}>{{ count }}</option>{% endfor %}</select></label>
+    </div>
+    <label><span>Objective</span><textarea name="objective" rows="4"></textarea></label>
+    <div class="factory-explainer"><span class="coach-eyebrow">Example</span><p>2 squat, 3 bench and 1 deadlift day generates SBD, SB and B each week.</p></div>
+    <div class="coach-form__actions"><button class="coach-primary-button" type="submit">Generate block</button></div>
+  </form>
+</section>
+{% endblock %}

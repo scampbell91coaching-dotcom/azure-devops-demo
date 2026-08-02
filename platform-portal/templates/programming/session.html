@@ -33,7 +33,20 @@
     <span class="autosave-status" data-autosave-status>Saved</span>
   </header>
 
-  <section class="coach-panel builder-panel">
+  <section class="programming-template-strip">
+  <div><span class="coach-eyebrow">Start faster</span><h2>Day templates</h2></div>
+  <div class="programming-template-grid">
+  {% for key, template in day_templates.items() %}
+    <form class="programming-template-card" method="post" action="{{ url_for('programming_templates.apply_day_template', session_id=session.id) }}">
+      <input type="hidden" name="template_key" value="{{ key }}">
+      <strong>{{ key }}</strong><span>{{ template.label }}</span><p>{{ template.description }}</p>
+      <label><input type="checkbox" name="replace_existing" value="1"> Replace current exercises</label>
+      <button class="coach-primary-button" type="submit">Use template</button>
+    </form>
+  {% endfor %}
+  </div>
+</section>
+<section class="coach-panel builder-panel">
     <div class="builder-toolbar">
       <div>
         <span class="coach-eyebrow">Session plan</span>

@@ -15,6 +15,7 @@ from .extensions import db
 from .lead_magnets import lead_magnets_bp
 from .programming import programming_bp
 from .programming_pack2 import programming_pack2_bp
+from .programming_templates import programming_templates_bp
 from .views import views_bp
 
 
@@ -47,6 +48,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(lead_magnets_bp)
     app.register_blueprint(programming_bp)
     app.register_blueprint(programming_pack2_bp)
+    app.register_blueprint(programming_templates_bp)
     app.register_blueprint(athletes_bp)
 
     with app.app_context():
