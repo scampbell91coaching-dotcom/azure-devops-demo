@@ -1,20 +1,14 @@
 name: Lead Magnets Deploy
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
     paths:
-      - "platform-portal/public_app.py"
-      - "platform-portal/Dockerfile.public"
-      - "platform-portal/portal/lead_magnets.py"
-      - "platform-portal/portal/models/lead_capture.py"
-      - "platform-portal/templates/lead_magnet.html"
-      - "platform-portal/static/css/lead_magnet.css"
-      - "platform-portal/content/lead_magnets/**"
-      - "platform-portal/requirements.txt"
-
+      - "platform-portal/**"
+      - "lead-magnets-chart/**"
+      - ".github/workflows/lead-magnets-deploy.yml"
+  workflow_dispatch:
 permissions:
   contents: write
   id-token: write
