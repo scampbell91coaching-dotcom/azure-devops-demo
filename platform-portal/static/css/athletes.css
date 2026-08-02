@@ -286,3 +286,38 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Coach workspace must not inherit the operations portal sidebar */
+
+body:has(.athlete-page) aside.sidebar,
+body:has(.athlete-page) .sidebar,
+body:has(.athlete-page) .side-nav,
+body:has(.athlete-page) nav.sidebar-nav {
+  display: none !important;
+}
+
+body:has(.athlete-page) .app-shell,
+body:has(.athlete-page) .layout,
+body:has(.athlete-page) .portal-layout {
+  grid-template-columns: 1fr !important;
+}
+
+body:has(.athlete-page) main,
+body:has(.athlete-page) .main-content,
+body:has(.athlete-page) .content {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+}
+
+body:has(.athlete-page) .athlete-page {
+  max-width: 1400px;
+  margin-inline: auto;
+  padding: 2rem;
+}
+
+@media (max-width: 700px) {
+  body:has(.athlete-page) .athlete-page {
+    padding: 1rem;
+  }
+}
