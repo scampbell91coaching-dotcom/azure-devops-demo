@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta name="theme-color" content="#08111f">
+
+  <title>{% block title %}Traditional Strength Coach{% endblock %}</title>
+
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/coach_workspace.css') }}"
+  >
+
+  {% block head %}{% endblock %}
+</head>
+
+<body class="coach-workspace">
+  <a class="coach-skip-link" href="#coach-main">Skip to content</a>
+
+  <header class="coach-topbar">
+    <div class="coach-topbar__inner">
+      <a class="coach-brand" href="/athletes">
+        <span class="coach-brand__mark" aria-hidden="true">TS</span>
+
+        <span class="coach-brand__copy">
+          <strong>Traditional Strength</strong>
+          <small>Coach Workspace</small>
+        </span>
+      </a>
+
+      <button
+        class="coach-menu-button"
+        type="button"
+        aria-expanded="false"
+        aria-controls="coach-navigation"
+        data-coach-menu-button
+      >
+        Menu
+      </button>
+
+      <nav
+        class="coach-navigation"
+        id="coach-navigation"
+        aria-label="Coach workspace"
+        data-coach-navigation
+      >
+        <a
+          href="/athletes"
+          {% if coach_section == "athletes" %}aria-current="page"{% endif %}
+        >
+          Athletes
+        </a>
+
+        <a
+          href="/apply"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Applications
+        </a>
+
+        <span class="coach-navigation__disabled">Programming</span>
+        <span class="coach-navigation__disabled">Check-ins</span>
+        <span class="coach-navigation__disabled">Meet Prep</span>
+      </nav>
+
+      <div class="coach-topbar__actions">
+        <a
+          class="coach-link-button"
+          href="/"
+        >
+          Platform
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main id="coach-main" class="coach-main">
+    <div class="coach-shell">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <footer class="coach-footer">
+    <div class="coach-shell coach-footer__inner">
+      <span>Traditional Strength Coach Workspace</span>
+      <span>Private</span>
+    </div>
+  </footer>
+
+  <script
+    src="{{ url_for('static', filename='js/coach_workspace.js') }}"
+    defer
+  ></script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

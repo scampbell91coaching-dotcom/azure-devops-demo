@@ -1,27 +1,32 @@
-{% extends "base.html" %}
+{% extends "coach/base.html" %}
+
+{% set coach_section = "athletes" %}
 
 {% block title %}{{ athlete.full_name }} | Traditional Strength{% endblock %}
 
 {% block content %}
-<div class="athlete-page">
-  <div class="athlete-page__header athlete-page__header--split">
+<section class="coach-page">
+  <header class="coach-page__header coach-page__header--split">
     <div>
-      <a class="back-link" href="/athletes">← Athletes</a>
-      <span class="section-label">Athlete dashboard</span>
+      <a class="coach-back-link" href="/athletes">← Athletes</a>
+      <span class="coach-eyebrow">Athlete dashboard</span>
       <h1>{{ athlete.full_name }}</h1>
       <p>{{ athlete.email }}</p>
     </div>
 
     <a
-      class="athlete-button"
-      href="{{ url_for('athletes.nutrition_checkin_form', athlete_id=athlete.id) }}"
+      class="coach-primary-button"
+      href="{{ url_for(
+        'athletes.nutrition_checkin_form',
+        athlete_id=athlete.id
+      ) }}"
     >
       Add nutrition check-in
     </a>
-  </div>
+  </header>
 
-  <section class="athlete-metrics">
-    <article>
+  <section class="coach-metric-grid">
+    <article class="coach-metric">
       <span>Bodyweight</span>
       <strong>
         {% if athlete.bodyweight_kg %}
@@ -32,80 +37,73 @@
       </strong>
     </article>
 
-    <article>
+    <article class="coach-metric">
       <span>Weight class</span>
       <strong>{{ athlete.weight_class or "—" }}</strong>
     </article>
 
-    <article>
+    <article class="coach-metric">
       <span>Federation</span>
       <strong>{{ athlete.federation or "—" }}</strong>
     </article>
 
-    <article>
+    <article class="coach-metric">
       <span>Next competition</span>
       <strong>{{ athlete.next_competition or "—" }}</strong>
     </article>
   </section>
 
   {% if latest_checkin %}
-    <section class="athlete-panel">
-      <div class="athlete-panel__heading">
-        <h2>Latest nutrition check-in</h2>
-        <span>
-          {{ latest_checkin.submitted_at.strftime("%d %b %Y") }}
-        </span>
+    <section class="coach-panel">
+      <div class="coach-panel__heading coach-panel__heading--split">
+        <div>
+          <span class="coach-eyebrow">Latest submission</span>
+          <h2>Nutrition check-in</h2>
+        </div>
+
+        <span>{{ latest_checkin.submitted_at.strftime("%d %b %Y") }}</span>
       </div>
 
-      <div class="checkin-score-grid">
-        <article>
-          <span>Adherence</span>
-          <strong>{{ latest_checkin.nutrition_adherence }}/10</strong>
-        </article>
-        <article>
-          <span>Hunger</span>
-          <strong>{{ latest_checkin.hunger }}/10</strong>
-        </article>
-        <article>
-          <span>Energy</span>
-          <strong>{{ latest_checkin.energy }}/10</strong>
-        </article>
-        <article>
-          <span>Sleep</span>
-          <strong>{{ latest_checkin.sleep_quality }}/10</strong>
-        </article>
-        <article>
-          <span>Stress</span>
-          <strong>{{ latest_checkin.stress }}/10</strong>
-        </article>
-        <article>
-          <span>Digestion</span>
-          <strong>{{ latest_checkin.digestion }}/10</strong>
-        </article>
-        <article>
-          <span>Training</span>
-          <strong>{{ latest_checkin.training_performance }}/10</strong>
-        </article>
+      <div class="coach-score-grid">
+        {% for label, score in (
+          ("Adherence", latest_checkin.nutrition_adherence),
+          ("Hunger", latest_checkin.hunger),
+          ("Energy", latest_checkin.energy),
+          ("Sleep", latest_checkin.sleep_quality),
+          ("Stress", latest_checkin.stress),
+          ("Digestion", latest_checkin.digestion),
+          ("Training", latest_checkin.training_performance)
+        ) %}
+          <article>
+            <span>{{ label }}</span>
+            <strong>{{ score }}/10</strong>
+          </article>
+        {% endfor %}
       </div>
     </section>
   {% endif %}
 
-  <section class="athlete-panel">
-    <div class="athlete-panel__heading">
-      <h2>Nutrition check-ins</h2>
-      <span>{{ checkins | length }}</span>
+  <section class="coach-panel">
+    <div class="coach-panel__heading coach-panel__heading--split">
+      <div>
+        <span class="coach-eyebrow">History</span>
+        <h2>Nutrition check-ins</h2>
+      </div>
+
+      <span class="coach-count">{{ checkins | length }}</span>
     </div>
 
     {% if checkins %}
-      <div class="checkin-list">
+      <div class="coach-checkin-list">
         {% for checkin in checkins %}
-          <article class="checkin-card">
-            <div class="checkin-card__header">
+          <article class="coach-checkin-card">
+            <header class="coach-checkin-card__header">
               <div>
-                <strong>
-                  {{ checkin.submitted_at.strftime("%d %B %Y") }}
-                </strong>
-                <span>
+                <strong>{{ checkin.submitted_at.strftime("%d %B %Y") }}</strong>
+
+                <span
+                  class="coach-status {% if checkin.reviewed %}coach-status--active{% else %}coach-status--pending{% endif %}"
+                >
                   {% if checkin.reviewed %}
                     Reviewed
                   {% else %}
@@ -117,31 +115,33 @@
               {% if checkin.bodyweight_kg %}
                 <strong>{{ checkin.bodyweight_kg }} kg</strong>
               {% endif %}
-            </div>
+            </header>
 
-            <div class="checkin-card__summary">
+            <div class="coach-checkin-card__summary">
               <span>Adherence {{ checkin.nutrition_adherence }}/10</span>
               <span>Energy {{ checkin.energy }}/10</span>
               <span>Stress {{ checkin.stress }}/10</span>
               <span>Training {{ checkin.training_performance }}/10</span>
             </div>
 
-            {% if checkin.wins %}
-              <div>
-                <h3>Wins</h3>
-                <p>{{ checkin.wins }}</p>
-              </div>
-            {% endif %}
+            <div class="coach-checkin-card__copy">
+              {% if checkin.wins %}
+                <div>
+                  <h3>Wins</h3>
+                  <p>{{ checkin.wins }}</p>
+                </div>
+              {% endif %}
 
-            {% if checkin.challenges %}
-              <div>
-                <h3>Challenges</h3>
-                <p>{{ checkin.challenges }}</p>
-              </div>
-            {% endif %}
+              {% if checkin.challenges %}
+                <div>
+                  <h3>Challenges</h3>
+                  <p>{{ checkin.challenges }}</p>
+                </div>
+              {% endif %}
+            </div>
 
             <form
-              class="review-form"
+              class="coach-response-form"
               method="post"
               action="{{ url_for(
                 'athletes.review_nutrition_checkin',
@@ -154,7 +154,7 @@
                 <textarea name="coach_response" rows="4">{{ checkin.coach_response or "" }}</textarea>
               </label>
 
-              <button class="athlete-button" type="submit">
+              <button class="coach-primary-button" type="submit">
                 {% if checkin.reviewed %}
                   Update response
                 {% else %}
@@ -166,8 +166,11 @@
         {% endfor %}
       </div>
     {% else %}
-      <p class="empty-state">No nutrition check-ins yet.</p>
+      <div class="coach-empty-state">
+        <h3>No nutrition check-ins yet</h3>
+        <p>Add the first check-in for this athlete.</p>
+      </div>
     {% endif %}
   </section>
-</div>
+</section>
 {% endblock %}

@@ -1,0 +1,574 @@
+:root {
+  color-scheme: dark;
+  --coach-bg: #08111f;
+  --coach-panel: #101722;
+  --coach-panel-soft: #0c1420;
+  --coach-border: #283447;
+  --coach-text: #f3f0e8;
+  --coach-muted: #9da8b8;
+  --coach-accent: #c3a06f;
+  --coach-accent-soft: #ddc39e;
+  --coach-success: #7fc6a4;
+  --coach-warning: #dfb56d;
+  --coach-shell: 1380px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body.coach-workspace {
+  margin: 0;
+  background: var(--coach-bg);
+  color: var(--coach-text);
+  font-family: Inter, system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.coach-shell {
+  width: min(var(--coach-shell), calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+.coach-skip-link {
+  position: fixed;
+  z-index: 100;
+  transform: translateY(-130%);
+  background: var(--coach-text);
+  color: var(--coach-bg);
+  padding: 0.75rem 1rem;
+}
+
+.coach-skip-link:focus {
+  transform: none;
+}
+
+.coach-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  border-bottom: 1px solid var(--coach-border);
+  background: rgba(8, 17, 31, 0.96);
+  backdrop-filter: blur(14px);
+}
+
+.coach-topbar__inner {
+  width: min(var(--coach-shell), calc(100% - 2rem));
+  min-height: 4.8rem;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 2rem;
+  align-items: center;
+}
+
+.coach-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  text-decoration: none;
+}
+
+.coach-brand__mark {
+  display: grid;
+  width: 2.7rem;
+  height: 2.7rem;
+  place-items: center;
+  border: 1px solid var(--coach-accent);
+  color: var(--coach-accent-soft);
+  font-family: Georgia, serif;
+  font-weight: 900;
+}
+
+.coach-brand__copy {
+  display: grid;
+}
+
+.coach-brand__copy small {
+  color: var(--coach-muted);
+}
+
+.coach-navigation {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.coach-navigation a,
+.coach-navigation__disabled {
+  color: var(--coach-muted);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.coach-navigation a:hover,
+.coach-navigation a[aria-current="page"] {
+  color: var(--coach-text);
+}
+
+.coach-navigation__disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.coach-topbar__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.coach-link-button,
+.coach-primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.8rem;
+  border: 1px solid var(--coach-accent);
+  padding: 0.65rem 0.95rem;
+  font-weight: 900;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.coach-primary-button {
+  background: var(--coach-accent);
+  color: var(--coach-bg);
+}
+
+.coach-link-button {
+  background: transparent;
+  color: var(--coach-text);
+}
+
+.coach-menu-button {
+  display: none;
+  justify-self: end;
+  border: 1px solid var(--coach-border);
+  padding: 0.6rem 0.8rem;
+  background: transparent;
+  color: var(--coach-text);
+}
+
+.coach-main {
+  min-height: calc(100vh - 9rem);
+  padding-block: 2.2rem 4rem;
+}
+
+.coach-page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.coach-page--narrow {
+  max-width: 980px;
+  margin-inline: auto;
+}
+
+.coach-page__header {
+  margin-bottom: 0.25rem;
+}
+
+.coach-page__header--split {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 2rem;
+}
+
+.coach-page__header h1 {
+  margin: 0.25rem 0 0.45rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+}
+
+.coach-page__header p {
+  margin: 0;
+  color: var(--coach-muted);
+}
+
+.coach-eyebrow,
+.coach-back-link {
+  color: var(--coach-accent-soft);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.coach-back-link {
+  display: inline-block;
+  margin-bottom: 0.7rem;
+  text-decoration: none;
+}
+
+.coach-panel {
+  border: 1px solid var(--coach-border);
+  padding: 1.4rem;
+  background: var(--coach-panel);
+}
+
+.coach-panel__heading {
+  margin-bottom: 1.2rem;
+}
+
+.coach-panel__heading--split {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.coach-panel__heading h2 {
+  margin: 0.2rem 0 0;
+  font-family: Georgia, serif;
+  font-size: 1.75rem;
+  text-transform: uppercase;
+}
+
+.coach-count {
+  display: grid;
+  min-width: 2.4rem;
+  height: 2.4rem;
+  place-items: center;
+  border: 1px solid var(--coach-border);
+  color: var(--coach-muted);
+}
+
+.coach-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.coach-form--athlete {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.coach-form label,
+.coach-response-form label {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.coach-form label span,
+.coach-response-form label span {
+  color: var(--coach-muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.coach-form input,
+.coach-form textarea,
+.coach-form select,
+.coach-response-form textarea {
+  width: 100%;
+  border: 1px solid var(--coach-border);
+  padding: 0.8rem;
+  background: var(--coach-panel-soft);
+  color: var(--coach-text);
+}
+
+.coach-form textarea,
+.coach-response-form textarea {
+  resize: vertical;
+}
+
+.coach-form input:focus,
+.coach-form textarea:focus,
+.coach-form select:focus,
+.coach-response-form textarea:focus {
+  border-color: var(--coach-accent);
+  outline: 2px solid rgba(195, 160, 111, 0.14);
+}
+
+.coach-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  grid-column: 1 / -1;
+  padding-top: 0.2rem;
+}
+
+.coach-form-grid,
+.coach-score-fields {
+  display: grid;
+  gap: 1rem;
+}
+
+.coach-form-grid--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.coach-score-fields {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.coach-table-wrap {
+  overflow-x: auto;
+}
+
+.coach-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.coach-table th,
+.coach-table td {
+  border-bottom: 1px solid var(--coach-border);
+  padding: 1rem 0.8rem;
+  text-align: left;
+}
+
+.coach-table th {
+  color: var(--coach-muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.coach-athlete-link {
+  display: grid;
+  text-decoration: none;
+}
+
+.coach-athlete-link small {
+  color: var(--coach-muted);
+}
+
+.coach-status {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid var(--coach-border);
+  padding: 0.3rem 0.55rem;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.coach-status--active {
+  border-color: rgba(127, 198, 164, 0.45);
+  color: var(--coach-success);
+}
+
+.coach-status--pending {
+  border-color: rgba(223, 181, 109, 0.45);
+  color: var(--coach-warning);
+}
+
+.coach-empty-state {
+  border: 1px dashed var(--coach-border);
+  padding: 2rem;
+  text-align: center;
+}
+
+.coach-empty-state h3 {
+  margin-top: 0;
+}
+
+.coach-empty-state p {
+  margin-bottom: 0;
+  color: var(--coach-muted);
+}
+
+.coach-metric-grid,
+.coach-score-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.coach-metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.coach-score-grid {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.coach-metric,
+.coach-score-grid article {
+  border: 1px solid var(--coach-border);
+  padding: 1rem;
+  background: var(--coach-panel);
+}
+
+.coach-metric span,
+.coach-score-grid span {
+  display: block;
+  color: var(--coach-muted);
+  font-size: 0.8rem;
+}
+
+.coach-metric strong,
+.coach-score-grid strong {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.15rem;
+}
+
+.coach-checkin-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.coach-checkin-card {
+  border: 1px solid var(--coach-border);
+  padding: 1.2rem;
+  background: var(--coach-panel-soft);
+}
+
+.coach-checkin-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.coach-checkin-card__header > div {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.coach-checkin-card__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-block: 1rem;
+}
+
+.coach-checkin-card__summary span {
+  border: 1px solid var(--coach-border);
+  padding: 0.35rem 0.55rem;
+  color: var(--coach-muted);
+  font-size: 0.8rem;
+}
+
+.coach-checkin-card__copy {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.coach-checkin-card__copy h3 {
+  margin-bottom: 0.3rem;
+}
+
+.coach-checkin-card__copy p {
+  margin-top: 0;
+  color: var(--coach-muted);
+}
+
+.coach-response-form {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.coach-form-error {
+  color: #ef9f96;
+}
+
+.coach-footer {
+  border-top: 1px solid var(--coach-border);
+  padding-block: 1.5rem;
+  color: var(--coach-muted);
+}
+
+.coach-footer__inner {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+@media (max-width: 1050px) {
+  .coach-form--athlete,
+  .coach-form-grid--four,
+  .coach-metric-grid,
+  .coach-score-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .coach-score-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .coach-topbar__inner {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .coach-menu-button {
+    display: inline-flex;
+  }
+
+  .coach-navigation {
+    position: absolute;
+    top: calc(100% + 1px);
+    left: 0;
+    right: 0;
+    display: none;
+    padding: 1rem;
+    border-bottom: 1px solid var(--coach-border);
+    background: var(--coach-bg);
+    flex-direction: column;
+  }
+
+  .coach-navigation.is-open {
+    display: flex;
+  }
+
+  .coach-topbar__actions {
+    display: none;
+  }
+}
+
+@media (max-width: 650px) {
+  .coach-shell,
+  .coach-topbar__inner {
+    width: min(100% - 1rem, var(--coach-shell));
+  }
+
+  .coach-brand__copy small {
+    display: none;
+  }
+
+  .coach-page__header--split {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .coach-form--athlete,
+  .coach-form-grid--four,
+  .coach-metric-grid,
+  .coach-score-fields,
+  .coach-score-grid,
+  .coach-checkin-card__copy {
+    grid-template-columns: 1fr;
+  }
+
+  .coach-form__actions,
+  .coach-form__actions .coach-primary-button {
+    width: 100%;
+  }
+
+  .coach-panel {
+    padding: 1rem;
+  }
+
+  .coach-footer__inner {
+    flex-direction: column;
+  }
+}

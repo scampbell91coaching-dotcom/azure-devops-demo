@@ -1,32 +1,40 @@
-{% extends "base.html" %}
+{% extends "coach/base.html" %}
+
+{% set coach_section = "athletes" %}
 
 {% block title %}Nutrition Check-in | Traditional Strength{% endblock %}
 
 {% block content %}
-<div class="athlete-page athlete-page--narrow">
-  <div class="athlete-page__header">
+<section class="coach-page coach-page--narrow">
+  <header class="coach-page__header">
     <a
-      class="back-link"
-      href="{{ url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}"
+      class="coach-back-link"
+      href="{{ url_for(
+        'athletes.athlete_dashboard',
+        athlete_id=athlete.id
+      ) }}"
     >
       ← {{ athlete.full_name }}
     </a>
 
-    <span class="section-label">Nutrition check-in</span>
+    <span class="coach-eyebrow">Nutrition check-in</span>
     <h1>Weekly check-in</h1>
     <p>Capture the week clearly so the next decision is easy.</p>
-  </div>
+  </header>
 
   <form
-    class="athlete-panel athlete-form"
+    class="coach-panel coach-form"
     method="post"
-    action="{{ url_for('athletes.create_nutrition_checkin', athlete_id=athlete.id) }}"
+    action="{{ url_for(
+      'athletes.create_nutrition_checkin',
+      athlete_id=athlete.id
+    ) }}"
   >
     {% if errors.get("scores") %}
-      <p class="form-error">{{ errors["scores"] }}</p>
+      <p class="coach-form-error">{{ errors["scores"] }}</p>
     {% endif %}
 
-    <div class="athlete-form__grid athlete-form__grid--four">
+    <div class="coach-form-grid coach-form-grid--four">
       <label>
         <span>Bodyweight (kg)</span>
         <input
@@ -65,7 +73,7 @@
       </label>
     </div>
 
-    <div class="score-fields">
+    <div class="coach-score-fields">
       {% for name, label in (
         ("nutrition_adherence", "Nutrition adherence"),
         ("hunger", "Hunger"),
@@ -79,6 +87,7 @@
           <span>{{ label }}</span>
           <select name="{{ name }}" required>
             <option value="">Choose</option>
+
             {% for score in range(1, 11) %}
               <option
                 value="{{ score }}"
@@ -112,9 +121,11 @@
       <textarea name="questions" rows="5">{{ form.get('questions', '') }}</textarea>
     </label>
 
-    <button class="athlete-button" type="submit">
-      Save nutrition check-in
-    </button>
+    <div class="coach-form__actions">
+      <button class="coach-primary-button" type="submit">
+        Save nutrition check-in
+      </button>
+    </div>
   </form>
-</div>
+</section>
 {% endblock %}

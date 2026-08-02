@@ -1,41 +1,50 @@
-{% extends "base.html" %}
+{% extends "coach/base.html" %}
+
+{% set coach_section = "athletes" %}
 
 {% block title %}Athletes | Traditional Strength{% endblock %}
 
 {% block content %}
-<div class="athlete-page">
-  <div class="athlete-page__header">
+<section class="coach-page">
+  <header class="coach-page__header">
     <div>
-      <span class="section-label">Coach workspace</span>
+      <span class="coach-eyebrow">Athlete management</span>
       <h1>Athletes</h1>
-      <p>Manage athletes, nutrition check-ins and coaching notes.</p>
+      <p>Manage athlete profiles, nutrition check-ins and coaching notes.</p>
     </div>
-  </div>
+  </header>
 
-  <section class="athlete-panel">
-    <div class="athlete-panel__heading">
-      <h2>Add athlete</h2>
+  <section class="coach-panel">
+    <div class="coach-panel__heading">
+      <div>
+        <span class="coach-eyebrow">New athlete</span>
+        <h2>Add athlete</h2>
+      </div>
     </div>
 
-    <form class="athlete-form athlete-form--create" method="post" action="/athletes">
+    <form
+      class="coach-form coach-form--athlete"
+      method="post"
+      action="/athletes"
+    >
       <label>
         <span>First name</span>
-        <input name="first_name" required>
+        <input name="first_name" autocomplete="given-name" required>
       </label>
 
       <label>
         <span>Last name</span>
-        <input name="last_name" required>
+        <input name="last_name" autocomplete="family-name" required>
       </label>
 
       <label>
         <span>Email</span>
-        <input name="email" type="email" required>
+        <input name="email" type="email" autocomplete="email" required>
       </label>
 
       <label>
         <span>Instagram</span>
-        <input name="instagram">
+        <input name="instagram" placeholder="@username">
       </label>
 
       <label>
@@ -58,19 +67,27 @@
         <input name="next_competition">
       </label>
 
-      <button class="athlete-button" type="submit">Create athlete</button>
+      <div class="coach-form__actions">
+        <button class="coach-primary-button" type="submit">
+          Create athlete
+        </button>
+      </div>
     </form>
   </section>
 
-  <section class="athlete-panel">
-    <div class="athlete-panel__heading">
-      <h2>Current athletes</h2>
-      <span>{{ athletes | length }}</span>
+  <section class="coach-panel">
+    <div class="coach-panel__heading coach-panel__heading--split">
+      <div>
+        <span class="coach-eyebrow">Roster</span>
+        <h2>Current athletes</h2>
+      </div>
+
+      <span class="coach-count">{{ athletes | length }}</span>
     </div>
 
     {% if athletes %}
-      <div class="athlete-table-wrap">
-        <table class="athlete-table">
+      <div class="coach-table-wrap">
+        <table class="coach-table">
           <thead>
             <tr>
               <th>Athlete</th>
@@ -85,12 +102,24 @@
             {% for athlete in athletes %}
               <tr>
                 <td>
-                  <a href="{{ url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}">
+                  <a
+                    class="coach-athlete-link"
+                    href="{{ url_for(
+                      'athletes.athlete_dashboard',
+                      athlete_id=athlete.id
+                    ) }}"
+                  >
                     <strong>{{ athlete.full_name }}</strong>
                     <small>{{ athlete.email }}</small>
                   </a>
                 </td>
-                <td>{{ athlete.status | title }}</td>
+
+                <td>
+                  <span class="coach-status coach-status--active">
+                    {{ athlete.status | title }}
+                  </span>
+                </td>
+
                 <td>
                   {% if athlete.bodyweight_kg %}
                     {{ athlete.bodyweight_kg }} kg
@@ -98,6 +127,7 @@
                     —
                   {% endif %}
                 </td>
+
                 <td>{{ athlete.next_competition or "—" }}</td>
                 <td>{{ athlete.nutrition_checkins.count() }}</td>
               </tr>
@@ -106,8 +136,11 @@
         </table>
       </div>
     {% else %}
-      <p class="empty-state">No athletes yet.</p>
+      <div class="coach-empty-state">
+        <h3>No athletes yet</h3>
+        <p>Create your first athlete above.</p>
+      </div>
     {% endif %}
   </section>
-</div>
+</section>
 {% endblock %}
