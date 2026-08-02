@@ -103,8 +103,8 @@ spec:
           image: quay.io/oauth2-proxy/oauth2-proxy:v7.9.0
           args:
             - --provider=oidc
-            - --oidc-issuer-url=https://login.microsoftonline.com/74d2fd2d-dd77-4db5-949c-232b3f50d865/v2.0","--client-id
-            - --client-id=19e10ae8-f9db-4325-993a-9d2bca621840","--client-secret
+            - --oidc-issuer-url=https://login.microsoftonline.com/74d2fd2d-dd77-4db5-949c-232b3f50d865/v2.0
+            - --client-id=19e10ae8-f9db-4325-993a-9d2bca621840
             - --client-secret=$(CLIENT_SECRET)
             - --cookie-secret=$(COOKIE_SECRET)
             - --cookie-secure=true
