@@ -1,29 +1,41 @@
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PORT=8080
+    PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
-RUN addgroup --system appgroup \
-    && adduser --system --ingroup appgroup appuser \
-    && mkdir -p /data \
-    && chown -R appuser:appgroup /app /data
+RUN groupadd --system --gid 10001 app \
+    && useradd \
+        --system \
+        --uid 10001 \
+        --gid app \
+        --home-dir /app \
+        app
 
-COPY requirements.txt ./requirements.txt
+COPY requirements.txt /app/requirements.txt
 
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-COPY portal ./portal
-COPY templates ./templates
-COPY static ./static
-COPY content ./content
-COPY public_app.py ./public_app.py
+COPY public_app.py /app/public_app.py
+COPY portal /app/portal
+COPY templates /app/templates
+COPY static /app/static
+COPY content /app/content
 
-USER appuser
+RUN mkdir -p /data /tmp \
+    && chown -R app:app /app /data /tmp
+
+USER app
 
 EXPOSE 8080
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--threads", "4", "--timeout", "30", "public_app:app"]
+CMD [
+  "gunicorn",
+  "--bind=0.0.0.0:8080",
+  "--workers=2",
+  "--threads=4",
+  "--timeout=60",
+  "public_app:app"
+]
