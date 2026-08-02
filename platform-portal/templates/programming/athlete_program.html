@@ -1,0 +1,81 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "programming" %}
+
+{% block title %}
+{{ athlete.full_name }} Programme | Traditional Strength
+{% endblock %}
+
+{% block content %}
+<section class="coach-page">
+  <header class="coach-page__header">
+    <span class="coach-eyebrow">Athlete programming</span>
+
+    <h1>{{ athlete.full_name }}</h1>
+
+    <p>
+      View, edit and generate training blocks for this athlete.
+    </p>
+
+    <div class="coach-form__actions">
+      <a
+        class="coach-primary-button"
+        href="{{ url_for('block_factory.wizard') }}"
+      >
+        Generate new block
+      </a>
+
+      <a
+        class="coach-link-button"
+        href="{{ url_for('athletes.detail', athlete_id=athlete.id) }}"
+      >
+        Back to athlete
+      </a>
+    </div>
+  </header>
+
+  <section class="coach-panel">
+    <div class="coach-panel__heading">
+      <span class="coach-eyebrow">Training history</span>
+      <h2>Programme blocks</h2>
+    </div>
+
+    {% if blocks %}
+      <div class="coach-list">
+        {% for block in blocks %}
+          <article class="coach-list__item">
+            <div>
+              <strong>{{ block.name }}</strong>
+
+              <p>
+                {{ block.weeks | length }} weeks
+              </p>
+            </div>
+
+            <a
+              class="coach-link-button"
+              href="{{ url_for('programming.block', block_id=block.id) }}"
+            >
+              View block
+            </a>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="coach-empty-state">
+        <h3>No programme blocks yet</h3>
+
+        <p>
+          Generate the athlete's first block using Block Factory.
+        </p>
+
+        <a
+          class="coach-primary-button"
+          href="{{ url_for('block_factory.wizard') }}"
+        >
+          Open Block Factory
+        </a>
+      </div>
+    {% endif %}
+  </section>
+</section>
+{% endblock %}

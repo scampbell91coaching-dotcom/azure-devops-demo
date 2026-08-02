@@ -23,6 +23,26 @@ def _int(value: str | None) -> int | None:
     return int(value) if value and value.strip() else None
 
 
+@programming_bp.get("/athletes/<int:athlete_id>/programming")
+def athlete_program(athlete_id: int):
+    athlete = db.session.get(Athlete, athlete_id)
+
+    if athlete is None:
+        abort(404)
+
+    blocks = (
+        TrainingBlock.query.filter_by(athlete_id=athlete.id)
+        .order_by(TrainingBlock.id.desc())
+        .all()
+    )
+
+    return render_template(
+        "programming/athlete_program.html",
+        athlete=athlete,
+        blocks=blocks,
+    )
+
+
 @programming_bp.get("/programming")
 def index():
     athletes = Athlete.query.order_by(Athlete.last_name.asc()).all()
