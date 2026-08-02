@@ -9,6 +9,7 @@ from .api.health import health_bp
 from .api.history import history_bp
 from .api.platform import platform_bp
 from .api.recommendations import recommendations_bp
+from .athletes import athletes_bp
 from .database_config import resolve_database_uri
 from .extensions import db
 from .lead_magnets import lead_magnets_bp
@@ -42,13 +43,18 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(recommendations_bp, url_prefix="/api/v1")
     app.register_blueprint(views_bp)
     app.register_blueprint(lead_magnets_bp)
+    app.register_blueprint(athletes_bp)
 
     with app.app_context():
+        from .models.athlete import Athlete
         from .models.lead_capture import LeadCapture
+        from .models.nutrition_checkin import NutritionCheckIn
         from .models.platform_snapshot import PlatformSnapshot
 
         _ = PlatformSnapshot
         _ = LeadCapture
+        _ = Athlete
+        _ = NutritionCheckIn
         db.create_all()
 
     return app

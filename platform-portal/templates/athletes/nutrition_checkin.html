@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Nutrition Check-in | Traditional Strength{% endblock %}
+
+{% block content %}
+<div class="athlete-page athlete-page--narrow">
+  <div class="athlete-page__header">
+    <a
+      class="back-link"
+      href="{{ url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}"
+    >
+      ← {{ athlete.full_name }}
+    </a>
+
+    <span class="section-label">Nutrition check-in</span>
+    <h1>Weekly check-in</h1>
+    <p>Capture the week clearly so the next decision is easy.</p>
+  </div>
+
+  <form
+    class="athlete-panel athlete-form"
+    method="post"
+    action="{{ url_for('athletes.create_nutrition_checkin', athlete_id=athlete.id) }}"
+  >
+    {% if errors.get("scores") %}
+      <p class="form-error">{{ errors["scores"] }}</p>
+    {% endif %}
+
+    <div class="athlete-form__grid athlete-form__grid--four">
+      <label>
+        <span>Bodyweight (kg)</span>
+        <input
+          name="bodyweight_kg"
+          type="number"
+          step="0.1"
+          value="{{ form.get('bodyweight_kg', athlete.bodyweight_kg or '') }}"
+        >
+      </label>
+
+      <label>
+        <span>Average calories</span>
+        <input
+          name="average_calories"
+          type="number"
+          value="{{ form.get('average_calories', '') }}"
+        >
+      </label>
+
+      <label>
+        <span>Average protein (g)</span>
+        <input
+          name="average_protein_g"
+          type="number"
+          value="{{ form.get('average_protein_g', '') }}"
+        >
+      </label>
+
+      <label>
+        <span>Average steps</span>
+        <input
+          name="average_steps"
+          type="number"
+          value="{{ form.get('average_steps', '') }}"
+        >
+      </label>
+    </div>
+
+    <div class="score-fields">
+      {% for name, label in (
+        ("nutrition_adherence", "Nutrition adherence"),
+        ("hunger", "Hunger"),
+        ("energy", "Energy"),
+        ("sleep_quality", "Sleep quality"),
+        ("stress", "Stress"),
+        ("digestion", "Digestion"),
+        ("training_performance", "Training performance")
+      ) %}
+        <label>
+          <span>{{ label }}</span>
+          <select name="{{ name }}" required>
+            <option value="">Choose</option>
+            {% for score in range(1, 11) %}
+              <option
+                value="{{ score }}"
+                {% if form.get(name) == score|string %}selected{% endif %}
+              >
+                {{ score }}
+              </option>
+            {% endfor %}
+          </select>
+        </label>
+      {% endfor %}
+    </div>
+
+    <label>
+      <span>What went well?</span>
+      <textarea name="wins" rows="5">{{ form.get('wins', '') }}</textarea>
+    </label>
+
+    <label>
+      <span>What was difficult?</span>
+      <textarea name="challenges" rows="5">{{ form.get('challenges', '') }}</textarea>
+    </label>
+
+    <label>
+      <span>Anything coming up that affects the plan?</span>
+      <textarea name="upcoming_events" rows="4">{{ form.get('upcoming_events', '') }}</textarea>
+    </label>
+
+    <label>
+      <span>Questions for your coach</span>
+      <textarea name="questions" rows="5">{{ form.get('questions', '') }}</textarea>
+    </label>
+
+    <button class="athlete-button" type="submit">
+      Save nutrition check-in
+    </button>
+  </form>
+</div>
+{% endblock %}
