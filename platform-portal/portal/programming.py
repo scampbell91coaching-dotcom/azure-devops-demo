@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import cast
 
 from flask import Blueprint, abort, redirect, render_template, request, url_for
+from sqlalchemy.exc import SQLAlchemyError
 
 from .extensions import db
 from .models.athlete import Athlete
@@ -23,6 +24,53 @@ def _float(value: str | None) -> float | None:
 
 def _int(value: str | None) -> int | None:
     return int(value) if value and value.strip() else None
+
+
+def _renumber_sessions(
+    week: TrainingWeek,
+    *,
+    excluding: TrainingSession | None = None,
+) -> None:
+    sessions = sorted(
+        (
+            item
+            for item in cast(list[TrainingSession], week.sessions)
+            if item is not excluding
+        ),
+        key=lambda item: (item.position, item.id or 0),
+    )
+    for position, item in enumerate(sessions, start=1):
+        item.position = position
+
+
+def _copy_prescriptions(
+    source: TrainingSession,
+    target: TrainingSession,
+) -> None:
+    for item in cast(list[ExercisePrescription], source.prescriptions):
+        db.session.add(
+            ExercisePrescription(
+                session=target,
+                exercise_name=item.exercise_name,
+                position=item.position,
+                sets=item.sets,
+                reps=item.reps,
+                load_kg=item.load_kg,
+                percentage=item.percentage,
+                rpe=item.rpe,
+                tempo=item.tempo,
+                rest_seconds=item.rest_seconds,
+                notes=item.notes,
+            )
+        )
+
+
+def _commit_or_rollback() -> None:
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        raise
 
 
 @programming_bp.get("/athletes/<int:athlete_id>/programming")
@@ -214,8 +262,45 @@ def create_session(week_id: int):
         position=position,
     )
     db.session.add(session)
-    db.session.commit()
+    _commit_or_rollback()
     return redirect(url_for("programming.session", session_id=session.id))
+
+
+def _insert_blank_session(source: TrainingSession, *, after: bool) -> TrainingSession:
+    week = cast(TrainingWeek, source.week)
+    _renumber_sessions(week)
+    source_position = source.position
+    insertion_position = source_position + int(after)
+    for item in cast(list[TrainingSession], week.sessions):
+        if item.position >= insertion_position:
+            item.position += 1
+    target = TrainingSession(
+        week=week,
+        name=f"Session {insertion_position}",
+        position=insertion_position,
+    )
+    db.session.add(target)
+    return target
+
+
+@programming_bp.post("/programming/sessions/<int:session_id>/insert-before")
+def insert_session_before(session_id: int):
+    source = db.session.get(TrainingSession, session_id)
+    if source is None:
+        abort(404)
+    target = _insert_blank_session(source, after=False)
+    _commit_or_rollback()
+    return redirect(url_for("programming.session", session_id=target.id))
+
+
+@programming_bp.post("/programming/sessions/<int:session_id>/insert-after")
+def insert_session_after(session_id: int):
+    source = db.session.get(TrainingSession, session_id)
+    if source is None:
+        abort(404)
+    target = _insert_blank_session(source, after=True)
+    _commit_or_rollback()
+    return redirect(url_for("programming.session", session_id=target.id))
 
 
 @programming_bp.get("/programming/sessions/<int:session_id>")
@@ -266,33 +351,45 @@ def duplicate_session(session_id: int):
     source = db.session.get(TrainingSession, session_id)
     if source is None:
         abort(404)
-    target = TrainingSession(
-        week=source.week,
-        name=f"{source.name} Copy",
-        day_label=source.day_label,
-        position=len(source.week.sessions) + 1,
-        notes=source.notes,
-    )
-    db.session.add(target)
-    db.session.flush()
-    for item in source.prescriptions:
-        db.session.add(
-            ExercisePrescription(
-                session=target,
-                exercise_name=item.exercise_name,
-                position=item.position,
-                sets=item.sets,
-                reps=item.reps,
-                load_kg=item.load_kg,
-                percentage=item.percentage,
-                rpe=item.rpe,
-                tempo=item.tempo,
-                rest_seconds=item.rest_seconds,
-                notes=item.notes,
-            )
+    try:
+        week = cast(TrainingWeek, source.week)
+        _renumber_sessions(week)
+        target_position = source.position + 1
+        for item in cast(list[TrainingSession], week.sessions):
+            if item.position >= target_position:
+                item.position += 1
+        target = TrainingSession(
+            week=week,
+            name=f"{source.name} Copy",
+            day_label=source.day_label,
+            position=target_position,
+            notes=source.notes,
         )
-    db.session.commit()
+        db.session.add(target)
+        db.session.flush()
+        _copy_prescriptions(source, target)
+        _commit_or_rollback()
+    except SQLAlchemyError:
+        db.session.rollback()
+        raise
     return redirect(url_for("programming.session", session_id=target.id))
+
+
+@programming_bp.post("/programming/sessions/<int:session_id>/delete")
+def delete_session(session_id: int):
+    item = db.session.get(TrainingSession, session_id)
+    if item is None:
+        abort(404)
+    week = cast(TrainingWeek, item.week)
+    week_id = week.id
+    try:
+        db.session.delete(item)
+        _renumber_sessions(week, excluding=item)
+        _commit_or_rollback()
+    except SQLAlchemyError:
+        db.session.rollback()
+        raise
+    return redirect(url_for("programming.week", week_id=week_id))
 
 
 @programming_bp.post("/programming/weeks/<int:week_id>/duplicate")
