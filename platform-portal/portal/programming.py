@@ -380,14 +380,6 @@ def duplicate_session(session_id: int):
     except SQLAlchemyError:
         db.session.rollback()
         raise
-        )
-        db.session.add(target)
-        db.session.flush()
-        _copy_prescriptions(source, target)
-        _commit_or_rollback()
-    except SQLAlchemyError:
-        db.session.rollback()
-        raise
     return redirect(url_for("programming.session", session_id=target.id))
 
 
