@@ -116,16 +116,7 @@ def _duplicate_block(source: TrainingBlock) -> TrainingBlock:
                 db.session.add(
                     ExercisePrescription(
                         session=target_session,
-                        exercise_name=item.exercise_name,
-                        position=item.position,
-                        sets=item.sets,
-                        reps=item.reps,
-                        load_kg=item.load_kg,
-                        percentage=item.percentage,
-                        rpe=item.rpe,
-                        tempo=item.tempo,
-                        rest_seconds=item.rest_seconds,
-                        notes=item.notes,
+                        **item.copy_values(),
                     )
                 )
 
@@ -279,16 +270,7 @@ def duplicate_session(session_id: int):
         db.session.add(
             ExercisePrescription(
                 session=target,
-                exercise_name=item.exercise_name,
-                position=item.position,
-                sets=item.sets,
-                reps=item.reps,
-                load_kg=item.load_kg,
-                percentage=item.percentage,
-                rpe=item.rpe,
-                tempo=item.tempo,
-                rest_seconds=item.rest_seconds,
-                notes=item.notes,
+                **item.copy_values(),
             )
         )
     db.session.commit()
@@ -322,16 +304,7 @@ def duplicate_week(week_id: int):
             db.session.add(
                 ExercisePrescription(
                     session=target_session,
-                    exercise_name=item.exercise_name,
-                    position=item.position,
-                    sets=item.sets,
-                    reps=item.reps,
-                    load_kg=item.load_kg,
-                    percentage=item.percentage,
-                    rpe=item.rpe,
-                    tempo=item.tempo,
-                    rest_seconds=item.rest_seconds,
-                    notes=item.notes,
+                    **item.copy_values(),
                 )
             )
     db.session.commit()
