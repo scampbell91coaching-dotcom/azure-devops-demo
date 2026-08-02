@@ -4,6 +4,7 @@ from pathlib import Path
 
 from flask import Flask, jsonify
 
+from portal.coaching_applications import coaching_applications_bp
 from portal.database_config import resolve_database_uri
 from portal.extensions import db
 from portal.lead_magnets import lead_magnets_bp
@@ -35,6 +36,7 @@ def create_public_app(
     db.init_app(app)
 
     app.register_blueprint(lead_magnets_bp)
+    app.register_blueprint(coaching_applications_bp)
 
     @app.get("/health")
     def health():

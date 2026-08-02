@@ -11,6 +11,21 @@ coaching_applications_bp = Blueprint(
 )
 
 
+APPLICATION_PAGE_CONTENT = {
+    "slug": "apply",
+    "title": "Apply for Coaching",
+    "subtitle": (
+        "Apply for individualised online powerlifting coaching "
+        "with Traditional Strength."
+    ),
+    "meta_description": (
+        "Apply for individualised online powerlifting coaching "
+        "with Traditional Strength."
+    ),
+    "coaching_url": "/apply",
+}
+
+
 def _optional_float(value: str | None) -> float | None:
     if value is None or not value.strip():
         return None
@@ -29,6 +44,7 @@ def _optional_int(value: str | None) -> int | None:
 def application_page():
     return render_template(
         "public/coaching_application.html",
+        content=APPLICATION_PAGE_CONTENT,
         submitted=request.args.get("submitted") == "1",
         form={},
         errors={},
@@ -90,6 +106,7 @@ def submit_application():
         return (
             render_template(
                 "public/coaching_application.html",
+                content=APPLICATION_PAGE_CONTENT,
                 submitted=False,
                 form=form,
                 errors=errors,

@@ -1,17 +1,20 @@
-from portal import create_app
 from portal.extensions import db
 from portal.models.coaching_application import CoachingApplication
+from public_app import create_public_app
 
 
-def create_test_app():
-    app = create_app(
-        {
-            "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        }
+def create_test_app(monkeypatch=None):
+    if monkeypatch is not None:
+        monkeypatch.setenv("DATABASE_URL", "sqlite:///:memory:")
+
+    app = create_public_app()
+    app.config.update(
+        TESTING=True,
+        SQLALCHEMY_DATABASE_URI="sqlite:///:memory:",
     )
 
     with app.app_context():
+        db.drop_all()
         db.create_all()
 
     return app
