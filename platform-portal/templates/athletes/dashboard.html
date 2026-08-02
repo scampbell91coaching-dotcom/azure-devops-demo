@@ -23,6 +23,26 @@
     >
       Add nutrition check-in
     </a>
+
+    <a
+      class="coach-link-button"
+      href="{{ url_for('checkins.settings', athlete_id=athlete.id) }}"
+    >
+      Check-in settings
+    </a>
+
+    {% if weekly_checkin_due %}
+      <a
+        class="coach-link-button"
+        href="{{ url_for('checkins.new', athlete_id=athlete.id) }}"
+      >
+        Weekly check-in due
+      </a>
+    {% elif not checkin_settings.workflow_active or not checkin_settings.has_enabled_modules %}
+      <span class="coach-status coach-status--pending">Weekly check-ins disabled</span>
+    {% else %}
+      <span class="coach-status coach-status--active">No weekly check-in due</span>
+    {% endif %}
   
 <a
   class="coach-link-button"

@@ -12,6 +12,16 @@
     <label>
       <input
         type="checkbox"
+        name="workflow_active"
+        value="1"
+        {% if settings.workflow_active %}checked{% endif %}
+      >
+      Weekly check-in workflow active
+    </label>
+
+    <label>
+      <input
+        type="checkbox"
         name="training_enabled"
         value="1"
         {% if settings.training_enabled %}checked{% endif %}

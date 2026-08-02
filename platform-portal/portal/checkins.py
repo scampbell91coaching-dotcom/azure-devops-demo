@@ -15,7 +15,13 @@ def _settings_for(athlete: Athlete) -> AthleteCheckinSettings:
     settings = AthleteCheckinSettings.query.filter_by(athlete_id=athlete.id).first()
 
     if settings is None:
-        settings = AthleteCheckinSettings(athlete=athlete)
+        settings = AthleteCheckinSettings(
+            athlete=athlete,
+            training_enabled=True,
+            nutrition_enabled=False,
+            workflow_active=True,
+            checkin_day=0,
+        )
         db.session.add(settings)
         db.session.commit()
 
@@ -59,7 +65,9 @@ def update_settings(athlete_id: int):
     settings = _settings_for(athlete)
     settings.training_enabled = request.form.get("training_enabled") == "1"
     settings.nutrition_enabled = request.form.get("nutrition_enabled") == "1"
-    settings.checkin_day = request.form.get("checkin_day", type=int) or 0
+    settings.workflow_active = request.form.get("workflow_active") == "1"
+    checkin_day = request.form.get("checkin_day", type=int)
+    settings.checkin_day = checkin_day if checkin_day in range(7) else 0
 
     db.session.commit()
     return redirect(url_for("checkins.settings", athlete_id=athlete.id))

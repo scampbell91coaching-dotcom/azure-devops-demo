@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from flask import Blueprint, abort, redirect, render_template, request, url_for
 
 from .extensions import db
 from .models.athlete import Athlete
+from .models.checkins import AthleteCheckinSettings
 from .models.nutrition_checkin import NutritionCheckIn
 
 athletes_bp = Blueprint("athletes", __name__)
@@ -95,12 +98,23 @@ def athlete_dashboard(athlete_id: int):
     )
 
     latest_checkin = checkins[0] if checkins else None
+    settings = AthleteCheckinSettings.query.filter_by(athlete_id=athlete.id).first()
+    if settings is None:
+        settings = AthleteCheckinSettings(
+            athlete_id=athlete.id,
+            training_enabled=True,
+            nutrition_enabled=False,
+            workflow_active=True,
+            checkin_day=0,
+        )
 
     return render_template(
         "athletes/dashboard.html",
         athlete=athlete,
         checkins=checkins,
         latest_checkin=latest_checkin,
+        checkin_settings=settings,
+        weekly_checkin_due=settings.is_due_on(datetime.now(UTC).date()),
     )
 
 
