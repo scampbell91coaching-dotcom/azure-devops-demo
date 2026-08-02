@@ -1,0 +1,48 @@
+<section class="guide-section signup-section">
+  <div class="page-shell signup-panel">
+    <div class="signup-panel__copy">
+      <span class="eyebrow">Keep the Guide</span>
+      <h2>{{ content.cta_heading }}</h2>
+      <p>{{ content.cta_copy }}</p>
+    </div>
+
+    {% if success %}
+      <div class="success-box" role="status">
+        <strong>You're in.</strong>
+        <p>Check your inbox for the guide.</p>
+      </div>
+    {% else %}
+      <form
+        class="guide-form"
+        method="post"
+        action="/api/v1/lead-captures"
+      >
+        <input type="hidden" name="source_slug" value="{{ content.slug }}">
+
+        <label>
+          <span>First name</span>
+          <input
+            name="first_name"
+            type="text"
+            autocomplete="given-name"
+            required
+          >
+        </label>
+
+        <label>
+          <span>Email address</span>
+          <input
+            name="email"
+            type="email"
+            autocomplete="email"
+            required
+          >
+        </label>
+
+        <button class="primary-button" type="submit">
+          {{ content.button_text }}
+        </button>
+      </form>
+    {% endif %}
+  </div>
+</section>

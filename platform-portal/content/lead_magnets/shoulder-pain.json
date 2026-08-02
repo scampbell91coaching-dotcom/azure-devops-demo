@@ -1,22 +1,50 @@
 {
   "slug": "shoulder-pain",
-  "eyebrow": "Free strength guide",
-  "title": "The Lifter\u2019s Guide to Training Around Shoulder Pain",
-  "subtitle": "A practical guide to help strength athletes identify common training triggers, adjust pressing and upper-body work, and rebuild confidence without guessing.",
-  "problem_heading": "Shoulder pain does not always mean abandoning pressing",
-  "problem_copy": "Pain during bench press, overhead work, or upper-body training can make every session feel uncertain. This guide gives you a structured way to adjust load, range, grip, tempo, and exercise selection while continuing to monitor how your shoulder responds.",
-  "benefits": [
-    "How to identify pressing positions and loading patterns that may aggravate symptoms",
-    "Simple ways to adjust grip width, range of motion, tempo, and exercise selection",
-    "How to use pain and performance feedback without overreacting to one difficult session",
-    "A progressive approach for rebuilding tolerance to bench press and upper-body training",
-    "When it is sensible to seek assessment from a qualified healthcare professional"
+  "title": "Shoulder Pain Guide",
+  "meta_description": "A practical shoulder pain guide for powerlifters.",
+  "strapline": "A step-by-step framework to press, bench and train without constantly irritating your shoulder.",
+  "subtitle": "This page will show lifters how to work out what is aggravating the shoulder, improve the positions they need and rebuild pressing strength.",
+  "hero_image_label": "Shoulder assessment or bench coaching image",
+  "highlights": [
+    "Work out which pressing position is causing the problem",
+    "Improve shoulder movement and control",
+    "Build confidence under the bar again"
   ],
-  "cta_heading": "Get the free shoulder pain guide",
-  "cta_copy": "Enter your details below and the guide will be sent to your inbox.",
-  "button_text": "Send me the guide",
-  "download_label": "Shoulder Pain Training Guide",
-  "accent_label": "For powerlifters and strength athletes",
-  "testimonial": "Clear, practical advice for lifters who want to keep training while making sensible decisions around shoulder symptoms.",
-  "disclaimer": "This guide is educational and is not a diagnosis or a substitute for individual medical advice. Seek professional assessment for severe, worsening, unexplained, traumatic, or persistent symptoms."
+  "video_heading": "Start here: why does your shoulder keep getting irritated?",
+  "video_copy": "Use this video to explain the common shoulder problems you see in powerlifters and how the page should be used.",
+  "video_url": "",
+  "video_placeholder": "Main shoulder pain overview video",
+  "framework_label": "The Four-Step Process",
+  "framework_heading": "Find the limitation. Improve it. Rebuild the press.",
+  "framework_intro": "The copy is temporary. Replace it with your own shoulder process once the videos are ready.",
+  "steps": [
+    {
+      "title": "Identify",
+      "copy": "Assess the shoulder position, range and pressing patterns that reproduce the issue.",
+      "image_label": "Assessment photo",
+      "video_url": ""
+    },
+    {
+      "title": "Improve",
+      "copy": "Use targeted drills to improve the movement or control that is missing.",
+      "image_label": "Movement drill photo",
+      "video_url": ""
+    },
+    {
+      "title": "Strengthen",
+      "copy": "Build strength around the shoulder and pressing positions that matter.",
+      "image_label": "Strength drill photo",
+      "video_url": ""
+    },
+    {
+      "title": "Apply",
+      "copy": "Adjust bench and upper-body training so you can keep progressing while symptoms settle.",
+      "image_label": "Bench application photo",
+      "video_url": ""
+    }
+  ],
+  "cta_heading": "Send me the shoulder pain guide",
+  "cta_copy": "Enter your details and get the guide sent to your inbox.",
+  "button_text": "Send Me the Guide",
+  "coaching_url": "https://traditionalstrength.co.uk/apply"
 }

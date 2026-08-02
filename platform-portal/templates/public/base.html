@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#070707">
+  <meta
+    name="description"
+    content="{{ content.meta_description | default(content.subtitle) }}"
+  >
+
+  <title>{{ content.title }} | Traditional Strength</title>
+
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/public_guides.css') }}"
+  >
+</head>
+
+<body class="guide-site">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <header class="guide-header">
+    <div class="page-shell guide-header__inner">
+      <a class="brand" href="/guides/hip-pain">
+        <img
+          src="{{ url_for('static', filename='img/traditional-strength-logo.png') }}"
+          alt="Traditional Strength"
+        >
+      </a>
+
+      <nav class="guide-nav" aria-label="Guide navigation">
+        <a
+          href="/guides/hip-pain"
+          {% if content.slug == "hip-pain" %}aria-current="page"{% endif %}
+        >
+          Hip Pain Guide
+        </a>
+
+        <a
+          href="/guides/shoulder-pain"
+          {% if content.slug == "shoulder-pain" %}aria-current="page"{% endif %}
+        >
+          Shoulder Pain Guide
+        </a>
+      </nav>
+
+      <a class="header-cta" href="{{ content.coaching_url }}">
+        Apply for Coaching
+      </a>
+    </div>
+  </header>
+
+  {% block content %}{% endblock %}
+
+  <footer class="guide-footer">
+    <div class="page-shell guide-footer__inner">
+      <div class="footer-brand">
+        <img
+          src="{{ url_for('static', filename='img/traditional-strength-logo.png') }}"
+          alt=""
+        >
+
+        <div>
+          <strong>Traditional Strength</strong>
+          <p>Powerlifting coaching without the generic bullshit.</p>
+        </div>
+      </div>
+
+      <div class="footer-links">
+        <a href="/guides/hip-pain">Hip Pain Guide</a>
+        <a href="/guides/shoulder-pain">Shoulder Pain Guide</a>
+        <a href="{{ content.coaching_url }}">Apply for Coaching</a>
+      </div>
+    </div>
+  </footer>
+
+  <script
+    src="{{ url_for('static', filename='js/public_guides.js') }}"
+    defer
+  ></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<section class="guide-section video-section">
+  <div class="page-shell two-column">
+    <div class="section-copy">
+      <span class="eyebrow">Video Overview</span>
+      <h2>{{ content.video_heading }}</h2>
+      <p>{{ content.video_copy }}</p>
+    </div>
+
+    <div class="video-placeholder">
+      {% if content.video_url %}
+        <video controls preload="metadata">
+          <source src="{{ content.video_url }}" type="video/mp4">
+          Your browser does not support video playback.
+        </video>
+      {% else %}
+        <button class="video-placeholder__button" type="button">
+          <span class="play-icon">▶</span>
+          <strong>Video goes here</strong>
+          <small>{{ content.video_placeholder }}</small>
+        </button>
+      {% endif %}
+    </div>
+  </div>
+</section>

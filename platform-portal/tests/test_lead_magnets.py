@@ -17,7 +17,7 @@ def test_hip_pain_lead_magnet_page():
     response = app.test_client().get("/guides/hip-pain")
 
     assert response.status_code == 200
-    assert b"Training Around Hip Pain" in response.data
+    assert b"Hip Pain Guide" in response.data
 
 
 def test_unknown_lead_magnet_returns_404():

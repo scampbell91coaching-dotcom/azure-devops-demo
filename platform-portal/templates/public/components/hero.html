@@ -1,0 +1,41 @@
+<section class="guide-hero">
+  <div class="guide-hero__mark" aria-hidden="true">
+    <img
+      src="{{ url_for('static', filename='img/traditional-strength-logo.png') }}"
+      alt=""
+    >
+  </div>
+
+  <div class="page-shell guide-hero__grid">
+    <div class="guide-hero__copy">
+      <span class="eyebrow">Free Guide</span>
+
+      <h1>{{ content.title }}</h1>
+
+      <p class="guide-hero__strapline">{{ content.strapline }}</p>
+
+      <p class="guide-hero__intro">{{ content.subtitle }}</p>
+
+      <div class="guide-highlights">
+        {% for item in content.highlights %}
+          <div class="guide-highlight">
+            <span>{{ loop.index }}</span>
+            <p>{{ item }}</p>
+          </div>
+        {% endfor %}
+      </div>
+
+      <a class="primary-button" href="#guide-steps">
+        Start the Guide
+      </a>
+    </div>
+
+    <div class="guide-hero__visual">
+      <div class="visual-placeholder">
+        <span>Photo Placeholder</span>
+        <strong>{{ content.hero_image_label }}</strong>
+        <small>Replace with your own coaching or lifting photo</small>
+      </div>
+    </div>
+  </div>
+</section>
