@@ -1,0 +1,453 @@
+{% extends "public/base.html" %}
+
+{% block content %}
+<main id="main-content" class="application-page">
+  <section class="application-hero">
+    <div class="page-shell application-hero__grid">
+      <div>
+        <span class="eyebrow">Online Powerlifting Coaching</span>
+
+        <h1>Apply for Coaching</h1>
+
+        <p class="application-hero__lead">
+          Tell me where your training is now, what is getting in the way and
+          what you want help with. I read every application myself.
+        </p>
+
+        <div class="application-points">
+          <div>
+            <strong>Individual programming</strong>
+            <span>Built around your training, recovery and goals.</span>
+          </div>
+
+          <div>
+            <strong>Real feedback</strong>
+            <span>Video review, honest answers and clear adjustments.</span>
+          </div>
+
+          <div>
+            <strong>Competition support</strong>
+            <span>Planning, attempts and meet-day decision making.</span>
+          </div>
+        </div>
+      </div>
+
+      <aside class="application-note">
+        <span class="eyebrow">Before you apply</span>
+        <h2>This works best when you are ready to be coached.</h2>
+
+        <p>
+          That means sending videos, communicating properly and giving the
+          process enough time to work. If that sounds like you, fill this in.
+        </p>
+      </aside>
+    </div>
+  </section>
+
+  {% if submitted %}
+    <section class="application-section">
+      <div class="page-shell">
+        <div class="application-success" role="status">
+          <span>Application received</span>
+          <h2>Thanks. I will read through it and come back to you.</h2>
+
+          <p>
+            Keep an eye on your email and Instagram messages. If it looks like
+            a good fit, the next step will be a conversation.
+          </p>
+
+          <a class="primary-button" href="/guides/hip-pain">
+            View the Free Guides
+          </a>
+        </div>
+      </div>
+    </section>
+  {% else %}
+    <section class="application-section">
+      <div class="page-shell application-layout">
+        <form class="application-form" method="post" action="/apply" novalidate>
+          <div class="honeypot" aria-hidden="true">
+            <label>
+              Website
+              <input
+                name="website"
+                type="text"
+                tabindex="-1"
+                autocomplete="off"
+              >
+            </label>
+          </div>
+
+          <section class="form-section">
+            <div class="form-section__heading">
+              <span>01</span>
+              <div>
+                <h2>About you</h2>
+                <p>Basic details so I know who I am speaking to.</p>
+              </div>
+            </div>
+
+            <div class="form-grid form-grid--two">
+              <label>
+                <span>First name *</span>
+                <input
+                  name="first_name"
+                  value="{{ form.get('first_name', '') }}"
+                  required
+                >
+                {% if errors.get("first_name") %}
+                  <small class="field-error">
+                    {{ errors["first_name"] }}
+                  </small>
+                {% endif %}
+              </label>
+
+              <label>
+                <span>Last name *</span>
+                <input
+                  name="last_name"
+                  value="{{ form.get('last_name', '') }}"
+                  required
+                >
+                {% if errors.get("last_name") %}
+                  <small class="field-error">
+                    {{ errors["last_name"] }}
+                  </small>
+                {% endif %}
+              </label>
+
+              <label>
+                <span>Email address *</span>
+                <input
+                  name="email"
+                  type="email"
+                  value="{{ form.get('email', '') }}"
+                  required
+                >
+                {% if errors.get("email") %}
+                  <small class="field-error">
+                    {{ errors["email"] }}
+                  </small>
+                {% endif %}
+              </label>
+
+              <label>
+                <span>Instagram</span>
+                <input
+                  name="instagram"
+                  value="{{ form.get('instagram', '') }}"
+                  placeholder="@username"
+                >
+              </label>
+
+              <label>
+                <span>Country *</span>
+                <input
+                  name="country"
+                  value="{{ form.get('country', '') }}"
+                  required
+                >
+                {% if errors.get("country") %}
+                  <small class="field-error">
+                    {{ errors["country"] }}
+                  </small>
+                {% endif %}
+              </label>
+
+              <label>
+                <span>Age</span>
+                <input
+                  name="age"
+                  type="number"
+                  min="16"
+                  max="100"
+                  value="{{ form.get('age', '') }}"
+                >
+              </label>
+            </div>
+          </section>
+
+          <section class="form-section">
+            <div class="form-section__heading">
+              <span>02</span>
+              <div>
+                <h2>Your lifting</h2>
+                <p>Give me a quick picture of your training history.</p>
+              </div>
+            </div>
+
+            <div class="form-grid form-grid--three">
+              <label>
+                <span>Bodyweight (kg)</span>
+                <input
+                  name="bodyweight_kg"
+                  type="number"
+                  step="0.1"
+                  value="{{ form.get('bodyweight_kg', '') }}"
+                >
+              </label>
+
+              <label>
+                <span>Years training</span>
+                <input
+                  name="years_training"
+                  type="number"
+                  step="0.5"
+                  value="{{ form.get('years_training', '') }}"
+                >
+              </label>
+
+              <label>
+                <span>Training days per week</span>
+                <input
+                  name="training_days"
+                  type="number"
+                  min="1"
+                  max="7"
+                  value="{{ form.get('training_days', '') }}"
+                >
+              </label>
+
+              <label>
+                <span>Best squat (kg)</span>
+                <input
+                  name="squat_kg"
+                  type="number"
+                  step="0.5"
+                  value="{{ form.get('squat_kg', '') }}"
+                >
+              </label>
+
+              <label>
+                <span>Best bench (kg)</span>
+                <input
+                  name="bench_kg"
+                  type="number"
+                  step="0.5"
+                  value="{{ form.get('bench_kg', '') }}"
+                >
+              </label>
+
+              <label>
+                <span>Best deadlift (kg)</span>
+                <input
+                  name="deadlift_kg"
+                  type="number"
+                  step="0.5"
+                  value="{{ form.get('deadlift_kg', '') }}"
+                >
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                <span>Current programme</span>
+                <textarea
+                  name="current_program"
+                  rows="4"
+                  placeholder="What are you running now and how is it going?"
+                >{{ form.get('current_program', '') }}</textarea>
+              </label>
+
+              <label>
+                <span>Next competition</span>
+                <input
+                  name="next_competition"
+                  value="{{ form.get('next_competition', '') }}"
+                  placeholder="Date, federation and meet if known"
+                >
+              </label>
+
+              <label>
+                <span>Previous coaching</span>
+                <textarea
+                  name="previous_coaching"
+                  rows="4"
+                  placeholder="Have you worked with a coach before? What worked and what did not?"
+                >{{ form.get('previous_coaching', '') }}</textarea>
+              </label>
+            </div>
+          </section>
+
+          <section class="form-section">
+            <div class="form-section__heading">
+              <span>03</span>
+              <div>
+                <h2>What needs to change?</h2>
+                <p>This is the part I care about most.</p>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                <span>What is your main goal? *</span>
+                <textarea
+                  name="primary_goal"
+                  rows="5"
+                  required
+                >{{ form.get('primary_goal', '') }}</textarea>
+                {% if errors.get("primary_goal") %}
+                  <small class="field-error">
+                    {{ errors["primary_goal"] }}
+                  </small>
+                {% endif %}
+              </label>
+
+              <label>
+                <span>What is holding you back right now? *</span>
+                <textarea
+                  name="biggest_problem"
+                  rows="5"
+                  required
+                >{{ form.get('biggest_problem', '') }}</textarea>
+                {% if errors.get("biggest_problem") %}
+                  <small class="field-error">
+                    {{ errors["biggest_problem"] }}
+                  </small>
+                {% endif %}
+              </label>
+
+              <label>
+                <span>Injury or pain history</span>
+                <textarea
+                  name="injury_history"
+                  rows="5"
+                  placeholder="Include anything that currently affects training."
+                >{{ form.get('injury_history', '') }}</textarea>
+              </label>
+
+              <label>
+                <span>What do you need from a coach? *</span>
+                <textarea
+                  name="coaching_expectations"
+                  rows="5"
+                  required
+                >{{ form.get('coaching_expectations', '') }}</textarea>
+                {% if errors.get("coaching_expectations") %}
+                  <small class="field-error">
+                    {{ errors["coaching_expectations"] }}
+                  </small>
+                {% endif %}
+              </label>
+            </div>
+          </section>
+
+          <section class="form-section">
+            <div class="form-section__heading">
+              <span>04</span>
+              <div>
+                <h2>Working together</h2>
+                <p>Good coaching needs input from both sides.</p>
+              </div>
+            </div>
+
+            <fieldset class="readiness-list">
+              <legend>Confirm the following:</legend>
+
+              <label>
+                <input
+                  name="video_feedback_ready"
+                  type="checkbox"
+                  value="yes"
+                  {% if form.get("video_feedback_ready") == "yes" %}checked{% endif %}
+                >
+                <span>
+                  I am willing to regularly send clear training videos.
+                </span>
+              </label>
+
+              <label>
+                <input
+                  name="communication_ready"
+                  type="checkbox"
+                  value="yes"
+                  {% if form.get("communication_ready") == "yes" %}checked{% endif %}
+                >
+                <span>
+                  I will communicate honestly about training, recovery and
+                  problems.
+                </span>
+              </label>
+
+              <label>
+                <input
+                  name="minimum_term_ready"
+                  type="checkbox"
+                  value="yes"
+                  {% if form.get("minimum_term_ready") == "yes" %}checked{% endif %}
+                >
+                <span>
+                  I understand that meaningful progress takes time and I am
+                  not looking for a one-week fix.
+                </span>
+              </label>
+            </fieldset>
+
+            <div class="form-grid">
+              <label>
+                <span>How did you find Traditional Strength?</span>
+                <input
+                  name="referral_source"
+                  value="{{ form.get('referral_source', '') }}"
+                >
+              </label>
+
+              <label>
+                <span>Anything else I should know?</span>
+                <textarea
+                  name="anything_else"
+                  rows="5"
+                >{{ form.get('anything_else', '') }}</textarea>
+              </label>
+            </div>
+          </section>
+
+          <section class="form-submit-section">
+            <label class="privacy-check">
+              <input
+                name="privacy_consent"
+                type="checkbox"
+                value="yes"
+                {% if form.get("privacy_consent") == "yes" %}checked{% endif %}
+              >
+
+              <span>
+                I agree that Traditional Strength can store and use these
+                details to respond to my coaching application. *
+              </span>
+            </label>
+
+            {% if errors.get("privacy_consent") %}
+              <small class="field-error">
+                {{ errors["privacy_consent"] }}
+              </small>
+            {% endif %}
+
+            <button class="primary-button application-submit" type="submit">
+              Submit Application
+            </button>
+
+            <p>
+              Submitting does not commit either of us to coaching. It starts
+              the conversation.
+            </p>
+          </section>
+        </form>
+
+        <aside class="application-sidebar">
+          <div>
+            <span class="eyebrow">What happens next</span>
+
+            <ol>
+              <li>I read your application.</li>
+              <li>I decide whether I can genuinely help.</li>
+              <li>If it looks right, we arrange a conversation.</li>
+              <li>We agree the next step together.</li>
+            </ol>
+          </div>
+        </aside>
+      </div>
+    </section>
+  {% endif %}
+</main>
+{% endblock %}

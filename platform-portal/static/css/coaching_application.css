@@ -1,0 +1,275 @@
+.application-page {
+  background:
+    radial-gradient(
+      circle at 80% 4%,
+      rgba(185, 150, 104, 0.08),
+      transparent 26rem
+    ),
+    var(--black);
+}
+
+.application-hero {
+  border-bottom: 1px solid var(--line);
+  padding-block: 5rem;
+}
+
+.application-hero__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.65fr);
+  gap: 4rem;
+  align-items: center;
+}
+
+.application-hero h1 {
+  margin: 0.8rem 0 1rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3.4rem, 7vw, 6.8rem);
+  line-height: 0.9;
+  letter-spacing: -0.055em;
+  text-transform: uppercase;
+}
+
+.application-hero__lead {
+  max-width: 60ch;
+  color: var(--muted);
+  font-size: 1.15rem;
+}
+
+.application-points {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 2rem;
+}
+
+.application-points div {
+  display: grid;
+  border-left: 1px solid var(--gold);
+  padding-left: 1rem;
+}
+
+.application-points span {
+  color: var(--muted);
+}
+
+.application-note {
+  border: 1px solid var(--gold);
+  padding: 1.7rem;
+  background: var(--panel-raised);
+}
+
+.application-note h2 {
+  margin: 0.7rem 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.8rem;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.application-note p {
+  color: var(--muted);
+}
+
+.application-section {
+  padding-block: 4rem;
+}
+
+.application-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 2rem;
+  align-items: start;
+}
+
+.application-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-section {
+  border: 1px solid var(--line);
+  padding: 1.5rem;
+  background: var(--panel);
+}
+
+.form-section__heading {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: flex-start;
+}
+
+.form-section__heading > span {
+  color: var(--gold-soft);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.form-section__heading h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.8rem;
+  text-transform: uppercase;
+}
+
+.form-section__heading p {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+}
+
+.form-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 1rem;
+}
+
+.application-form label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.application-form label > span,
+.readiness-list legend {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.application-form input,
+.application-form textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 0.8rem;
+  background: var(--black-soft);
+  color: var(--bone);
+}
+
+.application-form input:focus,
+.application-form textarea:focus {
+  border-color: var(--gold);
+  outline: 2px solid rgba(185, 150, 104, 0.16);
+}
+
+.readiness-list {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0 0 1rem;
+  border: 0;
+  padding: 0;
+}
+
+.readiness-list label,
+.privacy-check {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 0.7rem;
+}
+
+.readiness-list input,
+.privacy-check input {
+  width: auto;
+  margin-top: 0.25rem;
+}
+
+.field-error {
+  color: #f4a59a;
+}
+
+.form-submit-section {
+  border: 1px solid var(--gold);
+  padding: 1.5rem;
+  background: var(--panel-raised);
+}
+
+.application-submit {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.form-submit-section > p {
+  margin-bottom: 0;
+  color: var(--muted);
+  text-align: center;
+}
+
+.application-sidebar {
+  position: sticky;
+  top: 7rem;
+  border: 1px solid var(--line);
+  padding: 1.3rem;
+  background: var(--panel);
+}
+
+.application-sidebar ol {
+  display: grid;
+  gap: 1rem;
+  margin: 1rem 0 0;
+  padding-left: 1.2rem;
+  color: var(--muted);
+}
+
+.application-success {
+  max-width: 52rem;
+  border: 1px solid var(--gold);
+  padding: 2rem;
+  background: var(--panel-raised);
+}
+
+.application-success > span {
+  color: var(--gold-soft);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.application-success h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.application-success p {
+  color: var(--muted);
+}
+
+.honeypot {
+  position: absolute;
+  left: -10000px;
+}
+
+@media (max-width: 900px) {
+  .application-hero__grid,
+  .application-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .application-sidebar {
+    position: static;
+  }
+
+  .form-grid--three {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .application-hero {
+    padding-block: 3rem;
+  }
+
+  .form-grid--two,
+  .form-grid--three {
+    grid-template-columns: 1fr;
+  }
+
+  .form-section {
+    padding: 1rem;
+  }
+}
