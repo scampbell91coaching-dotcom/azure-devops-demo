@@ -10,6 +10,7 @@ from .api.history import history_bp
 from .api.platform import platform_bp
 from .api.recommendations import recommendations_bp
 from .athletes import athletes_bp
+from .checkins import checkins_bp
 from .database_config import resolve_database_uri
 from .exercise_library import exercise_library_bp
 from .extensions import db
@@ -54,9 +55,11 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(programming_pack2_bp)
     app.register_blueprint(programming_templates_bp)
     app.register_blueprint(athletes_bp)
+    app.register_blueprint(checkins_bp)
 
     with app.app_context():
         from .models.athlete import Athlete
+        from .models.checkins import AthleteCheckinSettings, WeeklyCheckin
         from .models.exercise_library import (
             DayTemplate,
             DayTemplateExercise,
@@ -73,6 +76,8 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         )
 
         _ = PlatformSnapshot
+        _ = AthleteCheckinSettings
+        _ = WeeklyCheckin
         _ = LeadCapture
         _ = TrainingBlock
         _ = TrainingWeek

@@ -1,0 +1,25 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "checkins" %}
+{% block title %}Check-in Review{% endblock %}
+{% block content %}
+<section class="coach-page">
+  <header class="coach-page__header">
+    <h1>{{ checkin.athlete.full_name }}</h1>
+    <p>{{ checkin.week_ending }}</p>
+  </header>
+
+  <section class="coach-panel">
+    {% for flag in checkin.risk_flags %}
+      <strong>{{ flag }}</strong>
+    {% endfor %}
+    <p>{{ checkin.training_notes or "" }}</p>
+    <p>{{ checkin.nutrition_notes or "" }}</p>
+    <p>{{ checkin.general_notes or "" }}</p>
+  </section>
+
+  <form class="coach-panel coach-form" method="post" action="{{ url_for('checkins.review', checkin_id=checkin.id) }}">
+    <label><span>Internal coach notes</span><textarea name="coach_notes">{{ checkin.coach_notes or "" }}</textarea></label>
+    <button class="coach-primary-button" type="submit">Mark reviewed</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "checkins" %}
+{% block title %}Check-ins{% endblock %}
+{% block content %}
+<section class="coach-page">
+  <header class="coach-page__header"><h1>Check-ins</h1></header>
+  <section class="coach-panel">
+    {% for item in checkins %}
+      <p>
+        <a href="{{ url_for('checkins.detail', checkin_id=item.id) }}">
+          {{ item.athlete.full_name }} · {{ item.week_ending }} · {{ item.status }}
+        </a>
+      </p>
+    {% else %}
+      <p>No check-ins yet.</p>
+    {% endfor %}
+  </section>
+</section>
+{% endblock %}
