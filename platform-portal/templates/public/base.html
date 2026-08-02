@@ -15,6 +15,12 @@
     rel="stylesheet"
     href="{{ url_for('static', filename='css/public_guides.css') }}"
   >
+  {% if content.slug == "apply" %}
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/coaching_application.css') }}"
+    >
+  {% endif %}
 </head>
 
 <body class="guide-site">
