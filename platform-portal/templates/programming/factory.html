@@ -31,7 +31,7 @@
         {% for athlete in athletes %}
           <option
             value="{{ athlete.id }}"
-            {% if form.get("athlete_id") | int == athlete.id %}selected{% endif %}
+            {% if form.get("athlete_id") | int == athlete.id or selected_athlete and selected_athlete.id == athlete.id %}selected{% endif %}
           >
             {{ athlete.full_name }}
           </option>
