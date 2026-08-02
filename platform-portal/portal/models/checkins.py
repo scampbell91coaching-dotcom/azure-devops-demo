@@ -18,6 +18,7 @@ class AthleteCheckinSettings(db.Model):  # type: ignore[name-defined]
     )
     training_enabled = db.Column(db.Boolean, nullable=False, default=True)
     nutrition_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    workflow_active = db.Column(db.Boolean, nullable=False, default=True)
     checkin_day = db.Column(db.Integer, nullable=False, default=0)
 
     athlete = db.relationship(
@@ -28,6 +29,29 @@ class AthleteCheckinSettings(db.Model):  # type: ignore[name-defined]
             cascade="all, delete-orphan",
         ),
     )
+
+    @property
+    def has_enabled_modules(self) -> bool:
+        """Whether this athlete has at least one weekly check-in module enabled."""
+        return bool(self.training_enabled or self.nutrition_enabled)
+
+    def is_due_on(self, on_date: date) -> bool:
+        """Return whether a weekly check-in is outstanding on ``on_date``."""
+        if (
+            not self.workflow_active
+            or not self.has_enabled_modules
+            or on_date.weekday() != self.checkin_day
+        ):
+            return False
+
+        week_start = on_date.fromordinal(on_date.toordinal() - on_date.weekday())
+        week_end = on_date.fromordinal(week_start.toordinal() + 6)
+        submitted = WeeklyCheckin.query.filter(
+            WeeklyCheckin.athlete_id == self.athlete_id,
+            WeeklyCheckin.week_ending >= week_start,
+            WeeklyCheckin.week_ending <= week_end,
+        ).first()
+        return submitted is None
 
 
 class WeeklyCheckin(db.Model):  # type: ignore[name-defined]
