@@ -341,6 +341,12 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
 
 @block_factory_bp.get("/programming/factory")
 def wizard():
+    selected_athlete_id = request.args.get("athlete_id", type=int)
+    selected_athlete = (
+        db.session.get(Athlete, selected_athlete_id)
+        if selected_athlete_id is not None
+        else None
+    )
     athletes = Athlete.query.order_by(
         Athlete.first_name.asc(),
         Athlete.last_name.asc(),
@@ -351,6 +357,7 @@ def wizard():
         athletes=athletes,
         preview=None,
         form={},
+        selected_athlete=selected_athlete,
     )
 
 

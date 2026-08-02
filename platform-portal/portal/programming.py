@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 from flask import Blueprint, abort, redirect, render_template, request, url_for
 
 from .extensions import db
@@ -32,14 +34,20 @@ def athlete_program(athlete_id: int):
 
     blocks = (
         TrainingBlock.query.filter_by(athlete_id=athlete.id)
-        .order_by(TrainingBlock.id.desc())
+        .order_by(TrainingBlock.created_at.desc(), TrainingBlock.id.desc())
         .all()
     )
+    current_block = next(
+        (item for item in blocks if item.status != "archived"),
+        None,
+    )
+    previous_blocks = [item for item in blocks if item != current_block]
 
     return render_template(
         "programming/athlete_program.html",
         athlete=athlete,
-        blocks=blocks,
+        current_block=current_block,
+        previous_blocks=previous_blocks,
     )
 
 
@@ -65,6 +73,99 @@ def create_block():
     db.session.add(block)
     db.session.commit()
     return redirect(url_for("programming.block", block_id=block.id))
+
+
+def _duplicate_block(source: TrainingBlock) -> TrainingBlock:
+    target = TrainingBlock(
+        athlete=source.athlete,
+        name=f"{source.name} Copy",
+        objective=source.objective,
+        status="draft",
+    )
+    db.session.add(target)
+    db.session.flush()
+
+    for source_week in cast(list[TrainingWeek], source.weeks):
+        target_week = TrainingWeek(
+            block=target,
+            name=source_week.name,
+            position=source_week.position,
+            notes=source_week.notes,
+        )
+        db.session.add(target_week)
+        db.session.flush()
+
+        for source_session in cast(
+            list[TrainingSession],
+            source_week.sessions,
+        ):
+            target_session = TrainingSession(
+                week=target_week,
+                name=source_session.name,
+                day_label=source_session.day_label,
+                position=source_session.position,
+                notes=source_session.notes,
+            )
+            db.session.add(target_session)
+            db.session.flush()
+
+            for item in cast(
+                list[ExercisePrescription],
+                source_session.prescriptions,
+            ):
+                db.session.add(
+                    ExercisePrescription(
+                        session=target_session,
+                        exercise_name=item.exercise_name,
+                        position=item.position,
+                        sets=item.sets,
+                        reps=item.reps,
+                        load_kg=item.load_kg,
+                        percentage=item.percentage,
+                        rpe=item.rpe,
+                        tempo=item.tempo,
+                        rest_seconds=item.rest_seconds,
+                        notes=item.notes,
+                    )
+                )
+
+    return target
+
+
+@programming_bp.post("/programming/blocks/<int:block_id>/duplicate")
+def duplicate_block(block_id: int):
+    source = db.session.get(TrainingBlock, block_id)
+    if source is None:
+        abort(404)
+
+    target = _duplicate_block(source)
+    db.session.commit()
+    return redirect(url_for("programming.block", block_id=target.id))
+
+
+@programming_bp.post("/programming/blocks/<int:block_id>/archive")
+def archive_block(block_id: int):
+    item = db.session.get(TrainingBlock, block_id)
+    if item is None:
+        abort(404)
+
+    item.status = "archived"
+    db.session.commit()
+    return redirect(url_for("programming.athlete_program", athlete_id=item.athlete_id))
+
+
+@programming_bp.post("/programming/blocks/<int:block_id>/delete")
+def delete_draft_block(block_id: int):
+    item = db.session.get(TrainingBlock, block_id)
+    if item is None:
+        abort(404)
+    if item.status != "draft":
+        abort(409)
+
+    athlete_id = item.athlete_id
+    db.session.delete(item)
+    db.session.commit()
+    return redirect(url_for("programming.athlete_program", athlete_id=athlete_id))
 
 
 @programming_bp.get("/programming/blocks/<int:block_id>")
