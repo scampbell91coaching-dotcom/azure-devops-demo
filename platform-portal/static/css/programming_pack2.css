@@ -1,0 +1,135 @@
+.programming-builder {
+  --sheet-columns:
+    minmax(210px, 2fr)
+    64px 76px 82px 70px 70px 82px 82px
+    minmax(180px, 1.5fr)
+    42px;
+}
+
+.autosave-status {
+  color: var(--coach-success);
+  font-weight: 800;
+}
+
+.autosave-status.is-saving {
+  color: var(--coach-warning);
+}
+
+.autosave-status.is-error {
+  color: #ef9f96;
+}
+
+.builder-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.builder-toolbar h2 {
+  margin: 0.2rem 0 0;
+}
+
+.builder-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  color: var(--coach-muted);
+  font-size: 0.76rem;
+}
+
+.programming-sheet {
+  overflow-x: auto;
+}
+
+.programming-sheet__head,
+.programming-sheet__row,
+.programming-sheet__new-row {
+  display: grid;
+  grid-template-columns: var(--sheet-columns);
+  min-width: 1180px;
+}
+
+.programming-sheet__head {
+  border-bottom: 1px solid var(--coach-border);
+  color: var(--coach-muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.programming-sheet__head span {
+  padding: 0.55rem 0.45rem;
+}
+
+.programming-sheet__row,
+.programming-sheet__new-row {
+  border-bottom: 1px solid var(--coach-border);
+  background: var(--coach-panel-soft);
+}
+
+.programming-sheet__row.is-dragging {
+  opacity: 0.45;
+}
+
+.programming-sheet__row input,
+.programming-sheet__row textarea,
+.programming-sheet__new-row input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-right: 1px solid var(--coach-border);
+  padding: 0.72rem 0.45rem;
+  background: transparent;
+  color: var(--coach-text);
+  resize: none;
+}
+
+.programming-sheet__row input:focus,
+.programming-sheet__row textarea:focus,
+.programming-sheet__new-row input:focus {
+  outline: 2px solid var(--coach-accent);
+  outline-offset: -2px;
+}
+
+.sheet-exercise-cell {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+}
+
+.drag-handle,
+.sheet-delete-button,
+.sheet-add-button {
+  border: 0;
+  background: transparent;
+  color: var(--coach-muted);
+  cursor: pointer;
+}
+
+.drag-handle {
+  border-right: 1px solid var(--coach-border);
+  cursor: grab;
+}
+
+.sheet-delete-button:hover {
+  color: #ef9f96;
+}
+
+.sheet-add-button {
+  color: var(--coach-accent-soft);
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+
+.programming-sheet__new-row {
+  margin-top: 0.75rem;
+  border: 1px solid var(--coach-border);
+}
+
+@media (max-width: 760px) {
+  .builder-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

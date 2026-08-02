@@ -1,5 +1,122 @@
-{% extends "coach/base.html" %}{% set coach_section = "programming" %}
+{% extends "coach/base.html" %}
+{% set coach_section = "programming" %}
+
 {% block title %}{{ session.name }} | Traditional Strength{% endblock %}
-{% block content %}<section class="coach-page"><header class="coach-page__header"><a class="coach-back-link" href="{{ url_for('programming.week', week_id=session.week.id) }}">← {{ session.week.name }}</a><span class="coach-eyebrow">{{ session.week.block.athlete.full_name }}</span><h1>{{ session.name }}</h1><p>{{ session.day_label or 'No day assigned' }}</p></header>
-<section class="coach-panel"><div class="coach-panel__heading"><h2>Add exercise</h2></div><form class="coach-form prescription-form" method="post" action="{{ url_for('programming.create_prescription', session_id=session.id) }}"><label><span>Exercise</span><input name="exercise_name" required></label><label><span>Sets</span><input name="sets" type="number"></label><label><span>Reps</span><input name="reps"></label><label><span>Load</span><input name="load_kg" type="number" step="0.5"></label><label><span>%</span><input name="percentage" type="number" step="0.1"></label><label><span>RPE</span><input name="rpe" type="number" step="0.5"></label><label><span>Tempo</span><input name="tempo"></label><label><span>Rest</span><input name="rest_seconds" type="number"></label><label class="prescription-notes"><span>Notes</span><input name="notes"></label><button class="coach-primary-button">Add exercise</button></form></section>
-<section class="coach-panel"><div class="coach-panel__heading"><h2>Exercises</h2></div><div class="programming-cards">{% for item in session.prescriptions %}<article><span>{{ item.position }}</span><strong>{{ item.exercise_name }}</strong><small>{{ item.sets or '—' }} × {{ item.reps or '—' }} · RPE {{ item.rpe or '—' }} · {{ item.load_kg or '—' }} kg</small><p>{{ item.notes or '' }}</p></article>{% else %}<p>No exercises yet.</p>{% endfor %}</div></section></section>{% endblock %}
+
+{% block head %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/programming_pack2.css') }}"
+>
+{% endblock %}
+
+{% block content %}
+<section
+  class="coach-page programming-builder"
+  data-session-builder
+  data-session-id="{{ session.id }}"
+>
+  <header class="coach-page__header coach-page__header--split">
+    <div>
+      <a
+        class="coach-back-link"
+        href="{{ url_for('programming.week_detail', week_id=week.id) }}"
+      >
+        ← {{ week.name }}
+      </a>
+
+      <span class="coach-eyebrow">{{ block.athlete.full_name }}</span>
+      <h1>{{ session.name }}</h1>
+      <p>{{ session.day_label or "No day assigned" }}</p>
+    </div>
+
+    <span class="autosave-status" data-autosave-status>Saved</span>
+  </header>
+
+  <section class="coach-panel builder-panel">
+    <div class="builder-toolbar">
+      <div>
+        <span class="coach-eyebrow">Session plan</span>
+        <h2>Exercises</h2>
+      </div>
+
+      <div class="builder-shortcuts">
+        <span>Enter adds a row</span>
+        <span>Ctrl + S saves</span>
+        <span>Drag rows to reorder</span>
+      </div>
+    </div>
+
+    <datalist id="exercise-suggestions" data-exercise-suggestions></datalist>
+
+    <div class="programming-sheet">
+      <div class="programming-sheet__head">
+        <span>Exercise</span>
+        <span>Sets</span>
+        <span>Reps</span>
+        <span>Kg</span>
+        <span>%</span>
+        <span>RPE</span>
+        <span>Tempo</span>
+        <span>Rest</span>
+        <span>Notes</span>
+        <span></span>
+      </div>
+
+      <div class="programming-sheet__body" data-prescription-list>
+        {% for item in session.prescriptions %}
+        <div
+          class="programming-sheet__row"
+          draggable="true"
+          data-prescription-row
+          data-prescription-id="{{ item.id }}"
+        >
+          <div class="sheet-exercise-cell">
+            <button class="drag-handle" type="button">⋮⋮</button>
+            <input
+              name="exercise_name"
+              value="{{ item.exercise_name }}"
+              list="exercise-suggestions"
+              data-autosave-field
+            >
+          </div>
+
+          <input name="sets" type="number" value="{{ item.sets or '' }}" data-autosave-field>
+          <input name="reps" value="{{ item.reps or '' }}" data-autosave-field>
+          <input name="load_kg" type="number" step="0.5" value="{{ item.load_kg or '' }}" data-autosave-field>
+          <input name="percentage" type="number" step="0.1" value="{{ item.percentage or '' }}" data-autosave-field>
+          <input name="rpe" type="number" step="0.5" value="{{ item.rpe or '' }}" data-autosave-field>
+          <input name="tempo" value="{{ item.tempo or '' }}" data-autosave-field>
+          <input name="rest_seconds" type="number" value="{{ item.rest_seconds or '' }}" data-autosave-field>
+          <textarea name="notes" rows="1" data-autosave-field>{{ item.notes or "" }}</textarea>
+
+          <button class="sheet-delete-button" type="button" data-delete-prescription>
+            ×
+          </button>
+        </div>
+        {% endfor %}
+      </div>
+
+      <form class="programming-sheet__new-row" data-new-prescription-form>
+        <input name="exercise_name" placeholder="Add exercise" list="exercise-suggestions" required>
+        <input name="sets" type="number" placeholder="Sets">
+        <input name="reps" placeholder="Reps">
+        <input name="load_kg" type="number" step="0.5" placeholder="Kg">
+        <input name="percentage" type="number" step="0.1" placeholder="%">
+        <input name="rpe" type="number" step="0.5" placeholder="RPE">
+        <input name="tempo" placeholder="Tempo">
+        <input name="rest_seconds" type="number" placeholder="Rest">
+        <input name="notes" placeholder="Notes">
+        <button class="sheet-add-button" type="submit">+</button>
+      </form>
+    </div>
+  </section>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script
+  src="{{ url_for('static', filename='js/programming_pack2.js') }}"
+  defer
+></script>
+{% endblock %}
