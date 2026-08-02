@@ -65,7 +65,14 @@
           Applications
         </a>
 
-        <a href="/programming" {% if coach_section == "programming" %}aria-current="page"{% endif %}>Programming</a>
+                <a
+          href="/exercise-library"
+          {% if coach_section == "exercise_library" %}aria-current="page"{% endif %}
+        >
+          Exercises
+        </a>
+
+<a href="/programming" {% if coach_section == "programming" %}aria-current="page"{% endif %}>Programming</a>
         <span class="coach-navigation__disabled">Check-ins</span>
         <span class="coach-navigation__disabled">Meet Prep</span>
       </nav>

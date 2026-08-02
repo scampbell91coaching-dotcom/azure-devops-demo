@@ -11,9 +11,11 @@ from .api.platform import platform_bp
 from .api.recommendations import recommendations_bp
 from .athletes import athletes_bp
 from .database_config import resolve_database_uri
+from .exercise_library import exercise_library_bp
 from .extensions import db
 from .lead_magnets import lead_magnets_bp
 from .programming import programming_bp
+from .programming_engine import programming_engine_bp
 from .programming_pack2 import programming_pack2_bp
 from .programming_templates import programming_templates_bp
 from .views import views_bp
@@ -47,12 +49,19 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(views_bp)
     app.register_blueprint(lead_magnets_bp)
     app.register_blueprint(programming_bp)
+    app.register_blueprint(exercise_library_bp)
+    app.register_blueprint(programming_engine_bp)
     app.register_blueprint(programming_pack2_bp)
     app.register_blueprint(programming_templates_bp)
     app.register_blueprint(athletes_bp)
 
     with app.app_context():
         from .models.athlete import Athlete
+        from .models.exercise_library import (
+            DayTemplate,
+            DayTemplateExercise,
+            Exercise,
+        )
         from .models.lead_capture import LeadCapture
         from .models.nutrition_checkin import NutritionCheckIn
         from .models.platform_snapshot import PlatformSnapshot
@@ -69,8 +78,14 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         _ = TrainingWeek
         _ = TrainingSession
         _ = ExercisePrescription
+        _ = Exercise
+        _ = DayTemplate
+        _ = DayTemplateExercise
         _ = Athlete
         _ = NutritionCheckIn
         db.create_all()
+        from .seed_programming_engine import seed_programming_engine
+
+        seed_programming_engine()
 
     return app

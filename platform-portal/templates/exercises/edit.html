@@ -1,0 +1,165 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "exercise_library" %}
+
+{% block title %}{{ exercise.name }} | Traditional Strength{% endblock %}
+
+{% block head %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/exercise_library.css') }}"
+>
+{% endblock %}
+
+{% block content %}
+<section class="coach-page exercise-library-page">
+  <header class="coach-page__header">
+    <a class="coach-back-link" href="/exercise-library">
+      ← Exercise library
+    </a>
+
+    <span class="coach-eyebrow">{{ exercise.movement }}</span>
+    <h1>{{ exercise.name }}</h1>
+  </header>
+
+  <form
+    class="coach-panel coach-form exercise-create-grid"
+    method="post"
+    action="{{ url_for(
+      'exercise_library.update',
+      exercise_id=exercise.id
+    ) }}"
+  >
+    <label>
+      <span>Name</span>
+      <input name="name" value="{{ exercise.name }}" required>
+    </label>
+
+    <label>
+      <span>Movement</span>
+      <select name="movement" required>
+        {% for item in (
+          "squat",
+          "bench",
+          "deadlift",
+          "accessory",
+          "warmup"
+        ) %}
+          <option
+            value="{{ item }}"
+            {% if exercise.movement == item %}selected{% endif %}
+          >
+            {{ item | title }}
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>
+      <span>Category</span>
+      <input name="category" value="{{ exercise.category }}">
+    </label>
+
+    <label>
+      <span>Variation</span>
+      <input
+        name="variation"
+        value="{{ exercise.variation or '' }}"
+      >
+    </label>
+
+    <label>
+      <span>Equipment</span>
+      <input
+        name="equipment"
+        value="{{ exercise.equipment or '' }}"
+      >
+    </label>
+
+    <label>
+      <span>Primary muscles</span>
+      <input
+        name="primary_muscles"
+        value="{{ exercise.primary_muscles or '' }}"
+      >
+    </label>
+
+    <label>
+      <span>Secondary muscles</span>
+      <input
+        name="secondary_muscles"
+        value="{{ exercise.secondary_muscles or '' }}"
+      >
+    </label>
+
+    <label>
+      <span>Fatigue rating</span>
+      <input
+        name="fatigue_rating"
+        type="number"
+        min="1"
+        max="5"
+        value="{{ exercise.fatigue_rating }}"
+      >
+    </label>
+
+    <label>
+      <span>Default sets</span>
+      <input
+        name="default_sets"
+        type="number"
+        value="{{ exercise.default_sets or '' }}"
+      >
+    </label>
+
+    <label>
+      <span>Default reps</span>
+      <input
+        name="default_reps"
+        value="{{ exercise.default_reps or '' }}"
+      >
+    </label>
+
+    <label>
+      <span>Default RPE</span>
+      <input
+        name="default_rpe"
+        type="number"
+        step="0.5"
+        value="{{ exercise.default_rpe or '' }}"
+      >
+    </label>
+
+    <label>
+      <span>Default rest</span>
+      <input
+        name="default_rest_seconds"
+        type="number"
+        value="{{ exercise.default_rest_seconds or '' }}"
+      >
+    </label>
+
+    <label class="exercise-create-grid__wide">
+      <span>Coaching cues</span>
+      <textarea
+        name="coaching_cues"
+        rows="5"
+      >{{ exercise.coaching_cues or "" }}</textarea>
+    </label>
+
+    <label class="exercise-create-grid__wide">
+      <span>Video URL</span>
+      <input
+        name="video_url"
+        type="url"
+        value="{{ exercise.video_url or '' }}"
+      >
+    </label>
+
+    <div class="coach-form__actions">
+      <button class="coach-primary-button" type="submit">
+        Save exercise
+      </button>
+    </div>
+  </form>
+</section>
+{% endblock %}
