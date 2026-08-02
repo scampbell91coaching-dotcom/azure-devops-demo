@@ -79,5 +79,11 @@
     src="{{ url_for('static', filename='js/public_guides.js') }}"
     defer
   ></script>
+  {% if content.slug == "apply" %}
+    <script
+      src="{{ url_for('static', filename='js/coaching_application.js') }}"
+      defer
+    ></script>
+  {% endif %}
 </body>
 </html>

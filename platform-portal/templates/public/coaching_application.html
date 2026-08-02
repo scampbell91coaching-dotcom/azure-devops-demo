@@ -2,70 +2,92 @@
 
 {% block content %}
 <main id="main-content" class="application-page">
-  <section class="application-hero">
-    <div class="page-shell application-hero__grid">
-      <div>
-        <span class="eyebrow">Online Powerlifting Coaching</span>
+  <section class="application-intro">
+    <div class="page-shell application-intro__inner">
+      <span class="eyebrow">Online Powerlifting Coaching</span>
 
-        <h1>Apply for Coaching</h1>
+      <h1>Apply for Coaching</h1>
 
-        <p class="application-hero__lead">
-          Tell me where your training is now, what is getting in the way and
-          what you want help with. I read every application myself.
-        </p>
+      <p>
+        Powerlifting coaching built around your training, your recovery and
+        your goals.
+      </p>
 
-        <div class="application-points">
-          <div>
-            <strong>Individual programming</strong>
-            <span>Built around your training, recovery and goals.</span>
-          </div>
-
-          <div>
-            <strong>Real feedback</strong>
-            <span>Video review, honest answers and clear adjustments.</span>
-          </div>
-
-          <div>
-            <strong>Competition support</strong>
-            <span>Planning, attempts and meet-day decision making.</span>
-          </div>
-        </div>
-      </div>
-
-      <aside class="application-note">
-        <span class="eyebrow">Before you apply</span>
-        <h2>This works best when you are ready to be coached.</h2>
-
-        <p>
-          That means sending videos, communicating properly and giving the
-          process enough time to work. If that sounds like you, fill this in.
-        </p>
-      </aside>
+      <p class="application-intro__note">
+        Applications take around 10 minutes.
+      </p>
     </div>
   </section>
 
   {% if submitted %}
-    <section class="application-section">
+    <section class="application-success-section">
       <div class="page-shell">
         <div class="application-success" role="status">
-          <span>Application received</span>
-          <h2>Thanks. I will read through it and come back to you.</h2>
+          <span class="eyebrow">Application received</span>
+
+          <h2>Thanks for taking the time to apply.</h2>
 
           <p>
-            Keep an eye on your email and Instagram messages. If it looks like
-            a good fit, the next step will be a conversation.
+            I will read through everything personally. If I think we are a
+            good fit, I will be in touch within 48 hours to discuss the next
+            step.
           </p>
 
-          <a class="primary-button" href="/guides/hip-pain">
-            View the Free Guides
-          </a>
+          <div class="success-actions">
+            <a class="primary-button" href="/guides/hip-pain">
+              View the Hip Guide
+            </a>
+
+            <a class="secondary-button" href="/guides/shoulder-pain">
+              View the Shoulder Guide
+            </a>
+          </div>
         </div>
       </div>
     </section>
   {% else %}
-    <section class="application-section">
-      <div class="page-shell application-layout">
-        <form class="application-form" method="post" action="/apply" novalidate>
+    <section class="application-wizard-section">
+      <div class="page-shell wizard-shell">
+        <div class="wizard-progress" aria-label="Application progress">
+          <div class="wizard-progress__bar">
+            <span data-progress-bar></span>
+          </div>
+
+          <ol class="wizard-progress__steps">
+            <li class="is-active" data-progress-step="1">
+              <span>1</span>
+              <small>About you</small>
+            </li>
+
+            <li data-progress-step="2">
+              <span>2</span>
+              <small>Your lifting</small>
+            </li>
+
+            <li data-progress-step="3">
+              <span>3</span>
+              <small>Your training</small>
+            </li>
+
+            <li data-progress-step="4">
+              <span>4</span>
+              <small>Working together</small>
+            </li>
+
+            <li data-progress-step="5">
+              <span>5</span>
+              <small>Review</small>
+            </li>
+          </ol>
+        </div>
+
+        <form
+          class="application-wizard"
+          method="post"
+          action="/apply"
+          novalidate
+          data-application-form
+        >
           <div class="honeypot" aria-hidden="true">
             <label>
               Website
@@ -78,271 +100,320 @@
             </label>
           </div>
 
-          <section class="form-section">
-            <div class="form-section__heading">
-              <span>01</span>
-              <div>
-                <h2>About you</h2>
-                <p>Basic details so I know who I am speaking to.</p>
-              </div>
+          <section
+            class="wizard-step is-active"
+            data-step="1"
+            aria-labelledby="step-one-title"
+          >
+            <div class="wizard-step__heading">
+              <span class="eyebrow">Step 1 of 4</span>
+              <h2 id="step-one-title">Tell me about yourself</h2>
+              <p>Just the basics to start with.</p>
             </div>
 
-            <div class="form-grid form-grid--two">
-              <label>
-                <span>First name *</span>
-                <input
-                  name="first_name"
-                  value="{{ form.get('first_name', '') }}"
-                  required
-                >
-                {% if errors.get("first_name") %}
-                  <small class="field-error">
-                    {{ errors["first_name"] }}
-                  </small>
-                {% endif %}
-              </label>
+            <div class="editorial-field">
+              <label for="first-name">First name</label>
+              <input
+                id="first-name"
+                name="first_name"
+                value="{{ form.get('first_name', '') }}"
+                autocomplete="given-name"
+                required
+              >
+              <small class="field-error" data-error-for="first_name">
+                {{ errors.get("first_name", "") }}
+              </small>
+            </div>
 
-              <label>
-                <span>Last name *</span>
-                <input
-                  name="last_name"
-                  value="{{ form.get('last_name', '') }}"
-                  required
-                >
-                {% if errors.get("last_name") %}
-                  <small class="field-error">
-                    {{ errors["last_name"] }}
-                  </small>
-                {% endif %}
-              </label>
+            <div class="editorial-field">
+              <label for="last-name">Last name</label>
+              <input
+                id="last-name"
+                name="last_name"
+                value="{{ form.get('last_name', '') }}"
+                autocomplete="family-name"
+                required
+              >
+              <small class="field-error" data-error-for="last_name">
+                {{ errors.get("last_name", "") }}
+              </small>
+            </div>
 
-              <label>
-                <span>Email address *</span>
-                <input
-                  name="email"
-                  type="email"
-                  value="{{ form.get('email', '') }}"
-                  required
-                >
-                {% if errors.get("email") %}
-                  <small class="field-error">
-                    {{ errors["email"] }}
-                  </small>
-                {% endif %}
-              </label>
+            <div class="editorial-field">
+              <label for="email">Email address</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value="{{ form.get('email', '') }}"
+                autocomplete="email"
+                required
+              >
+              <small class="field-error" data-error-for="email">
+                {{ errors.get("email", "") }}
+              </small>
+            </div>
 
-              <label>
-                <span>Instagram</span>
-                <input
-                  name="instagram"
-                  value="{{ form.get('instagram', '') }}"
-                  placeholder="@username"
-                >
-              </label>
+            <div class="editorial-field">
+              <label for="instagram">Instagram <span>optional</span></label>
+              <input
+                id="instagram"
+                name="instagram"
+                value="{{ form.get('instagram', '') }}"
+                placeholder="@username"
+              >
+            </div>
 
-              <label>
-                <span>Country *</span>
-                <input
-                  name="country"
-                  value="{{ form.get('country', '') }}"
-                  required
-                >
-                {% if errors.get("country") %}
-                  <small class="field-error">
-                    {{ errors["country"] }}
-                  </small>
-                {% endif %}
-              </label>
+            <div class="editorial-field">
+              <label for="country">Country</label>
+              <input
+                id="country"
+                name="country"
+                value="{{ form.get('country', '') }}"
+                autocomplete="country-name"
+                required
+              >
+              <small class="field-error" data-error-for="country">
+                {{ errors.get("country", "") }}
+              </small>
+            </div>
 
-              <label>
-                <span>Age</span>
-                <input
-                  name="age"
-                  type="number"
-                  min="16"
-                  max="100"
-                  value="{{ form.get('age', '') }}"
-                >
-              </label>
+            <div class="editorial-field">
+              <label for="age">Age <span>optional</span></label>
+              <input
+                id="age"
+                name="age"
+                type="number"
+                min="16"
+                max="100"
+                value="{{ form.get('age', '') }}"
+              >
+            </div>
+
+            <div class="wizard-actions wizard-actions--end">
+              <button class="primary-button" type="button" data-next-step>
+                Continue
+              </button>
             </div>
           </section>
 
-          <section class="form-section">
-            <div class="form-section__heading">
-              <span>02</span>
-              <div>
-                <h2>Your lifting</h2>
-                <p>Give me a quick picture of your training history.</p>
+          <section
+            class="wizard-step"
+            data-step="2"
+            aria-labelledby="step-two-title"
+            hidden
+          >
+            <div class="wizard-step__heading">
+              <span class="eyebrow">Step 2 of 4</span>
+              <h2 id="step-two-title">Your lifting</h2>
+              <p>Give me a quick picture of where you are now.</p>
+            </div>
+
+            <div class="editorial-field">
+              <label for="bodyweight">Current bodyweight (kg)</label>
+              <input
+                id="bodyweight"
+                name="bodyweight_kg"
+                type="number"
+                step="0.1"
+                value="{{ form.get('bodyweight_kg', '') }}"
+              >
+            </div>
+
+            <div class="editorial-grid editorial-grid--three">
+              <div class="editorial-field">
+                <label for="squat">Squat (kg)</label>
+                <input
+                  id="squat"
+                  name="squat_kg"
+                  type="number"
+                  step="0.5"
+                  value="{{ form.get('squat_kg', '') }}"
+                >
+              </div>
+
+              <div class="editorial-field">
+                <label for="bench">Bench (kg)</label>
+                <input
+                  id="bench"
+                  name="bench_kg"
+                  type="number"
+                  step="0.5"
+                  value="{{ form.get('bench_kg', '') }}"
+                >
+              </div>
+
+              <div class="editorial-field">
+                <label for="deadlift">Deadlift (kg)</label>
+                <input
+                  id="deadlift"
+                  name="deadlift_kg"
+                  type="number"
+                  step="0.5"
+                  value="{{ form.get('deadlift_kg', '') }}"
+                >
               </div>
             </div>
 
-            <div class="form-grid form-grid--three">
-              <label>
-                <span>Bodyweight (kg)</span>
+            <div class="editorial-grid editorial-grid--two">
+              <div class="editorial-field">
+                <label for="years-training">Years training</label>
                 <input
-                  name="bodyweight_kg"
-                  type="number"
-                  step="0.1"
-                  value="{{ form.get('bodyweight_kg', '') }}"
-                >
-              </label>
-
-              <label>
-                <span>Years training</span>
-                <input
+                  id="years-training"
                   name="years_training"
                   type="number"
                   step="0.5"
                   value="{{ form.get('years_training', '') }}"
                 >
-              </label>
+              </div>
 
-              <label>
-                <span>Training days per week</span>
+              <div class="editorial-field">
+                <label for="training-days">Training days per week</label>
                 <input
+                  id="training-days"
                   name="training_days"
                   type="number"
                   min="1"
                   max="7"
                   value="{{ form.get('training_days', '') }}"
                 >
-              </label>
-
-              <label>
-                <span>Best squat (kg)</span>
-                <input
-                  name="squat_kg"
-                  type="number"
-                  step="0.5"
-                  value="{{ form.get('squat_kg', '') }}"
-                >
-              </label>
-
-              <label>
-                <span>Best bench (kg)</span>
-                <input
-                  name="bench_kg"
-                  type="number"
-                  step="0.5"
-                  value="{{ form.get('bench_kg', '') }}"
-                >
-              </label>
-
-              <label>
-                <span>Best deadlift (kg)</span>
-                <input
-                  name="deadlift_kg"
-                  type="number"
-                  step="0.5"
-                  value="{{ form.get('deadlift_kg', '') }}"
-                >
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label>
-                <span>Current programme</span>
-                <textarea
-                  name="current_program"
-                  rows="4"
-                  placeholder="What are you running now and how is it going?"
-                >{{ form.get('current_program', '') }}</textarea>
-              </label>
-
-              <label>
-                <span>Next competition</span>
-                <input
-                  name="next_competition"
-                  value="{{ form.get('next_competition', '') }}"
-                  placeholder="Date, federation and meet if known"
-                >
-              </label>
-
-              <label>
-                <span>Previous coaching</span>
-                <textarea
-                  name="previous_coaching"
-                  rows="4"
-                  placeholder="Have you worked with a coach before? What worked and what did not?"
-                >{{ form.get('previous_coaching', '') }}</textarea>
-              </label>
-            </div>
-          </section>
-
-          <section class="form-section">
-            <div class="form-section__heading">
-              <span>03</span>
-              <div>
-                <h2>What needs to change?</h2>
-                <p>This is the part I care about most.</p>
               </div>
             </div>
 
-            <div class="form-grid">
-              <label>
-                <span>What is your main goal? *</span>
-                <textarea
-                  name="primary_goal"
-                  rows="5"
-                  required
-                >{{ form.get('primary_goal', '') }}</textarea>
-                {% if errors.get("primary_goal") %}
-                  <small class="field-error">
-                    {{ errors["primary_goal"] }}
-                  </small>
-                {% endif %}
+            <div class="editorial-field">
+              <label for="next-competition">
+                Competition planned? <span>optional</span>
               </label>
+              <input
+                id="next-competition"
+                name="next_competition"
+                value="{{ form.get('next_competition', '') }}"
+                placeholder="Date or rough timeframe"
+              >
+            </div>
 
-              <label>
-                <span>What is holding you back right now? *</span>
-                <textarea
-                  name="biggest_problem"
-                  rows="5"
-                  required
-                >{{ form.get('biggest_problem', '') }}</textarea>
-                {% if errors.get("biggest_problem") %}
-                  <small class="field-error">
-                    {{ errors["biggest_problem"] }}
-                  </small>
-                {% endif %}
-              </label>
+            <div class="wizard-actions">
+              <button class="secondary-button" type="button" data-previous-step>
+                Back
+              </button>
 
-              <label>
-                <span>Injury or pain history</span>
-                <textarea
-                  name="injury_history"
-                  rows="5"
-                  placeholder="Include anything that currently affects training."
-                >{{ form.get('injury_history', '') }}</textarea>
-              </label>
-
-              <label>
-                <span>What do you need from a coach? *</span>
-                <textarea
-                  name="coaching_expectations"
-                  rows="5"
-                  required
-                >{{ form.get('coaching_expectations', '') }}</textarea>
-                {% if errors.get("coaching_expectations") %}
-                  <small class="field-error">
-                    {{ errors["coaching_expectations"] }}
-                  </small>
-                {% endif %}
-              </label>
+              <button class="primary-button" type="button" data-next-step>
+                Continue
+              </button>
             </div>
           </section>
 
-          <section class="form-section">
-            <div class="form-section__heading">
-              <span>04</span>
-              <div>
-                <h2>Working together</h2>
-                <p>Good coaching needs input from both sides.</p>
-              </div>
+          <section
+            class="wizard-step"
+            data-step="3"
+            aria-labelledby="step-three-title"
+            hidden
+          >
+            <div class="wizard-step__heading">
+              <span class="eyebrow">Step 3 of 4</span>
+              <h2 id="step-three-title">Your training</h2>
+              <p>This is the part I care about most.</p>
             </div>
 
-            <fieldset class="readiness-list">
-              <legend>Confirm the following:</legend>
+            <div class="editorial-field editorial-field--large">
+              <label for="primary-goal">What are you working towards?</label>
+              <textarea
+                id="primary-goal"
+                name="primary_goal"
+                rows="6"
+                required
+              >{{ form.get('primary_goal', '') }}</textarea>
+              <small class="field-error" data-error-for="primary_goal">
+                {{ errors.get("primary_goal", "") }}
+              </small>
+            </div>
+
+            <div class="editorial-field editorial-field--large">
+              <label for="biggest-problem">What is holding you back?</label>
+              <textarea
+                id="biggest-problem"
+                name="biggest_problem"
+                rows="6"
+                required
+              >{{ form.get('biggest_problem', '') }}</textarea>
+              <small class="field-error" data-error-for="biggest_problem">
+                {{ errors.get("biggest_problem", "") }}
+              </small>
+            </div>
+
+            <div class="editorial-field editorial-field--large">
+              <label for="current-program">
+                What frustrates you most about your training?
+              </label>
+              <textarea
+                id="current-program"
+                name="current_program"
+                rows="6"
+              >{{ form.get('current_program', '') }}</textarea>
+            </div>
+
+            <div class="editorial-field editorial-field--large">
+              <label for="injury-history">
+                Any current injuries or recurring pain?
+              </label>
+              <textarea
+                id="injury-history"
+                name="injury_history"
+                rows="6"
+              >{{ form.get('injury_history', '') }}</textarea>
+            </div>
+
+            <div class="wizard-actions">
+              <button class="secondary-button" type="button" data-previous-step>
+                Back
+              </button>
+
+              <button class="primary-button" type="button" data-next-step>
+                Continue
+              </button>
+            </div>
+          </section>
+
+          <section
+            class="wizard-step"
+            data-step="4"
+            aria-labelledby="step-four-title"
+            hidden
+          >
+            <div class="wizard-step__heading">
+              <span class="eyebrow">Step 4 of 4</span>
+              <h2 id="step-four-title">Working together</h2>
+              <p>Good coaching needs input from both sides.</p>
+            </div>
+
+            <div class="editorial-field editorial-field--large">
+              <label for="coaching-now">
+                Why are you looking for coaching now?
+              </label>
+              <textarea
+                id="coaching-now"
+                name="previous_coaching"
+                rows="6"
+              >{{ form.get('previous_coaching', '') }}</textarea>
+            </div>
+
+            <div class="editorial-field editorial-field--large">
+              <label for="coaching-expectations">
+                What would a successful coaching experience look like for you?
+              </label>
+              <textarea
+                id="coaching-expectations"
+                name="coaching_expectations"
+                rows="6"
+                required
+              >{{ form.get('coaching_expectations', '') }}</textarea>
+              <small class="field-error" data-error-for="coaching_expectations">
+                {{ errors.get("coaching_expectations", "") }}
+              </small>
+            </div>
+
+            <fieldset class="commitment-list">
+              <legend>Can you commit to:</legend>
 
               <label>
                 <input
@@ -351,9 +422,7 @@
                   value="yes"
                   {% if form.get("video_feedback_ready") == "yes" %}checked{% endif %}
                 >
-                <span>
-                  I am willing to regularly send clear training videos.
-                </span>
+                <span>Sending clear training videos regularly</span>
               </label>
 
               <label>
@@ -363,10 +432,7 @@
                   value="yes"
                   {% if form.get("communication_ready") == "yes" %}checked{% endif %}
                 >
-                <span>
-                  I will communicate honestly about training, recovery and
-                  problems.
-                </span>
+                <span>Communicating honestly and consistently</span>
               </label>
 
               <label>
@@ -376,76 +442,113 @@
                   value="yes"
                   {% if form.get("minimum_term_ready") == "yes" %}checked{% endif %}
                 >
-                <span>
-                  I understand that meaningful progress takes time and I am
-                  not looking for a one-week fix.
-                </span>
+                <span>Following the programme and giving the process time</span>
               </label>
             </fieldset>
 
-            <div class="form-grid">
-              <label>
-                <span>How did you find Traditional Strength?</span>
-                <input
-                  name="referral_source"
-                  value="{{ form.get('referral_source', '') }}"
-                >
+            <div class="editorial-field">
+              <label for="referral-source">
+                How did you hear about Traditional Strength?
               </label>
 
-              <label>
-                <span>Anything else I should know?</span>
-                <textarea
-                  name="anything_else"
-                  rows="5"
-                >{{ form.get('anything_else', '') }}</textarea>
+              <select id="referral-source" name="referral_source">
+                <option value="">Choose one</option>
+                {% for option in (
+                  "Instagram",
+                  "YouTube",
+                  "Referral",
+                  "Competition",
+                  "Google",
+                  "Other"
+                ) %}
+                  <option
+                    value="{{ option }}"
+                    {% if form.get("referral_source") == option %}selected{% endif %}
+                  >
+                    {{ option }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="editorial-field editorial-field--large">
+              <label for="anything-else">
+                Anything else I should know? <span>optional</span>
               </label>
+              <textarea
+                id="anything-else"
+                name="anything_else"
+                rows="5"
+              >{{ form.get('anything_else', '') }}</textarea>
+            </div>
+
+            <div class="wizard-actions">
+              <button class="secondary-button" type="button" data-previous-step>
+                Back
+              </button>
+
+              <button class="primary-button" type="button" data-review-step>
+                Review Application
+              </button>
             </div>
           </section>
 
-          <section class="form-submit-section">
+          <section
+            class="wizard-step"
+            data-step="5"
+            aria-labelledby="review-title"
+            hidden
+          >
+            <div class="wizard-step__heading">
+              <span class="eyebrow">Final check</span>
+              <h2 id="review-title">Review your application</h2>
+              <p>Make sure everything looks right before you send it.</p>
+            </div>
+
+            <div class="application-review" data-review-output></div>
+
             <label class="privacy-check">
               <input
                 name="privacy_consent"
                 type="checkbox"
                 value="yes"
                 {% if form.get("privacy_consent") == "yes" %}checked{% endif %}
+                required
               >
-
               <span>
                 I agree that Traditional Strength can store and use these
-                details to respond to my coaching application. *
+                details to respond to my application.
               </span>
             </label>
 
-            {% if errors.get("privacy_consent") %}
-              <small class="field-error">
-                {{ errors["privacy_consent"] }}
-              </small>
-            {% endif %}
+            <small class="field-error" data-error-for="privacy_consent">
+              {{ errors.get("privacy_consent", "") }}
+            </small>
 
-            <button class="primary-button application-submit" type="submit">
-              Submit Application
-            </button>
+            <div class="submission-note">
+              <p>
+                I read every application personally. If I think we are a good
+                fit, I will be in touch within 48 hours.
+              </p>
 
-            <p>
-              Submitting does not commit either of us to coaching. It starts
-              the conversation.
-            </p>
+              <p>No pressure. No obligation.</p>
+            </div>
+
+            <div class="wizard-actions">
+              <button class="secondary-button" type="button" data-previous-step>
+                Back
+              </button>
+
+              <button class="primary-button" type="submit">
+                Submit Application
+              </button>
+            </div>
           </section>
         </form>
 
-        <aside class="application-sidebar">
-          <div>
-            <span class="eyebrow">What happens next</span>
-
-            <ol>
-              <li>I read your application.</li>
-              <li>I decide whether I can genuinely help.</li>
-              <li>If it looks right, we arrange a conversation.</li>
-              <li>We agree the next step together.</li>
-            </ol>
-          </div>
-        </aside>
+        <p class="save-note" data-save-status aria-live="polite">
+          Your progress is saved in this browser.
+        </p>
       </div>
     </section>
   {% endif %}
