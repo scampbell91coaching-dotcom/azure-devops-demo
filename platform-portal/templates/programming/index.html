@@ -1,0 +1,21 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "programming" %}
+{% block title %}Programming | Traditional Strength{% endblock %}
+{% block content %}
+<section class="coach-page">
+  <header class="coach-page__header"><span class="coach-eyebrow">Programming</span><h1>Training blocks</h1><p>Create athlete programming without rebuilding the same week repeatedly.</p></header>
+  <section class="coach-panel">
+    <div class="coach-panel__heading"><span class="coach-eyebrow">New block</span><h2>Create block</h2></div>
+    <form class="coach-form programming-form" method="post" action="/programming/blocks">
+      <label><span>Athlete</span><select name="athlete_id" required><option value="">Choose athlete</option>{% for athlete in athletes %}<option value="{{ athlete.id }}">{{ athlete.full_name }}</option>{% endfor %}</select></label>
+      <label><span>Name</span><input name="name" placeholder="Meet prep" required></label>
+      <label><span>Objective</span><input name="objective" placeholder="Build specificity"></label>
+      <button class="coach-primary-button" type="submit">Create block</button>
+    </form>
+  </section>
+  <section class="coach-panel">
+    <div class="coach-panel__heading coach-panel__heading--split"><div><span class="coach-eyebrow">Current work</span><h2>Blocks</h2></div><span class="coach-count">{{ blocks|length }}</span></div>
+    <div class="programming-cards">{% for block in blocks %}<a href="{{ url_for('programming.block', block_id=block.id) }}"><span>{{ block.athlete.full_name }}</span><strong>{{ block.name }}</strong><small>{{ block.weeks|length }} weeks</small></a>{% else %}<p>No blocks yet.</p>{% endfor %}</div>
+  </section>
+</section>
+{% endblock %}

@@ -12,6 +12,10 @@
     rel="stylesheet"
     href="{{ url_for('static', filename='css/coach_workspace.css') }}"
   >
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/programming.css') }}"
+  >
 
   {% block head %}{% endblock %}
 </head>
@@ -61,7 +65,7 @@
           Applications
         </a>
 
-        <span class="coach-navigation__disabled">Programming</span>
+        <a href="/programming" {% if coach_section == "programming" %}aria-current="page"{% endif %}>Programming</a>
         <span class="coach-navigation__disabled">Check-ins</span>
         <span class="coach-navigation__disabled">Meet Prep</span>
       </nav>
