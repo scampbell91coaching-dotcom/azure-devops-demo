@@ -44,3 +44,4 @@ platform-portal/data/public-leads.db
 platform-portal/data/public-leads.db-shm
 platform-portal/data/public-leads.db-wal
 platform-portal/Dockerfile.private
+.tmp/
