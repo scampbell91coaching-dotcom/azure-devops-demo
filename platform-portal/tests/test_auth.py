@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from portal import create_app
+from portal import TESTING_SECRET_KEY, create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.user import User, UserRole
@@ -53,6 +53,41 @@ def _login(client, email: str, password: str):
         "/login",
         data={"email": email, "password": password, "csrf_token": _csrf(client)},
     )
+
+
+def test_production_startup_requires_secret_key(monkeypatch):
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+
+    with pytest.raises(RuntimeError, match="SECRET_KEY must be set"):
+        create_app()
+
+
+def test_testing_startup_uses_safe_test_defaults(monkeypatch):
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
+
+    assert app.config["SECRET_KEY"] == TESTING_SECRET_KEY
+    assert app.config["AUTHENTICATION_DISABLED"] is True
+
+
+def test_authentication_remains_enabled_in_production(monkeypatch):
+    monkeypatch.setenv("SECRET_KEY", "configured-production-secret")
+
+    app = create_app()
+
+    assert app.testing is False
+    assert app.config["AUTHENTICATION_DISABLED"] is False
+
+
+def test_authentication_cannot_be_disabled_outside_testing():
+    with pytest.raises(RuntimeError, match="only permitted while testing"):
+        create_app(
+            {
+                "SECRET_KEY": "configured-production-secret",
+                "AUTHENTICATION_DISABLED": True,
+            }
+        )
 
 
 def test_private_routes_redirect_but_public_routes_remain_public(secured_app):
