@@ -62,6 +62,18 @@ jobs:
         working-directory: infra
         run: terraform validate
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Checkov
+        run: python -m pip install checkov==3.3.8
+
+      - name: Scan PostgreSQL module
+        run: checkov --directory infra/modules/postgresql --framework terraform --compact --quiet --skip-download
+
   plan:
     name: Development plan only
     if: github.event_name == 'workflow_dispatch'
@@ -102,14 +114,7 @@ jobs:
           terraform plan \
             -var-file=environments/dev/terraform.tfvars \
             -var=postgresql_enabled=true \
-            -out=postgresql.tfplan
-
-      - name: Upload plan artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: postgresql-development-plan
-          path: infra/postgresql.tfplan
-          retention-days: 1
+            -no-color
 
       - name: Confirm plan-only boundary
-        run: echo "This workflow never runs terraform apply."
+        run: echo "This workflow never saves a binary plan or runs terraform apply."

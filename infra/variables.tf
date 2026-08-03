@@ -71,8 +71,11 @@ variable "postgresql_administrator_login" {
   default     = "tsplatformadmin"
 
   validation {
-    condition     = can(regex("^[a-zA-Z][a-zA-Z0-9_]{0,62}$", var.postgresql_administrator_login))
-    error_message = "postgresql_administrator_login must start with a letter and contain at most 63 letters, numbers, or underscores."
+    condition = (
+      can(regex("^[a-zA-Z][a-zA-Z0-9_]{0,62}$", var.postgresql_administrator_login)) &&
+      !contains(["admin", "administrator", "azure_pg_admin", "azure_superuser", "guest", "public", "root"], lower(var.postgresql_administrator_login))
+    )
+    error_message = "postgresql_administrator_login must start with a letter, contain at most 63 letters, numbers, or underscores, and not use a reserved administrator name."
   }
 }
 
@@ -164,5 +167,10 @@ variable "postgresql_tags" {
     Environment = "lab"
     ManagedBy   = "Terraform"
     Project     = "traditional-strength"
+  }
+
+  validation {
+    condition     = alltrue([for key, value in var.postgresql_tags : length(trimspace(key)) > 0 && length(trimspace(value)) > 0])
+    error_message = "postgresql_tags cannot contain empty or whitespace-only keys or values."
   }
 }
