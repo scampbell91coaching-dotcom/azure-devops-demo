@@ -1,0 +1,3 @@
+[tool.ruff.lint]
+# Keep the core Ruff correctness checks explicit and version-independent.
+select = ["E4", "E7", "E9", "F"]

@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
@@ -56,20 +56,40 @@ jobs:
           print(f"Validated presence of {len(files)} YAML files")
           PY
 
-      - name: Scan repository and IaC
-        uses: aquasecurity/trivy-action@v0.36.0
+      - name: Diagnose repository vulnerabilities and secrets
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          version: v0.73.0
           scan-type: fs
           scan-ref: .
+          scanners: vuln,secret
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "0"
+          skip-dirs: .git,.venv,node_modules,test-results,evidence,.tmp
+
+      - name: Scan repository for GitHub code scanning
+        id: trivy
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.73.0
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret
           format: sarif
           output: trivy-results.sarif
           severity: HIGH,CRITICAL
+          limit-severities-for-sarif: true
           ignore-unfixed: true
           exit-code: "1"
+          skip-dirs: .git,.venv,node_modules,test-results,evidence,.tmp
+          skip-setup-trivy: true
 
       - name: Upload Trivy SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-results.sarif
 
@@ -86,3 +106,9 @@ jobs:
           name: repository-sbom
           path: sbom.spdx.json
           retention-days: 14
+
+      - name: Enforce Trivy result
+        if: always() && steps.trivy.outcome == 'failure'
+        run: |
+          echo "Trivy reported HIGH or CRITICAL findings; failing the job after publishing security outputs."
+          exit 1

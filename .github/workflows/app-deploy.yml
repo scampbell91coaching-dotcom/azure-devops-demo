@@ -62,7 +62,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
@@ -107,10 +107,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -122,11 +122,20 @@ jobs:
 
           python -m pip install --upgrade pip
           pip install -r platform-portal/requirements.txt
+          pip install ruff==0.16.1
 
-      - name: Run tests
+      - name: Run Ruff checks
+        working-directory: platform-portal
         run: |
           set -euo pipefail
-          pytest -v platform-portal/tests
+          ruff check .
+          ruff format --check .
+
+      - name: Run complete test suite
+        working-directory: platform-portal
+        run: |
+          set -euo pipefail
+          pytest -v tests
 
   build-and-push:
     name: Build, scan and publish image
@@ -139,7 +148,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate image metadata
         id: meta
@@ -168,8 +177,9 @@ jobs:
             platform-portal
 
       - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          version: v0.73.0
           image-ref: ${{ steps.meta.outputs.full_sha_tag }}
           format: table
           severity: HIGH,CRITICAL
@@ -238,7 +248,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
