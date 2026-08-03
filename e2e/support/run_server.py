@@ -51,15 +51,36 @@ def main() -> None:
         )
         seed_database(app)
 
+        print("REGISTERING __e2e__ ROUTE")
+
         @app.post("/__e2e__/athlete-session/<int:athlete_id>")
         def select_e2e_athlete(athlete_id: int):
+            print("E2E ROUTE HIT", athlete_id)
             """Select an identity only for this token-protected local test run."""
             supplied_token = request.headers.get("X-E2E-Run-Token", "")
-            if not hmac.compare_digest(supplied_token, run_token):
-                abort(404)
 
-            if db.session.get(Athlete, athlete_id) is None:
-                abort(404)
+            if not hmac.compare_digest(supplied_token, run_token):
+                return jsonify(
+                    {
+                        "error": "token_mismatch",
+                        "supplied_length": len(supplied_token),
+                        "expected_length": len(run_token),
+                    }
+                ), 401
+
+            athlete = db.session.get(Athlete, athlete_id)
+            if athlete is None:
+                available_ids = [
+                    value
+                    for value, in db.session.query(Athlete.id).order_by(Athlete.id).all()
+                ]
+                return jsonify(
+                    {
+                        "error": "athlete_missing",
+                        "requested_id": athlete_id,
+                        "available_ids": available_ids,
+                    }
+                ), 404
 
             session.clear()
             session["athlete_id"] = athlete_id

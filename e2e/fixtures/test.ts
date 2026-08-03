@@ -18,8 +18,15 @@ export const test = base.extend<Fixtures>({
   // This selects a test identity directly; it must not be described as login/auth coverage.
   athleteSession: async ({}, use) => {
     await use(async (request, athleteId) => {
-      const response = await request.post(`/__e2e__/athlete-session/${athleteId}`);
-      expect(response.ok()).toBeTruthy();
+      const response = await request.post(`/__e2e__/athlete-session/${athleteId}`, {
+        headers: {
+          'X-E2E-Run-Token': process.env.E2E_RUN_TOKEN ?? '',
+        },
+      });
+      expect(
+        response.ok(),
+        `E2E session failed: ${response.status()} ${await response.text()} tokenLength=${(process.env.E2E_RUN_TOKEN ?? '').length}`,
+      ).toBeTruthy();
     });
   },
 });

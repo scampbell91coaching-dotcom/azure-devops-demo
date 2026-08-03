@@ -15,7 +15,9 @@ if (!Number.isInteger(port) || port < 1024 || port > 65535) {
   throw new Error('E2E_PORT must be an unprivileged TCP port (1024-65535).');
 }
 
-const runToken = randomBytes(32).toString('hex');
+const runToken =
+  process.env.E2E_RUN_TOKEN ?? randomBytes(32).toString('hex');
+process.env.E2E_RUN_TOKEN = runToken;
 if (!/^[A-Za-z0-9_./-]+$/.test(pythonExecutable)) {
   throw new Error('E2E_PYTHON contains unsupported characters.');
 }
