@@ -70,7 +70,9 @@ def test_service_returns_current_athlete_data_and_first_session_only():
                     digestion=8,
                     training_performance=8,
                 ),
-                TrainingBlock(athlete_id=other.id, name="Private block", status="active"),
+                TrainingBlock(
+                    athlete_id=other.id, name="Private block", status="active"
+                ),
             ]
         )
         db.session.commit()
@@ -165,8 +167,8 @@ def test_dashboard_renders_data_empty_states_links_and_no_coach_controls():
     assert "No check-ins yet" in page
     assert "No nutrition update yet" in page
     assert "No coach response yet" in page
-    assert f'/athletes/{athlete_id}/check-ins/new' in page
-    assert f'/athletes/{athlete_id}/nutrition-checkins/new' in page
+    assert f"/athletes/{athlete_id}/check-ins/new" in page
+    assert f"/athletes/{athlete_id}/nutrition-checkins/new" in page
     assert "Check-in settings" not in page
     assert "Mark reviewed" not in page
     assert "Generate new block" not in page

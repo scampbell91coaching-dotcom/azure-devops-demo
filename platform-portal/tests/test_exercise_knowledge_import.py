@@ -244,7 +244,9 @@ def test_warmup_records_are_unambiguously_labelled_and_prescribed():
     assert all(item["category"] == "movement preparation" for item in warmups)
     assert all(item["warmup_suitable"] for item in warmups)
     assert all(not item["accessory_suitable"] for item in warmups)
-    assert all("controlled repetitions" in item["prescription_styles"] for item in warmups)
+    assert all(
+        "controlled repetitions" in item["prescription_styles"] for item in warmups
+    )
 
 
 def test_representative_canonical_alias_muscle_and_equipment_searches_render():

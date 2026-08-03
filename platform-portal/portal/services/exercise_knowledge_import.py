@@ -142,13 +142,19 @@ def _validated_values(
     default_reps = _required_string(record.get("default_reps"), maximum_length=40)
     default_rpe = record.get("default_rpe")
     default_rest_seconds = record.get("default_rest_seconds")
-    primary_muscles = _validated_string_list(record.get("primary_muscles"), minimum_items=1)
+    primary_muscles = _validated_string_list(
+        record.get("primary_muscles"), minimum_items=1
+    )
     secondary_muscles = _validated_string_list(record.get("secondary_muscles"))
     coaching_cues = _validated_string_list(record.get("coaching_cues"), minimum_items=2)
-    common_mistakes = _validated_string_list(record.get("common_mistakes"), minimum_items=1)
+    common_mistakes = _validated_string_list(
+        record.get("common_mistakes"), minimum_items=1
+    )
     regressions = _validated_string_list(record.get("regressions"), minimum_items=1)
     progressions = _validated_string_list(record.get("progressions"), minimum_items=1)
-    prescription_styles = _validated_string_list(record.get("prescription_styles"), minimum_items=1)
+    prescription_styles = _validated_string_list(
+        record.get("prescription_styles"), minimum_items=1
+    )
     goal = _required_string(record.get("goal"), maximum_length=120)
     difficulty = _required_string(record.get("difficulty"), maximum_length=20)
     setup = _required_string(record.get("setup"), maximum_length=2000)
@@ -255,7 +261,9 @@ def _validated_aliases(
         normalised_alias = _required_string(alias, maximum_length=160)
         if normalised_alias is None:
             return None
-        if canonical_name is not None and _identity(normalised_alias) == _identity(canonical_name):
+        if canonical_name is not None and _identity(normalised_alias) == _identity(
+            canonical_name
+        ):
             return None
         if _identity(normalised_alias) not in {_identity(item) for item in aliases}:
             aliases.append(normalised_alias)

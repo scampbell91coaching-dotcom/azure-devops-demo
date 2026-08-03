@@ -121,8 +121,7 @@ class CoachDashboardService:
             for athlete_id, item in latest_weekly.items()
             if athlete_id in athlete_by_id
             and any(
-                flag in {"High fatigue", "Pain reported"}
-                for flag in item.risk_flags
+                flag in {"High fatigue", "Pain reported"} for flag in item.risk_flags
             )
         )
 

@@ -27,9 +27,7 @@ def test_service_aggregates_review_due_flags_programming_and_nutrition():
 
     with app.app_context():
         flagged = Athlete(first_name="Alex", last_name="Flagged", email="a@test")
-        unprogrammed = Athlete(
-            first_name="Bea", last_name="Pending", email="b@test"
-        )
+        unprogrammed = Athlete(first_name="Bea", last_name="Pending", email="b@test")
         inactive = Athlete(
             first_name="Cal", last_name="Inactive", email="c@test", status="inactive"
         )
@@ -290,10 +288,10 @@ def test_dashboard_route_renders_sections_links_and_unavailable_timing():
         assert heading in page
     assert "Programme timing unavailable" in page
     assert "93.5 kg" in page
-    assert f'/athletes/{athlete_id}' in page
-    assert f'/athletes/{athlete_id}/programming' in page
-    assert f'/check-ins/{checkin_id}' in page
-    assert 'href="/athletes/' in page and '#nutrition-checkins' not in page
+    assert f"/athletes/{athlete_id}" in page
+    assert f"/athletes/{athlete_id}/programming" in page
+    assert f"/check-ins/{checkin_id}" in page
+    assert 'href="/athletes/' in page and "#nutrition-checkins" not in page
 
 
 def test_dashboard_route_is_registered_once_and_nutrition_link_has_a_target():
