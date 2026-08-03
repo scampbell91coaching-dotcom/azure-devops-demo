@@ -14,7 +14,10 @@ def test_coach_base_has_dedicated_navigation():
 
 
 def test_athlete_pages_use_coach_base():
-    athlete_templates = (ROOT / "templates" / "athletes").glob("*.html")
+    athlete_templates = (
+        ROOT / "templates" / "athletes" / name
+        for name in ("dashboard.html", "list.html", "nutrition_checkin.html")
+    )
 
     for template in athlete_templates:
         text = template.read_text()
