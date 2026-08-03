@@ -2,7 +2,9 @@ replicaCount: 1
 
 image:
   repository: stevedevopslab6280.azurecr.io/flask-web
-  tag: latest
+  # Use a commit SHA, semantic version, or digest. Mutable tags such as latest are rejected.
+  tag: 68e2757f00c726dc02500fa5ccf39444a00d7934
+  digest: ""
   pullPolicy: IfNotPresent
 
 service:
@@ -94,8 +96,22 @@ podSecurityContext:
   fsGroup: 10001
 
 containerSecurityContext:
-  # Set true only after confirming the application writes nowhere in the image filesystem.
-  readOnlyRootFilesystem: false
+  readOnlyRootFilesystem: true
+
+ingress:
+  enabled: false
+  className: nginx
+  hosts: []
+  tlsSecretName: ""
+
+networkPolicy:
+  enabled: true
+  ingressNamespace: ingress-nginx
+  monitoringNamespace: monitoring
+  allowMonitoring: false
+  allowHttpsEgress: true
+  allowDatabaseEgress: false
+  databasePort: 5432
 
 topologySpreadConstraints: []
 
