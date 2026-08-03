@@ -24,6 +24,7 @@ EXPECTED_TABLES = {
     "training_blocks",
     "training_sessions",
     "training_weeks",
+    "users",
     "weekly_checkins",
 }
 

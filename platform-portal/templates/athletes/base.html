@@ -15,6 +15,9 @@
       <span aria-hidden="true">TS</span>
       <strong>Traditional Strength</strong>
     </a>
+    <form method="post" action="{{ url_for('auth.logout') }}">
+      <button type="submit">Sign out</button>
+    </form>
   </header>
   <main id="main" class="athlete-shell">{% block content %}{% endblock %}</main>
 </body>

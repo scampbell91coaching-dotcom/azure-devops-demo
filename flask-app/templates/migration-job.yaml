@@ -40,6 +40,11 @@ spec:
           command:
             {{- toYaml .Values.migration.command | nindent 12 }}
           env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: flask-runtime-secrets
+                  key: SECRET_KEY
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:

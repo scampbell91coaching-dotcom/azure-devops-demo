@@ -1,4 +1,4 @@
-"""Start the portal against a fresh, deterministic E2E-only SQLite database."""
+"""Run the disposable, loopback-only Traditional Strength E2E server."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PORTAL = ROOT / "platform-portal"
 
 sys.path.insert(0, str(PORTAL))
+
 from security import create_disposable_database, require_test_only_environment  # noqa: E402
 
 
@@ -40,7 +41,13 @@ def main() -> None:
     signal.signal(signal.SIGINT, stop_for_cleanup)
 
     try:
-        app = create_app({"TESTING": True, "SECRET_KEY": os.urandom(32).hex()})
+        app = create_app(
+            {
+                "TESTING": True,
+                "AUTHENTICATION_DISABLED": True,
+                "SECRET_KEY": os.urandom(32).hex(),
+            }
+        )
         seed_database(app)
 
         @app.post("/__e2e__/athlete-session/<int:athlete_id>")
@@ -49,13 +56,20 @@ def main() -> None:
             supplied_token = request.headers.get("X-E2E-Run-Token", "")
             if not hmac.compare_digest(supplied_token, run_token):
                 abort(404)
+
             if db.session.get(Athlete, athlete_id) is None:
                 abort(404)
+
             session.clear()
             session["athlete_id"] = athlete_id
             return jsonify({"athlete_id": athlete_id})
 
-        app.run(host="127.0.0.1", port=args.port, debug=False, use_reloader=False)
+        app.run(
+            host="127.0.0.1",
+            port=args.port,
+            debug=False,
+            use_reloader=False,
+        )
     finally:
         database.unlink(missing_ok=True)
 

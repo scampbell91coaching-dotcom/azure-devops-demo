@@ -34,6 +34,9 @@ spec:
     name: flask-runtime-secrets
     creationPolicy: Owner
   data:
+    - secretKey: SECRET_KEY
+      remoteRef:
+        key: flask-secret-key
     - secretKey: APPLICATIONINSIGHTS_CONNECTION_STRING
       remoteRef:
         key: applicationinsights-connection-string

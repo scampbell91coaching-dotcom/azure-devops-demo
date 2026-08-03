@@ -38,6 +38,11 @@
           <p class="sub">{% block subtitle %}{% endblock %}</p>
         </div>
         <div class="sub" id="generated">Loading status…</div>
+        {% if current_user %}
+          <form method="post" action="{{ url_for('auth.logout') }}">
+            <button type="submit">Sign out</button>
+          </form>
+        {% endif %}
       </header>
       {% block content %}{% endblock %}
     </main>

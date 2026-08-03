@@ -94,6 +94,9 @@
         >
           Platform
         </a>
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <button class="coach-link-button" type="submit">Sign out</button>
+        </form>
       </div>
     </div>
   </header>
