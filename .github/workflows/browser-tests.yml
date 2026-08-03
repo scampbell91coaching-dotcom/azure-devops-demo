@@ -50,6 +50,8 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Run browser tests
+        env:
+          E2E_TEST_ONLY: "1"
         run: npm run e2e
       - name: Upload failure artifacts
         if: failure()

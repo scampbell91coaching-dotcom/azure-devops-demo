@@ -125,8 +125,10 @@ python_tests() {
 }
 
 playwright_run() {
+  local python_bin
   [[ -x "$REPO_ROOT/node_modules/.bin/playwright" ]] || fail 'Playwright is not installed; run npm ci and npx playwright install chromium'
-  (cd "$REPO_ROOT" && env -u E2E_BASE_URL npm run e2e) || fail 'Playwright failed; see test-results/ and playwright-report/'
+  python_bin=$(portal_python) || fail 'Python is not installed'
+  (cd "$REPO_ROOT" && env -u E2E_BASE_URL E2E_TEST_ONLY=1 E2E_PYTHON="$python_bin" npm run e2e) || fail 'Playwright failed; browser captures are disabled; inspect console output'
 }
 
 helm_validate() {

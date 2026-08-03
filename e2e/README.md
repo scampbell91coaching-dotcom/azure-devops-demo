@@ -19,7 +19,7 @@ Install and run:
 python3 -m pip install -r platform-portal/requirements.txt
 npm ci
 npx playwright install chromium
-npm run e2e
+E2E_TEST_ONLY=1 npm run e2e
 ```
 
 Useful local commands:
@@ -30,14 +30,17 @@ npm run e2e:ui
 npm run e2e:report
 ```
 
-By default Playwright starts the portal on port 8091. The launcher deletes and
-recreates `.tmp/traditional-strength-e2e.sqlite`, then inserts fixed IDs and
-values. It never reads the normal local or production database. Tests run with
+Playwright starts the portal on loopback port 8091. The launcher creates a
+uniquely named SQLite database, removes it on shutdown, and inserts fixed IDs
+and values. It never reads the normal local or production database. Tests run with
 one worker because supported form submissions mutate this disposable database.
 
-To test an already-running disposable environment, set `E2E_BASE_URL`. The
-operator is responsible for ensuring that URL is isolated and contains the
-documented fixture records; never point browser tests at production.
+The explicit `E2E_TEST_ONLY=1` acknowledgement is mandatory. `E2E_BASE_URL` is
+always rejected, shared/production environment markers are refused, an
+unpredictable per-run token protects test-only hooks, and existing servers are
+never reused.
 
-Screenshots and traces are retained only for failures in `test-results/` and
-the HTML report is written to `playwright-report/`.
+Screenshots, videos, traces, HTML reports, and CI artifact uploads are disabled
+because pages can contain sensitive health and coaching data. Use the bounded
+console reporter for diagnostics. Temporary runner output is always deleted at
+the end of the run.
