@@ -8,12 +8,28 @@ image:
 service:
   type: ClusterIP
   port: 80
-  targetPort: 5000
+  targetPort: 8090
 
-containerPort: 5000
+containerPort: 8090
 
 application:
   message: ""
+
+database:
+  # The Secret is created out-of-band (normally by External Secrets). Never put
+  # a connection string in a values file or a GitHub Actions input.
+  enabled: false
+  secretName: flask-runtime-secrets
+  secretKey: DATABASE_URL
+
+migration:
+  enabled: false
+  command:
+    - flask
+    - db
+    - upgrade
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
 
 resources:
   requests:
