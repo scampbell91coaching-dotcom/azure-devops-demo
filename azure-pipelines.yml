@@ -63,6 +63,14 @@ stages:
         echo "Helm validation completed successfully."
       displayName: Lint and render Helm chart
 
+    - script: |
+        set -euo pipefail
+        curl -fsSLo kubeconform.tar.gz https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+        tar -xzf kubeconform.tar.gz kubeconform
+        sudo install kubeconform /usr/local/bin/kubeconform
+        scripts/validate-security.sh
+      displayName: Validate Kubernetes security controls
+
     - publish: rendered-manifests.yaml
       artifact: rendered-manifests
       displayName: Publish rendered manifests

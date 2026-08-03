@@ -3,6 +3,7 @@ replicaCount: 1
 image:
   repository: stevedevopslab6280.azurecr.io/lead-magnets
   tag: aea03eb7024e928f5df3bb0c2a43cc4b7283a14b
+  digest: ""
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -22,6 +23,10 @@ ingress:
   className: nginx
   host: traditionalstrength.co.uk
   tlsSecretName: traditionalstrength-tls
+
+networkPolicy:
+  enabled: true
+  ingressNamespace: ingress-nginx
 
 resources:
   requests:
@@ -45,6 +50,7 @@ containerSecurityContext:
   capabilities:
     drop:
       - ALL
+  runAsNonRoot: true
 
 database:
   path: /data/leads.db

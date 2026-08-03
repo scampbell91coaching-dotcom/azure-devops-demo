@@ -8,12 +8,18 @@ data "azurerm_container_registry" "acr" {
 }
 
 resource "azurerm_kubernetes_cluster" "aks" {
-  oidc_issuer_enabled       = true
-  workload_identity_enabled = true
-  name                      = var.aks_name
-  location                  = data.azurerm_resource_group.lab.location
-  resource_group_name       = data.azurerm_resource_group.lab.name
-  dns_prefix                = var.dns_prefix
+  oidc_issuer_enabled          = true
+  workload_identity_enabled    = true
+  azure_policy_enabled         = true
+  local_account_disabled       = true
+  image_cleaner_enabled        = true
+  image_cleaner_interval_hours = 48
+  automatic_upgrade_channel    = "patch"
+  node_os_upgrade_channel      = "NodeImage"
+  name                         = var.aks_name
+  location                     = data.azurerm_resource_group.lab.location
+  resource_group_name          = data.azurerm_resource_group.lab.name
+  dns_prefix                   = var.dns_prefix
 
   sku_tier = "Free"
 
@@ -28,6 +34,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
     auto_scaling_enabled = false
 
     os_disk_size_gb = 30
+    os_disk_type    = "Managed"
+    os_sku          = "AzureLinux"
     type            = "VirtualMachineScaleSets"
 
     upgrade_settings {
@@ -36,7 +44,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 
   key_vault_secrets_provider {
-    secret_rotation_enabled = false
+    secret_rotation_enabled  = true
+    secret_rotation_interval = "2m"
   }
 
   identity {

@@ -3,6 +3,7 @@ replicaCount: 1
 image:
   repository: stevedevopslab6280.azurecr.io/flask-web
   tag: c69864836193acc31a22d7c5eb288ad5e8481559
+  digest: ""
   pullPolicy: IfNotPresent
 
 service:
@@ -86,6 +87,23 @@ podSecurityContext:
 
 containerSecurityContext:
   readOnlyRootFilesystem: true
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - traditionalstrength.co.uk
+    - www.traditionalstrength.co.uk
+  tlsSecretName: traditionalstrength-tls
+
+networkPolicy:
+  enabled: true
+  ingressNamespace: ingress-nginx
+  monitoringNamespace: monitoring
+  allowMonitoring: false
+  allowHttpsEgress: true
+  allowDatabaseEgress: true
+  databasePort: 5432
 
 topologySpreadConstraints:
   - maxSkew: 1
