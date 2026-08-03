@@ -9,8 +9,17 @@ from .models.athlete import Athlete
 from .models.checkins import AthleteCheckinSettings
 from .models.nutrition_checkin import NutritionCheckIn
 from .services.athlete_dashboard import get_athlete_dashboard
+from .services.nutrition_dashboard import get_nutrition_dashboard
 
 athletes_bp = Blueprint("athletes", __name__)
+
+
+@athletes_bp.get("/nutrition")
+def nutrition_dashboard():
+    return render_template(
+        "nutrition/index.html",
+        dashboard=get_nutrition_dashboard(),
+    )
 
 
 @athletes_bp.get("/athlete/dashboard")
