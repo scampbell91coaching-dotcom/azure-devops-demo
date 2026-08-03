@@ -11,6 +11,18 @@ from ..programming_services.sessions import (
 from ..programming_templates import day_templates
 
 
+def _redirect_after_edit(session: TrainingSession):
+    if request.form.get("week_editor"):
+        return redirect(
+            url_for(
+                "programming.week",
+                week_id=session.week_id,
+                _anchor=f"session-{session.id}",
+            )
+        )
+    return redirect(url_for("programming.session", session_id=session.id))
+
+
 def register_session_routes(blueprint: Blueprint) -> None:
     @blueprint.post("/programming/weeks/<int:week_id>/sessions")
     def create_session(week_id: int):
@@ -22,7 +34,7 @@ def register_session_routes(blueprint: Blueprint) -> None:
             name=request.form.get("name", "").strip(),
             day_label=request.form.get("day_label", "").strip() or None,
         )
-        return redirect(url_for("programming.session", session_id=session.id))
+        return _redirect_after_edit(session)
 
     @blueprint.post("/programming/sessions/<int:session_id>/insert-before")
     def insert_session_before(session_id: int):
@@ -30,7 +42,7 @@ def register_session_routes(blueprint: Blueprint) -> None:
         if source is None:
             abort(404)
         target = insert_blank(source, after=False)
-        return redirect(url_for("programming.session", session_id=target.id))
+        return _redirect_after_edit(target)
 
     @blueprint.post("/programming/sessions/<int:session_id>/insert-after")
     def insert_session_after(session_id: int):
@@ -38,7 +50,7 @@ def register_session_routes(blueprint: Blueprint) -> None:
         if source is None:
             abort(404)
         target = insert_blank(source, after=True)
-        return redirect(url_for("programming.session", session_id=target.id))
+        return _redirect_after_edit(target)
 
     @blueprint.get("/programming/sessions/<int:session_id>")
     def session(session_id: int):
@@ -61,7 +73,7 @@ def register_session_routes(blueprint: Blueprint) -> None:
         if source is None:
             abort(404)
         target = duplicate(source)
-        return redirect(url_for("programming.session", session_id=target.id))
+        return _redirect_after_edit(target)
 
     @blueprint.post("/programming/sessions/<int:session_id>/delete")
     def delete_session(session_id: int):

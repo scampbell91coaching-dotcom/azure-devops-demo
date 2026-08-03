@@ -2,6 +2,7 @@ from flask import Blueprint, abort, redirect, render_template, request, url_for
 
 from ..extensions import db
 from ..models.programming import TrainingBlock, TrainingWeek
+from ..programming_services.prescriptions import PRESCRIPTION_MODE_LABELS
 from ..programming_services.weeks import (
     FinalWeekDeletionError,
     create,
@@ -29,7 +30,11 @@ def register_week_routes(blueprint: Blueprint) -> None:
         item = db.session.get(TrainingWeek, week_id)
         if item is None:
             abort(404)
-        return render_template("programming/week.html", week=item)
+        return render_template(
+            "programming/week.html",
+            week=item,
+            prescription_modes=PRESCRIPTION_MODE_LABELS,
+        )
 
     @blueprint.post("/programming/weeks/<int:week_id>/duplicate")
     def duplicate_week(week_id: int):

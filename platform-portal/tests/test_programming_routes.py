@@ -59,6 +59,16 @@ EXPECTED_PROGRAMMING_ROUTES = {
         "/programming/sessions/<int:session_id>/insert-before",
         "POST",
     ),
+    (
+        "programming.update_prescription",
+        "/programming/prescriptions/<int:prescription_id>",
+        "POST",
+    ),
+    (
+        "programming.delete_prescription",
+        "/programming/prescriptions/<int:prescription_id>/delete",
+        "POST",
+    ),
     ("programming.session", "/programming/sessions/<int:session_id>", "GET"),
     ("programming.week", "/programming/weeks/<int:week_id>", "GET"),
 }
