@@ -78,6 +78,31 @@ PGSSLMODE=verify-full psql \
 
 Retrieve credentials through the approved Key Vault/External Secrets path. Do not print them in CI logs, Terraform outputs, shell history, or Kubernetes manifests.
 
+## AKS release cutover
+
+The `flask-app` chart consumes `DATABASE_URL` only through the key named `DATABASE_URL` in the existing `flask-runtime-secrets` Kubernetes Secret. The Deployment and migration Job use `secretKeyRef`; the URI is never accepted as a Helm value or workflow input. Before enabling a PostgreSQL release, have the secret owner add the complete, correctly URL-encoded URI (including `sslmode=verify-full`) to the approved Key Vault/External Secrets flow and verify only the key's presence:
+
+```bash
+export NAMESPACE=production
+kubectl get secret flask-runtime-secrets \
+  --namespace "$NAMESPACE" \
+  --output jsonpath='{.data.DATABASE_URL}' | grep -q .
+```
+
+Do not decode or print that value. This repository deliberately does not create or mutate the live Secret.
+
+Production starts in cutover mode: `replicaCount: 1` and HPA disabled. Every Helm install or upgrade first runs a `flask db upgrade` Job using the exact immutable image tag selected for the web Deployment. The Job is a Helm pre-install/pre-upgrade hook with no retries. Argo CD does not advance to the Deployment if it fails, and the workflow times out rather than reporting a successful rollout.
+
+The release workflow requires explicit `environment` and `namespace` inputs for manual runs. Only `main` may publish an image or update the GitOps values; pull requests and feature-branch dispatches stop after tests, image scanning, Helm linting, and rendering. Main builds use the full Git commit SHA as the promoted immutable tag. The `latest` tag is convenience-only and is never written to production values.
+
+Before a cutover, verify from AKS that private DNS resolves the PostgreSQL hostname, TCP 5432 is reachable, the runtime Secret contains the expected key, and the migration command exists in the candidate image. After promotion, the workflow waits for Argo CD's migration-gated Deployment to select that exact image, waits for the Kubernetes rollout, and then calls the public `/health` endpoint.
+
+### Optional scale-out
+
+Do not enable multiple replicas merely because the migration completed. First verify database connectivity, schema revision, write/read behavior, connection-pool limits, restart behavior, and a backup/restore exercise. Then add `values-scale-out.yaml` to the Argo CD application's `helm.valueFiles` in a reviewed Git change. This opts into a minimum of two replicas and HPA scaling up to five; no expensive Azure database option or PostgreSQL HA setting is enabled by it.
+
+To return to cutover mode, remove that overlay in Git. Avoid `kubectl scale`: Argo CD and the HPA will reconcile it.
+
 ## Backups and recovery
 
 Flexible Server takes managed automated backups and supports point-in-time restore within the configured seven-day retention period. Seven days is the conservative cost-conscious starting point; increase it up to 35 days when recovery objectives require it. Geo-redundant backup is off by default and must be enabled deliberately after checking regional support and cost.

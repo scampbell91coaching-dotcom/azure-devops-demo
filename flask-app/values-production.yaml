@@ -1,4 +1,4 @@
-replicaCount: 2
+replicaCount: 1
 
 image:
   repository: stevedevopslab6280.azurecr.io/flask-web
@@ -8,12 +8,45 @@ image:
 service:
   type: ClusterIP
   port: 80
-  targetPort: 5000
+  targetPort: 8090
 
-containerPort: 5000
+containerPort: 8090
 
 application:
   message: ""
+
+database:
+  enabled: true
+  secretName: flask-runtime-secrets
+  secretKey: DATABASE_URL
+
+migration:
+  enabled: true
+  command:
+    - flask
+    - db
+    - upgrade
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 1
+  targetCPUUtilizationPercentage: 50
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
 
 resources:
   requests:

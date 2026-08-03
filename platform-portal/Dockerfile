@@ -13,8 +13,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app.py .
+COPY portal ./portal
+COPY migrations ./migrations
 COPY templates ./templates
 COPY static ./static
+COPY content ./content
+COPY data ./data
 RUN mkdir -p /app/data && chown -R portal:portal /app
 
 USER 10001:10001
