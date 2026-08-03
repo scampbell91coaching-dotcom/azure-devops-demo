@@ -31,6 +31,20 @@ class Exercise(db.Model):  # type: ignore[name-defined]
     default_rest_seconds = db.Column(db.Integer, nullable=True)
 
     coaching_cues = db.Column(db.Text, nullable=True)
+    goal = db.Column(db.String(120), nullable=True)
+    difficulty = db.Column(db.String(20), nullable=True)
+    setup = db.Column(db.Text, nullable=True)
+    execution = db.Column(db.Text, nullable=True)
+    common_mistakes = db.Column(db.Text, nullable=True)
+    regressions = db.Column(db.Text, nullable=True)
+    progressions = db.Column(db.Text, nullable=True)
+    cautions = db.Column(db.Text, nullable=True)
+    competition_relevance = db.Column(db.String(40), nullable=True)
+    prescription_styles = db.Column(db.Text, nullable=True)
+    rep_ranges = db.Column(db.String(80), nullable=True)
+    warmup_suitable = db.Column(db.Boolean, nullable=False, default=False)
+    accessory_suitable = db.Column(db.Boolean, nullable=False, default=False)
+    catalogue_version = db.Column(db.Integer, nullable=True)
     video_url = db.Column(db.String(500), nullable=True)
 
     active = db.Column(db.Boolean, nullable=False, default=True, index=True)
@@ -60,6 +74,20 @@ def ensure_exercise_knowledge_columns() -> None:
         "family": "VARCHAR(120)",
         "aliases": "TEXT",
         "occurrence_count": "INTEGER",
+        "goal": "VARCHAR(120)",
+        "difficulty": "VARCHAR(20)",
+        "setup": "TEXT",
+        "execution": "TEXT",
+        "common_mistakes": "TEXT",
+        "regressions": "TEXT",
+        "progressions": "TEXT",
+        "cautions": "TEXT",
+        "competition_relevance": "VARCHAR(40)",
+        "prescription_styles": "TEXT",
+        "rep_ranges": "VARCHAR(80)",
+        "warmup_suitable": "BOOLEAN NOT NULL DEFAULT 0",
+        "accessory_suitable": "BOOLEAN NOT NULL DEFAULT 0",
+        "catalogue_version": "INTEGER",
     }
     existing_columns = {
         column["name"] for column in inspect(db.engine).get_columns("exercises")
