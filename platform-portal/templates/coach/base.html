@@ -25,7 +25,7 @@
 
   <header class="coach-topbar">
     <div class="coach-topbar__inner">
-      <a class="coach-brand" href="/athletes">
+      <a class="coach-brand" href="{{ url_for('coach_dashboard.index') }}">
         <span class="coach-brand__mark" aria-hidden="true">TS</span>
 
         <span class="coach-brand__copy">
@@ -51,6 +51,13 @@
         data-coach-navigation
       >
         <a
+          href="{{ url_for('coach_dashboard.index') }}"
+          {% if coach_section == "dashboard" %}aria-current="page"{% endif %}
+        >
+          Dashboard
+        </a>
+
+        <a
           href="/athletes"
           {% if coach_section == "athletes" %}aria-current="page"{% endif %}
         >
@@ -73,7 +80,10 @@
         </a>
 
 <a href="/programming" {% if coach_section == "programming" %}aria-current="page"{% endif %}>Programming</a>
-        <span class="coach-navigation__disabled">Check-ins</span>
+        <a
+          href="{{ url_for('checkins.index') }}"
+          {% if coach_section == "checkins" %}aria-current="page"{% endif %}
+        >Check-ins</a>
         <span class="coach-navigation__disabled">Meet Prep</span>
       </nav>
 

@@ -390,6 +390,54 @@ select {
   gap: 1rem;
 }
 
+.coach-dashboard__summary,
+.coach-dashboard__grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.coach-dashboard__summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.coach-dashboard__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.coach-dashboard__wide {
+  grid-column: 1 / -1;
+}
+
+.coach-dashboard-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.coach-dashboard-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--coach-border);
+  padding: 0.25rem 0 1rem;
+}
+
+.coach-dashboard-list article:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.coach-dashboard-list article > div,
+.coach-dashboard__source {
+  display: grid;
+}
+
+.coach-dashboard-list span,
+.coach-dashboard__source {
+  color: var(--coach-muted);
+  font-size: 0.8rem;
+}
+
 .coach-metric-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -496,7 +544,8 @@ select {
   .coach-form--athlete,
   .coach-form-grid--four,
   .coach-metric-grid,
-  .coach-score-fields {
+  .coach-score-fields,
+  .coach-dashboard__summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -555,8 +604,15 @@ select {
   .coach-metric-grid,
   .coach-score-fields,
   .coach-score-grid,
-  .coach-checkin-card__copy {
+  .coach-checkin-card__copy,
+  .coach-dashboard__summary,
+  .coach-dashboard__grid {
     grid-template-columns: 1fr;
+  }
+
+  .coach-dashboard-list article {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .coach-form__actions,
