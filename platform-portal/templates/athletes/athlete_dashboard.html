@@ -52,6 +52,7 @@
       {% else %}
         <p class="muted">No check-in is currently scheduled.</p>
       {% endif %}
+      <a class="button button--secondary" href="{{ url_for('checkins.athlete_history') }}">Check-in history</a>
     </section>
 
     <section class="dashboard-card" id="nutrition">

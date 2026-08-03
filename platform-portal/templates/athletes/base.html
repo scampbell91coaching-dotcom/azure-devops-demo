@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#08111f">
   <title>{% block title %}Traditional Strength{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/athlete_dashboard.css') }}">
+  {% block head %}{% endblock %}
 </head>
 <body class="athlete-workspace">
   <a class="athlete-skip-link" href="#main">Skip to content</a>
