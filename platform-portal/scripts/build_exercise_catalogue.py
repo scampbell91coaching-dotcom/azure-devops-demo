@@ -349,44 +349,146 @@ MOVEMENT_KNOWLEDGE = {
     "squat": {
         "setup": "Set the bar securely, take an even grip and stance, then brace before unlocking the knees and hips.",
         "execution": "Descend with the load balanced over the mid-foot, reach the intended depth under control, then drive evenly to standing.",
-        "coaching_cues": ["Brace before you descend", "Keep pressure through the whole foot", "Drive the floor away"],
-        "common_mistakes": ["Losing mid-foot balance", "Relaxing the trunk at the bottom"],
-        "regressions": ["Reduce the load", "Use a goblet squat to practise balance and depth"],
-        "progressions": ["Add load while preserving depth", "Use a pause to strengthen the bottom position"],
+        "coaching_cues": [
+            "Brace before you descend",
+            "Keep pressure through the whole foot",
+            "Drive the floor away",
+        ],
+        "common_mistakes": [
+            "Losing mid-foot balance",
+            "Relaxing the trunk at the bottom",
+        ],
+        "regressions": [
+            "Reduce the load",
+            "Use a goblet squat to practise balance and depth",
+        ],
+        "progressions": [
+            "Add load while preserving depth",
+            "Use a pause to strengthen the bottom position",
+        ],
         "cautions": "Use safeties set just below the intended depth. Stop if pain changes the movement or prevents a stable, controlled repetition.",
     },
     "bench": {
         "setup": "Set the rack height, lie with eyes under the bar, plant the feet and secure an even grip before unracking with straight arms.",
         "execution": "Lower the bar to a repeatable touch point with the upper back and feet braced, then press to a controlled lockout.",
-        "coaching_cues": ["Set the upper back", "Keep the wrists over the elbows", "Press back towards the rack"],
-        "common_mistakes": ["Losing upper-back tension", "Allowing the wrists to fold behind the bar"],
+        "coaching_cues": [
+            "Set the upper back",
+            "Keep the wrists over the elbows",
+            "Press back towards the rack",
+        ],
+        "common_mistakes": [
+            "Losing upper-back tension",
+            "Allowing the wrists to fold behind the bar",
+        ],
         "regressions": ["Reduce the load", "Use a push-up or machine chest press"],
-        "progressions": ["Add load without changing the touch point", "Add a deliberate pause on the chest"],
+        "progressions": [
+            "Add load without changing the touch point",
+            "Add a deliberate pause on the chest",
+        ],
         "cautions": "Use a competent spotter or correctly positioned safeties. Stop if pain prevents a stable touch or press path.",
     },
     "deadlift": {
         "setup": "Centre the feet under the bar, take a secure grip, brace the trunk and remove slack without moving the bar forwards.",
         "execution": "Push through the floor as the bar stays close, stand tall without leaning back, then return it under control.",
-        "coaching_cues": ["Brace and take out the slack", "Keep the bar close", "Push the floor away"],
-        "common_mistakes": ["Jerking the bar from the floor", "Letting the bar drift away from the legs"],
+        "coaching_cues": [
+            "Brace and take out the slack",
+            "Keep the bar close",
+            "Push the floor away",
+        ],
+        "common_mistakes": [
+            "Jerking the bar from the floor",
+            "Letting the bar drift away from the legs",
+        ],
         "regressions": ["Reduce the load", "Raise the start position on blocks"],
-        "progressions": ["Add load while keeping a consistent start", "Add a pause just off the floor"],
+        "progressions": [
+            "Add load while keeping a consistent start",
+            "Add a pause just off the floor",
+        ],
         "cautions": "Choose a load that allows a braced, repeatable start and controlled return. Stop if pain changes the pulling position.",
     },
 }
 
 
 FAMILY_KNOWLEDGE = {
-    "Back": ("Set the implement and brace the trunk before initiating with the shoulder blades and elbows.", "Pull through a controlled range, pause briefly in the shortened position, then return without losing trunk position.", ["Lead with the elbows", "Keep the neck relaxed", "Control the return"], ["Using momentum", "Shrugging instead of pulling through the target range"]),
-    "Quads": ("Set the machine or stance so the working foot is stable and the knee can track freely.", "Bend and extend the knee through a controlled range while keeping pressure distributed across the foot.", ["Keep the whole foot planted", "Let the knee track with the toes", "Control the lowering phase"], ["Bouncing out of the bottom", "Allowing the knee to collapse inwards"]),
-    "Hamstrings": ("Adjust the pad or body position so the hips remain supported and the knee moves freely.", "Flex the knee or hinge under control, pause in the shortened position where appropriate, then return slowly.", ["Keep the hips still", "Move under control", "Own the lengthened position"], ["Lifting the hips to finish", "Rushing the return"]),
-    "Glutes": ("Adopt a stable stance and align the resistance with the intended direction of hip movement.", "Move from the hip without rotating the pelvis, pause briefly, then return under control.", ["Keep the pelvis level", "Move from the hip", "Finish without overextending"], ["Rotating to create range", "Using momentum"]),
-    "Shoulders": ("Choose a light, controllable load and set the ribs and shoulder blades before moving the arms.", "Move through the available shoulder range without shrugging or using trunk momentum, then lower slowly.", ["Keep the ribs stacked", "Move the arms smoothly", "Keep the neck relaxed"], ["Shrugging the load up", "Swinging through the trunk"]),
-    "Chest": ("Set a stable hand and body position with the shoulders controlled and the resistance aligned across the chest.", "Press or bring the arms together through a controlled range, then return without the shoulders rolling forwards.", ["Keep the shoulders controlled", "Move smoothly", "Control the stretch"], ["Forcing excessive depth", "Losing body position"]),
-    "Triceps": ("Set the upper arm in a stable position and choose a load that permits full elbow control.", "Extend the elbow without moving the shoulder excessively, then return slowly to the start.", ["Keep the upper arm quiet", "Reach a controlled lockout", "Control the return"], ["Swinging the upper arm", "Using trunk momentum"]),
-    "Biceps": ("Stand or sit with the trunk braced, wrists neutral and upper arms in the intended position.", "Flex the elbow without swinging, squeeze briefly, then lower through a controlled range.", ["Keep the upper arm still", "Keep the wrist stacked", "Lower slowly"], ["Swinging the torso", "Letting the wrist fold back"]),
-    "Trunk": ("Choose a stable base and set the ribs over the pelvis before applying resistance.", "Maintain the intended trunk position while breathing and moving only through the prescribed joints.", ["Keep the ribs stacked", "Breathe behind the brace", "Stop before position changes"], ["Holding the breath unnecessarily", "Using a range that breaks trunk position"]),
-    "Calves and grip": ("Set the implement securely and use a stable stance or supported seated position.", "Move through the available range or hold with steady tension, avoiding bouncing and unnecessary joint movement.", ["Use the full controlled range", "Keep pressure even", "Hold without compensating"], ["Bouncing repetitions", "Letting the implement slip out of position"]),
+    "Back": (
+        "Set the implement and brace the trunk before initiating with the shoulder blades and elbows.",
+        "Pull through a controlled range, pause briefly in the shortened position, then return without losing trunk position.",
+        ["Lead with the elbows", "Keep the neck relaxed", "Control the return"],
+        ["Using momentum", "Shrugging instead of pulling through the target range"],
+    ),
+    "Quads": (
+        "Set the machine or stance so the working foot is stable and the knee can track freely.",
+        "Bend and extend the knee through a controlled range while keeping pressure distributed across the foot.",
+        [
+            "Keep the whole foot planted",
+            "Let the knee track with the toes",
+            "Control the lowering phase",
+        ],
+        ["Bouncing out of the bottom", "Allowing the knee to collapse inwards"],
+    ),
+    "Hamstrings": (
+        "Adjust the pad or body position so the hips remain supported and the knee moves freely.",
+        "Flex the knee or hinge under control, pause in the shortened position where appropriate, then return slowly.",
+        ["Keep the hips still", "Move under control", "Own the lengthened position"],
+        ["Lifting the hips to finish", "Rushing the return"],
+    ),
+    "Glutes": (
+        "Adopt a stable stance and align the resistance with the intended direction of hip movement.",
+        "Move from the hip without rotating the pelvis, pause briefly, then return under control.",
+        ["Keep the pelvis level", "Move from the hip", "Finish without overextending"],
+        ["Rotating to create range", "Using momentum"],
+    ),
+    "Shoulders": (
+        "Choose a light, controllable load and set the ribs and shoulder blades before moving the arms.",
+        "Move through the available shoulder range without shrugging or using trunk momentum, then lower slowly.",
+        ["Keep the ribs stacked", "Move the arms smoothly", "Keep the neck relaxed"],
+        ["Shrugging the load up", "Swinging through the trunk"],
+    ),
+    "Chest": (
+        "Set a stable hand and body position with the shoulders controlled and the resistance aligned across the chest.",
+        "Press or bring the arms together through a controlled range, then return without the shoulders rolling forwards.",
+        ["Keep the shoulders controlled", "Move smoothly", "Control the stretch"],
+        ["Forcing excessive depth", "Losing body position"],
+    ),
+    "Triceps": (
+        "Set the upper arm in a stable position and choose a load that permits full elbow control.",
+        "Extend the elbow without moving the shoulder excessively, then return slowly to the start.",
+        [
+            "Keep the upper arm quiet",
+            "Reach a controlled lockout",
+            "Control the return",
+        ],
+        ["Swinging the upper arm", "Using trunk momentum"],
+    ),
+    "Biceps": (
+        "Stand or sit with the trunk braced, wrists neutral and upper arms in the intended position.",
+        "Flex the elbow without swinging, squeeze briefly, then lower through a controlled range.",
+        ["Keep the upper arm still", "Keep the wrist stacked", "Lower slowly"],
+        ["Swinging the torso", "Letting the wrist fold back"],
+    ),
+    "Trunk": (
+        "Choose a stable base and set the ribs over the pelvis before applying resistance.",
+        "Maintain the intended trunk position while breathing and moving only through the prescribed joints.",
+        [
+            "Keep the ribs stacked",
+            "Breathe behind the brace",
+            "Stop before position changes",
+        ],
+        [
+            "Holding the breath unnecessarily",
+            "Using a range that breaks trunk position",
+        ],
+    ),
+    "Calves and grip": (
+        "Set the implement securely and use a stable stance or supported seated position.",
+        "Move through the available range or hold with steady tension, avoiding bouncing and unnecessary joint movement.",
+        [
+            "Use the full controlled range",
+            "Keep pressure even",
+            "Hold without compensating",
+        ],
+        ["Bouncing repetitions", "Letting the implement slip out of position"],
+    ),
 }
 
 
@@ -395,40 +497,145 @@ RECORD_OVERRIDES = {
         "aliases": ["Comp Squat", "Powerlifting Squat"],
         "setup": "Set the hooks below shoulder height and safeties just below depth. Centre the bar across the upper back, take an even grip, brace, stand it clear and take the minimum steps into the chosen stance.",
         "execution": "After the start command in competition practice, unlock knees and hips together, descend until the hip crease passes below the top of the knee, then stand to locked knees before reracking on command.",
-        "coaching_cues": ["Brace before the descent", "Stay balanced over mid-foot", "Drive the floor away"],
-        "common_mistakes": ["Rushing the walkout", "Cutting depth", "Letting the chest and hips rise at different rates"],
+        "coaching_cues": [
+            "Brace before the descent",
+            "Stay balanced over mid-foot",
+            "Drive the floor away",
+        ],
+        "common_mistakes": [
+            "Rushing the walkout",
+            "Cutting depth",
+            "Letting the chest and hips rise at different rates",
+        ],
         "regressions": ["High-bar back squat", "Goblet squat"],
-        "progressions": ["Paused competition squat", "Competition squat with command practice"],
+        "progressions": [
+            "Paused competition squat",
+            "Competition squat with command practice",
+        ],
         "rep_ranges": "1-6 reps; mostly 1-4 near competition",
     },
     "Competition Bench Press": {
         "aliases": ["Comp Bench", "Competition Bench"],
         "setup": "Set the hooks so the bar can be unracked without losing shoulder position. Plant the feet, keep the required contact points on the bench, take an even legal grip and receive a controlled hand-off if used.",
         "execution": "Hold the bar motionless at straight arms, lower to the chest, pause until the press command in competition practice, then press to locked elbows and wait for the rack command.",
-        "coaching_cues": ["Set the upper back", "Meet the bar with the chest", "Press back to lockout"],
-        "common_mistakes": ["Softening during the pause", "Uneven elbow lockout", "Lifting a required contact point"],
+        "coaching_cues": [
+            "Set the upper back",
+            "Meet the bar with the chest",
+            "Press back to lockout",
+        ],
+        "common_mistakes": [
+            "Softening during the pause",
+            "Uneven elbow lockout",
+            "Lifting a required contact point",
+        ],
         "regressions": ["Paused bench press without commands", "Push-up"],
-        "progressions": ["Long-pause bench press", "Competition bench with full commands"],
+        "progressions": [
+            "Long-pause bench press",
+            "Competition bench with full commands",
+        ],
         "rep_ranges": "1-8 reps; mostly 1-5 near competition",
     },
     "Competition Deadlift": {
         "aliases": ["Comp Deadlift", "Powerlifting Deadlift"],
         "setup": "Centre the feet beneath the bar in the chosen legal stance, take a secure grip, brace and remove slack while keeping the bar still before the attempt begins.",
         "execution": "Lift in one continuous effort until knees and hips are locked and the shoulders are upright, hold the bar motionless, then return it with both hands after the down command in competition practice.",
-        "coaching_cues": ["Take out the slack", "Push the floor away", "Stand tall and hold"],
-        "common_mistakes": ["Jerking the bar from the floor", "Losing the bar forwards", "Lowering before the command"],
+        "coaching_cues": [
+            "Take out the slack",
+            "Push the floor away",
+            "Stand tall and hold",
+        ],
+        "common_mistakes": [
+            "Jerking the bar from the floor",
+            "Losing the bar forwards",
+            "Lowering before the command",
+        ],
         "regressions": ["Block pull", "Trap-bar deadlift"],
-        "progressions": ["Paused deadlift", "Competition deadlift with command practice"],
+        "progressions": [
+            "Paused deadlift",
+            "Competition deadlift with command practice",
+        ],
         "rep_ranges": "1-6 reps; mostly 1-4 near competition",
     },
-    "Barbell Row": {"aliases": ["Bent-Over Barbell Row"], "coaching_cues": ["Brace the torso", "Pull towards the lower ribs", "Lower to straight arms"], "regressions": ["Chest-supported dumbbell row"], "progressions": ["Paused barbell row"]},
-    "Lat Pulldown": {"aliases": ["Cable Lat Pulldown"], "coaching_cues": ["Set the shoulders down", "Drive the elbows towards the ribs", "Control to straight arms"], "regressions": ["Single-arm lat pulldown"], "progressions": ["Pull-up"]},
-    "Leg Press": {"coaching_cues": ["Keep the pelvis supported", "Track knees with toes", "Press through the whole foot"], "regressions": ["Reduce the load or range"], "progressions": ["Single-leg press"]},
-    "Seated Leg Curl": {"coaching_cues": ["Keep the hips against the pad", "Curl through the heel", "Control the return"], "regressions": ["Banded leg curl"], "progressions": ["Single-leg curl"]},
-    "Face Pull": {"coaching_cues": ["Pull towards eye level", "Finish with hands apart", "Keep the ribs stacked"], "regressions": ["Band face pull"], "progressions": ["Add a controlled external rotation"]},
-    "Cable Triceps Pressdown": {"aliases": ["Triceps Pushdown"], "coaching_cues": ["Pin the upper arms", "Extend without leaning", "Control to full elbow bend"], "regressions": ["Use a lighter cable setting"], "progressions": ["Single-arm pressdown"]},
-    "Pallof Press": {"aliases": ["Anti-Rotation Press"], "coaching_cues": ["Keep ribs over pelvis", "Press straight forwards", "Resist turning towards the cable"], "regressions": ["Use a wider stance or lighter band"], "progressions": ["Half-kneeling Pallof press"]},
-    "Dowel Hip Hinge": {"equipment": "dowel", "setup": "Stand tall with a dowel touching the head, upper back and tailbone; soften the knees and brace lightly.", "execution": "Push the hips backwards while maintaining all three dowel contact points, then squeeze the glutes to stand.", "coaching_cues": ["Keep three points of contact", "Send the hips back", "Stand tall"], "common_mistakes": ["Squatting instead of hinging", "Losing dowel contact"], "regressions": ["Wall hip hinge"], "progressions": ["Light kettlebell Romanian deadlift"]},
+    "Barbell Row": {
+        "aliases": ["Bent-Over Barbell Row"],
+        "coaching_cues": [
+            "Brace the torso",
+            "Pull towards the lower ribs",
+            "Lower to straight arms",
+        ],
+        "regressions": ["Chest-supported dumbbell row"],
+        "progressions": ["Paused barbell row"],
+    },
+    "Lat Pulldown": {
+        "aliases": ["Cable Lat Pulldown"],
+        "coaching_cues": [
+            "Set the shoulders down",
+            "Drive the elbows towards the ribs",
+            "Control to straight arms",
+        ],
+        "regressions": ["Single-arm lat pulldown"],
+        "progressions": ["Pull-up"],
+    },
+    "Leg Press": {
+        "coaching_cues": [
+            "Keep the pelvis supported",
+            "Track knees with toes",
+            "Press through the whole foot",
+        ],
+        "regressions": ["Reduce the load or range"],
+        "progressions": ["Single-leg press"],
+    },
+    "Seated Leg Curl": {
+        "coaching_cues": [
+            "Keep the hips against the pad",
+            "Curl through the heel",
+            "Control the return",
+        ],
+        "regressions": ["Banded leg curl"],
+        "progressions": ["Single-leg curl"],
+    },
+    "Face Pull": {
+        "coaching_cues": [
+            "Pull towards eye level",
+            "Finish with hands apart",
+            "Keep the ribs stacked",
+        ],
+        "regressions": ["Band face pull"],
+        "progressions": ["Add a controlled external rotation"],
+    },
+    "Cable Triceps Pressdown": {
+        "aliases": ["Triceps Pushdown"],
+        "coaching_cues": [
+            "Pin the upper arms",
+            "Extend without leaning",
+            "Control to full elbow bend",
+        ],
+        "regressions": ["Use a lighter cable setting"],
+        "progressions": ["Single-arm pressdown"],
+    },
+    "Pallof Press": {
+        "aliases": ["Anti-Rotation Press"],
+        "coaching_cues": [
+            "Keep ribs over pelvis",
+            "Press straight forwards",
+            "Resist turning towards the cable",
+        ],
+        "regressions": ["Use a wider stance or lighter band"],
+        "progressions": ["Half-kneeling Pallof press"],
+    },
+    "Dowel Hip Hinge": {
+        "equipment": "dowel",
+        "setup": "Stand tall with a dowel touching the head, upper back and tailbone; soften the knees and brace lightly.",
+        "execution": "Push the hips backwards while maintaining all three dowel contact points, then squeeze the glutes to stand.",
+        "coaching_cues": [
+            "Keep three points of contact",
+            "Send the hips back",
+            "Stand tall",
+        ],
+        "common_mistakes": ["Squatting instead of hinging", "Losing dowel contact"],
+        "regressions": ["Wall hip hinge"],
+        "progressions": ["Light kettlebell Romanian deadlift"],
+    },
 }
 
 
@@ -463,10 +670,20 @@ def make_record(
     )
     setup = f"Set up the {equipment} securely and establish a stable position that allows the intended joints to move freely."
     execution = f"Perform the {name.lower()} through a controlled range, pause where appropriate, then return without using momentum."
-    cues = ["Set a stable start position", "Move through a controlled range", "Keep the load balanced"]
-    mistakes = ["Using momentum to create range", "Choosing more load than can be controlled"]
+    cues = [
+        "Set a stable start position",
+        "Move through a controlled range",
+        "Keep the load balanced",
+    ]
+    mistakes = [
+        "Using momentum to create range",
+        "Choosing more load than can be controlled",
+    ]
     regressions = ["Reduce the load", "Shorten the range while retaining control"]
-    progressions = ["Add load gradually", "Increase the controlled range or repetitions"]
+    progressions = [
+        "Add load gradually",
+        "Increase the controlled range or repetitions",
+    ]
     cautions = "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition."
     uses_movement_template = (
         (movement == "squat" and "bar" in equipment.casefold())
