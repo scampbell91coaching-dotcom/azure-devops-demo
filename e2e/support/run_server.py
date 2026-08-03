@@ -28,12 +28,20 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8091)
     args = parser.parse_args()
 
-    app = create_app({"TESTING": False, "SECRET_KEY": "e2e-placeholder-only"})
+    app = create_app(
+        {
+            "TESTING": True,
+            "AUTHENTICATION_DISABLED": True,
+            "SECRET_KEY": "e2e-placeholder-only",
+        }
+    )
     seed_database(app)
 
     @app.post("/__e2e__/athlete-session/<int:athlete_id>")
     def select_e2e_athlete(athlete_id: int):
         """Test-only session selection; this is not an authentication flow."""
+        if not app.testing:
+            abort(404)
         if db.session.get(Athlete, athlete_id) is None:
             abort(404)
         session.clear()

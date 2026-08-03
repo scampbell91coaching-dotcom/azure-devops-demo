@@ -2,7 +2,16 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from flask import Blueprint, abort, redirect, render_template, request, session, url_for
+from flask import (
+    Blueprint,
+    abort,
+    g,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 from .extensions import db
 from .models.athlete import Athlete
@@ -30,7 +39,8 @@ def _settings_for(athlete: Athlete) -> AthleteCheckinSettings:
 
 
 def _session_athlete() -> Athlete:
-    athlete_id = session.get("athlete_id")
+    user = g.get("current_user")
+    athlete_id = user.athlete_id if user is not None else session.get("athlete_id")
     if isinstance(athlete_id, bool) or not isinstance(athlete_id, int):
         abort(401)
     athlete = db.session.get(Athlete, athlete_id)

@@ -17,6 +17,7 @@ from .programming import (
     TrainingSession,
     TrainingWeek,
 )
+from .user import User, UserRole
 
 __all__ = [
     "Athlete",
@@ -33,4 +34,6 @@ __all__ = [
     "TrainingSession",
     "TrainingWeek",
     "WeeklyCheckin",
+    "User",
+    "UserRole",
 ]

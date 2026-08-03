@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+from datetime import timedelta
 from pathlib import Path
 
 from flask import Flask
@@ -10,6 +12,7 @@ from .api.history import history_bp
 from .api.platform import platform_bp
 from .api.recommendations import recommendations_bp
 from .athletes import athletes_bp
+from .auth import init_auth
 from .block_factory import block_factory_bp
 from .checkins import checkins_bp
 from .coach_dashboard import coach_dashboard_bp
@@ -34,16 +37,37 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     portal_root = Path(__file__).resolve().parents[1]
 
     app.config.from_mapping(
+        SECRET_KEY=os.environ.get("SECRET_KEY"),
         SQLALCHEMY_DATABASE_URI=resolve_database_uri(
             application_root=portal_root,
             local_filename="platform-history.db",
         ),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         LEGACY_STARTUP_INITIALIZATION=None,
+        AUTHENTICATION_DISABLED=False,
+        PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SECURE=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        LOGIN_RATE_LIMIT_ATTEMPTS=5,
+        LOGIN_RATE_LIMIT_WINDOW_SECONDS=15 * 60,
     )
 
     if test_config:
         app.config.update(test_config)
+    if (
+        test_config
+        and test_config.get("TESTING")
+        and "AUTHENTICATION_DISABLED" not in test_config
+    ):
+        app.config["AUTHENTICATION_DISABLED"] = True
+    if app.testing and "SESSION_COOKIE_SECURE" not in (test_config or {}):
+        app.config["SESSION_COOKIE_SECURE"] = False
+    if not app.config["SECRET_KEY"]:
+        if app.testing:
+            app.config["SECRET_KEY"] = "testing-only-secret-key"
+        else:
+            raise RuntimeError("SECRET_KEY must be set for the private portal")
     if app.config["LEGACY_STARTUP_INITIALIZATION"] is None:
         app.config["LEGACY_STARTUP_INITIALIZATION"] = app.testing
     db.init_app(app)
@@ -56,6 +80,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     _ = models
 
     app.register_blueprint(health_bp)
+    init_auth(app)
     app.register_blueprint(executive_bp, url_prefix="/api/v1")
     app.register_blueprint(history_bp, url_prefix="/api/v1")
     app.register_blueprint(platform_bp, url_prefix="/api/v1")
