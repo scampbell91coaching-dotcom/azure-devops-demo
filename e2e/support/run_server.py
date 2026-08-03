@@ -3,24 +3,18 @@
 from __future__ import annotations
 
 import argparse
+import atexit
+import hmac
 import os
+import signal
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PORTAL = ROOT / "platform-portal"
-DATABASE = ROOT / ".tmp" / "traditional-strength-e2e.sqlite"
 
 sys.path.insert(0, str(PORTAL))
-DATABASE.parent.mkdir(exist_ok=True)
-DATABASE.unlink(missing_ok=True)
-os.environ["DATABASE_URL"] = f"sqlite:///{DATABASE}"
-
-from flask import abort, jsonify, session  # noqa: E402
-from portal import create_app  # noqa: E402
-from portal.extensions import db  # noqa: E402
-from portal.models.athlete import Athlete  # noqa: E402
-from seed_database import seed_database  # noqa: E402
+from security import create_disposable_database, require_test_only_environment  # noqa: E402
 
 
 def main() -> None:
@@ -28,19 +22,42 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8091)
     args = parser.parse_args()
 
-    app = create_app({"TESTING": False, "SECRET_KEY": "e2e-placeholder-only"})
-    seed_database(app)
+    run_token = require_test_only_environment()
+    database = create_disposable_database(ROOT / ".tmp")
+    atexit.register(database.unlink, missing_ok=True)
+    os.environ["DATABASE_URL"] = f"sqlite:///{database}"
 
-    @app.post("/__e2e__/athlete-session/<int:athlete_id>")
-    def select_e2e_athlete(athlete_id: int):
-        """Test-only session selection; this is not an authentication flow."""
-        if db.session.get(Athlete, athlete_id) is None:
-            abort(404)
-        session.clear()
-        session["athlete_id"] = athlete_id
-        return jsonify({"athlete_id": athlete_id})
+    from flask import abort, jsonify, request, session
+    from portal import create_app
+    from portal.extensions import db
+    from portal.models.athlete import Athlete
+    from seed_database import seed_database
 
-    app.run(host="127.0.0.1", port=args.port, debug=False, use_reloader=False)
+    def stop_for_cleanup(_signum, _frame):
+        raise SystemExit(0)
+
+    signal.signal(signal.SIGTERM, stop_for_cleanup)
+    signal.signal(signal.SIGINT, stop_for_cleanup)
+
+    try:
+        app = create_app({"TESTING": True, "SECRET_KEY": os.urandom(32).hex()})
+        seed_database(app)
+
+        @app.post("/__e2e__/athlete-session/<int:athlete_id>")
+        def select_e2e_athlete(athlete_id: int):
+            """Select an identity only for this token-protected local test run."""
+            supplied_token = request.headers.get("X-E2E-Run-Token", "")
+            if not hmac.compare_digest(supplied_token, run_token):
+                abort(404)
+            if db.session.get(Athlete, athlete_id) is None:
+                abort(404)
+            session.clear()
+            session["athlete_id"] = athlete_id
+            return jsonify({"athlete_id": athlete_id})
+
+        app.run(host="127.0.0.1", port=args.port, debug=False, use_reloader=False)
+    finally:
+        database.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
