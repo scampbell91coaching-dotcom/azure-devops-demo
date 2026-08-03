@@ -1,0 +1,42 @@
+// PROPOSED, NOT ACTIVE. Save each query as a separate Azure Monitor scheduled
+// query alert only after reviewing scope, action group, frequency and cost.
+
+// Name: TraditionalStrengthPublicEndpointUnavailable
+// Threshold: results > 0, evaluate every 5m over 5m, severity 0.
+let expectedChecks = 2;
+availabilityResults
+| where timestamp > ago(5m)
+| where name == "traditional-strength-public-health"
+| summarize Checks=count(), Failures=countif(success == false)
+| where Checks < expectedChecks or Failures > 0
+
+// Name: TraditionalStrengthApplicationInsightsErrorRateHigh
+// Threshold: results > 0, evaluate every 5m over 10m, severity 1.
+requests
+| where timestamp > ago(10m)
+| summarize Total=count(), Failures=countif(success == false or toint(resultCode) >= 500)
+| extend ErrorRate=todouble(Failures) / Total
+| where Total >= 20 and ErrorRate > 0.05
+
+// Name: TraditionalStrengthApplicationInsightsLatencyHigh
+// Threshold: results > 0, evaluate every 5m over 15m, severity 2.
+requests
+| where timestamp > ago(15m)
+| summarize Requests=count(), P95=percentile(duration, 95)
+| where Requests >= 20 and P95 > 1s
+
+// Name: TraditionalStrengthPostgreSqlConnectivityFailure
+// Threshold: results > 0, evaluate every 5m over 10m, severity 1.
+dependencies
+| where timestamp > ago(10m)
+| where type =~ "SQL" or target has "postgres"
+| summarize Calls=count(), Failures=countif(success == false), LastFailure=maxif(timestamp, success == false)
+| where Calls >= 5 and Failures >= 3
+
+// Name: TraditionalStrengthWorkerExceptionBurst
+// Threshold: results > 0, evaluate every 5m over 10m, severity 2.
+exceptions
+| where timestamp > ago(10m)
+| where cloud_RoleName has "worker" or customDimensions["workload.kind"] in ("worker", "job")
+| summarize Failures=count(), AffectedOperations=dcount(operation_Id)
+| where Failures >= 5

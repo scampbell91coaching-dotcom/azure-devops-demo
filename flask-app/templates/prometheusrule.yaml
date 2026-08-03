@@ -1,0 +1,88 @@
+{{- if and .Values.monitoring.enabled .Values.monitoring.prometheusRule.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "flask-app.fullname" . }}-production-health
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "flask-app.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.prometheusRule.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: traditional-strength.web
+      rules:
+        - alert: TraditionalStrengthWebUnavailable
+          expr: max(up{namespace="{{ .Release.Namespace }}",service="{{ include "flask-app.fullname" . }}"}) < 1 or absent(up{namespace="{{ .Release.Namespace }}",service="{{ include "flask-app.fullname" . }}"})
+          for: 5m
+          labels: { severity: critical, service: traditional-strength, owner: platform }
+          annotations:
+            summary: Production web metrics endpoint is unavailable
+            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#web-unavailable-or-not-ready
+        - alert: TraditionalStrengthWebNotReady
+          expr: kube_deployment_status_replicas_available{namespace="{{ .Release.Namespace }}",deployment="flask-web"} < kube_deployment_spec_replicas{namespace="{{ .Release.Namespace }}",deployment="flask-web"}
+          for: 10m
+          labels: { severity: critical, service: traditional-strength, owner: platform }
+          annotations:
+            summary: Production web replicas have not become Ready
+            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#web-unavailable-or-not-ready
+        - alert: TraditionalStrengthHttpErrorRateHigh
+          expr: (sum(rate(flask_http_requests_total{namespace="{{ .Release.Namespace }}",status_code=~"5.."}[5m])) / clamp_min(sum(rate(flask_http_requests_total{namespace="{{ .Release.Namespace }}"}[5m])), 0.001)) > 0.05 and sum(rate(flask_http_requests_total{namespace="{{ .Release.Namespace }}"}[5m])) > 0.1
+          for: 10m
+          labels: { severity: critical, service: traditional-strength, owner: application }
+          annotations:
+            summary: HTTP 5xx rate exceeds 5 percent with meaningful traffic
+            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#http-errors-or-latency
+        - alert: TraditionalStrengthHttpLatencyHigh
+          expr: histogram_quantile(0.95, sum by (le) (rate(flask_http_request_duration_seconds_bucket{namespace="{{ .Release.Namespace }}"}[10m]))) > 1
+          for: 15m
+          labels: { severity: warning, service: traditional-strength, owner: application }
+          annotations:
+            summary: HTTP p95 latency exceeds one second
+            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#http-errors-or-latency
+    - name: traditional-strength.kubernetes
+      rules:
+        - alert: TraditionalStrengthPodRestarting
+          expr: increase(kube_pod_container_status_restarts_total{namespace="{{ .Release.Namespace }}",pod=~"flask-web.*"}[15m]) >= 3
+          for: 5m
+          labels: { severity: warning, service: traditional-strength, owner: platform }
+          annotations:
+            summary: A production web container restarted at least three times
+            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#pod-restarts-or-rollout-failure
+        - alert: TraditionalStrengthRolloutStalled
+          expr: kube_deployment_status_condition{namespace="{{ .Release.Namespace }}",deployment="flask-web",condition="Progressing",status="false"} == 1
+          for: 10m
+          labels: { severity: critical, service: traditional-strength, owner: platform }
+          annotations:
+            summary: Production rollout is not progressing
+            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#pod-restarts-or-rollout-failure
+        - alert: TraditionalStrengthJobFailed
+          expr: kube_job_status_failed{namespace="{{ .Release.Namespace }}",job_name=~".*(traditional-strength|flask|worker).*"} > 0
+          for: 5m
+          labels: { severity: warning, service: traditional-strength, owner: application }
+          annotations:
+            summary: A Traditional Strength worker or Job has failed
+            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#worker-or-job-failure
+        - alert: TraditionalStrengthMigrationJobFailed
+          expr: kube_job_status_failed{namespace="{{ .Release.Namespace }}",job_name=~".*migrat.*"} > 0
+          for: 1m
+          labels: { severity: critical, service: traditional-strength, owner: application }
+          annotations:
+            summary: A database migration Job has failed
+            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#migration-job-failure
+        - alert: TraditionalStrengthContainerCpuPressure
+          expr: sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="{{ .Release.Namespace }}",pod=~"flask-web.*",container!=""}[5m])) / clamp_min(sum by (pod) (kube_pod_container_resource_limits{namespace="{{ .Release.Namespace }}",pod=~"flask-web.*",resource="cpu"}), 0.001) > 0.85
+          for: 15m
+          labels: { severity: warning, service: traditional-strength, owner: platform }
+          annotations:
+            summary: Web pod CPU is above 85 percent of its limit
+            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#resource-pressure
+        - alert: TraditionalStrengthContainerMemoryPressure
+          expr: sum by (pod) (container_memory_working_set_bytes{namespace="{{ .Release.Namespace }}",pod=~"flask-web.*",container!=""}) / clamp_min(sum by (pod) (kube_pod_container_resource_limits{namespace="{{ .Release.Namespace }}",pod=~"flask-web.*",resource="memory"}), 1) > 0.90
+          for: 10m
+          labels: { severity: warning, service: traditional-strength, owner: platform }
+          annotations:
+            summary: Web pod memory is above 90 percent of its limit
+            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#resource-pressure
+{{- end }}
