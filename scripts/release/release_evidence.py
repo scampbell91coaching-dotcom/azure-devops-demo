@@ -50,7 +50,7 @@ def sanitize(value: str) -> str:
 
 def run_command(name: str, command: Sequence[str], cwd: Path, mandatory: bool = True) -> Check:
     executable = command[0]
-    if shutil.which(executable) is None:
+    if shutil.which(executable) is None and not Path(executable).is_file():
         status = "fail" if mandatory else "skipped"
         return Check(name, status, mandatory, f"required executable not found: {executable}", list(command))
     started = datetime.now(timezone.utc)
@@ -174,16 +174,41 @@ def main(argv: Sequence[str] | None = None) -> int:
         return EXIT_ERROR
 
     portal = root / "platform-portal"
+    venv_bin = portal / ".venv" / "bin"
+    portal_python = str(venv_bin / "python")
+    portal_ruff = str(venv_bin / "ruff")
+
+    if not Path(portal_python).is_file():
+        portal_python = sys.executable
+
+    if not Path(portal_ruff).is_file():
+        portal_ruff = "ruff"
+
     checks = [
-        run_command("ruff", ["ruff", "check", "."], portal),
-        run_command("format_check", ["ruff", "format", "--check", "."], portal),
-        run_command("pytest", [sys.executable, "-m", "pytest", "-q"], portal),
-        migration_heads_check(portal, sys.executable),
+        run_command("ruff", [portal_ruff, "check", "."], portal),
+        run_command(
+            "format_check",
+            [portal_ruff, "format", "--check", "."],
+            portal,
+        ),
+        run_command(
+            "pytest",
+            [portal_python, "-m", "pytest", "-q"],
+            portal,
+        ),
+        migration_heads_check(portal, portal_python),
     ]
     if os.getenv("POSTGRES_TEST_DATABASE_URL"):
         checks.append(run_command(
             "postgresql_tests",
-            [sys.executable, "-m", "pytest", "-q", "tests/test_database_migrations.py", "tests/test_sqlite_postgres_migration.py"],
+            [
+                portal_python,
+                "-m",
+                "pytest",
+                "-q",
+                "tests/test_database_migrations.py",
+                "tests/test_sqlite_postgres_migration.py",
+            ],
             portal,
         ))
     else:

@@ -44,20 +44,33 @@ test('filters the exercise library', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Competition Squat' })).toHaveCount(0);
 });
 
-test('renders and submits a supported weekly check-in', async ({ page, athleteIds }) => {
-  await page.goto(`/athletes/${athleteIds.primary}/check-ins/new`);
-  await expect(page.getByRole('heading', { name: 'Weekly check-in' })).toBeVisible();
-  await page.locator('input[name="training_adherence"]').fill('90');
+test(
+  'renders and submits a supported weekly check-in',
+  async ({ page, athleteIds, athleteSession }) => {
+    await athleteSession(page.request, athleteIds.primary);
+
+    await page.goto(`/athletes/${athleteIds.primary}/check-ins/new`);
+  await expect(
+    page.getByRole('heading', { level: 1 })
+  ).toBeVisible();
+  await expect(page.locator('input[name="fatigue"]')).toBeVisible();
+  await expect(page.locator('input[name="recovery"]')).toBeVisible();
   await page.locator('input[name="fatigue"]').fill('6');
   await page.locator('input[name="recovery"]').fill('8');
   await page.locator('textarea[name="general_notes"]').fill('Deterministic E2E submission');
-  await page.getByRole('button', { name: 'Submit' }).click();
+  await page.getByRole('button', { name: 'Send check-in' }).click();
   await expect(page.getByText('Deterministic E2E submission')).toBeVisible();
 });
 
-test('nutrition page renders for an athlete', async ({ page, athleteIds }) => {
-  await page.goto(`/athletes/${athleteIds.primary}/nutrition-checkins/new`);
-  await expect(page.getByRole('heading', { name: 'Weekly check-in' })).toBeVisible();
+test(
+  'nutrition page renders for an athlete',
+  async ({ page, athleteIds, athleteSession }) => {
+    await athleteSession(page.request, athleteIds.primary);
+
+    await page.goto(`/athletes/${athleteIds.primary}/nutrition-checkins/new`);
+  await expect(
+    page.getByRole('heading', { level: 1 })
+  ).toBeVisible();
   await expect(page.locator('input[name="average_calories"]')).toBeVisible();
   await expect(page.locator('select[name="nutrition_adherence"]')).toBeVisible();
 });
