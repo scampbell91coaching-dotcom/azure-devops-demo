@@ -193,7 +193,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         ),
         run_command(
             "pytest",
-            [portal_python, "-m", "pytest", "-q"],
+            [
+                "bash",
+                "-lc",
+                f"unset POSTGRES_TEST_DATABASE_URL; {portal_python} -m pytest -q",
+            ],
             portal,
         ),
         migration_heads_check(portal, portal_python),
