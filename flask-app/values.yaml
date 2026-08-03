@@ -94,8 +94,7 @@ podSecurityContext:
   fsGroup: 10001
 
 containerSecurityContext:
-  # Set true only after confirming the application writes nowhere in the image filesystem.
-  readOnlyRootFilesystem: false
+  readOnlyRootFilesystem: true
 
 topologySpreadConstraints: []
 

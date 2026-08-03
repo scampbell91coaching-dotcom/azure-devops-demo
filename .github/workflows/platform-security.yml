@@ -29,10 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4
 
       - name: Helm lint
         run: helm lint flask-app -f flask-app/values-production.yaml
@@ -56,32 +56,45 @@ jobs:
           print(f"Validated presence of {len(files)} YAML files")
           PY
 
-      - name: Scan repository and IaC
-        uses: aquasecurity/trivy-action@v0.36.0
+      - name: Scan repository, secrets and IaC (blocking)
+        uses: aquasecurity/trivy-action@76071ef0d7ec797419534a183b498b4d6366cf37
         with:
           scan-type: fs
           scan-ref: .
+          scanners: vuln,secret,misconfig
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          skip-dirs: node_modules,.venv,.terraform,__pycache__,playwright-report,test-results
+
+      - name: Generate Trivy SARIF
+        if: always()
+        uses: aquasecurity/trivy-action@76071ef0d7ec797419534a183b498b4d6366cf37
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
           format: sarif
           output: trivy-results.sarif
           severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
+          exit-code: "0"
+          skip-dirs: node_modules,.venv,.terraform,__pycache__,playwright-report,test-results
 
       - name: Upload Trivy SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('trivy-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@b611370bb5703a7efb587f9c9d136a0bb02c5e5a
         with:
           sarif_file: trivy-results.sarif
 
       - name: Generate repository SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@7b36ad622f042cab6f59edea7a0c90f0b3e1384d
         with:
           path: .
           format: spdx-json
           output-file: sbom.spdx.json
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: repository-sbom
           path: sbom.spdx.json

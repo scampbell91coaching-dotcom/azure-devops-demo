@@ -40,7 +40,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: application-cicd-${{ github.ref }}
@@ -62,10 +61,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4
         with:
           version: v3.17.3
 
@@ -107,10 +106,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.12"
           cache: pip
@@ -133,13 +132,17 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      id-token: write
+
     outputs:
       image: ${{ steps.meta.outputs.full_sha_tag }}
       image_tag: ${{ steps.meta.outputs.image_tag }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Generate image metadata
         id: meta
@@ -167,18 +170,35 @@ jobs:
             -t "${{ steps.meta.outputs.full_sha_tag }}" \
             platform-portal
 
-      - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
+      - name: Scan image with Trivy (blocking)
+        uses: aquasecurity/trivy-action@76071ef0d7ec797419534a183b498b4d6366cf37
         with:
           image-ref: ${{ steps.meta.outputs.full_sha_tag }}
           format: table
           severity: HIGH,CRITICAL
-          ignore-unfixed: true
           exit-code: "1"
+
+      - name: Generate image scan SARIF
+        if: always()
+        uses: aquasecurity/trivy-action@76071ef0d7ec797419534a183b498b4d6366cf37
+        with:
+          image-ref: ${{ steps.meta.outputs.full_sha_tag }}
+          format: sarif
+          output: trivy-image-results.sarif
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+
+      - name: Upload image scan SARIF
+        if: always() && hashFiles('trivy-image-results.sarif') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: trivy-image-sarif
+          path: trivy-image-results.sarif
+          retention-days: 14
 
       - name: Azure Login
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        uses: azure/login@v3
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
@@ -201,7 +221,7 @@ jobs:
 
       - name: Login to ACR
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        uses: docker/login-action@v4
+        uses: docker/login-action@c07548e8a66516733c5d4c387f003a339ca4bc91
         with:
           registry: ${{ env.ACR_LOGIN_SERVER }}
           username: 00000000-0000-0000-0000-000000000000
@@ -238,7 +258,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           ref: main
           fetch-depth: 0
@@ -334,7 +354,7 @@ jobs:
 
     steps:
       - name: Azure Login
-        uses: azure/login@v3
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}

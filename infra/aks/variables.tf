@@ -27,6 +27,16 @@ variable "dns_prefix" {
   default     = "aks-devops-lab"
 }
 
+variable "api_server_authorized_ip_ranges" {
+  description = "Public CIDR ranges allowed to reach the AKS API; supply trusted operator and CI egress ranges"
+  type        = list(string)
+
+  validation {
+    condition     = length(var.api_server_authorized_ip_ranges) > 0
+    error_message = "At least one trusted AKS API server CIDR must be supplied."
+  }
+}
+
 variable "acr_name" {
   description = "Existing Azure Container Registry name"
   type        = string
