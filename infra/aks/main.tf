@@ -17,6 +17,10 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   sku_tier = "Free"
 
+  api_server_access_profile {
+    authorized_ip_ranges = var.api_server_authorized_ip_ranges
+  }
+
   default_node_pool {
     name                 = "system"
     vm_size              = var.node_vm_size

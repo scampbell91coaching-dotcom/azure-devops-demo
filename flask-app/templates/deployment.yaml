@@ -106,5 +106,15 @@ spec:
                   - /bin/sh
                   - -c
                   - sleep {{ .Values.preStopSleepSeconds | default 10 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: application-data
+              mountPath: /app/data
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: application-data
+          emptyDir: {}
