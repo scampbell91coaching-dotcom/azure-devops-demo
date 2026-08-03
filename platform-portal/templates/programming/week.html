@@ -1,5 +1,60 @@
-{% extends "coach/base.html" %}{% set coach_section = "programming" %}
+{% extends "coach/base.html" %}
+{% set coach_section = "programming" %}
 {% block title %}{{ week.name }} | Traditional Strength{% endblock %}
-{% block content %}<section class="coach-page"><header class="coach-page__header"><a class="coach-back-link" href="{{ url_for('programming.block', block_id=week.block.id) }}">← {{ week.block.name }}</a><span class="coach-eyebrow">{{ week.block.athlete.full_name }}</span><h1>{{ week.name }}</h1></header>
-<section class="coach-panel"><div class="coach-panel__heading"><h2>Add session</h2></div><form class="coach-form programming-form" method="post" action="{{ url_for('programming.create_session', week_id=week.id) }}"><label><span>Name</span><input name="name" placeholder="Lower 1"></label><label><span>Day</span><input name="day_label" placeholder="Monday"></label><button class="coach-primary-button">Add session</button></form></section>
-<section class="coach-panel"><div class="coach-panel__heading"><h2>Sessions</h2></div><div class="programming-list">{% for session in week.sessions %}<div><a href="{{ url_for('programming.session', session_id=session.id) }}"><strong>{{ session.position }}. {{ session.name }}</strong><small>{{ session.day_label or 'No day' }} · {{ session.prescriptions|length }} exercises</small></a><form method="post" action="{{ url_for('programming.insert_session_before', session_id=session.id) }}"><button class="coach-link-button">Insert before</button></form><form method="post" action="{{ url_for('programming.insert_session_after', session_id=session.id) }}"><button class="coach-link-button">Insert after</button></form><form method="post" action="{{ url_for('programming.duplicate_session', session_id=session.id) }}"><button class="coach-link-button">Duplicate</button></form><form method="post" action="{{ url_for('programming.delete_session', session_id=session.id) }}"><button class="coach-link-button">Delete</button></form></div>{% else %}<p>No sessions yet.</p>{% endfor %}</div></section></section>{% endblock %}
+
+{% macro value(item, field) -%}{{- item|attr(field) if item|attr(field) is not none else '' -}}{%- endmacro %}
+{% macro prescription_fields(item=none) %}
+  <label><span>Mode</span><select name="prescription_type"><option value="">Standard</option>{% for mode, label in prescription_modes.items() %}<option value="{{ mode }}"{% if item and item.prescription_type == mode %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label class="week-editor__exercise"><span>Exercise</span><input name="exercise_name" value="{{ item.exercise_name if item else '' }}" required></label>
+  <label><span>Sets</span><input name="sets" type="number" min="1" value="{{ value(item, 'sets') if item else '' }}"></label>
+  <label><span>Reps</span><input name="reps" value="{{ value(item, 'reps') if item else '' }}"></label>
+  <label><span>Min reps</span><input name="reps_min" type="number" min="1" value="{{ value(item, 'reps_min') if item else '' }}"></label>
+  <label><span>Max reps</span><input name="reps_max" type="number" min="1" value="{{ value(item, 'reps_max') if item else '' }}"></label>
+  <label><span>RPE</span><input name="rpe" type="number" min="1" max="10" step="0.5" value="{{ value(item, 'rpe') if item else '' }}"></label>
+  <label><span>RPE cap</span><input name="rpe_cap" type="number" min="1" max="10" step="0.5" value="{{ value(item, 'rpe_cap') if item else '' }}"></label>
+  <label><span>Load (kg)</span><input name="load_kg" type="number" min="0" step="0.5" value="{{ value(item, 'load_kg') if item else '' }}"></label>
+  <label><span>Load cap (kg)</span><input name="load_cap_kg" type="number" min="0" step="0.5" value="{{ value(item, 'load_cap_kg') if item else '' }}"></label>
+  <label><span>Target reps</span><input name="target_reps" type="number" min="1" value="{{ value(item, 'target_reps') if item else '' }}"></label>
+  <label><span>Target RPE</span><input name="target_rpe" type="number" min="1" max="10" step="0.5" value="{{ value(item, 'target_rpe') if item else '' }}"></label>
+  <label><span>Target load (kg)</span><input name="target_load_kg" type="number" min="0" step="0.5" value="{{ value(item, 'target_load_kg') if item else '' }}"></label>
+  <label><span>Percentage</span><input name="percentage" type="number" min="0" step="0.1" value="{{ value(item, 'percentage') if item else '' }}"></label>
+  <label><span>Tempo</span><input name="tempo" value="{{ value(item, 'tempo') if item else '' }}"></label>
+  <label><span>Rest (seconds)</span><input name="rest_seconds" type="number" min="0" value="{{ value(item, 'rest_seconds') if item else '' }}"></label>
+  <label class="week-editor__notes"><span>Notes</span><textarea name="notes" rows="2">{{ value(item, 'notes') if item else '' }}</textarea></label>
+{% endmacro %}
+
+{% block content %}
+<section class="coach-page week-editor">
+  <header class="coach-page__header coach-page__header--split">
+    <div><a class="coach-back-link" href="{{ url_for('programming.block', block_id=week.block.id) }}">← {{ week.block.name }}</a><span class="coach-eyebrow">{{ week.block.athlete.full_name }} · Week {{ week.position }}</span><h1>{{ week.name }}</h1>{% if week.notes %}<p>{{ week.notes }}</p>{% endif %}</div>
+    <div class="week-lifecycle" aria-label="Week controls">
+      <form method="post" action="{{ url_for('programming.duplicate_week', week_id=week.id) }}"><button class="coach-link-button" type="submit">Duplicate week</button></form>
+      <form method="post" action="{{ url_for('programming.extend_block', block_id=week.block.id) }}"><input type="hidden" name="weeks" value="1"><button class="coach-link-button" type="submit">Extend block</button></form>
+      <form method="post" action="{{ url_for('programming.delete_week', week_id=week.id) }}"><button class="coach-link-button" type="submit">Delete week</button></form>
+    </div>
+  </header>
+  <section class="coach-panel"><div class="coach-panel__heading"><h2>Add session</h2></div><form class="coach-form programming-form" method="post" action="{{ url_for('programming.create_session', week_id=week.id) }}"><input type="hidden" name="week_editor" value="1"><label><span>Name</span><input name="name" placeholder="Session {{ week.sessions|length + 1 }}"></label><label><span>Day</span><input name="day_label" placeholder="Monday"></label><button class="coach-primary-button" type="submit">Add session</button></form></section>
+  <div class="week-editor__sessions">
+  {% for session in week.sessions %}
+    <article class="coach-panel week-session" id="session-{{ session.id }}">
+      <div class="week-session__heading"><div><span class="coach-eyebrow">Session {{ session.position }}</span><h2>{{ session.name }}</h2><p>{{ session.day_label or 'No day assigned' }}</p></div>
+        <div class="week-session__actions"><a class="coach-link-button" href="{{ url_for('programming.session', session_id=session.id) }}">Open session</a>
+          <form method="post" action="{{ url_for('programming.insert_session_before', session_id=session.id) }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Insert before</button></form>
+          <form method="post" action="{{ url_for('programming.insert_session_after', session_id=session.id) }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Insert after</button></form>
+          <form method="post" action="{{ url_for('programming.duplicate_session', session_id=session.id) }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Duplicate</button></form>
+          <form method="post" action="{{ url_for('programming.delete_session', session_id=session.id) }}"><button class="coach-link-button" type="submit">Delete</button></form>
+        </div></div>
+      <div class="week-prescriptions">
+      {% for item in session.prescriptions %}
+        <details class="week-prescription" open><summary><strong>{{ item.position }}. {{ item.exercise_name }}</strong><span>{{ item.summary or 'No prescription set' }}</span></summary>
+          <form class="week-prescription__form" method="post" action="{{ url_for('programming.update_prescription', prescription_id=item.id) }}"><input type="hidden" name="week_editor" value="1">{{ prescription_fields(item) }}<button class="coach-primary-button" type="submit">Save exercise</button></form>
+          <form class="week-prescription__delete" method="post" action="{{ url_for('programming.delete_prescription', prescription_id=item.id) }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Delete exercise</button></form>
+        </details>
+      {% else %}<p class="week-editor__empty">No exercises yet.</p>{% endfor %}
+      </div>
+      <details class="week-prescription week-prescription--new"><summary><strong>Add exercise</strong><span>Choose any prescription mode</span></summary><form class="week-prescription__form" method="post" action="{{ url_for('programming.create_prescription', session_id=session.id) }}"><input type="hidden" name="week_editor" value="1">{{ prescription_fields() }}<button class="coach-primary-button" type="submit">Add exercise</button></form></details>
+    </article>
+  {% else %}<section class="coach-panel"><p>No sessions yet. Add the first session above.</p></section>{% endfor %}
+  </div>
+</section>
+{% endblock %}

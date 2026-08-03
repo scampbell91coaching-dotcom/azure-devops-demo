@@ -1,15 +1,23 @@
 :root {
   color-scheme: dark;
-  --coach-bg: #08111f;
-  --coach-panel: #101722;
-  --coach-panel-soft: #0c1420;
-  --coach-border: #283447;
-  --coach-text: #f3f0e8;
-  --coach-muted: #9da8b8;
-  --coach-accent: #c3a06f;
-  --coach-accent-soft: #ddc39e;
-  --coach-success: #7fc6a4;
-  --coach-warning: #dfb56d;
+  --coach-bg: #0b0d0c;
+  --coach-panel: #131715;
+  --coach-panel-soft: #0f1210;
+  --coach-panel-raised: #181d1a;
+  --coach-border: #303832;
+  --coach-border-strong: #4a554d;
+  --coach-text: #eee9dc;
+  --coach-heading: #f5efdf;
+  --coach-muted: #aaa99e;
+  --coach-muted-low: #82877f;
+  --coach-accent: #c49a5c;
+  --coach-accent-soft: #d8ba88;
+  --coach-accent-ink: #181109;
+  --coach-success: #9dbb9f;
+  --coach-warning: #d0a86e;
+  --coach-danger: #d68f83;
+  --coach-focus: #e2bd7f;
+  --coach-display: Georgia, "Times New Roman", serif;
   --coach-shell: 1380px;
 }
 
@@ -23,9 +31,9 @@ html {
 
 body.coach-workspace {
   margin: 0;
-  background: var(--coach-bg);
+  background: radial-gradient(circle at 82% -10%, rgba(196, 154, 92, 0.09), transparent 30rem), var(--coach-bg);
   color: var(--coach-text);
-  font-family: Inter, system-ui, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   line-height: 1.5;
 }
 
@@ -39,6 +47,9 @@ textarea,
 select {
   font: inherit;
 }
+
+::selection { background: var(--coach-accent); color: var(--coach-accent-ink); }
+:where(a, button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--coach-focus); outline-offset: 3px; }
 
 .coach-shell {
   width: min(var(--coach-shell), calc(100% - 2rem));
@@ -63,7 +74,7 @@ select {
   top: 0;
   z-index: 30;
   border-bottom: 1px solid var(--coach-border);
-  background: rgba(8, 17, 31, 0.96);
+  background: rgba(11, 13, 12, 0.94);
   backdrop-filter: blur(14px);
 }
 
@@ -99,6 +110,8 @@ select {
   display: grid;
 }
 
+.coach-brand__copy strong { color: var(--coach-heading); font-family: var(--coach-display); font-size: 1.05rem; letter-spacing: 0.015em; }
+
 .coach-brand__copy small {
   color: var(--coach-muted);
 }
@@ -112,14 +125,19 @@ select {
 .coach-navigation a,
 .coach-navigation__disabled {
   color: var(--coach-muted);
+  font-size: 0.78rem;
   font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   text-decoration: none;
 }
 
 .coach-navigation a:hover,
 .coach-navigation a[aria-current="page"] {
-  color: var(--coach-text);
+  color: var(--coach-accent-soft);
 }
+
+.coach-navigation a[aria-current="page"] { text-decoration: underline; text-decoration-color: var(--coach-accent); text-underline-offset: 0.55rem; }
 
 .coach-navigation__disabled {
   opacity: 0.45;
@@ -142,17 +160,21 @@ select {
   font-weight: 900;
   text-decoration: none;
   cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
 .coach-primary-button {
   background: var(--coach-accent);
-  color: var(--coach-bg);
+  color: var(--coach-accent-ink);
 }
 
 .coach-link-button {
   background: transparent;
-  color: var(--coach-text);
+  color: var(--coach-accent-soft);
 }
+
+.coach-primary-button:hover { background: var(--coach-accent-soft); border-color: var(--coach-accent-soft); }
+.coach-link-button:hover { background: rgba(196, 154, 92, 0.08); border-color: var(--coach-accent-soft); color: var(--coach-heading); }
 
 .coach-menu-button {
   display: none;
@@ -189,9 +211,12 @@ select {
   gap: 2rem;
 }
 
+.coach-page__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .65rem; }
+
 .coach-page__header h1 {
   margin: 0.25rem 0 0.45rem;
-  font-family: Georgia, "Times New Roman", serif;
+  color: var(--coach-heading);
+  font-family: var(--coach-display);
   font-size: clamp(3rem, 6vw, 5.5rem);
   line-height: 0.9;
   letter-spacing: -0.04em;
@@ -221,7 +246,7 @@ select {
 .coach-panel {
   border: 1px solid var(--coach-border);
   padding: 1.4rem;
-  background: var(--coach-panel);
+  background: linear-gradient(145deg, rgba(255,255,255,0.012), transparent 45%), var(--coach-panel);
 }
 
 .coach-panel__heading {
@@ -237,7 +262,8 @@ select {
 
 .coach-panel__heading h2 {
   margin: 0.2rem 0 0;
-  font-family: Georgia, serif;
+  color: var(--coach-heading);
+  font-family: var(--coach-display);
   font-size: 1.75rem;
   text-transform: uppercase;
 }
@@ -282,7 +308,11 @@ select {
   padding: 0.8rem;
   background: var(--coach-panel-soft);
   color: var(--coach-text);
+  border-radius: 0;
+  caret-color: var(--coach-accent);
 }
+
+.coach-form input:hover, .coach-form textarea:hover, .coach-form select:hover, .coach-response-form textarea:hover { border-color: var(--coach-border-strong); }
 
 .coach-form textarea,
 .coach-response-form textarea {
@@ -294,7 +324,8 @@ select {
 .coach-form select:focus,
 .coach-response-form textarea:focus {
   border-color: var(--coach-accent);
-  outline: 2px solid rgba(195, 160, 111, 0.14);
+  outline: 2px solid rgba(226, 189, 127, 0.22);
+  outline-offset: 1px;
 }
 
 .coach-form__actions {
@@ -341,6 +372,9 @@ select {
   text-transform: uppercase;
 }
 
+.coach-table tbody tr { transition: background-color 140ms ease; }
+.coach-table tbody tr:hover { background: rgba(196, 154, 92, 0.045); }
+
 .coach-athlete-link {
   display: grid;
   text-decoration: none;
@@ -372,11 +406,15 @@ select {
 .coach-empty-state {
   border: 1px dashed var(--coach-border);
   padding: 2rem;
+  background: var(--coach-panel-soft);
   text-align: center;
 }
 
 .coach-empty-state h3 {
   margin-top: 0;
+  color: var(--coach-heading);
+  font-family: var(--coach-display);
+  font-size: 1.5rem;
 }
 
 .coach-empty-state p {
@@ -402,7 +440,8 @@ select {
 .coach-score-grid article {
   border: 1px solid var(--coach-border);
   padding: 1rem;
-  background: var(--coach-panel);
+  background: var(--coach-panel-soft);
+  border-top-color: var(--coach-border-strong);
 }
 
 .coach-metric span,
@@ -477,8 +516,12 @@ select {
 }
 
 .coach-form-error {
-  color: #ef9f96;
+  color: var(--coach-danger);
 }
+
+.coach-list { display: grid; border-top: 1px solid var(--coach-border); }
+.coach-list__item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--coach-border); }
+.coach-list__item p { margin: 0.25rem 0 0; color: var(--coach-muted); }
 
 .coach-footer {
   border-top: 1px solid var(--coach-border);
@@ -550,6 +593,9 @@ select {
     flex-direction: column;
   }
 
+  .coach-page__actions { justify-content: stretch; }
+  .coach-page__actions > * { flex: 1 1 auto; }
+
   .coach-form--athlete,
   .coach-form-grid--four,
   .coach-metric-grid,
@@ -571,4 +617,6 @@ select {
   .coach-footer__inner {
     flex-direction: column;
   }
+
+  .coach-list__item { align-items: stretch; flex-direction: column; }
 }

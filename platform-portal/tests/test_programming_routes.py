@@ -38,6 +38,16 @@ EXPECTED_PROGRAMMING_ROUTES = {
         "/programming/weeks/<int:week_id>/duplicate",
         "POST",
     ),
+    (
+        "programming.delete_week",
+        "/programming/weeks/<int:week_id>/delete",
+        "POST",
+    ),
+    (
+        "programming.extend_block",
+        "/programming/blocks/<int:block_id>/extend",
+        "POST",
+    ),
     ("programming.index", "/programming", "GET"),
     (
         "programming.insert_session_after",
@@ -47,6 +57,16 @@ EXPECTED_PROGRAMMING_ROUTES = {
     (
         "programming.insert_session_before",
         "/programming/sessions/<int:session_id>/insert-before",
+        "POST",
+    ),
+    (
+        "programming.update_prescription",
+        "/programming/prescriptions/<int:prescription_id>",
+        "POST",
+    ),
+    (
+        "programming.delete_prescription",
+        "/programming/prescriptions/<int:prescription_id>/delete",
         "POST",
     ),
     ("programming.session", "/programming/sessions/<int:session_id>", "GET"),
