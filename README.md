@@ -16,6 +16,9 @@
 
 ## Project Overview
 
+For local prerequisites and consistent one-command checks, see the
+[`Local development guide`](docs/local-development.md) or run `make help`.
+
 This project builds and operates a production-inspired application platform on Microsoft Azure.
 
 Azure infrastructure is provisioned with Terraform, a containerised Flask application is published to Azure Container Registry, and workloads are deployed to Azure Kubernetes Service using Helm and Argo CD.
