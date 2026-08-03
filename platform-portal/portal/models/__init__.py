@@ -33,7 +33,7 @@ __all__ = [
     "TrainingBlock",
     "TrainingSession",
     "TrainingWeek",
-    "WeeklyCheckin",
     "User",
     "UserRole",
+    "WeeklyCheckin",
 ]

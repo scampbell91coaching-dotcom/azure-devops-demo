@@ -28,9 +28,7 @@ def secured_app():
         db.session.flush()
         coach = User(email="coach@example.test", role=UserRole.COACH)
         coach.set_password("correct horse battery staple")
-        athlete = User(
-            email=first.email, role=UserRole.ATHLETE, athlete_id=first.id
-        )
+        athlete = User(email=first.email, role=UserRole.ATHLETE, athlete_id=first.id)
         athlete.set_password("athlete secure password")
         db.session.add_all([coach, athlete])
         db.session.commit()

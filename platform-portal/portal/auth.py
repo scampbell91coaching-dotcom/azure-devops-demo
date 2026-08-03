@@ -211,11 +211,7 @@ def _inject_csrf_fields(response: Response) -> Response:
     html = response.get_data(as_text=True)
     if "<form" not in html:
         return response
-    field = (
-        '<input type="hidden" name="csrf_token" value="'
-        + _csrf_token()
-        + '">'
-    )
+    field = '<input type="hidden" name="csrf_token" value="' + _csrf_token() + '">'
     html = re.sub(r"(<form\b[^>]*>)", rf"\1{field}", html, flags=re.IGNORECASE)
     response.set_data(html)
     return response
