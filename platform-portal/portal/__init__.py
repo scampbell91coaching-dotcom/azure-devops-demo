@@ -12,6 +12,7 @@ from .api.recommendations import recommendations_bp
 from .athletes import athletes_bp
 from .block_factory import block_factory_bp
 from .checkins import checkins_bp
+from .coach_dashboard import coach_dashboard_bp
 from .database_cli import register_database_commands
 from .database_config import resolve_database_uri
 from .exercise_library import exercise_library_bp
@@ -69,6 +70,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(programming_templates_bp)
     app.register_blueprint(athletes_bp)
     app.register_blueprint(checkins_bp)
+    app.register_blueprint(coach_dashboard_bp)
 
     if app.config["LEGACY_STARTUP_INITIALIZATION"]:
         with app.app_context():
