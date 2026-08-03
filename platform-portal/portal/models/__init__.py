@@ -1,1 +1,36 @@
-"""Database models."""
+"""Coaching database models registered with SQLAlchemy metadata.
+
+Import this package after ``db.init_app`` so application startup, Alembic, and
+database CLI commands all operate on the same complete model set.
+"""
+
+from .athlete import Athlete
+from .checkins import AthleteCheckinSettings, WeeklyCheckin
+from .coaching_application import CoachingApplication
+from .exercise_library import DayTemplate, DayTemplateExercise, Exercise
+from .lead_capture import LeadCapture
+from .nutrition_checkin import NutritionCheckIn
+from .platform_snapshot import PlatformSnapshot
+from .programming import (
+    ExercisePrescription,
+    TrainingBlock,
+    TrainingSession,
+    TrainingWeek,
+)
+
+__all__ = [
+    "Athlete",
+    "AthleteCheckinSettings",
+    "CoachingApplication",
+    "DayTemplate",
+    "DayTemplateExercise",
+    "Exercise",
+    "ExercisePrescription",
+    "LeadCapture",
+    "NutritionCheckIn",
+    "PlatformSnapshot",
+    "TrainingBlock",
+    "TrainingSession",
+    "TrainingWeek",
+    "WeeklyCheckin",
+]

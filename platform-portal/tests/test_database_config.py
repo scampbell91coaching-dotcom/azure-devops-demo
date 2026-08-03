@@ -50,3 +50,17 @@ def test_public_database_can_use_pvc_uri(
 
     assert uri == configured_uri
     assert not (tmp_path / "read-only-app").exists()
+
+
+def test_postgresql_database_url_uses_psycopg_driver(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "postgresql://coach:secret@localhost/traditional_strength",
+    )
+
+    uri = resolve_database_uri(
+        application_root=tmp_path,
+        local_filename="local.db",
+    )
+
+    assert uri == ("postgresql+psycopg://coach:secret@localhost/traditional_strength")
