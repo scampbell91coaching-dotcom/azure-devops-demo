@@ -2,14 +2,34 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from flask import Blueprint, abort, redirect, render_template, request, url_for
+from flask import Blueprint, abort, redirect, render_template, request, session, url_for
 
 from .extensions import db
 from .models.athlete import Athlete
 from .models.checkins import AthleteCheckinSettings
 from .models.nutrition_checkin import NutritionCheckIn
+from .services.athlete_dashboard import get_athlete_dashboard
 
 athletes_bp = Blueprint("athletes", __name__)
+
+
+@athletes_bp.get("/athlete/dashboard")
+def dashboard():
+    athlete_id = session.get("athlete_id")
+    if isinstance(athlete_id, bool) or not isinstance(athlete_id, int):
+        abort(401)
+
+    dashboard_data = get_athlete_dashboard(
+        athlete_id,
+        today=datetime.now(UTC).date(),
+    )
+    if dashboard_data is None:
+        abort(401)
+
+    return render_template(
+        "athletes/athlete_dashboard.html",
+        dashboard=dashboard_data,
+    )
 
 
 def _optional_float(value: str | None) -> float | None:

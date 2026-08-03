@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#08111f">
+  <title>{% block title %}Traditional Strength{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/athlete_dashboard.css') }}">
+</head>
+<body class="athlete-workspace">
+  <a class="athlete-skip-link" href="#main">Skip to content</a>
+  <header class="athlete-topbar">
+    <a class="athlete-brand" href="{{ url_for('athletes.dashboard') }}">
+      <span aria-hidden="true">TS</span>
+      <strong>Traditional Strength</strong>
+    </a>
+  </header>
+  <main id="main" class="athlete-shell">{% block content %}{% endblock %}</main>
+</body>
+</html>
