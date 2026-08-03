@@ -46,3 +46,6 @@ platform-portal/data/public-leads.db-shm
 platform-portal/data/public-leads.db-wal
 platform-portal/Dockerfile.private
 .tmp/
+node_modules/
+playwright-report/
+test-results/
