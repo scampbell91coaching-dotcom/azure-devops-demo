@@ -60,16 +60,14 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
-      volumes:
-        - name: tmp
-          emptyDir: {}
+            - name: application-data
+              mountPath: /app/data
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          volumeMounts:
-            - name: tmp
-              mountPath: /tmp
       volumes:
         - name: tmp
           emptyDir:
             sizeLimit: 64Mi
+        - name: application-data
+          emptyDir: {}
 {{- end }}
