@@ -37,6 +37,9 @@ jobs:
       - name: Helm lint
         run: helm lint flask-app -f flask-app/values-production.yaml
 
+      - name: Validate proposed observability resources
+        run: scripts/validate-observability.sh
+
       - name: Render production chart
         run: |
           helm template flask-web-prod flask-app \

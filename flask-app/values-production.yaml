@@ -72,3 +72,16 @@ affinity:
           labelSelector:
             matchLabels:
               app: flask-web
+
+# PROPOSED, NOT ACTIVE: opt in only after confirming the monitoring release
+# label and Alertmanager routing described in docs/production-observability.md.
+monitoring:
+  enabled: false
+  prometheusRule:
+    enabled: true
+    labels:
+      release: monitoring
+  grafanaDashboard:
+    enabled: true
+    labels:
+      grafana_dashboard: "1"

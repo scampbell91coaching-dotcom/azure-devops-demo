@@ -84,3 +84,16 @@ containerSecurityContext:
 topologySpreadConstraints: []
 
 affinity: {}
+
+# Proposed production observability resources. Disabled by default so adding the
+# definitions cannot create dashboards or live alerts without an explicit review.
+monitoring:
+  enabled: false
+  prometheusRule:
+    enabled: true
+    labels:
+      release: monitoring
+  grafanaDashboard:
+    enabled: true
+    labels:
+      grafana_dashboard: "1"
