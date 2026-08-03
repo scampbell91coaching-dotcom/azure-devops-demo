@@ -61,26 +61,53 @@ class CoachDashboardService:
     def build(self, *, today: date | None = None) -> CoachDashboard:
         today = today or datetime.now(UTC).date()
         athletes = Athlete.query.order_by(Athlete.last_name, Athlete.first_name).all()
-        weekly = WeeklyCheckin.query.order_by(WeeklyCheckin.submitted_at.desc()).all()
-        nutrition = NutritionCheckIn.query.order_by(
-            NutritionCheckIn.submitted_at.desc()
+        weekly = WeeklyCheckin.query.order_by(
+            WeeklyCheckin.submitted_at.desc(), WeeklyCheckin.id.desc()
         ).all()
-        settings = AthleteCheckinSettings.query.all()
+        nutrition = NutritionCheckIn.query.order_by(
+            NutritionCheckIn.submitted_at.desc(), NutritionCheckIn.id.desc()
+        ).all()
+        settings = AthleteCheckinSettings.query.order_by(
+            AthleteCheckinSettings.athlete_id
+        ).all()
         blocks = TrainingBlock.query.order_by(
             TrainingBlock.created_at.desc(), TrainingBlock.id.desc()
         ).all()
 
         athlete_by_id = {athlete.id: athlete for athlete in athletes}
-        recent_cutoff = today - timedelta(days=self.RECENT_DAYS)
+        recent_cutoff = today - timedelta(days=self.RECENT_DAYS - 1)
         recent = tuple(item for item in weekly if item.week_ending >= recent_cutoff)
 
         requiring_review = self._reviews(athlete_by_id, weekly, nutrition)
+        week_start = today - timedelta(days=today.weekday())
+        week_end = week_start + timedelta(days=6)
+        submitted_athlete_ids = {
+            item.athlete_id
+            for item in weekly
+            if week_start <= item.week_ending <= week_end
+        }
         pending = tuple(
             DueCheckin(athlete_by_id[item.athlete_id], today)
             for item in settings
-            if item.athlete_id in athlete_by_id and item.is_due_on(today)
+            if item.athlete_id in athlete_by_id
+            and athlete_by_id[item.athlete_id].status == "active"
+            and item.workflow_active
+            and item.has_enabled_modules
+            and item.checkin_day == today.weekday()
+            and item.athlete_id not in submitted_athlete_ids
         )
-        latest_weekly = self._latest_by_athlete(weekly)
+        pending = tuple(
+            sorted(
+                pending,
+                key=lambda item: (
+                    item.due_date,
+                    item.athlete.last_name.casefold(),
+                    item.athlete.first_name.casefold(),
+                    item.athlete.id,
+                ),
+            )
+        )
+        latest_weekly = self._latest_weekly_by_athlete(weekly)
         health_flags = tuple(
             AthleteFlag(
                 athlete=athlete_by_id[athlete_id],
@@ -124,10 +151,22 @@ class CoachDashboardService:
         )
 
     @staticmethod
-    def _latest_by_athlete(items: list[WeeklyCheckin]) -> dict[int, WeeklyCheckin]:
+    def _latest_weekly_by_athlete(
+        items: list[WeeklyCheckin],
+    ) -> dict[int, WeeklyCheckin]:
         latest: dict[int, WeeklyCheckin] = {}
         for item in items:
-            latest.setdefault(item.athlete_id, item)
+            current = latest.get(item.athlete_id)
+            if current is None or (
+                item.week_ending,
+                item.submitted_at,
+                item.id,
+            ) > (
+                current.week_ending,
+                current.submitted_at,
+                current.id,
+            ):
+                latest[item.athlete_id] = item
         return latest
 
     @staticmethod
@@ -158,7 +197,13 @@ class CoachDashboardService:
             for item in nutrition
             if item.athlete_id in athletes and not item.reviewed
         )
-        return tuple(sorted(items, key=lambda item: item.submitted_at, reverse=True))
+        return tuple(
+            sorted(
+                items,
+                key=lambda item: (item.submitted_at, item.url_kind, item.item_id),
+                reverse=True,
+            )
+        )
 
     @staticmethod
     def _nutrition_summaries(
