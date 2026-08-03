@@ -135,20 +135,20 @@ def _validated_values(
     family = _required_string(record.get("family"), maximum_length=120)
     category = _required_string(record.get("category"), maximum_length=60)
     equipment = _required_string(record.get("equipment"), maximum_length=120)
-    aliases = _validated_aliases(record.get("aliases"))
+    aliases = _validated_aliases(record.get("aliases"), canonical_name=name)
     fatigue_rating = record.get("fatigue_rating")
     occurrence_count = record.get("occurrences")
     default_sets = record.get("default_sets")
     default_reps = _required_string(record.get("default_reps"), maximum_length=40)
     default_rpe = record.get("default_rpe")
     default_rest_seconds = record.get("default_rest_seconds")
-    primary_muscles = _validated_string_list(record.get("primary_muscles"))
+    primary_muscles = _validated_string_list(record.get("primary_muscles"), minimum_items=1)
     secondary_muscles = _validated_string_list(record.get("secondary_muscles"))
-    coaching_cues = _validated_string_list(record.get("coaching_cues"))
-    common_mistakes = _validated_string_list(record.get("common_mistakes"))
-    regressions = _validated_string_list(record.get("regressions"))
-    progressions = _validated_string_list(record.get("progressions"))
-    prescription_styles = _validated_string_list(record.get("prescription_styles"))
+    coaching_cues = _validated_string_list(record.get("coaching_cues"), minimum_items=2)
+    common_mistakes = _validated_string_list(record.get("common_mistakes"), minimum_items=1)
+    regressions = _validated_string_list(record.get("regressions"), minimum_items=1)
+    progressions = _validated_string_list(record.get("progressions"), minimum_items=1)
+    prescription_styles = _validated_string_list(record.get("prescription_styles"), minimum_items=1)
     goal = _required_string(record.get("goal"), maximum_length=120)
     difficulty = _required_string(record.get("difficulty"), maximum_length=20)
     setup = _required_string(record.get("setup"), maximum_length=2000)
@@ -192,6 +192,13 @@ def _validated_values(
         or isinstance(default_rpe, bool)
         or not 1 <= default_rpe <= 10
         or not _is_integer_between(default_rest_seconds, 0, 1800)
+        or len(setup) < 30
+        or len(execution) < 30
+        or len(cautions) < 30
+        or (movement == "warmup" and not warmup_suitable)
+        or (movement == "warmup" and accessory_suitable)
+        or (category == "competition" and relevance != "direct")
+        or (category == "competition" and accessory_suitable)
     ):
         return None
 
@@ -237,7 +244,9 @@ def _required_string(value: object, maximum_length: int) -> str | None:
     return result if result and len(result) <= maximum_length else None
 
 
-def _validated_aliases(value: object) -> list[str] | None:
+def _validated_aliases(
+    value: object, *, canonical_name: str | None = None
+) -> list[str] | None:
     if not isinstance(value, list):
         return None
 
@@ -246,13 +255,25 @@ def _validated_aliases(value: object) -> list[str] | None:
         normalised_alias = _required_string(alias, maximum_length=160)
         if normalised_alias is None:
             return None
+        if canonical_name is not None and _identity(normalised_alias) == _identity(canonical_name):
+            return None
         if _identity(normalised_alias) not in {_identity(item) for item in aliases}:
             aliases.append(normalised_alias)
     return aliases
 
 
-def _validated_string_list(value: object) -> list[str] | None:
-    return _validated_aliases(value)
+def _validated_string_list(
+    value: object, *, minimum_items: int = 0
+) -> list[str] | None:
+    items = _validated_aliases(value)
+    if (
+        items is None
+        or not isinstance(value, list)
+        or len(items) != len(value)
+        or len(items) < minimum_items
+    ):
+        return None
+    return items
 
 
 def _identity(value: str) -> str:
