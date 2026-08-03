@@ -45,6 +45,7 @@ def main() -> None:
             {
                 "TESTING": True,
                 "AUTHENTICATION_DISABLED": True,
+                "LEGACY_STARTUP_INITIALIZATION": False,
                 "SECRET_KEY": os.urandom(32).hex(),
             }
         )
