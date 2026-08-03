@@ -14,15 +14,16 @@
       <p>{{ athlete.email }}</p>
     </div>
 
-    <a
-      class="coach-primary-button"
-      href="{{ url_for(
-        'athletes.nutrition_checkin_form',
-        athlete_id=athlete.id
-      ) }}"
-    >
-      Add nutrition check-in
-    </a>
+    <div class="coach-page__actions">
+      <a
+        class="coach-primary-button"
+        href="{{ url_for(
+          'athletes.nutrition_checkin_form',
+          athlete_id=athlete.id
+        ) }}"
+      >
+        Add nutrition check-in
+      </a>
 
     <a
       class="coach-link-button"
@@ -44,14 +45,16 @@
       <span class="coach-status coach-status--active">No weekly check-in due</span>
     {% endif %}
   
-<a
-  class="coach-link-button"
-  href="{{ url_for('programming.athlete_program', athlete_id=athlete.id) }}"
->
-  View programme
-</a>
+      <a
+        class="coach-link-button"
+        href="{{ url_for('programming.athlete_program', athlete_id=athlete.id) }}"
+      >
+        View programme
+      </a>
 
-</header>
+    </div>
+
+  </header>
 
   <section class="coach-metric-grid">
     <article class="coach-metric">
