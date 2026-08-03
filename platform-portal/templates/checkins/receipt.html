@@ -1,0 +1,19 @@
+{% extends "athletes/base.html" %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/checkins.css') }}">{% endblock %}
+{% block title %}Check-in Receipt · Traditional Strength{% endblock %}
+{% block content %}
+<section class="checkin-page">
+  <header class="checkin-header"><p class="eyebrow">Check-in received</p><h1>Thanks, {{ checkin.athlete.first_name }}</h1><p>Week ending {{ checkin.week_ending.strftime('%d %B %Y') }} · Submitted {{ checkin.submitted_at.strftime('%d %b at %H:%M') }}</p></header>
+  <section class="checkin-card">
+    <div class="checkin-receipt-heading"><h2>Your answers</h2><span class="status">{{ 'Coach reviewed' if checkin.status == 'reviewed' else 'Awaiting coach review' }}</span></div>
+    <dl class="checkin-values">
+      {% if checkin.training_included %}<div><dt>Readiness</dt><dd>{{ checkin.recovery if checkin.recovery is not none else '—' }}</dd></div><div><dt>Fatigue</dt><dd>{{ checkin.fatigue if checkin.fatigue is not none else '—' }}</dd></div><div><dt>Pain affected training</dt><dd>{{ 'Yes' if checkin.pain_present else 'No' }}</dd></div>{% endif %}
+      <div><dt>Sleep quality</dt><dd>{{ checkin.sleep_quality if checkin.sleep_quality is not none else '—' }}</dd></div><div><dt>Stress</dt><dd>{{ checkin.stress if checkin.stress is not none else '—' }}</dd></div>
+    </dl>
+    {% if checkin.training_notes %}<h3>Training notes</h3><p class="checkin-notes">{{ checkin.training_notes }}</p>{% endif %}
+    {% if checkin.general_notes %}<h3>Other notes</h3><p class="checkin-notes">{{ checkin.general_notes }}</p>{% endif %}
+  </section>
+  <section class="checkin-card"><p class="eyebrow">Coach response</p>{% if checkin.status == 'reviewed' and checkin.coach_notes %}<p class="coach-response">{{ checkin.coach_notes }}</p>{% else %}<div class="empty-state"><strong>Your coach has not reviewed this yet</strong><p>Their response will appear here after review.</p></div>{% endif %}</section>
+  <a class="button button--secondary" href="{{ url_for('checkins.athlete_history') }}">Back to check-in history</a>
+</section>
+{% endblock %}

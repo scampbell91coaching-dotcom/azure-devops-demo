@@ -1,0 +1,21 @@
+{% extends "athletes/base.html" %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/checkins.css') }}">{% endblock %}
+{% block title %}Check-in History · Traditional Strength{% endblock %}
+{% block content %}
+<section class="checkin-page">
+  <header class="checkin-header">
+    <p class="eyebrow">Your check-ins</p><h1>Weekly history</h1>
+    {% if due_message %}<p class="checkin-alert">{{ due_message }} <a href="{{ url_for('checkins.new', athlete_id=athlete.id) }}">Complete it now</a>.</p>{% endif %}
+  </header>
+  <div class="checkin-history">
+    {% for item in checkins %}
+      <a class="checkin-history__item" href="{{ url_for('checkins.athlete_detail', checkin_id=item.id) }}">
+        <span><strong>Week ending {{ item.week_ending.strftime('%d %B %Y') }}</strong><small>Submitted {{ item.submitted_at.strftime('%d %b at %H:%M') }}</small></span>
+        <span class="status">{{ 'Coach reviewed' if item.status == 'reviewed' else 'Awaiting coach review' }}</span>
+      </a>
+    {% else %}
+      <div class="empty-state"><strong>No weekly check-ins yet</strong><p>Once you send your first check-in, your receipt and coach response will appear here.</p></div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

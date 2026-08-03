@@ -1,0 +1,33 @@
+.checkin-page { display: grid; gap: 1.25rem; width: min(100%, 48rem); margin: auto; }
+.checkin-header h1 { margin: .3rem 0; font: 700 clamp(2rem, 9vw, 4rem)/1 Georgia, serif; text-transform: uppercase; }
+.checkin-header > p:not(.eyebrow), .checkin-field small, .checkin-card > small { color: var(--muted); }
+.checkin-alert { border-left: 3px solid var(--accent); padding: .8rem 1rem; background: var(--soft); color: var(--text) !important; }
+.checkin-alert a, .checkin-history-link { font-weight: 800; }
+.checkin-form, .checkin-card, .checkin-field, .checkin-history { display: grid; }
+.checkin-form { gap: 1rem; }
+.checkin-card { gap: .75rem; border: 1px solid var(--border); padding: 1rem; background: var(--panel); }
+.checkin-card h2, .checkin-card h3 { margin: 0; }
+.checkin-card label { font-weight: 800; }
+.checkin-card input:not([type="checkbox"]), .checkin-card textarea { width: 100%; min-height: 3rem; border: 1px solid var(--border); border-radius: 0; padding: .75rem; background: var(--soft); color: var(--text); font: inherit; }
+.checkin-card textarea { resize: vertical; }
+.checkin-card input:focus, .checkin-card textarea:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+.checkin-grid { display: grid; gap: 1rem; }
+.checkin-field { gap: .35rem; }
+.checkin-checkbox { display: flex; align-items: flex-start; gap: .7rem; border: 1px solid var(--border); padding: .9rem; }
+.checkin-checkbox input { width: 1.25rem; height: 1.25rem; flex: 0 0 auto; }
+.checkin-checkbox span { display: grid; gap: .25rem; }
+.checkin-checkbox small, .checkin-history__item small { color: var(--muted); font-weight: 400; }
+.checkin-error { margin: 0; color: #ffb4ab; font-weight: 700; }
+.checkin-error--summary { border: 1px solid #9f4a43; padding: 1rem; background: #291615; }
+.checkin-submit { width: 100%; margin: 0; border: 0; cursor: pointer; font: inherit; }
+.checkin-history-link { text-align: center; }
+.checkin-history { gap: .75rem; }
+.checkin-history__item { display: flex; flex-direction: column; gap: .8rem; border: 1px solid var(--border); padding: 1rem; background: var(--panel); text-decoration: none; }
+.checkin-history__item > span:first-child { display: grid; gap: .3rem; }
+.checkin-receipt-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; }
+.checkin-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin: 0; }
+.checkin-values div { border: 1px solid var(--border); padding: .75rem; background: var(--soft); }
+.checkin-values dt { color: var(--muted); font-size: .8rem; }
+.checkin-values dd { margin: .3rem 0 0; font-size: 1.2rem; font-weight: 800; }
+.checkin-notes, .coach-response { white-space: pre-wrap; }
+@media (min-width: 600px) { .checkin-card { padding: 1.5rem; } .checkin-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .checkin-history__item { flex-direction: row; align-items: center; justify-content: space-between; } }
