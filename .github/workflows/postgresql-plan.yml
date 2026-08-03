@@ -1,0 +1,115 @@
+name: Azure PostgreSQL plan
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "infra/modules/postgresql/**"
+      - "infra/modules/network/**"
+      - "infra/postgresql.tf"
+      - "infra/main.tf"
+      - "infra/variables.tf"
+      - "infra/outputs.tf"
+      - "infra/environments/**/postgresql.tfvars.example"
+      - "docs/azure-postgresql.md"
+      - ".github/workflows/postgresql-plan.yml"
+  workflow_dispatch:
+    inputs:
+      server_name:
+        description: "Globally unique development PostgreSQL server name"
+        required: true
+        type: string
+      key_vault_name:
+        description: "Existing development Key Vault name"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  TERRAFORM_VERSION: "1.15.8"
+  ARM_USE_OIDC: "true"
+  ARM_USE_AZUREAD: "true"
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+jobs:
+  validate:
+    name: Format and validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive infra
+
+      - name: Initialise without remote state
+        working-directory: infra
+        run: terraform init -backend=false
+
+      - name: Validate Terraform
+        working-directory: infra
+        run: terraform validate
+
+  plan:
+    name: Development plan only
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Initialise development state
+        working-directory: infra
+        run: terraform init -backend-config=environments/dev/backend.hcl
+
+      - name: Create PostgreSQL development plan
+        working-directory: infra
+        env:
+          TF_VAR_postgresql_server_name: ${{ inputs.server_name }}
+          TF_VAR_key_vault_name: ${{ inputs.key_vault_name }}
+        run: |
+          terraform plan \
+            -var-file=environments/dev/terraform.tfvars \
+            -var=postgresql_enabled=true \
+            -out=postgresql.tfplan
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgresql-development-plan
+          path: infra/postgresql.tfplan
+          retention-days: 1
+
+      - name: Confirm plan-only boundary
+        run: echo "This workflow never runs terraform apply."
