@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from flask import Blueprint, abort, redirect, render_template, request, url_for
+from sqlalchemy import or_
 
 from .extensions import db
 from .models.exercise_library import Exercise
@@ -31,7 +32,17 @@ def index():
         query = query.filter_by(movement=movement)
 
     if search:
-        query = query.filter(Exercise.name.ilike(f"%{search}%"))
+        pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Exercise.name.ilike(pattern),
+                Exercise.aliases.ilike(pattern),
+                Exercise.family.ilike(pattern),
+                Exercise.primary_muscles.ilike(pattern),
+                Exercise.secondary_muscles.ilike(pattern),
+                Exercise.equipment.ilike(pattern),
+            )
+        )
 
     exercises = query.order_by(
         Exercise.movement.asc(),
