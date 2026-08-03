@@ -95,14 +95,20 @@ def _next_checkin_date(
     latest: WeeklyCheckin | None,
     today: date,
 ) -> date | None:
-    if settings is None or not settings.workflow_active or not settings.has_enabled_modules:
+    if (
+        settings is None
+        or not settings.workflow_active
+        or not settings.has_enabled_modules
+    ):
         return None
 
     days_ahead = (settings.checkin_day - today.weekday()) % 7
     candidate = today + timedelta(days=days_ahead)
     if latest is not None:
         candidate_week_start = candidate - timedelta(days=candidate.weekday())
-        latest_week_start = latest.week_ending - timedelta(days=latest.week_ending.weekday())
+        latest_week_start = latest.week_ending - timedelta(
+            days=latest.week_ending.weekday()
+        )
         if latest_week_start >= candidate_week_start:
             candidate += timedelta(days=7)
     return candidate
