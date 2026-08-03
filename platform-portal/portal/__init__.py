@@ -12,9 +12,10 @@ from .api.recommendations import recommendations_bp
 from .athletes import athletes_bp
 from .block_factory import block_factory_bp
 from .checkins import checkins_bp
+from .database_cli import register_database_commands
 from .database_config import resolve_database_uri
 from .exercise_library import exercise_library_bp
-from .extensions import db
+from .extensions import db, migrate
 from .lead_magnets import lead_magnets_bp
 from .programming import programming_bp
 from .programming_engine import programming_engine_bp
@@ -37,11 +38,21 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
             local_filename="platform-history.db",
         ),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        LEGACY_STARTUP_INITIALIZATION=None,
     )
 
     if test_config:
         app.config.update(test_config)
+    if app.config["LEGACY_STARTUP_INITIALIZATION"] is None:
+        app.config["LEGACY_STARTUP_INITIALIZATION"] = app.testing
     db.init_app(app)
+    migrate.init_app(app, db)
+
+    # Import every coaching model once so relationships and Alembic metadata are
+    # complete without coupling model registration to schema mutation.
+    from . import models
+
+    _ = models
 
     app.register_blueprint(health_bp)
     app.register_blueprint(executive_bp, url_prefix="/api/v1")
@@ -59,50 +70,22 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(athletes_bp)
     app.register_blueprint(checkins_bp)
 
-    with app.app_context():
-        from .models.athlete import Athlete
-        from .models.checkins import AthleteCheckinSettings, WeeklyCheckin
-        from .models.exercise_library import (
-            DayTemplate,
-            DayTemplateExercise,
-            Exercise,
-            ensure_exercise_knowledge_columns,
-        )
-        from .models.lead_capture import LeadCapture
-        from .models.nutrition_checkin import NutritionCheckIn
-        from .models.platform_snapshot import PlatformSnapshot
-        from .models.programming import (
-            ExercisePrescription,
-            TrainingBlock,
-            TrainingSession,
-            TrainingWeek,
-            ensure_prescription_mode_columns,
-        )
+    if app.config["LEGACY_STARTUP_INITIALIZATION"]:
+        with app.app_context():
+            from .models.exercise_library import ensure_exercise_knowledge_columns
+            from .models.programming import ensure_prescription_mode_columns
+            from .seed_programming_engine import seed_programming_engine
 
-        _ = PlatformSnapshot
-        _ = AthleteCheckinSettings
-        _ = WeeklyCheckin
-        _ = LeadCapture
-        _ = TrainingBlock
-        _ = TrainingWeek
-        _ = TrainingSession
-        _ = ExercisePrescription
-        _ = Exercise
-        _ = DayTemplate
-        _ = DayTemplateExercise
-        _ = Athlete
-        _ = NutritionCheckIn
-        db.create_all()
-        ensure_exercise_knowledge_columns()
-        ensure_prescription_mode_columns()
-        from .seed_programming_engine import seed_programming_engine
-
-        seed_programming_engine()
+            db.create_all()
+            ensure_exercise_knowledge_columns()
+            ensure_prescription_mode_columns()
+            seed_programming_engine()
 
     from .services.exercise_knowledge_import import (
         register_exercise_knowledge_import_command,
     )
 
     register_exercise_knowledge_import_command(app)
+    register_database_commands(app)
 
     return app
