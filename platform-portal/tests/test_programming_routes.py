@@ -38,6 +38,16 @@ EXPECTED_PROGRAMMING_ROUTES = {
         "/programming/weeks/<int:week_id>/duplicate",
         "POST",
     ),
+    (
+        "programming.delete_week",
+        "/programming/weeks/<int:week_id>/delete",
+        "POST",
+    ),
+    (
+        "programming.extend_block",
+        "/programming/blocks/<int:block_id>/extend",
+        "POST",
+    ),
     ("programming.index", "/programming", "GET"),
     (
         "programming.insert_session_after",
