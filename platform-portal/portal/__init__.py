@@ -27,6 +27,8 @@ from .programming_pack2 import programming_pack2_bp
 from .programming_templates import programming_templates_bp
 from .views import views_bp
 
+TESTING_SECRET_KEY = "testing-only-secret-key"
+
 
 def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app = Flask(
@@ -65,9 +67,11 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         app.config["SESSION_COOKIE_SECURE"] = False
     if not app.config["SECRET_KEY"]:
         if app.testing:
-            app.config["SECRET_KEY"] = "testing-only-secret-key"
+            app.config["SECRET_KEY"] = TESTING_SECRET_KEY
         else:
             raise RuntimeError("SECRET_KEY must be set for the private portal")
+    if app.config["AUTHENTICATION_DISABLED"] and not app.testing:
+        raise RuntimeError("AUTHENTICATION_DISABLED is only permitted while testing")
     if app.config["LEGACY_STARTUP_INITIALIZATION"] is None:
         app.config["LEGACY_STARTUP_INITIALIZATION"] = app.testing
     db.init_app(app)

@@ -54,6 +54,14 @@ def test_migration_metadata_contains_all_coaching_tables(tmp_path: Path):
         assert set(db.metadata.tables) == EXPECTED_TABLES
 
 
+def test_migration_cli_can_inspect_heads_with_local_validation_config(tmp_path: Path):
+    app = migration_app(f"sqlite:///{tmp_path / 'heads.db'}")
+
+    result = app.test_cli_runner().invoke(args=["db", "heads"])
+
+    assert result.exit_code == 0, result.output
+
+
 def test_upgrade_and_schema_verification_on_empty_sqlite(tmp_path: Path):
     app = migration_app(f"sqlite:///{tmp_path / 'upgrade.db'}")
     runner = app.test_cli_runner()

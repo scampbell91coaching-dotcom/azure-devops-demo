@@ -38,6 +38,18 @@ make db-reset       # dedicated loopback PostgreSQL test database only
 make release-gate   # existing release-evidence checks and sanitized reports
 ```
 
+To inspect the current migration heads without configuring a production secret,
+run Flask with an explicit, process-local validation secret:
+
+```bash
+cd platform-portal
+SECRET_KEY='local-migration-validation-only' .venv/bin/flask --app portal:create_app db heads
+```
+
+This value is suitable only for local metadata inspection. The application has
+no default production secret and still refuses normal startup when `SECRET_KEY`
+is absent.
+
 `make release-gate` intentionally fails on a dirty worktree and writes ignored,
 sanitized reports under `evidence/release/`. It reuses
 `scripts/release/release-evidence`; PostgreSQL checks remain optional unless
