@@ -199,18 +199,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         migration_heads_check(portal, portal_python),
     ]
     if os.getenv("POSTGRES_TEST_DATABASE_URL"):
-        checks.append(run_command(
-            "postgresql_tests",
-            [
-                portal_python,
-                "-m",
-                "pytest",
-                "-q",
-                "tests/test_database_migrations.py",
-                "tests/test_sqlite_postgres_migration.py",
-            ],
-            portal,
-        ))
+        reset_command = [
+            "bash",
+            "-lc",
+            "sudo -u postgres dropdb --if-exists traditional_strength_test "
+            "&& sudo -u postgres createdb -O ts_app traditional_strength_test "
+            "&& "
+            + portal_python
+            + " -m pytest -q "
+            "tests/test_database_migrations.py "
+            "tests/test_sqlite_postgres_migration.py",
+        ]
+        checks.append(
+            run_command(
+                "postgresql_tests",
+                reset_command,
+                portal,
+            )
+        )
     else:
         checks.append(Check("postgresql_tests", "skipped", False, "POSTGRES_TEST_DATABASE_URL is not configured"))
     checks.extend([
