@@ -80,6 +80,8 @@ jobs:
           checkov \
             --directory infra \
             --framework terraform \
+            --var-file infra/aks/environments/dev/terraform.tfvars \
+            --evaluate-variables true \
             --compact \
             --quiet
 
