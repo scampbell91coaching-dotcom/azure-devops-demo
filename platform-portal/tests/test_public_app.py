@@ -41,6 +41,17 @@ def test_public_app_applies_security_headers_to_error_responses():
     assert "Cache-Control" not in response.headers
 
 
+def test_public_app_csp_does_not_enable_arbitrary_inline_execution():
+    response = create_test_app().test_client().get("/apply")
+    policy = response.headers["Content-Security-Policy"]
+
+    assert "script-src 'self' https://cdn.jsdelivr.net" in policy
+    assert "style-src 'self'" in policy
+    assert "'unsafe-inline'" not in policy
+    assert "'unsafe-eval'" not in policy
+    assert b"progressBar.style" not in response.data
+
+
 def test_public_lead_capture_persists():
     app = create_test_app()
 

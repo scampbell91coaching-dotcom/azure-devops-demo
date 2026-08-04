@@ -31,6 +31,17 @@ def test_application_wizard_saves_browser_progress():
     assert "traditional-strength-coaching-application" in text
 
 
+def test_application_progress_uses_csp_compatible_width_classes():
+    javascript = (ROOT / "static" / "js" / "coaching_application.js").read_text()
+    css = (ROOT / "static" / "css" / "coaching_application.css").read_text()
+
+    assert "progressBar.style" not in javascript
+    assert "progressBar.classList.add(`progress-${progress}`)" in javascript
+    for progress in (25, 50, 75, 100):
+        assert f".wizard-progress__bar .progress-{progress}" in css
+        assert f"width: {progress}%;" in css
+
+
 def test_application_has_no_photo_placeholders():
     text = (
         (ROOT / "templates" / "public" / "coaching_application.html")

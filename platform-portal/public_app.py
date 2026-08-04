@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from flask import Flask, jsonify
+
 from portal.coaching_applications import coaching_applications_bp
 from portal.database_config import resolve_database_uri
 from portal.extensions import db

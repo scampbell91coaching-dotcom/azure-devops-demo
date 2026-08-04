@@ -11,6 +11,13 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("[data-progress-step]")
   );
   const progressBar = document.querySelector("[data-progress-bar]");
+  const progressClasses = [
+    "progress-0",
+    "progress-25",
+    "progress-50",
+    "progress-75",
+    "progress-100",
+  ];
   const saveStatus = document.querySelector("[data-save-status]");
   const reviewOutput = document.querySelector("[data-review-output]");
   let currentStep = 1;
@@ -180,7 +187,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const progress = ((currentStep - 1) / 4) * 100;
 
     if (progressBar) {
-      progressBar.style.width = `${progress}%`;
+      progressBar.classList.remove(...progressClasses);
+      progressBar.classList.add(`progress-${progress}`);
     }
 
     progressItems.forEach((item, index) => {

@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 
 import pytest
+
 from portal import TESTING_SECRET_KEY, create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
