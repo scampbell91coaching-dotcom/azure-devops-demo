@@ -96,6 +96,29 @@ def test_private_routes_redirect_but_public_routes_remain_public(secured_app):
     assert client.get("/guides/shoulder-pain").status_code == 200
 
 
+@pytest.mark.parametrize("path", ["/health", "/coach", "/missing"])
+def test_security_headers_cover_private_app_response_classes(secured_app, path):
+    response = secured_app.test_client().get(path, base_url="https://portal.example")
+
+    assert response.headers["Content-Security-Policy"] == (
+        "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self'; "
+        "form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; "
+        "media-src 'self'; object-src 'none'; "
+        "script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; "
+        "upgrade-insecure-requests"
+    )
+    assert response.headers["Strict-Transport-Security"] == (
+        "max-age=31536000; includeSubDomains"
+    )
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+    assert response.headers["Permissions-Policy"] == (
+        "camera=(), geolocation=(), microphone=()"
+    )
+    assert response.headers["Cache-Control"] == "no-store"
+
+
 def test_login_is_generic_and_password_is_scrypt_hashed(secured_app):
     client = secured_app.test_client()
     unknown = _login(client, "missing@example.test", "wrong password")

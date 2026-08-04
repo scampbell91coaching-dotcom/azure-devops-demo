@@ -25,6 +25,7 @@ from .programming import programming_bp
 from .programming_engine import programming_engine_bp
 from .programming_pack2 import programming_pack2_bp
 from .programming_templates import programming_templates_bp
+from .security import init_security_headers
 from .views import views_bp
 
 TESTING_SECRET_KEY = "testing-only-secret-key"
@@ -75,6 +76,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     if app.config["LEGACY_STARTUP_INITIALIZATION"] is None:
         app.config["LEGACY_STARTUP_INITIALIZATION"] = app.testing
     db.init_app(app)
+    init_security_headers(app, prevent_caching=True)
     migrate.init_app(
         app,
         db,

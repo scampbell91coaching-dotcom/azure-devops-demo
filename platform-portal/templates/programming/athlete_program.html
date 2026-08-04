@@ -70,7 +70,7 @@
           <form
             method="post"
             action="{{ url_for('programming.archive_block', block_id=current_block.id) }}"
-            onsubmit="return confirm('Archive this block?');"
+            data-confirm="Archive this block?"
           >
             <button class="coach-link-button" type="submit">Archive</button>
           </form>
@@ -78,7 +78,7 @@
             <form
               method="post"
               action="{{ url_for('programming.delete_draft_block', block_id=current_block.id) }}"
-              onsubmit="return confirm('Delete this draft block and all of its weeks and sessions?');"
+              data-confirm="Delete this draft block and all of its weeks and sessions?"
             >
               <button class="coach-link-button" type="submit">Delete draft</button>
             </form>
@@ -116,7 +116,7 @@
                 <form
                   method="post"
                   action="{{ url_for('programming.archive_block', block_id=block.id) }}"
-                  onsubmit="return confirm('Archive this block?');"
+                  data-confirm="Archive this block?"
                 >
                   <button class="coach-link-button" type="submit">Archive</button>
                 </form>
@@ -125,7 +125,7 @@
                 <form
                   method="post"
                   action="{{ url_for('programming.delete_draft_block', block_id=block.id) }}"
-                  onsubmit="return confirm('Delete this draft block and all of its weeks and sessions?');"
+                  data-confirm="Delete this draft block and all of its weeks and sessions?"
                 >
                   <button class="coach-link-button" type="submit">Delete draft</button>
                 </form>
