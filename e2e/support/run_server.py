@@ -30,6 +30,7 @@ def main() -> None:
 
     from flask import abort, jsonify, request, session
     from portal import create_app
+    from portal.coaching_applications import coaching_applications_bp
     from portal.extensions import db
     from portal.models.athlete import Athlete
     from seed_database import seed_database
@@ -49,6 +50,9 @@ def main() -> None:
                 "SECRET_KEY": os.urandom(32).hex(),
             }
         )
+        if coaching_applications_bp.name not in app.blueprints:
+            app.register_blueprint(coaching_applications_bp)
+
         seed_database(app)
 
         print("REGISTERING __e2e__ ROUTE")
