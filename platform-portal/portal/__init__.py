@@ -13,6 +13,7 @@ from .api.history import history_bp
 from .api.platform import platform_bp
 from .api.recommendations import recommendations_bp
 from .athletes import athletes_bp
+from .attempt_selection import attempt_selection_bp
 from .auth import init_auth
 from .block_factory import block_factory_bp
 from .checkins import checkins_bp
@@ -116,6 +117,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(programming_pack2_bp)
     app.register_blueprint(programming_templates_bp)
     app.register_blueprint(athletes_bp)
+    app.register_blueprint(attempt_selection_bp)
     app.register_blueprint(checkins_bp)
     app.register_blueprint(coach_dashboard_bp)
 

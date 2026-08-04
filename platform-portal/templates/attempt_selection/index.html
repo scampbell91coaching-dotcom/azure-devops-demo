@@ -1,0 +1,57 @@
+{% extends "coach/base.html" %}
+{% block title %}Attempt Selection | Traditional Strength{% endblock %}
+{% block content %}
+<section class="programme-hero">
+  <p class="coach-eyebrow">Meet preparation</p>
+  <h1>Attempt selection</h1>
+  <p>Build a three-attempt plan from a current, meet-relevant reference load. Recommendations are planning support; the coach keeps the final call.</p>
+</section>
+
+{% if error %}<div class="programme-alert" role="alert"><strong>Check the attempt plan:</strong> {{ error }}</div>{% endif %}
+
+<form method="post" class="programme-form">
+  <fieldset>
+    <legend>Recommendation inputs</legend>
+    <p class="programme-help">Use the athlete's latest reliable single or conservative projected max, not an outdated lifetime best.</p>
+    <label>Lift
+      <select name="lift" required>
+        {% for value in ("squat", "bench", "deadlift") %}<option value="{{ value }}" {% if form.get('lift') == value %}selected{% endif %}>{{ value|title }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Reference load <input name="reference_load" type="number" min="0.01" step="any" required value="{{ form.get('reference_load', '') }}"></label>
+    <label>Units
+      <select name="unit" required>
+        {% for value in ("kg", "lb") %}<option value="{{ value }}" {% if form.get('unit', 'kg') == value %}selected{% endif %}>{{ value }}</option>{% endfor %}
+      </select>
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Strategy</legend>
+    <p class="programme-help">Defaults target a secure 90% opener, a 95% second, and a 100% third. Every result is rounded to the selected plate increment.</p>
+    <label>Opener % <input name="opener_percent" type="number" min="0.01" step="any" required value="{{ form.get('opener_percent', '90') }}"></label>
+    <label>Second % <input name="second_percent" type="number" min="0.01" step="any" required value="{{ form.get('second_percent', '95') }}"></label>
+    <label>Third % <input name="third_percent" type="number" min="0.01" step="any" required value="{{ form.get('third_percent', '100') }}"></label>
+    <label>Rounding increment <input name="rounding_increment" type="number" min="0.01" step="any" required value="{{ form.get('rounding_increment', '2.5') }}"></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Coach override (optional)</legend>
+    <p class="programme-help">Enter all three to preserve a manual plan exactly. Manual loads are validated but never rounded or replaced.</p>
+    {% for number, label in ((1, "Opener"), (2, "Second"), (3, "Third")) %}<label>{{ label }} <input name="manual_{{ number }}" type="number" min="0.01" step="any" value="{{ form.get('manual_' ~ number, '') }}"></label>{% endfor %}
+  </fieldset>
+  <button type="submit" class="coach-button">Build attempt plan</button>
+</form>
+
+{% if recommendation %}
+<section class="programme-panel" aria-live="polite">
+  <p class="coach-eyebrow">{{ "Coach override" if recommendation.manual_override else "Recommended plan" }}</p>
+  <h2>{{ recommendation.lift|title }} attempts</h2>
+  <ol>
+    {% for attempt in recommendation.attempts %}<li><strong>{{ attempt|format_decimal }} {{ recommendation.unit }}</strong></li>{% endfor %}
+  </ol>
+  <p>Based on {{ recommendation.reference_load|format_decimal }} {{ recommendation.unit }}; strategy {{ recommendation.strategy.opener_percent|format_decimal }}% / {{ recommendation.strategy.second_percent|format_decimal }}% / {{ recommendation.strategy.third_percent|format_decimal }}%, with {{ recommendation.strategy.rounding_increment|format_decimal }} {{ recommendation.unit }} rounding.</p>
+  {% if recommendation.manual_override %}<p>The displayed loads are the coach's manual values; the percentage strategy is retained for context only.</p>{% endif %}
+</section>
+{% endif %}
+{% endblock %}
