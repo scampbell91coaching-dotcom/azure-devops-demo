@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+
 from portal import create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete

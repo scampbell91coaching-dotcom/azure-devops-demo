@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 import pytest
+
 from portal import create_app
 from portal.attempt_selection import (
     AttemptSelectionError,

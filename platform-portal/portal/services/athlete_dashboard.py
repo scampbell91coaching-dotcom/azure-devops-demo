@@ -114,9 +114,7 @@ def _bodyweight_trend(athlete_id: int) -> tuple[TrendPoint, ...]:
     )
     points = [
         TrendPoint(item.week_ending, item.average_bodyweight_kg) for item in weekly
-    ] + [
-        TrendPoint(item.submitted_at.date(), item.bodyweight_kg) for item in nutrition
-    ]
+    ] + [TrendPoint(item.submitted_at.date(), item.bodyweight_kg) for item in nutrition]
     return tuple(sorted(points, key=lambda point: point.recorded_on)[-6:])
 
 
