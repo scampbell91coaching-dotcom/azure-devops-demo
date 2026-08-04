@@ -63,7 +63,7 @@ jobs:
           cache: true
 
       - name: Scan repository, secrets and IaC (blocking)
-        uses: aquasecurity/trivy-action@76071ef0d7ec797419534a183b498b4d6366cf37
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
         with:
           scan-type: fs
           skip-setup-trivy: true
@@ -76,7 +76,7 @@ jobs:
 
       - name: Generate Trivy SARIF
         if: always()
-        uses: aquasecurity/trivy-action@76071ef0d7ec797419534a183b498b4d6366cf37
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
         with:
           scan-type: fs
           skip-setup-trivy: true
