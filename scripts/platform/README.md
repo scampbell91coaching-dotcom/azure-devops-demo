@@ -2,6 +2,7 @@
 
 Scripts:
 
+- `azure-inventory` — sanitized, read-only Azure subscription metadata inventory ([documentation](../../docs/azure-inventory.md))
 - `platform-health.sh`
 - `validate-platform.sh`
 - `check-drift.sh`
