@@ -19,14 +19,23 @@ class CoachResponse:
 
 
 @dataclass(frozen=True)
+class TrendPoint:
+    recorded_on: date
+    value: float
+
+
+@dataclass(frozen=True)
 class AthleteDashboard:
     athlete: Athlete
     current_block: TrainingBlock | None
     next_session: TrainingSession | None
     latest_checkin: WeeklyCheckin | None
+    recent_checkins: tuple[WeeklyCheckin, ...]
     next_checkin_date: date | None
     latest_nutrition: NutritionCheckIn | None
     latest_bodyweight_kg: float | None
+    bodyweight_trend: tuple[TrendPoint, ...]
+    performance_trend: tuple[TrendPoint, ...]
     latest_coach_response: CoachResponse | None
 
 
@@ -49,11 +58,13 @@ def get_athlete_dashboard(athlete_id: int, *, today: date) -> AthleteDashboard |
     )
     next_session = _first_session(current_block)
 
-    latest_checkin = (
+    recent_checkins = tuple(
         WeeklyCheckin.query.filter_by(athlete_id=athlete_id)
         .order_by(WeeklyCheckin.submitted_at.desc(), WeeklyCheckin.id.desc())
-        .first()
+        .limit(4)
+        .all()
     )
+    latest_checkin = recent_checkins[0] if recent_checkins else None
     settings = AthleteCheckinSettings.query.filter_by(athlete_id=athlete_id).first()
     next_checkin_date = _next_checkin_date(settings, latest_checkin, today)
 
@@ -63,21 +74,66 @@ def get_athlete_dashboard(athlete_id: int, *, today: date) -> AthleteDashboard |
         .order_by(NutritionCheckIn.submitted_at.desc(), NutritionCheckIn.id.desc())
         .first()
     )
+    bodyweight_trend = _bodyweight_trend(athlete_id)
 
     return AthleteDashboard(
         athlete=athlete,
         current_block=current_block,
         next_session=next_session,
         latest_checkin=latest_checkin,
+        recent_checkins=recent_checkins,
         next_checkin_date=next_checkin_date,
         latest_nutrition=latest_nutrition,
         latest_bodyweight_kg=(
-            latest_nutrition.bodyweight_kg
-            if latest_nutrition is not None
-            and latest_nutrition.bodyweight_kg is not None
-            else athlete.bodyweight_kg
+            bodyweight_trend[-1].value if bodyweight_trend else athlete.bodyweight_kg
         ),
+        bodyweight_trend=bodyweight_trend,
+        performance_trend=_performance_trend(athlete_id),
         latest_coach_response=_latest_coach_response(athlete_id),
+    )
+
+
+def _bodyweight_trend(athlete_id: int) -> tuple[TrendPoint, ...]:
+    weekly = (
+        WeeklyCheckin.query.filter(
+            WeeklyCheckin.athlete_id == athlete_id,
+            WeeklyCheckin.average_bodyweight_kg.isnot(None),
+        )
+        .order_by(WeeklyCheckin.submitted_at.desc(), WeeklyCheckin.id.desc())
+        .limit(6)
+        .all()
+    )
+    nutrition = (
+        NutritionCheckIn.query.filter(
+            NutritionCheckIn.athlete_id == athlete_id,
+            NutritionCheckIn.bodyweight_kg.isnot(None),
+        )
+        .order_by(NutritionCheckIn.submitted_at.desc(), NutritionCheckIn.id.desc())
+        .limit(6)
+        .all()
+    )
+    points = [
+        TrendPoint(item.week_ending, item.average_bodyweight_kg) for item in weekly
+    ] + [
+        TrendPoint(item.submitted_at.date(), item.bodyweight_kg) for item in nutrition
+    ]
+    return tuple(sorted(points, key=lambda point: point.recorded_on)[-6:])
+
+
+def _performance_trend(athlete_id: int) -> tuple[TrendPoint, ...]:
+    items = (
+        NutritionCheckIn.query.filter_by(athlete_id=athlete_id)
+        .order_by(NutritionCheckIn.submitted_at.desc(), NutritionCheckIn.id.desc())
+        .limit(6)
+        .all()
+    )
+    return tuple(
+        reversed(
+            [
+                TrendPoint(item.submitted_at.date(), item.training_performance)
+                for item in items
+            ]
+        )
     )
 
 

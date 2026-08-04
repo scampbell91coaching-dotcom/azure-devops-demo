@@ -12,6 +12,7 @@
     <a href="#programme">Programme</a>
     <a href="#check-in">Check-in</a>
     <a href="#nutrition">Nutrition</a>
+    <a href="#trends">Trends</a>
   </nav>
 
   <div class="dashboard-grid">
@@ -43,6 +44,11 @@
       {% if dashboard.latest_checkin %}
         <p class="metric"><span>Latest check-in</span><strong>{{ dashboard.latest_checkin.week_ending.strftime('%d %b %Y') }}</strong></p>
         {% if dashboard.latest_checkin.status %}<span class="status">{{ dashboard.latest_checkin.status | title }}</span>{% endif %}
+        <div class="metric-grid" aria-label="Latest compliance and recovery">
+          <p class="metric"><span>Training compliance</span><strong>{{ (dashboard.latest_checkin.training_adherence ~ '/10') if dashboard.latest_checkin.training_adherence is not none else 'Not recorded' }}</strong></p>
+          <p class="metric"><span>Recovery</span><strong>{{ (dashboard.latest_checkin.recovery ~ '/10') if dashboard.latest_checkin.recovery is not none else 'Not recorded' }}</strong></p>
+          <p class="metric"><span>Sleep</span><strong>{{ (dashboard.latest_checkin.sleep_quality ~ '/10') if dashboard.latest_checkin.sleep_quality is not none else 'Not recorded' }}</strong></p>
+        </div>
       {% else %}
         <div class="empty-state"><strong>No check-ins yet</strong><p>Your first submission will appear here.</p></div>
       {% endif %}
@@ -69,6 +75,40 @@
         {% if dashboard.latest_bodyweight_kg is not none %}<p class="metric"><span>Latest bodyweight</span><strong>{{ dashboard.latest_bodyweight_kg }} kg</strong></p>{% endif %}
       {% endif %}
       <a class="button button--secondary" href="{{ url_for('athletes.nutrition_checkin_form', athlete_id=dashboard.athlete.id) }}">Add nutrition check-in</a>
+    </section>
+
+    <section class="dashboard-card dashboard-card--wide" id="trends">
+      <div class="card-heading"><div><span class="eyebrow">Recent history</span><h2>Trends</h2></div></div>
+      <div class="trend-grid">
+        <div>
+          <h3>Bodyweight</h3>
+          {% if dashboard.bodyweight_trend %}
+            <ol class="trend-list">
+              {% for point in dashboard.bodyweight_trend %}<li><span>{{ point.recorded_on.strftime('%d %b') }}</span><strong>{{ point.value }} kg</strong></li>{% endfor %}
+            </ol>
+          {% else %}
+            <div class="empty-state"><strong>No bodyweight trend yet</strong><p>At least one recorded bodyweight is needed.</p></div>
+          {% endif %}
+        </div>
+        <div>
+          <h3>Training performance</h3>
+          {% if dashboard.performance_trend %}
+            <ol class="trend-list">
+              {% for point in dashboard.performance_trend %}<li><span>{{ point.recorded_on.strftime('%d %b') }}</span><strong>{{ point.value | int }}/10</strong></li>{% endfor %}
+            </ol>
+          {% else %}
+            <div class="empty-state"><strong>No performance trend yet</strong><p>Performance scores will appear after nutrition updates.</p></div>
+          {% endif %}
+        </div>
+      </div>
+      {% if dashboard.recent_checkins %}
+        <h3>Recent check-ins</h3>
+        <ol class="trend-list trend-list--checkins">
+          {% for checkin in dashboard.recent_checkins %}<li><span>{{ checkin.week_ending.strftime('%d %b %Y') }}</span><strong>{{ checkin.status | title }}</strong></li>{% endfor %}
+        </ol>
+      {% else %}
+        <div class="empty-state"><strong>No recent check-ins</strong><p>Submitted weekly reviews will appear here.</p></div>
+      {% endif %}
     </section>
 
     <section class="dashboard-card dashboard-card--wide">

@@ -106,6 +106,71 @@ def test_service_has_clear_absent_values_without_inventing_data():
         assert result.latest_coach_response is None
 
 
+def test_service_returns_bounded_isolated_recent_checkins_and_trends():
+    app = _app()
+    with app.app_context():
+        athlete = _athlete("Alex", "alex@example.com")
+        other = _athlete("Sam", "sam@example.com")
+        for offset in range(7):
+            db.session.add(
+                WeeklyCheckin(
+                    athlete_id=athlete.id,
+                    week_ending=date(2026, 6, 7 + offset),
+                    submitted_at=datetime(2026, 6, 7 + offset, tzinfo=UTC),
+                    training_included=True,
+                    nutrition_included=True,
+                    training_adherence=6 + (offset % 3),
+                    recovery=5 + (offset % 2),
+                    sleep_quality=7,
+                    average_bodyweight_kg=90.0 + offset,
+                )
+            )
+        db.session.add_all(
+            [
+                NutritionCheckIn(
+                    athlete_id=athlete.id,
+                    submitted_at=datetime(2026, 7, 1, tzinfo=UTC),
+                    bodyweight_kg=98.0,
+                    nutrition_adherence=8,
+                    hunger=5,
+                    energy=7,
+                    sleep_quality=7,
+                    stress=4,
+                    digestion=8,
+                    training_performance=9,
+                ),
+                NutritionCheckIn(
+                    athlete_id=other.id,
+                    submitted_at=datetime(2026, 7, 2, tzinfo=UTC),
+                    bodyweight_kg=150.0,
+                    nutrition_adherence=8,
+                    hunger=5,
+                    energy=7,
+                    sleep_quality=7,
+                    stress=4,
+                    digestion=8,
+                    training_performance=2,
+                ),
+            ]
+        )
+        db.session.commit()
+
+        result = get_athlete_dashboard(athlete.id, today=date(2026, 7, 6))
+
+        assert result is not None
+        assert len(result.recent_checkins) == 4
+        assert [item.week_ending.day for item in result.recent_checkins] == [
+            13,
+            12,
+            11,
+            10,
+        ]
+        assert len(result.bodyweight_trend) == 6
+        assert result.latest_bodyweight_kg == 98.0
+        assert all(point.value != 150.0 for point in result.bodyweight_trend)
+        assert [point.value for point in result.performance_trend] == [9]
+
+
 def test_dashboard_requires_an_authenticated_athlete_session():
     app = _app()
     assert app.test_client().get("/athlete/dashboard").status_code == 401
@@ -167,9 +232,60 @@ def test_dashboard_renders_data_empty_states_links_and_no_coach_controls():
     assert "No check-ins yet" in page
     assert "No nutrition update yet" in page
     assert "No coach response yet" in page
+    assert "No bodyweight trend yet" in page
+    assert "No performance trend yet" in page
+    assert "No recent check-ins" in page
     assert f"/athletes/{athlete_id}/check-ins/new" in page
     assert f"/athletes/{athlete_id}/nutrition-checkins/new" in page
     assert "Check-in settings" not in page
     assert "Mark reviewed" not in page
     assert "Generate new block" not in page
     assert "Coach Workspace" not in page
+
+
+def test_dashboard_renders_compliance_recovery_trends_and_coach_notes():
+    app = _app()
+    with app.app_context():
+        athlete = _athlete("Alex", "alex@example.com")
+        db.session.add_all(
+            [
+                WeeklyCheckin(
+                    athlete_id=athlete.id,
+                    week_ending=date(2026, 8, 2),
+                    submitted_at=datetime(2026, 8, 2, tzinfo=UTC),
+                    training_included=True,
+                    training_adherence=8,
+                    recovery=6,
+                    sleep_quality=7,
+                    average_bodyweight_kg=92.1,
+                    coach_notes="Keep building steadily.",
+                    coach_reviewed_at=datetime(2026, 8, 3, tzinfo=UTC),
+                ),
+                NutritionCheckIn(
+                    athlete_id=athlete.id,
+                    submitted_at=datetime(2026, 8, 3, tzinfo=UTC),
+                    bodyweight_kg=92.4,
+                    nutrition_adherence=8,
+                    hunger=5,
+                    energy=7,
+                    sleep_quality=7,
+                    stress=4,
+                    digestion=8,
+                    training_performance=9,
+                ),
+            ]
+        )
+        db.session.commit()
+        athlete_id = athlete.id
+
+    client = app.test_client()
+    _sign_in(client, athlete_id)
+    page = client.get("/athlete/dashboard").get_data(as_text=True)
+
+    assert "Training compliance" in page
+    assert "8/10" in page
+    assert "Recovery" in page
+    assert "6/10" in page
+    assert "92.4 kg" in page
+    assert "9/10" in page
+    assert "Keep building steadily." in page
