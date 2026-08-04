@@ -75,7 +75,11 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     if app.config["LEGACY_STARTUP_INITIALIZATION"] is None:
         app.config["LEGACY_STARTUP_INITIALIZATION"] = app.testing
     db.init_app(app)
-    migrate.init_app(app, db)
+    migrate.init_app(
+        app,
+        db,
+        directory=str(portal_root / "migrations"),
+    )
 
     # Import every coaching model once so relationships and Alembic metadata are
     # complete without coupling model registration to schema mutation.
