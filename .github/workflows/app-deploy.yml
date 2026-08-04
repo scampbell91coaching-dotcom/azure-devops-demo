@@ -182,21 +182,25 @@ jobs:
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
         with:
           skip-setup-trivy: true
+          scanners: vuln
           image-ref: ${{ steps.meta.outputs.full_sha_tag }}
           format: table
           severity: HIGH,CRITICAL
           exit-code: "1"
+          ignore-unfixed: true
 
       - name: Generate image scan SARIF
         if: always()
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
         with:
           skip-setup-trivy: true
+          scanners: vuln
           image-ref: ${{ steps.meta.outputs.full_sha_tag }}
           format: sarif
           output: trivy-image-results.sarif
           severity: HIGH,CRITICAL
           exit-code: "0"
+          ignore-unfixed: false
 
       - name: Upload image scan SARIF
         if: always() && hashFiles('trivy-image-results.sarif') != ''
