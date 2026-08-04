@@ -13,6 +13,8 @@ data "azurerm_log_analytics_workspace" "aks" {
 }
 
 resource "azurerm_kubernetes_cluster" "aks" {
+  # checkov:skip=CKV_AZURE_115:Private AKS is deferred until private DNS, runner connectivity and operator access are designed and tested.
+  # checkov:skip=CKV_AZURE_117:Customer-managed disk encryption is deferred until Key Vault, key rotation and identity permissions are implemented.
   oidc_issuer_enabled          = true
   workload_identity_enabled    = true
   azure_policy_enabled         = true
@@ -41,10 +43,11 @@ resource "azurerm_kubernetes_cluster" "aks" {
     only_critical_addons_enabled = true
     temporary_name_for_rotation  = "systemtemp"
 
-    os_disk_size_gb = 30
-    os_disk_type    = "Ephemeral"
-    os_sku          = "AzureLinux"
-    type            = "VirtualMachineScaleSets"
+    os_disk_size_gb         = 30
+    os_disk_type            = "Ephemeral"
+    host_encryption_enabled = true
+    os_sku                  = "AzureLinux"
+    type                    = "VirtualMachineScaleSets"
 
     upgrade_settings {
       max_surge = "10%"
