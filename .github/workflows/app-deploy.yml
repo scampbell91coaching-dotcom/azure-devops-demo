@@ -171,14 +171,15 @@ jobs:
             platform-portal
 
       - name: Install Trivy
-        uses: aquasecurity/setup-trivy@ff1b8b060f23b650436d419b5e13f67f5d4c3087
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514
         with:
           version: v0.70.0
           cache: true
 
       - name: Scan image with Trivy (blocking)
-        uses: aquasecurity/trivy-action@$(git rev-parse HEAD)
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 rev-parse HEAD)
         with:
+          skip-setup-trivy: true
           image-ref: ${{ steps.meta.outputs.full_sha_tag }}
           format: table
           severity: HIGH,CRITICAL
@@ -186,8 +187,9 @@ jobs:
 
       - name: Generate image scan SARIF
         if: always()
-        uses: aquasecurity/trivy-action@$(git rev-parse HEAD)
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 rev-parse HEAD)
         with:
+          skip-setup-trivy: true
           image-ref: ${{ steps.meta.outputs.full_sha_tag }}
           format: sarif
           output: trivy-image-results.sarif
