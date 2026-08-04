@@ -55,3 +55,4 @@ platform-portal/Dockerfile.private
 node_modules/
 playwright-report/
 test-results/
+evidence/credential-audit/
