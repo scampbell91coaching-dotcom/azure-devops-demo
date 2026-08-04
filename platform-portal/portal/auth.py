@@ -4,9 +4,10 @@ import hmac
 import re
 import secrets
 import time
+import unicodedata
 from collections import defaultdict, deque
 from functools import wraps
-from urllib.parse import urljoin, urlparse
+from urllib.parse import unquote_to_bytes, urlsplit
 
 import click
 from flask import (
@@ -50,14 +51,31 @@ _DUMMY_PASSWORD_HASH = generate_password_hash("not-a-real-password", method="scr
 
 
 def _safe_redirect_target(target: str | None) -> bool:
-    if not target:
+    if not target or not target.startswith("/"):
         return False
-    raw_target = urlparse(target)
-    if raw_target.scheme or raw_target.netloc or not target.startswith("/"):
-        return False
-    host = urlparse(request.host_url)
-    candidate = urlparse(urljoin(request.host_url, target))
-    return candidate.scheme in {"http", "https"} and candidate.netloc == host.netloc
+
+    candidate = target
+    for _ in range(5):
+        if re.search(r"%(?![0-9a-fA-F]{2})", candidate):
+            return False
+        try:
+            decoded = unquote_to_bytes(candidate).decode("utf-8")
+        except UnicodeDecodeError:
+            return False
+        if (
+            not decoded.startswith("/")
+            or decoded.startswith("//")
+            or "\\" in decoded
+            or any(unicodedata.category(char) == "Cc" for char in decoded)
+        ):
+            return False
+        parsed = urlsplit(decoded)
+        if parsed.scheme or parsed.netloc:
+            return False
+        if decoded == candidate:
+            return True
+        candidate = decoded
+    return False
 
 
 def _client_key(email: str) -> str:

@@ -3,7 +3,6 @@ from __future__ import annotations
 import time
 
 import pytest
-
 from portal import TESTING_SECRET_KEY, create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
@@ -108,6 +107,96 @@ def test_login_is_generic_and_password_is_scrypt_hashed(secured_app):
         user = db.session.get(User, secured_app.config["TEST_IDS"]["coach"])
         assert user.password_hash.startswith("scrypt:")
         assert "correct horse" not in user.password_hash
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        "/athletes?view=active#top",
+        "/athlete/dashboard",
+    ],
+)
+def test_login_allows_strict_local_redirects(secured_app, target):
+    client = secured_app.test_client()
+    response = client.post(
+        "/login",
+        data={
+            "email": "coach@example.test",
+            "password": "correct horse battery staple",
+            "csrf_token": _csrf(client),
+            "next": target,
+        },
+    )
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == target
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        "https://evil.example/",
+        "//evil.example/",
+        "/\\evil.example/",
+        "/%5cevil.example/",
+        "/%2f%2fevil.example/",
+        "/%252f%252fevil.example/",
+        "/%0d%0aLocation:%20https://evil.example/",
+        "/line\nbreak",
+        "/\u0085break",
+        "/%zz",
+        "/%ff",
+        "javascript:alert(1)",
+    ],
+)
+def test_login_rejects_unsafe_redirects(secured_app, target):
+    client = secured_app.test_client()
+    response = client.post(
+        "/login",
+        data={
+            "email": "coach@example.test",
+            "password": "correct horse battery staple",
+            "csrf_token": _csrf(client),
+            "next": target,
+        },
+    )
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/coach"
+
+
+def test_login_rotates_session_state(secured_app):
+    client = secured_app.test_client()
+    original_csrf = _csrf(client)
+
+    response = client.post(
+        "/login",
+        data={
+            "email": "coach@example.test",
+            "password": "correct horse battery staple",
+            "csrf_token": original_csrf,
+        },
+    )
+
+    assert response.status_code == 302
+    with client.session_transaction() as auth_session:
+        assert auth_session["user_id"] == secured_app.config["TEST_IDS"]["coach"]
+        assert original_csrf not in auth_session.values()
+
+
+def test_production_session_cookie_security_flags():
+    app = create_app(
+        {
+            "SECRET_KEY": "configured-production-secret",
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+        }
+    )
+    response = app.test_client().get("/login")
+
+    cookie = response.headers["Set-Cookie"]
+    assert "HttpOnly" in cookie
+    assert "SameSite=Lax" in cookie
+    assert "Secure" in cookie
 
 
 def test_roles_and_athlete_isolation(secured_app):
