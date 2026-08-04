@@ -1,36 +1,50 @@
 # Traditional Strength production observability
 
-This design improves production health coverage without changing business logic
-or routes. It reuses Prometheus/Grafana and OpenTelemetry/Application Insights.
-Nothing in this change was deployed and no live alert was created.
+This document distinguishes the current production portal from repository-only
+reference instrumentation and future observability work. Nothing described here
+was deployed and no live alert was created.
 
 ## Current versus proposed
 
 | Resource | Repository state | Runtime state |
 |---|---|---|
-| `/health` startup, readiness and liveness probes | Existing | Active with the production Helm release |
-| `/metrics` and `ServiceMonitor` | Existing | Active when the chart and Prometheus Operator are installed |
-| Azure Monitor OpenTelemetry auto-instrumentation | Existing | Active only with the Key Vault-backed connection string |
+| `platform-portal` on port 8090 | Existing | Current production image and `app:app` entry point |
+| `/health` startup/readiness/liveness probes | Existing | Configured by the production Helm values |
+| Portal `/metrics` and application telemetry | Future | The production portal does not currently expose `/metrics` or configure OpenTelemetry |
+| Root `app/app.py` instrumentation | Reference only | Demo service on port 5000; not the production workload |
+| `ServiceMonitor` | Repository template | Disabled unless both monitoring flags are explicitly enabled; do not enable before portal metrics exist |
 | kube-prometheus-stack values | Existing | Confirm actual cluster state separately |
 | Grafana production dashboard ConfigMap | Added | **Proposed; disabled** (`monitoring.enabled: false`) |
 | Prometheus alert rules | Added | **Proposed; disabled** (`monitoring.enabled: false`) |
 | Application Insights KQL alerts | Added as definitions | **Proposed text only; not live Azure resources** |
 | Public Application Insights availability test | Design below | **Proposed; not provisioned** |
 
-The opt-in switch is deliberately false in both values files. Enabling it creates
-Kubernetes rule/dashboard objects only; notification delivery also needs a
-separately reviewed Alertmanager receiver and route. Never commit receiver
-tokens, webhooks, connection strings or database credentials.
+`monitoring.enabled` and `monitoring.serviceMonitor.enabled` are deliberately
+false in both values files. A `ServiceMonitor` renders only when both are true.
+The rule and dashboard have their own nested enablement under the main monitoring
+switch. Network policy must also set `networkPolicy.allowMonitoring=true` before
+Prometheus can reach the pod;
+notification delivery additionally needs a separately reviewed Alertmanager
+receiver and route. Never commit receiver tokens, webhooks, connection strings
+or database credentials.
+
+The root reference service exports `flask_http_requests_total`,
+`flask_http_request_duration_seconds`, `flask_http_request_errors_total`, and
+`flask_application_operations_total`. Labels are limited to HTTP method, Flask
+route template, status code, and fixed operation/outcome values. Raw paths,
+query strings, user identifiers, and other personal data are not labels.
+Prometheus scrapes are excluded from its request metrics. These metrics and its
+`/ready` and `/metrics` routes are not claims about the production portal.
 
 ## Coverage and practical starting thresholds
 
 | Signal | Source | Proposed threshold |
 |---|---|---|
-| Private reachability | Prometheus `up` over ClusterIP | below 1 for 5m; critical |
+| Private reachability after portal metrics work | Prometheus `up` over ClusterIP | below 1 for 5m; critical |
 | Ready replicas | kube-state-metrics | available below desired for 10m; critical |
 | Public `/health` | Application Insights availability | every 2m from 2+ locations; failure or missing checks for 5m; critical |
-| HTTP 5xx | Prometheus / App Insights | over 5% for 10m, gated by >0.1 req/s or 20 requests; critical |
-| HTTP latency | Prometheus / App Insights | p95 over 1s for 15m, 20-request gate in App Insights; warning |
+| HTTP 5xx after portal instrumentation | Prometheus / App Insights | over 5% for 10m, gated by >0.1 req/s or 20 requests; critical |
+| HTTP latency after portal instrumentation | Prometheus / App Insights | p95 over 1s for 15m, 20-request gate in App Insights; warning |
 | Pod restarts | kube-state-metrics | 3 in 15m, sustained for 5m; warning |
 | Rollout | kube-state-metrics | `Progressing=false` for 10m; critical |
 | Migration Job | kube-state-metrics | any failed Job matching `.*migrat.*` for 1m; critical |
@@ -68,10 +82,12 @@ validates certificates and redirects, runs every two minutes from at least two
 Azure locations, and is named `traditional-strength-public-health` for the KQL
 definition in `kubernetes/monitoring/application-insights-alerts.kql`.
 
-Prometheus scraping `/metrics` through ClusterIP proves private DNS, Service
-selection, endpoints and pod HTTP reachability. Kubernetes readiness continues
-to call existing `/health`. Do not expose `/metrics` or add another public load
-balancer.
+The current production portal exposes `/health`; Kubernetes startup, readiness,
+and liveness all use that route on container port 8090. It does not expose
+`/ready` or `/metrics`. A future private `/metrics` scrape could prove private
+DNS, Service selection, endpoints, and pod HTTP reachability, but it requires
+portal instrumentation first. Do not expose metrics publicly or add another
+public load balancer.
 
 ```bash
 curl -fsS --max-time 5 https://traditionalstrength.co.uk/health
@@ -164,7 +180,8 @@ The validation is local and does not contact a cluster:
 scripts/validate-observability.sh
 ```
 
-Before setting `monitoring.enabled=true`, require owner and rule-expression
-review against real labels, staging render/apply, Alertmanager route review, and
+Before setting either ServiceMonitor flag, add and test portal metrics, then
+require owner and rule-expression review against real labels, staging
+render/apply, monitoring NetworkPolicy ingress, Alertmanager route review, and
 confirmation that public availability and PostgreSQL dependency telemetry exist.
 Activation and deployment are outside this change.

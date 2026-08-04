@@ -127,6 +127,12 @@ affinity:
 # label and Alertmanager routing described in docs/production-observability.md.
 monitoring:
   enabled: false
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    labels:
+      release: monitoring
   prometheusRule:
     enabled: true
     labels:

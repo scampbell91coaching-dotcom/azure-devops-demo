@@ -2,18 +2,34 @@ from __future__ import annotations
 
 import importlib.util
 import os
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
-
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "e2e" / "support" / "security.py"
 SPEC = importlib.util.spec_from_file_location("e2e_security", MODULE_PATH)
 assert SPEC and SPEC.loader
 security = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(security)
+
+
+def _clear_portal_modules():
+    for module_name in list(sys.modules):
+        if module_name == "portal" or module_name.startswith("portal."):
+            sys.modules.pop(module_name, None)
+
+
+@pytest.fixture
+def isolated_portal_import(monkeypatch):
+    portal_root = Path(__file__).resolve().parents[1] / "platform-portal"
+    _clear_portal_modules()
+    monkeypatch.syspath_prepend(str(portal_root))
+    try:
+        yield
+    finally:
+        _clear_portal_modules()
 
 
 def test_explicit_test_flag_and_run_token_are_required(monkeypatch):
@@ -42,6 +58,7 @@ def test_launcher_refuses_before_importing_application_dependencies():
     assert result.returncode != 0
     assert "E2E_TEST_ONLY=1 is required" in result.stderr
 
+
 @pytest.mark.parametrize("value", ["production", "prod", "staging", "shared"])
 def test_shared_environment_markers_are_refused(monkeypatch, value):
     monkeypatch.setenv("E2E_TEST_ONLY", "1")
@@ -59,16 +76,14 @@ def test_database_is_unique_and_disposable(tmp_path):
     assert first.exists() and second.exists()
 
 
-def test_production_app_has_no_e2e_route():
+def test_production_app_has_no_e2e_route(isolated_portal_import, tmp_path):
     pytest.importorskip("flask")
-    portal_root = Path(__file__).resolve().parents[1] / "platform-portal"
-    import sys
+    from portal import create_app
 
-    sys.path.insert(0, str(portal_root))
-    try:
-        from portal import create_app
-
-        app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
-        assert all(not rule.rule.startswith("/__e2e__") for rule in app.url_map.iter_rules())
-    finally:
-        sys.path.remove(str(portal_root))
+    database = tmp_path / "security.sqlite"
+    app = create_app(
+        {"TESTING": True, "SQLALCHEMY_DATABASE_URI": f"sqlite:///{database}"}
+    )
+    assert all(
+        not rule.rule.startswith("/__e2e__") for rule in app.url_map.iter_rules()
+    )

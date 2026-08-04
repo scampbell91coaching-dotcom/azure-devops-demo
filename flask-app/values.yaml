@@ -121,6 +121,12 @@ affinity: {}
 # definitions cannot create dashboards or live alerts without an explicit review.
 monitoring:
   enabled: false
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    labels:
+      release: monitoring
   prometheusRule:
     enabled: true
     labels:
