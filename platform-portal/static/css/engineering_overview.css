@@ -1,0 +1,15 @@
+.engineering-source { padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px; color: var(--muted); }
+.engineering-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.engineering-card, .engineering-tool { background: var(--panel); border: 1px solid var(--border); border-top: 3px solid var(--border); border-radius: 14px; padding: 18px; }
+.engineering-card__heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.engineering-card h2 { margin: 0; }
+.engineering-card p, .engineering-tool small { color: var(--muted); }
+.engineering-card a { color: var(--accent); }
+.engineering-pill { padding: 5px 9px; border-radius: 999px; background: var(--panel2); font-size: .75rem; font-weight: 700; }
+.status-available { border-top-color: var(--pass); }
+.status-attention { border-top-color: var(--warn); }
+.status-unavailable { border-top-color: var(--muted); }
+.engineering-tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.engineering-tool { display: grid; gap: 7px; }
+.engineering-tool span { font-size: .85rem; }
+@media (max-width: 900px) { .engineering-grid, .engineering-tools { grid-template-columns: 1fr; } }

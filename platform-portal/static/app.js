@@ -10,6 +10,7 @@ function setField(name, value) {
 }
 
 function formatDate(value) {
+  if (!value) return "status collection unavailable";
   try { return new Date(value).toLocaleString(); }
   catch { return value; }
 }

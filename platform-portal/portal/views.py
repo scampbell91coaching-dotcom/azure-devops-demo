@@ -1,11 +1,22 @@
 from flask import Blueprint, render_template
 
+from .api.engineering import build_engineering_overview
+
 views_bp = Blueprint("views", __name__)
 
 
 @views_bp.get("/")
 def overview():
     return render_template("overview.html", page="overview")
+
+
+@views_bp.get("/engineering")
+def engineering():
+    return render_template(
+        "engineering_overview.html",
+        page="engineering",
+        overview=build_engineering_overview(),
+    )
 
 
 @views_bp.get("/infrastructure")

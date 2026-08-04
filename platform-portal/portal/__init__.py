@@ -6,6 +6,7 @@ from pathlib import Path
 
 from flask import Flask
 
+from .api.engineering import engineering_bp
 from .api.executive import executive_bp
 from .api.health import health_bp
 from .api.history import history_bp
@@ -25,7 +26,9 @@ from .programming import programming_bp
 from .programming_engine import programming_engine_bp
 from .programming_pack2 import programming_pack2_bp
 from .programming_templates import programming_templates_bp
+from .release_readiness import release_readiness_bp
 from .security import init_security_headers
+from .services.release_readiness import ReleaseEvidenceService
 from .views import views_bp
 
 TESTING_SECRET_KEY = "testing-only-secret-key"
@@ -54,6 +57,8 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         SESSION_COOKIE_SAMESITE="Lax",
         LOGIN_RATE_LIMIT_ATTEMPTS=5,
         LOGIN_RATE_LIMIT_WINDOW_SECONDS=15 * 60,
+        REPOSITORY_ROOT=portal_root.parent,
+        RELEASE_EVIDENCE_MAX_AGE_SECONDS=24 * 60 * 60,
     )
 
     if test_config:
@@ -76,6 +81,11 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     if app.config["LEGACY_STARTUP_INITIALIZATION"] is None:
         app.config["LEGACY_STARTUP_INITIALIZATION"] = app.testing
     db.init_app(app)
+    app.extensions["release_evidence"] = ReleaseEvidenceService(
+        repository_root=Path(app.config["REPOSITORY_ROOT"]),
+        evidence_path=app.config.get("RELEASE_EVIDENCE_FILE"),
+        max_age_seconds=int(app.config["RELEASE_EVIDENCE_MAX_AGE_SECONDS"]),
+    )
     init_security_headers(app, prevent_caching=True)
     migrate.init_app(
         app,
@@ -92,10 +102,12 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(health_bp)
     init_auth(app)
     app.register_blueprint(executive_bp, url_prefix="/api/v1")
+    app.register_blueprint(engineering_bp, url_prefix="/api/v1")
     app.register_blueprint(history_bp, url_prefix="/api/v1")
     app.register_blueprint(platform_bp, url_prefix="/api/v1")
     app.register_blueprint(recommendations_bp, url_prefix="/api/v1")
     app.register_blueprint(views_bp)
+    app.register_blueprint(release_readiness_bp)
     app.register_blueprint(lead_magnets_bp)
     app.register_blueprint(programming_bp)
     app.register_blueprint(block_factory_bp)
