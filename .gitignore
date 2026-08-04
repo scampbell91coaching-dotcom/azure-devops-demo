@@ -16,6 +16,10 @@ crash.*.log
 
 # OS
 .DS_Store
+
+# KeePass databases and lock files must remain outside Git
+*.kdbx
+*.kdbx.lock
 /argocd
 
 # Locally generated Azure federated credential definitions
