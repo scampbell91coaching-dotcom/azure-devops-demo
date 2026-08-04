@@ -82,7 +82,7 @@ jobs:
 
       - name: Upload Trivy SARIF
         if: always() && hashFiles('trivy-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@b611370bb5703a7efb587f9c9d136a0bb02c5e5a
+        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa
         with:
           sarif_file: trivy-results.sarif
 
