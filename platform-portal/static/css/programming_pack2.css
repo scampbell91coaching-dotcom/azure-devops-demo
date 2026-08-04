@@ -16,8 +16,17 @@
 }
 
 .autosave-status.is-error {
-  color: #ef9f96;
+  color: var(--coach-danger);
 }
+
+.programming-template-strip { display: grid; gap: 1rem; }
+.programming-template-strip h2 { margin: .2rem 0 0; color: var(--coach-heading); font-family: var(--coach-display); font-size: 1.75rem; }
+.programming-template-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
+.programming-template-card { display: grid; gap: .6rem; border: 1px solid var(--coach-border); padding: 1rem; background: var(--coach-panel); }
+.programming-template-card > strong { color: var(--coach-accent-soft); font-family: var(--coach-display); font-size: 1.55rem; }
+.programming-template-card > span, .programming-template-card p, .programming-template-card label { color: var(--coach-muted); }
+.programming-template-card p { margin: 0; }
+.programming-template-card label { font-size: .82rem; }
 
 .builder-toolbar {
   display: flex;
@@ -41,6 +50,7 @@
 
 .programming-sheet {
   overflow-x: auto;
+  border: 1px solid var(--coach-border);
 }
 
 .programming-sheet__head,
@@ -72,6 +82,8 @@
 .programming-sheet__row.is-dragging {
   opacity: 0.45;
 }
+
+.programming-sheet__row:hover { background: var(--coach-panel-raised); }
 
 .programming-sheet__row input,
 .programming-sheet__row textarea,
@@ -113,7 +125,7 @@
 }
 
 .sheet-delete-button:hover {
-  color: #ef9f96;
+  color: var(--coach-danger);
 }
 
 .sheet-add-button {
@@ -132,4 +144,6 @@
     align-items: stretch;
     flex-direction: column;
   }
+
+  .programming-template-grid { grid-template-columns: 1fr; }
 }

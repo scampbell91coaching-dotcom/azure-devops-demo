@@ -1,0 +1,5 @@
+{{- if .Values.image.digest }}
+{{- if not (regexMatch "^sha256:[a-f0-9]{64}$" .Values.image.digest) }}{{ fail "image.digest must be a sha256 digest" }}{{ end }}
+{{- else }}
+{{- if or (not .Values.image.tag) (eq .Values.image.tag "latest") (eq .Values.image.tag "main") (eq .Values.image.tag "master") }}{{ fail "image.tag must be immutable; mutable or empty tags are not allowed" }}{{ end }}
+{{- end }}

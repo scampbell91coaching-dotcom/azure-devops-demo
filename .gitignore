@@ -16,6 +16,10 @@ crash.*.log
 
 # OS
 .DS_Store
+
+# KeePass databases and lock files must remain outside Git
+*.kdbx
+*.kdbx.lock
 /argocd
 
 # Locally generated Azure federated credential definitions
@@ -26,6 +30,8 @@ crash.*.log
 evidence/raw/
 evidence/**/live-*.txt
 evidence/**/live-*.yaml
+/evidence/release/
+/evidence/azure-inventory/
 
 # Generated local operational dashboard
 dashboard/
@@ -45,3 +51,8 @@ platform-portal/data/public-leads.db-shm
 platform-portal/data/public-leads.db-wal
 platform-portal/Dockerfile.private
 .tmp/
+/evidence/github-inventory/
+node_modules/
+playwright-report/
+test-results/
+evidence/credential-audit/

@@ -1,1 +1,34 @@
-.programming-form{grid-template-columns:repeat(3,minmax(0,1fr)) auto;align-items:end}.programming-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}.programming-cards>a,.programming-cards>article{display:grid;gap:.45rem;border:1px solid var(--coach-border);padding:1rem;background:var(--coach-panel-soft);text-decoration:none}.programming-cards span,.programming-cards small{color:var(--coach-muted)}.programming-list{display:grid;gap:.75rem}.programming-list>div{display:flex;justify-content:space-between;gap:1rem;align-items:center;border:1px solid var(--coach-border);padding:.9rem;background:var(--coach-panel-soft)}.programming-list a{display:grid;text-decoration:none}.programming-list small{color:var(--coach-muted)}.prescription-form{grid-template-columns:2fr repeat(7,minmax(75px,1fr));align-items:end}.prescription-notes{grid-column:1/-1}@media(max-width:1050px){.programming-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.prescription-form{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:700px){.programming-form,.programming-cards,.prescription-form{grid-template-columns:1fr}.programming-list>div{align-items:stretch;flex-direction:column}}
+.programming-form { grid-template-columns: repeat(3, minmax(0, 1fr)) auto; align-items: end; }
+.programming-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.programming-cards > a, .programming-cards > article { display: grid; gap: .45rem; border: 1px solid var(--coach-border); border-top-color: var(--coach-accent); padding: 1rem; background: var(--coach-panel-soft); text-decoration: none; transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease; }
+.programming-cards > a:hover { background: var(--coach-panel-raised); border-color: var(--coach-accent); transform: translateY(-2px); }
+.programming-cards strong { color: var(--coach-heading); font-family: var(--coach-display); font-size: 1.35rem; }
+.programming-cards span, .programming-cards small { color: var(--coach-muted); }
+.programming-list { display: grid; gap: .75rem; }
+.programming-list > div { display: flex; justify-content: space-between; gap: 1rem; align-items: center; border: 1px solid var(--coach-border); padding: .9rem; background: var(--coach-panel-soft); }
+.programming-list a { display: grid; text-decoration: none; }
+.programming-list small { color: var(--coach-muted); }
+.prescription-form { grid-template-columns: 2fr repeat(7, minmax(75px, 1fr)); align-items: end; }
+.prescription-notes { grid-column: 1 / -1; }
+.week-editor__sessions { display: grid; gap: 1rem; }
+.week-lifecycle, .week-session__actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.week-session__heading { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--coach-border); }
+.week-session__heading h2 { margin: .2rem 0; color: var(--coach-heading); font-family: var(--coach-display); font-size: 1.65rem; }
+.week-session__heading p { margin: 0; color: var(--coach-muted); }
+.week-prescriptions { display: grid; gap: .75rem; }
+.week-prescription { border: 1px solid var(--coach-border); background: var(--coach-panel-soft); }
+.week-prescription[open] { border-color: var(--coach-border-strong); }
+.week-prescription summary { display: flex; justify-content: space-between; gap: 1rem; padding: .85rem; cursor: pointer; }
+.week-prescription summary::marker { color: var(--coach-accent); }
+.week-prescription summary span { color: var(--coach-muted); }
+.week-prescription__form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; padding: 1rem; border-top: 1px solid var(--coach-border); }
+.week-prescription__form label { display: grid; gap: .35rem; }
+.week-prescription__form label span { color: var(--coach-muted); font-size: .8rem; font-weight: 800; }
+.week-prescription__form input, .week-prescription__form select, .week-prescription__form textarea { box-sizing: border-box; width: 100%; border: 1px solid var(--coach-border); padding: .7rem; background: var(--coach-bg); color: var(--coach-text); font: inherit; }
+.week-prescription__delete { padding: 0 1rem 1rem; }
+.week-prescription--new { margin-top: .75rem; border-style: dashed; }
+.week-editor__exercise, .week-editor__notes { grid-column: span 2; }
+.week-editor__empty { color: var(--coach-muted); }
+@media (max-width: 1050px) { .programming-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } .prescription-form { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .week-prescription__form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .programming-form, .programming-cards, .prescription-form, .week-prescription__form { grid-template-columns: 1fr; } .programming-list > div, .week-session__heading, .week-prescription summary { align-items: stretch; flex-direction: column; } .week-editor__exercise, .week-editor__notes { grid-column: auto; } .week-session__actions > * { flex: 1 1 auto; } .week-session__actions button, .week-session__actions a { box-sizing: border-box; width: 100%; text-align: center; } }

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Release readiness | Traditional Strength Platform{% endblock %}
+{% block heading %}Release readiness{% endblock %}
+{% block subtitle %}The latest stored result from the repository release gate{% endblock %}
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/release_readiness.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="release-summary" aria-labelledby="release-status">
+  {% if result.available %}
+    {% set evidence = result.evidence %}
+    <div class="release-status release-status--{{ evidence.status }}" id="release-status">
+      {{ evidence.status | upper }}
+    </div>
+    <dl class="release-metadata">
+      <div><dt>Branch</dt><dd>{{ evidence.repository.branch }}</dd></div>
+      <div><dt>Commit</dt><dd><code>{{ evidence.repository.commit }}</code></dd></div>
+      <div><dt>Generated</dt><dd><time>{{ evidence.generated_at }}</time></dd></div>
+    </dl>
+  {% else %}
+    <div class="release-status release-status--not_ready" id="release-status">NOT_READY</div>
+    <p class="release-warning" role="status">{{ result.error }} Readiness cannot be confirmed.</p>
+  {% endif %}
+</section>
+
+{% if result.available %}
+  {% for title, checks in [('Required checks', result.evidence.required_checks), ('Optional checks', result.evidence.optional_checks)] %}
+    <section class="release-checks" aria-labelledby="checks-{{ loop.index }}">
+      <h2 id="checks-{{ loop.index }}">{{ title }}</h2>
+      {% if checks %}
+        <ul>
+          {% for check in checks %}
+            <li>
+              <span class="check-status check-status--{{ check.status }}">{{ check.status | upper }}</span>
+              <div><strong>{{ check.name }}</strong><p>{{ check.summary }}</p></div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No {{ title | lower }} were recorded.</p>
+      {% endif %}
+    </section>
+  {% endfor %}
+{% endif %}
+{% endblock %}

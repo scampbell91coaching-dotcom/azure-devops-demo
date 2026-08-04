@@ -9,17 +9,26 @@
   </header>
 
   <section class="coach-panel">
+    <p><strong>Status:</strong> {{ "Reviewed" if checkin.status == "reviewed" else "Pending review" }}</p>
     {% for flag in checkin.risk_flags %}
       <strong>{{ flag }}</strong>
     {% endfor %}
-    <p>{{ checkin.training_notes or "" }}</p>
-    <p>{{ checkin.nutrition_notes or "" }}</p>
-    <p>{{ checkin.general_notes or "" }}</p>
+    <dl>
+      <dt>Readiness</dt><dd>{{ checkin.recovery if checkin.recovery is not none else "—" }}</dd>
+      <dt>Fatigue</dt><dd>{{ checkin.fatigue if checkin.fatigue is not none else "—" }}</dd>
+      <dt>Sleep quality</dt><dd>{{ checkin.sleep_quality if checkin.sleep_quality is not none else "—" }}</dd>
+      <dt>Stress</dt><dd>{{ checkin.stress if checkin.stress is not none else "—" }}</dd>
+      <dt>Pain affected training</dt><dd>{{ "Yes" if checkin.pain_present else "No" }}</dd>
+    </dl>
+    {% if checkin.training_notes %}<h3>Training notes</h3><p>{{ checkin.training_notes }}</p>{% endif %}
+    {% if checkin.nutrition_notes %}<h3>Nutrition notes</h3><p>{{ checkin.nutrition_notes }}</p>{% endif %}
+    {% if checkin.general_notes %}<h3>General notes</h3><p>{{ checkin.general_notes }}</p>{% endif %}
   </section>
 
   <form class="coach-panel coach-form" method="post" action="{{ url_for('checkins.review', checkin_id=checkin.id) }}">
-    <label><span>Internal coach notes</span><textarea name="coach_notes">{{ checkin.coach_notes or "" }}</textarea></label>
-    <button class="coach-primary-button" type="submit">Mark reviewed</button>
+    <label><span>Response to athlete</span><textarea name="coach_notes" required>{{ checkin.coach_notes or "" }}</textarea></label>
+    {% if errors is defined and errors.coach_notes %}<p class="coach-form-error" role="alert">{{ errors.coach_notes }}</p>{% endif %}
+    <button class="coach-primary-button" type="submit">{{ "Update response" if checkin.status == "reviewed" else "Send response and mark reviewed" }}</button>
   </form>
 </section>
 {% endblock %}

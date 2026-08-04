@@ -25,6 +25,7 @@ spec:
         app: flask-web
         {{- include "flask-app.selectorLabels" . | nindent 8 }}
     spec:
+      automountServiceAccountToken: false
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds | default 30 }}
       securityContext:
         runAsNonRoot: true
@@ -43,7 +44,11 @@ spec:
       {{- end }}
       containers:
         - name: flask-web
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          {{- if .Values.image.digest }}
+          image: {{ printf "%s@%s" .Values.image.repository .Values.image.digest | quote }}
+          {{- else }}
+          image: {{ printf "%s:%s" .Values.image.repository (required "image.tag is required when image.digest is unset" .Values.image.tag) | quote }}
+          {{- end }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext:
             allowPrivilegeEscalation: false
@@ -57,6 +62,18 @@ spec:
               containerPort: {{ .Values.containerPort }}
               protocol: TCP
           env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: flask-runtime-secrets
+                  key: SECRET_KEY
+            {{- if .Values.database.enabled }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName | quote }}
+                  key: {{ .Values.database.secretKey | quote }}
+            {{- end }}
             - name: APPLICATIONINSIGHTS_CONNECTION_STRING
               valueFrom:
                 secretKeyRef:
@@ -99,5 +116,16 @@ spec:
                   - /bin/sh
                   - -c
                   - sleep {{ .Values.preStopSleepSeconds | default 10 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: application-data
+              mountPath: /app/data
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: application-data
+          emptyDir: {}

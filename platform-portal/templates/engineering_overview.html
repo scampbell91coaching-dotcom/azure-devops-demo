@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Engineering Overview · Traditional Strength Platform{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/engineering_overview.css') }}">{% endblock %}
+{% block heading %}Engineering overview{% endblock %}
+{% block subtitle %}A read-only index of existing platform health, controls, delivery evidence and local tooling.{% endblock %}
+{% block content %}
+<p class="engineering-source">
+  {% if overview.generated_at %}Platform status collected {{ overview.generated_at }}.{% else %}<strong>Live data unavailable.</strong> Generate the platform status snapshot to populate health, security and GitOps.{% endif %}
+</p>
+<section class="engineering-grid" aria-label="Engineering status summary">
+  {% for name, item in [('Health', overview.health), ('Security', overview.security), ('GitOps readiness', overview.gitops), ('Release readiness', overview.release)] %}
+  <article class="engineering-card status-{{ item.state }}">
+    <div class="engineering-card__heading"><h2>{{ name }}</h2><span class="engineering-pill">{{ item.label }}</span></div>
+    <p>{{ item.detail }}{% if name == 'Release readiness' and item.generated_at %} Generated {{ item.generated_at }}.{% endif %}</p>
+    {% if item.href %}<a href="{{ item.href }}">Open existing {{ name | lower }} view →</a>{% elif name == 'Release readiness' %}<code>scripts/release/release-evidence</code>{% endif %}
+  </article>
+  {% endfor %}
+</section>
+<section class="section" aria-labelledby="toolchain-heading">
+  <h2 id="toolchain-heading">Toolchain availability</h2>
+  <p class="sub">Executable discovery on this portal host only. These results do not assert credentials, connectivity, versions or production access.</p>
+  <div class="engineering-tools">
+    {% for tool in overview.toolchain %}
+    <article class="engineering-tool status-{{ tool.state }}"><strong>{{ tool.name }}</strong><span>{{ tool.label }}</span><small>{{ tool.detail }}</small></article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

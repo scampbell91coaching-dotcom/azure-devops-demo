@@ -1,0 +1,127 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "dashboard" %}
+{% block title %}Daily review | Traditional Strength{% endblock %}
+
+{% macro athlete_link(athlete) -%}
+  <a href="{{ url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}">{{ athlete.full_name }}</a>
+{%- endmacro %}
+
+{% block content %}
+<section class="coach-page coach-dashboard">
+  <header class="coach-page__header">
+    <span class="coach-eyebrow">Coach workspace</span>
+    <h1>Daily review</h1>
+    <p>Current coaching actions and the latest information already recorded in the platform.</p>
+  </header>
+
+  <div class="coach-dashboard__summary" aria-label="Daily review summary">
+    <article class="coach-metric"><span>Requiring review</span><strong>{{ dashboard.requiring_review | length }}</strong></article>
+    <article class="coach-metric"><span>Pending today</span><strong>{{ dashboard.pending_checkins | length }}</strong></article>
+    <article class="coach-metric"><span>Pain or fatigue flags</span><strong>{{ dashboard.health_flags | length }}</strong></article>
+    <article class="coach-metric"><span>No current programme</span><strong>{{ dashboard.without_programme | length }}</strong></article>
+  </div>
+
+  <div class="coach-dashboard__grid">
+    <section class="coach-panel coach-dashboard__wide">
+      <div class="coach-panel__heading coach-panel__heading--split">
+        <div><span class="coach-eyebrow">Action queue</span><h2>Athletes requiring review</h2></div>
+        <span class="coach-count">{{ dashboard.requiring_review | length }}</span>
+      </div>
+      {% if dashboard.requiring_review %}
+        <div class="coach-dashboard-list">
+          {% for item in dashboard.requiring_review %}
+            <article>
+              <div><strong>{{ athlete_link(item.athlete) }}</strong><span>{{ item.kind }} · {{ item.submitted_at.strftime("%d %b %Y") }}</span></div>
+              {% if item.url_kind == "weekly" %}
+                <a class="coach-link-button" href="{{ url_for('checkins.detail', checkin_id=item.item_id) }}">Review check-in</a>
+              {% else %}
+                <a class="coach-link-button" href="{{ url_for('athletes.athlete_dashboard', athlete_id=item.athlete.id) }}#nutrition-checkins">Review nutrition</a>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="coach-empty-state"><h3>Review queue clear</h3><p>No submitted weekly or nutrition check-ins are awaiting review.</p></div>
+      {% endif %}
+    </section>
+
+    <section class="coach-panel">
+      <div class="coach-panel__heading"><span class="coach-eyebrow">Today</span><h2>Pending check-ins</h2></div>
+      {% if dashboard.pending_checkins %}
+        <div class="coach-dashboard-list">
+          {% for item in dashboard.pending_checkins %}
+            <article><div><strong>{{ athlete_link(item.athlete) }}</strong><span>Due today</span></div><a href="{{ url_for('checkins.new', athlete_id=item.athlete.id) }}">Open form</a></article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="coach-empty-state"><h3>Nothing due today</h3><p>No active check-in workflows are outstanding today.</p></div>
+      {% endif %}
+    </section>
+
+    <section class="coach-panel">
+      <div class="coach-panel__heading"><span class="coach-eyebrow">Last 14 days</span><h2>Recent check-ins</h2></div>
+      {% if dashboard.recent_checkins %}
+        <div class="coach-dashboard-list">
+          {% for item in dashboard.recent_checkins %}
+            <article><div><strong>{{ athlete_link(item.athlete) }}</strong><span>{{ item.week_ending.strftime("%d %b") }} · {{ item.status | title }}</span></div><a href="{{ url_for('checkins.detail', checkin_id=item.id) }}">View</a></article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="coach-empty-state"><h3>No recent check-ins</h3><p>No weekly check-ins were recorded in the last 14 days.</p></div>
+      {% endif %}
+    </section>
+
+    <section class="coach-panel coach-dashboard__wide">
+      <div class="coach-panel__heading"><span class="coach-eyebrow">Latest weekly check-in</span><h2>Pain and fatigue flags</h2></div>
+      {% if dashboard.health_flags %}
+        <div class="coach-dashboard-list">
+          {% for item in dashboard.health_flags %}
+            <article><div><strong>{{ athlete_link(item.athlete) }}</strong><span>{{ item.flags | join(" · ") }} · week ending {{ item.checkin.week_ending.strftime("%d %b %Y") }}</span></div><a class="coach-link-button" href="{{ url_for('checkins.detail', checkin_id=item.checkin.id) }}">View check-in</a></article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="coach-empty-state"><h3>No pain or high fatigue flags</h3><p>No athlete's latest weekly check-in reports pain or fatigue of 8 or higher.</p></div>
+      {% endif %}
+    </section>
+
+    <section class="coach-panel">
+      <div class="coach-panel__heading"><span class="coach-eyebrow">Programming</span><h2>Programmes ending soon</h2></div>
+      {% if dashboard.programmes_ending_soon %}
+        <div class="coach-dashboard-list">
+          {% for block in dashboard.programmes_ending_soon %}
+            <article><div><strong>{{ athlete_link(block.athlete) }}</strong><span>{{ block.name }}</span></div><a href="{{ url_for('programming.block', block_id=block.id) }}">View programme</a></article>
+          {% endfor %}
+        </div>
+      {% elif not dashboard.programme_timing_available %}
+        <div class="coach-empty-state"><h3>Programme timing unavailable</h3><p>Blocks contain ordered weeks, but no schedule dates or current-week progress are recorded, so ending-soon status cannot be calculated.</p></div>
+      {% else %}
+        <div class="coach-empty-state"><h3>No programmes ending soon</h3><p>No current programmes are near their recorded end.</p></div>
+      {% endif %}
+    </section>
+
+    <section class="coach-panel">
+      <div class="coach-panel__heading"><span class="coach-eyebrow">Programming</span><h2>No current programme</h2></div>
+      {% if dashboard.without_programme %}
+        <div class="coach-dashboard-list">
+          {% for athlete in dashboard.without_programme %}
+            <article><div><strong>{{ athlete_link(athlete) }}</strong><span>Active athlete</span></div><a href="{{ url_for('programming.athlete_program', athlete_id=athlete.id) }}">Open programming</a></article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="coach-empty-state"><h3>Every active athlete has a programme</h3><p>No programming gaps found.</p></div>
+      {% endif %}
+    </section>
+
+    <section class="coach-panel coach-dashboard__wide">
+      <div class="coach-panel__heading"><span class="coach-eyebrow">Latest available</span><h2>Bodyweight and nutrition</h2></div>
+      {% if dashboard.nutrition %}
+        <div class="coach-table-wrap"><table class="coach-table"><thead><tr><th>Athlete</th><th>Bodyweight</th><th>Calories</th><th>Protein</th><th>Recorded</th></tr></thead><tbody>
+          {% for item in dashboard.nutrition %}<tr><td>{{ athlete_link(item.athlete) }}</td><td>{{ "%.1f kg" | format(item.bodyweight_kg) if item.bodyweight_kg is not none else "Unavailable" }}</td><td>{{ item.calories if item.calories is not none else "Unavailable" }}</td><td>{{ (item.protein_g ~ " g") if item.protein_g is not none else "Unavailable" }}</td><td>{{ item.recorded_at.strftime("%d %b %Y") }}<small class="coach-dashboard__source">{{ item.source }}</small></td></tr>{% endfor %}
+        </tbody></table></div>
+      {% else %}
+        <div class="coach-empty-state"><h3>No bodyweight or nutrition data</h3><p>This information has not been recorded for any athlete.</p></div>
+      {% endif %}
+    </section>
+  </div>
+</section>
+{% endblock %}

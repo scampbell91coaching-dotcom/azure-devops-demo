@@ -23,6 +23,10 @@ def resolve_database_uri(
     configured_uri = os.getenv(environment_variable)
 
     if configured_uri:
+        if configured_uri.startswith("postgres://"):
+            return configured_uri.replace("postgres://", "postgresql+psycopg://", 1)
+        if configured_uri.startswith("postgresql://"):
+            return configured_uri.replace("postgresql://", "postgresql+psycopg://", 1)
         return configured_uri
 
     local_database = application_root / "data" / local_filename

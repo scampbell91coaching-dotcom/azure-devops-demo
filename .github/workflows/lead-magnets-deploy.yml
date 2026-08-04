@@ -10,8 +10,7 @@ on:
       - ".github/workflows/lead-magnets-deploy.yml"
   workflow_dispatch:
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 env:
   ACR_LOGIN_SERVER: stevedevopslab6280.azurecr.io
@@ -21,12 +20,16 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+      id-token: write
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Azure login
-        uses: azure/login@v2
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -35,7 +38,7 @@ jobs:
       - name: Login to Azure Container Registry
         run: az acr login --name "${ACR_LOGIN_SERVER%%.*}"
 
-      - name: Build and push image
+      - name: Build image
         working-directory: platform-portal
         run: |
           set -euo pipefail
@@ -46,6 +49,39 @@ jobs:
             -f Dockerfile.public \
             -t "$IMAGE" \
             .
+
+      - name: Scan image with Trivy (blocking)
+        uses: aquasecurity/trivy-action@76071ef0d7ec797419534a183b498b4d6366cf37
+        with:
+          image-ref: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
+      - name: Generate image scan SARIF
+        if: always()
+        uses: aquasecurity/trivy-action@76071ef0d7ec797419534a183b498b4d6366cf37
+        with:
+          image-ref: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          format: sarif
+          output: trivy-lead-magnets-results.sarif
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+
+      - name: Upload image scan SARIF
+        if: always() && hashFiles('trivy-lead-magnets-results.sarif') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: trivy-lead-magnets-sarif
+          path: trivy-lead-magnets-results.sarif
+          retention-days: 14
+
+      - name: Push image
+        working-directory: platform-portal
+        run: |
+          set -euo pipefail
+
+          IMAGE="${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${GITHUB_SHA}"
 
           docker push "$IMAGE"
 

@@ -1,0 +1,84 @@
+name: Toolchain Audit
+
+on:
+  pull_request:
+    paths:
+      - ".python-version"
+      - ".terraform-version"
+      - ".nvmrc"
+      - ".toolchain-versions.env"
+      - "renovate.json5"
+      - ".github/workflows/toolchain-audit.yml"
+      - ".github/workflows/toolchain-updates.yml"
+
+  workflow_dispatch:
+
+  schedule:
+    - cron: "30 19 * * 2"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate pinned toolchain
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Read pinned versions
+        id: versions
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          source .toolchain-versions.env
+
+          {
+            echo "python=$(tr -d '[:space:]' < .python-version)"
+            echo "terraform=$(tr -d '[:space:]' < .terraform-version)"
+            echo "node=$(tr -d '[:space:]' < .nvmrc)"
+            echo "helm=${HELM_VERSION}"
+            echo "trivy=${TRIVY_VERSION}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: ${{ steps.versions.outputs.python }}
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: ${{ steps.versions.outputs.node }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: ${{ steps.versions.outputs.terraform }}
+
+      - name: Set up Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4
+        with:
+          version: v${{ steps.versions.outputs.helm }}
+
+      - name: Set up Trivy
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514
+        with:
+          version: v${{ steps.versions.outputs.trivy }}
+          cache: true
+
+      - name: Report installed versions
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python --version
+          node --version
+          npm --version
+          terraform version
+          helm version --short
+          trivy version

@@ -2,14 +2,53 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from flask import Blueprint, abort, redirect, render_template, request, url_for
+from flask import (
+    Blueprint,
+    abort,
+    g,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 from .extensions import db
 from .models.athlete import Athlete
 from .models.checkins import AthleteCheckinSettings
 from .models.nutrition_checkin import NutritionCheckIn
+from .services.athlete_dashboard import get_athlete_dashboard
+from .services.nutrition_dashboard import get_nutrition_dashboard
 
 athletes_bp = Blueprint("athletes", __name__)
+
+
+@athletes_bp.get("/nutrition")
+def nutrition_dashboard():
+    return render_template(
+        "nutrition/index.html",
+        dashboard=get_nutrition_dashboard(),
+    )
+
+
+@athletes_bp.get("/athlete/dashboard")
+def dashboard():
+    user = g.get("current_user")
+    athlete_id = user.athlete_id if user is not None else session.get("athlete_id")
+    if isinstance(athlete_id, bool) or not isinstance(athlete_id, int):
+        abort(401)
+
+    dashboard_data = get_athlete_dashboard(
+        athlete_id,
+        today=datetime.now(UTC).date(),
+    )
+    if dashboard_data is None:
+        abort(401)
+
+    return render_template(
+        "athletes/athlete_dashboard.html",
+        dashboard=dashboard_data,
+    )
 
 
 def _optional_float(value: str | None) -> float | None:
@@ -176,6 +215,8 @@ def create_nutrition_checkin(athlete_id: int):
     db.session.add(checkin)
     db.session.commit()
 
+    if g.get("current_user") is not None and g.current_user.role == "athlete":
+        return redirect(url_for("athletes.dashboard"))
     return redirect(
         url_for(
             "athletes.athlete_dashboard",

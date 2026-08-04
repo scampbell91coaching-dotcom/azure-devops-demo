@@ -88,7 +88,7 @@ kubectl get endpointslice -n "$NAMESPACE" -o yaml
 kubectl get pods -n "$NAMESPACE" --show-labels
 ```
 
-Confirm the selector is `app=flask-web`, probes pass and target port is 5000.
+Confirm the selector is `app=flask-web`, probes pass and target port is 8090.
 
 ## HPA Does Not Scale
 
@@ -122,6 +122,10 @@ kubectl get hpa,pods -n "$NAMESPACE" -w
 
 ## Roll Back a Bad Release
 
+First determine whether the migration was backward compatible. A failed migration prevents the new Deployment rollout, so normally no image rollback is needed: inspect the retained failed Job without exposing environment values, fix the migration in application-owned code, and promote a new immutable image. Do not automatically downgrade a database schema; Alembic downgrades and PostgreSQL point-in-time restores require a separately reviewed data-recovery decision.
+
+For a bad web rollout with a compatible schema, revert the GitOps promotion commit:
+
 ```bash
 git log --oneline -- flask-app/values-production.yaml
 git revert <bad-promotion-commit>
@@ -138,6 +142,8 @@ kubectl rollout undo deployment/flask-web -n "$NAMESPACE"
 ```
 
 Then correct Git, because Argo CD may restore the Git version.
+
+Treat `kubectl rollout undo` as temporary containment only. Argo CD self-healing will restore the image and replica settings declared on `main`; immediately revert or correct `flask-app/values-production.yaml` in Git and wait for reconciliation. If the scale-out overlay was enabled, revert that Git change as well. Never roll the image back across an incompatible schema change until the database owner has approved the recovery plan.
 
 ## Pod Failure Test
 
@@ -217,7 +223,12 @@ helm lint flask-app -f flask-app/values-production.yaml
 helm template flask-web-prod flask-app \
   -f flask-app/values-production.yaml \
   > /tmp/flask-production.yaml
-kubectl apply --dry-run=server -f /tmp/flask-production.yaml
+helm template flask-web-prod flask-app \
+  -f flask-app/values-production.yaml \
+  -f flask-app/values-scale-out.yaml \
+  > /tmp/flask-production-scale-out.yaml
+kubectl create --dry-run=client -f /tmp/flask-production.yaml >/dev/null
+kubectl create --dry-run=client -f /tmp/flask-production-scale-out.yaml >/dev/null
 ```
 
 ## Evidence Collection

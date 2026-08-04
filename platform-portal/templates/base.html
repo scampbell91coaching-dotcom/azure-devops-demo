@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/recommendations.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/executive_dashboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/lead_magnet.css') }}">
+  {% block page_styles %}{% endblock %}
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/athletes.css') }}?v=3"
@@ -21,6 +22,7 @@
       <div class="brand-sub">Operations Portal</div>
       <nav class="nav" aria-label="Portal navigation">
         <a href="/" class="{% if page == 'overview' %}active{% endif %}">Overview</a>
+        <a href="/engineering" class="{% if page == 'engineering' %}active{% endif %}">Engineering</a>
         <a href="/infrastructure" class="{% if page == 'infrastructure' %}active{% endif %}">Infrastructure</a>
         <a href="/security" class="{% if page == 'security' %}active{% endif %}">Security</a>
         <a href="/performance" class="{% if page == 'performance' %}active{% endif %}">Performance</a>
@@ -28,6 +30,7 @@
         <a href="/observability" class="{% if page == 'observability' %}active{% endif %}">Observability</a>
         <a href="/resilience" class="{% if page == 'resilience' %}active{% endif %}">Resilience</a>
         <a href="/history" class="{% if page == 'history' %}active{% endif %}">History</a>
+        <a href="/release-readiness" class="{% if page == 'release-readiness' %}active{% endif %}">Release readiness</a>
   <a href="/recommendations" class="{% if page == 'recommendations' %}active{% endif %}">Recommendations</a>
 </nav>
     </aside>
@@ -38,6 +41,11 @@
           <p class="sub">{% block subtitle %}{% endblock %}</p>
         </div>
         <div class="sub" id="generated">Loading status…</div>
+        {% if current_user %}
+          <form method="post" action="{{ url_for('auth.logout') }}">
+            <button type="submit">Sign out</button>
+          </form>
+        {% endif %}
       </header>
       {% block content %}{% endblock %}
     </main>

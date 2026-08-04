@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <meta name="theme-color" content="#08111f">
+  <meta name="theme-color" content="#0b0d0c">
 
   <title>{% block title %}Traditional Strength Coach{% endblock %}</title>
 
@@ -25,7 +25,7 @@
 
   <header class="coach-topbar">
     <div class="coach-topbar__inner">
-      <a class="coach-brand" href="/athletes">
+      <a class="coach-brand" href="{{ url_for('coach_dashboard.index') }}">
         <span class="coach-brand__mark" aria-hidden="true">TS</span>
 
         <span class="coach-brand__copy">
@@ -51,6 +51,13 @@
         data-coach-navigation
       >
         <a
+          href="{{ url_for('coach_dashboard.index') }}"
+          {% if coach_section == "dashboard" %}aria-current="page"{% endif %}
+        >
+          Dashboard
+        </a>
+
+        <a
           href="/athletes"
           {% if coach_section == "athletes" %}aria-current="page"{% endif %}
         >
@@ -73,8 +80,15 @@
         </a>
 
 <a href="/programming" {% if coach_section == "programming" %}aria-current="page"{% endif %}>Programming</a>
-        <span class="coach-navigation__disabled">Check-ins</span>
-        <span class="coach-navigation__disabled">Meet Prep</span>
+        <a
+          href="{{ url_for('checkins.index') }}"
+          {% if coach_section == "checkins" %}aria-current="page"{% endif %}
+        >Check-ins</a>
+        <a
+          href="{{ url_for('meet_day.index') }}"
+          aria-label="Meet Prep: Meet Day"
+          {% if coach_section == "meet_day" %}aria-current="page"{% endif %}
+        >Meet Day</a>
       </nav>
 
       <div class="coach-topbar__actions">
@@ -84,6 +98,9 @@
         >
           Platform
         </a>
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <button class="coach-link-button" type="submit">Sign out</button>
+        </form>
       </div>
     </div>
   </header>

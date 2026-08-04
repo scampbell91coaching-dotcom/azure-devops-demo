@@ -9,6 +9,9 @@ on:
       - "Dockerfile"
       - "requirements*.txt"
       - ".github/workflows/platform-security.yml"
+      - "scripts/platform/check-no-keepass-files.sh"
+      - "**/*.kdbx"
+      - "**/*.kdbx.lock"
   push:
     branches: [main]
     paths:
@@ -18,6 +21,9 @@ on:
       - "Dockerfile"
       - "requirements*.txt"
       - ".github/workflows/platform-security.yml"
+      - "scripts/platform/check-no-keepass-files.sh"
+      - "**/*.kdbx"
+      - "**/*.kdbx.lock"
   workflow_dispatch:
 
 permissions:
@@ -29,13 +35,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Reject tracked KeePass files
+        run: scripts/platform/check-no-keepass-files.sh
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4
 
       - name: Helm lint
         run: helm lint flask-app -f flask-app/values-production.yaml
+
+      - name: Validate proposed observability resources
+        run: scripts/validate-observability.sh
 
       - name: Render production chart
         run: |
@@ -53,32 +65,53 @@ jobs:
           print(f"Validated presence of {len(files)} YAML files")
           PY
 
-      - name: Scan repository and IaC
-        uses: aquasecurity/trivy-action@v0.36.0
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514
+        with:
+          version: v0.70.0
+          cache: true
+
+      - name: Scan repository, secrets and IaC (blocking)
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
         with:
           scan-type: fs
+          skip-setup-trivy: true
           scan-ref: .
+          scanners: vuln,secret,misconfig
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          skip-dirs: node_modules,.venv,.terraform,__pycache__,playwright-report,test-results
+
+      - name: Generate Trivy SARIF
+        if: always()
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
+        with:
+          scan-type: fs
+          skip-setup-trivy: true
+          scan-ref: .
+          scanners: vuln,secret,misconfig
           format: sarif
           output: trivy-results.sarif
           severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
+          exit-code: "0"
+          skip-dirs: node_modules,.venv,.terraform,__pycache__,playwright-report,test-results
 
       - name: Upload Trivy SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('trivy-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa
         with:
           sarif_file: trivy-results.sarif
 
       - name: Generate repository SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610
         with:
           path: .
           format: spdx-json
           output-file: sbom.spdx.json
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: repository-sbom
           path: sbom.spdx.json

@@ -1,0 +1,91 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+
+  "extends": [
+    "config:recommended"
+  ],
+
+  "enabledManagers": [
+    "custom.regex",
+    "terraform-version"
+  ],
+
+  "dependencyDashboard": true,
+  "automerge": false,
+  "prConcurrentLimit": 5,
+  "branchConcurrentLimit": 5,
+
+  "schedule": [
+    "after 7pm on tuesday and before 10pm on tuesday"
+  ],
+
+  "timezone": "Europe/London",
+
+  "labels": [
+    "dependencies",
+    "maintenance-window"
+  ],
+
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update pinned Python runtime",
+      "managerFilePatterns": [
+        "/^\\.python-version$/"
+      ],
+      "matchStrings": [
+        "(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+      ],
+      "depNameTemplate": "python",
+      "datasourceTemplate": "python-version",
+      "versioningTemplate": "python"
+    },
+    {
+      "customType": "regex",
+      "description": "Update pinned Node LTS runtime",
+      "managerFilePatterns": [
+        "/^\\.nvmrc$/"
+      ],
+      "matchStrings": [
+        "(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+      ],
+      "depNameTemplate": "node",
+      "datasourceTemplate": "node-version",
+      "versioningTemplate": "node"
+    },
+    {
+      "customType": "regex",
+      "description": "Update supplementary toolchain versions",
+      "managerFilePatterns": [
+        "/^\\.toolchain-versions\\.env$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[^ ]+) depName=(?<depName>[^ ]+) packageName=(?<packageName>[^ ]+) versioning=(?<versioning>[^\\s]+)\\s+[A-Z_]+_VERSION=(?<currentValue>[^\\s]+)"
+      ]
+    }
+  ],
+
+  "packageRules": [
+    {
+      "description": "Keep Python on the supported 3.12 release line",
+      "matchDepNames": [
+        "python"
+      ],
+      "allowedVersions": "3.12.x"
+    },
+    {
+      "description": "Keep Node on the Node 24 LTS release line",
+      "matchDepNames": [
+        "node"
+      ],
+      "allowedVersions": "24.x"
+    },
+    {
+      "description": "Keep Helm on major version 3",
+      "matchPackageNames": [
+        "helm/helm"
+      ],
+      "allowedVersions": "3.x"
+    }
+  ]
+}

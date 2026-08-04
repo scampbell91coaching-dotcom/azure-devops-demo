@@ -1,0 +1,124 @@
+{% extends "coach/base.html" %}
+
+{% set coach_section = "nutrition" %}
+
+{% block title %}Nutrition | Traditional Strength{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/nutrition.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="nutrition-page">
+  <header class="nutrition-header">
+    <div>
+      <span class="coach-eyebrow">Coaching overview</span>
+      <h1>Nutrition</h1>
+      <p>Recorded check-ins only. No targets or missing days are inferred.</p>
+    </div>
+    <div class="nutrition-tally" aria-label="Athletes with recorded nutrition data">
+      <strong>{{ dashboard.logged_count }}</strong>
+      <span>of {{ dashboard.athletes | length }} athletes logged</span>
+    </div>
+  </header>
+
+  {% if dashboard.athletes %}
+    <div class="nutrition-grid">
+      {% for item in dashboard.athletes %}
+        <article class="nutrition-card">
+          <header class="nutrition-card__header">
+            <div>
+              <span class="nutrition-state {% if item.has_recorded_data %}nutrition-state--logged{% endif %}">
+                {% if item.has_recorded_data %}Recorded data{% else %}No recorded data{% endif %}
+              </span>
+              <h2>{{ item.athlete.full_name }}</h2>
+            </div>
+            <a href="{{ url_for('athletes.athlete_dashboard', athlete_id=item.athlete.id) }}">
+              Athlete record →
+            </a>
+          </header>
+
+          {% if item.latest %}
+            <div class="nutrition-metrics">
+              <div>
+                <span>Latest calories</span>
+                <strong>{{ item.latest.calories if item.latest.calories is not none else "Not recorded" }}</strong>
+              </div>
+              <div>
+                <span>Latest protein</span>
+                <strong>
+                  {% if item.latest.protein_g is not none %}{{ item.latest.protein_g }} g{% else %}Not recorded{% endif %}
+                </strong>
+              </div>
+              <div>
+                <span>Adherence</span>
+                <strong>
+                  {% if item.latest.adherence is not none %}{{ item.latest.adherence }}/10{% else %}Not recorded{% endif %}
+                </strong>
+              </div>
+            </div>
+            <p class="nutrition-source">
+              Source: {{ item.latest.source }} · Recorded {{ item.latest.recorded_on.strftime("%d %b %Y") }}
+            </p>
+
+            <section class="nutrition-section">
+              <h3>Recent bodyweight</h3>
+              {% if item.recent_bodyweights %}
+                <div class="nutrition-table-wrap">
+                  <table>
+                    <thead><tr><th>Date</th><th>Bodyweight</th><th>Source</th></tr></thead>
+                    <tbody>
+                      {% for weight in item.recent_bodyweights %}
+                        <tr>
+                          <td>{{ weight.recorded_on.strftime("%d %b %Y") }}</td>
+                          <td>{{ weight.bodyweight_kg }} kg</td>
+                          <td>{{ weight.source }}</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% else %}
+                <p class="nutrition-empty">No bodyweight has been recorded in a check-in.</p>
+              {% endif %}
+            </section>
+
+            <section class="nutrition-section nutrition-weekly">
+              <h3>Latest weekly summary</h3>
+              {% if item.latest_weekly %}
+                <dl>
+                  <div><dt>Week ending</dt><dd>{{ item.latest_weekly.recorded_on.strftime("%d %b %Y") }}</dd></div>
+                  <div><dt>Calories</dt><dd>{{ item.latest_weekly.calories if item.latest_weekly.calories is not none else "Not recorded" }}</dd></div>
+                  <div><dt>Protein</dt><dd>{% if item.latest_weekly.protein_g is not none %}{{ item.latest_weekly.protein_g }} g{% else %}Not recorded{% endif %}</dd></div>
+                  <div><dt>Adherence</dt><dd>{% if item.latest_weekly.adherence is not none %}{{ item.latest_weekly.adherence }}/10{% else %}Not recorded{% endif %}</dd></div>
+                </dl>
+                <p class="nutrition-source">Source: Weekly check-in</p>
+              {% else %}
+                <p class="nutrition-empty">No dated nutrition-enabled weekly check-in is available.</p>
+              {% endif %}
+            </section>
+
+            <footer>
+              Last submission: {{ item.last_recorded_at.strftime("%d %b %Y at %H:%M") }}
+            </footer>
+          {% else %}
+            <div class="nutrition-empty nutrition-empty--large">
+              <h3>No nutrition data yet</h3>
+              <p>Calories, protein, adherence, and check-in bodyweight will appear after a nutrition submission.</p>
+              {% if item.athlete.bodyweight_kg is not none %}
+                <p>Profile bodyweight: {{ item.athlete.bodyweight_kg }} kg <span>· Source: Athlete profile (no record date)</span></p>
+              {% endif %}
+            </div>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="nutrition-empty nutrition-empty--page">
+      <h2>No athletes yet</h2>
+      <p>Add an athlete before nutrition records can be displayed.</p>
+      <a href="{{ url_for('athletes.athlete_list') }}">Go to athletes →</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

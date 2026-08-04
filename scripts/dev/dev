@@ -1,0 +1,160 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO_ROOT=$(CDPATH='' cd -- "$SCRIPT_DIR/../.." && pwd)
+PORTAL="$REPO_ROOT/platform-portal"
+
+fail() {
+  printf 'developer command failed: %s\n' "$1" >&2
+  exit 1
+}
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+portal_python() {
+  if [[ -x "$PORTAL/.venv/bin/python" ]]; then
+    printf '%s\n' "$PORTAL/.venv/bin/python"
+  else
+    command -v python3
+  fi
+}
+
+portal_ruff() {
+  if [[ -x "$PORTAL/.venv/bin/ruff" ]]; then
+    printf '%s\n' "$PORTAL/.venv/bin/ruff"
+  else
+    command -v ruff
+  fi
+}
+
+help_text() {
+  cat <<'EOF'
+Traditional Strength local developer commands
+
+  make setup-check    Check required tools and installed dependencies
+  make lint           Check Python lint/format and shell scripts
+  make test           Run root and platform-portal pytest suites
+  make playwright     Run browser tests on a disposable local server/database
+  make helm-validate  Lint and render local Helm charts (never installs them)
+  make db-reset       Reset only a loopback DB named traditional_strength_test
+  make release-gate   Run the existing read-only full release-evidence gate
+  make help           Show this help
+
+No command deploys, runs Terraform apply, contacts Kubernetes, or reads Azure.
+See docs/local-development.md for prerequisites and troubleshooting.
+EOF
+}
+
+setup_check() {
+  local missing=0 command_name
+  for command_name in git python3 node npm helm terraform; do
+    if have "$command_name"; then
+      printf 'ok: %s\n' "$command_name"
+    else
+      printf 'missing: %s\n' "$command_name" >&2
+      missing=1
+    fi
+  done
+
+  if have python3 && python3 -c 'import sys; raise SystemExit(sys.version_info < (3, 12))'; then
+    printf 'ok: Python 3.12+\n'
+  else
+    printf 'missing: Python 3.12 or newer\n' >&2
+    missing=1
+  fi
+  if have node && node -e 'process.exit(Number(process.versions.node.split(".")[0]) < 20 ? 1 : 0)'; then
+    printf 'ok: Node.js 20+\n'
+  else
+    printf 'missing: Node.js 20 or newer\n' >&2
+    missing=1
+  fi
+
+  local python_bin
+  python_bin=$(portal_python 2>/dev/null || true)
+  if [[ -n "$python_bin" ]] && "$python_bin" -c 'import alembic, azure.monitor.opentelemetry, flask, prometheus_client, psycopg, pytest' 2>/dev/null; then
+    printf 'ok: application and platform-portal Python dependencies\n'
+  else
+    printf 'missing: application or platform-portal Python dependencies (create platform-portal/.venv)\n' >&2
+    missing=1
+  fi
+  if portal_ruff >/dev/null 2>&1; then
+    printf 'ok: Ruff\n'
+  else
+    printf 'missing: Ruff (install it in platform-portal/.venv or on PATH)\n' >&2
+    missing=1
+  fi
+  if [[ -x "$REPO_ROOT/node_modules/.bin/playwright" ]]; then
+    printf 'ok: Playwright package\n'
+  else
+    printf 'missing: Playwright package (run npm ci)\n' >&2
+    missing=1
+  fi
+  if have shellcheck; then
+    printf 'ok: ShellCheck (optional)\n'
+  else
+    printf 'note: ShellCheck is optional but recommended\n'
+  fi
+  ((missing == 0)) || fail 'prerequisites are incomplete; see docs/local-development.md'
+  printf 'Local setup is ready.\n'
+}
+
+lint_check() {
+  local ruff_bin
+  ruff_bin=$(portal_ruff 2>/dev/null) || fail 'Ruff is not installed; run make setup-check'
+  (cd "$PORTAL" && "$ruff_bin" check . && "$ruff_bin" format --check .) || fail 'Ruff checks failed'
+  if have shellcheck; then
+    mapfile -d '' shell_files < <(find "$REPO_ROOT/scripts" -type f -name '*.sh' -print0; find "$REPO_ROOT/scripts" -type f ! -name '*.*' -perm -u+x -print0)
+    if ((${#shell_files[@]})); then
+      shellcheck "${shell_files[@]}" || fail 'ShellCheck failed'
+    fi
+  else
+    printf 'note: ShellCheck not installed; shell checks skipped\n'
+  fi
+  printf 'Lint and format checks passed.\n'
+}
+
+python_tests() {
+  local python_bin
+  python_bin=$(portal_python) || fail 'Python is not installed'
+  (cd "$REPO_ROOT" && "$python_bin" -m pytest -q tests) || fail 'root pytest suite failed'
+  (cd "$PORTAL" && env -u POSTGRES_TEST_DATABASE_URL "$python_bin" -m pytest -q) || fail 'platform-portal pytest suite failed'
+  (cd "$REPO_ROOT" && "$python_bin" -m unittest discover -s scripts/release/tests -v) || fail 'release helper tests failed'
+  (cd "$REPO_ROOT" && "$python_bin" -m unittest discover -s scripts/dev/tests -v) || fail 'developer helper tests failed'
+  (cd "$REPO_ROOT" && "$python_bin" -m unittest discover -s scripts/credentials/tests -v) || fail 'credential audit tests failed'
+  printf 'All Python tests passed.\n'
+}
+
+playwright_run() {
+  local python_bin
+  [[ -x "$REPO_ROOT/node_modules/.bin/playwright" ]] || fail 'Playwright is not installed; run npm ci and npx playwright install chromium'
+  python_bin=$(portal_python) || fail 'Python is not installed'
+  (cd "$REPO_ROOT" && env -u E2E_BASE_URL E2E_TEST_ONLY=1 E2E_PYTHON="$python_bin" npm run e2e) || fail 'Playwright failed; browser captures are disabled; inspect console output'
+}
+
+helm_validate() {
+  have helm || fail 'Helm is not installed'
+  helm lint "$REPO_ROOT/flask-app" -f "$REPO_ROOT/flask-app/values-production.yaml" >/dev/null || fail 'flask-app Helm lint failed'
+  helm template flask-web-local-check "$REPO_ROOT/flask-app" -f "$REPO_ROOT/flask-app/values-production.yaml" >/dev/null || fail 'flask-app Helm render failed'
+  helm lint "$REPO_ROOT/lead-magnets-chart" >/dev/null || fail 'lead-magnets-chart Helm lint failed'
+  helm template lead-magnets-local-check "$REPO_ROOT/lead-magnets-chart" >/dev/null || fail 'lead-magnets-chart Helm render failed'
+  printf 'All Helm charts linted and rendered successfully; nothing was installed.\n'
+}
+
+command_name=${1:-help}
+case "$command_name" in
+  help|-h|--help) help_text ;;
+  setup-check) setup_check ;;
+  lint) lint_check ;;
+  test) python_tests ;;
+  playwright) playwright_run ;;
+  helm-validate) helm_validate ;;
+  db-reset)
+    python_bin=$(portal_python) || fail 'Python is not installed'
+    "$python_bin" "$SCRIPT_DIR/reset_postgres.py" || fail 'local PostgreSQL reset failed'
+    ;;
+  release-gate)
+    "$REPO_ROOT/scripts/release/release-evidence" --repo-root "$REPO_ROOT" || fail 'release gate did not pass; reports are in evidence/release/'
+    ;;
+  *) fail "unknown command '$command_name'; run 'make help'" ;;
+esac

@@ -24,6 +24,34 @@ def test_public_app_only_exposes_public_routes():
     assert client.get("/api/v1/executive").status_code == 404
 
 
+def test_public_app_applies_security_headers_to_error_responses():
+    response = create_test_app().test_client().get("/missing")
+
+    assert response.status_code == 404
+    assert response.headers["Content-Security-Policy"].startswith("default-src 'self';")
+    assert response.headers["Content-Security-Policy"].endswith(
+        "upgrade-insecure-requests"
+    )
+    assert response.headers["Strict-Transport-Security"] == (
+        "max-age=31536000; includeSubDomains"
+    )
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+    assert "Cache-Control" not in response.headers
+
+
+def test_public_app_csp_does_not_enable_arbitrary_inline_execution():
+    response = create_test_app().test_client().get("/apply")
+    policy = response.headers["Content-Security-Policy"]
+
+    assert "script-src 'self' https://cdn.jsdelivr.net" in policy
+    assert "style-src 'self'" in policy
+    assert "'unsafe-inline'" not in policy
+    assert "'unsafe-eval'" not in policy
+    assert b"progressBar.style" not in response.data
+
+
 def test_public_lead_capture_persists():
     app = create_test_app()
 

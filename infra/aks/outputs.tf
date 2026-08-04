@@ -18,6 +18,11 @@ output "kubelet_identity_object_id" {
   value       = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
 }
 
+output "log_analytics_workspace_id" {
+  description = "ID of the existing Log Analytics workspace used by AKS monitoring"
+  value       = data.azurerm_log_analytics_workspace.aks.id
+}
+
 output "get_credentials_command" {
   description = "Command used to configure kubectl"
   value       = "az aks get-credentials --resource-group ${azurerm_kubernetes_cluster.aks.resource_group_name} --name ${azurerm_kubernetes_cluster.aks.name} --overwrite-existing"

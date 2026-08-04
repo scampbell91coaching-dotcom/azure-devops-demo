@@ -1,0 +1,31 @@
+name: Toolchain Updates
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Tuesday 19:00 UTC, which is 20:00 during UK summer time.
+    - cron: "0 19 * * 2"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: toolchain-updates
+  cancel-in-progress: false
+
+jobs:
+  renovate:
+    name: Propose supported toolchain updates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Run Renovate
+        uses: renovatebot/github-action@693b9ef15eec82123529a37c782242f091365961
+        with:
+          configurationFile: renovate.json5
+          token: ${{ secrets.RENOVATE_TOKEN }}
+          renovate-version: 43.285.4
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          LOG_LEVEL: info

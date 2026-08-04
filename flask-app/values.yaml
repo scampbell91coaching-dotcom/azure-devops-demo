@@ -2,18 +2,36 @@ replicaCount: 1
 
 image:
   repository: stevedevopslab6280.azurecr.io/flask-web
-  tag: latest
+  # Use a commit SHA, semantic version, or digest. Mutable tags such as latest are rejected.
+  tag: 68e2757f00c726dc02500fa5ccf39444a00d7934
+  digest: ""
   pullPolicy: IfNotPresent
 
 service:
   type: ClusterIP
   port: 80
-  targetPort: 5000
+  targetPort: 8090
 
-containerPort: 5000
+containerPort: 8090
 
 application:
   message: ""
+
+database:
+  # The Secret is created out-of-band (normally by External Secrets). Never put
+  # a connection string in a values file or a GitHub Actions input.
+  enabled: false
+  secretName: flask-runtime-secrets
+  secretKey: DATABASE_URL
+
+migration:
+  enabled: false
+  command:
+    - flask
+    - db
+    - upgrade
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
 
 resources:
   requests:
@@ -78,9 +96,42 @@ podSecurityContext:
   fsGroup: 10001
 
 containerSecurityContext:
-  # Set true only after confirming the application writes nowhere in the image filesystem.
-  readOnlyRootFilesystem: false
+  readOnlyRootFilesystem: true
+
+ingress:
+  enabled: false
+  className: nginx
+  hosts: []
+  tlsSecretName: ""
+
+networkPolicy:
+  enabled: true
+  ingressNamespace: ingress-nginx
+  monitoringNamespace: monitoring
+  allowMonitoring: false
+  allowHttpsEgress: true
+  allowDatabaseEgress: false
+  databasePort: 5432
 
 topologySpreadConstraints: []
 
 affinity: {}
+
+# Proposed production observability resources. Disabled by default so adding the
+# definitions cannot create dashboards or live alerts without an explicit review.
+monitoring:
+  enabled: false
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    labels:
+      release: monitoring
+  prometheusRule:
+    enabled: true
+    labels:
+      release: monitoring
+  grafanaDashboard:
+    enabled: true
+    labels:
+      grafana_dashboard: "1"

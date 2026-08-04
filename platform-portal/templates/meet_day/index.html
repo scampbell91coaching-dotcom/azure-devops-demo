@@ -1,0 +1,27 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "meet_day" %}
+{% block title %}Meet Day{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/meet_day.css') }}">{% endblock %}
+{% block content %}
+<section class="meet-day">
+  <header><p class="eyebrow">Competition control</p><h1>Meet Day</h1><p>Coach-controlled flights, warmups and platform attempts.</p></header>
+  {% if error %}<p class="meet-day__error" role="alert">{{ error }}</p>{% endif %}
+  <section class="coach-panel">
+    <h2>Create a meet</h2>
+    <form method="post" class="meet-day__form">
+      <label>Name <input name="name" maxlength="160" required></label>
+      <label>Date <input name="meet_date" type="date" value="{{ today }}" required></label>
+      <label>Coach notes <textarea name="notes" rows="2"></textarea></label>
+      <button type="submit">Create meet</button>
+    </form>
+  </section>
+  <section class="coach-panel">
+    <h2>Meets</h2>
+    <div class="meet-day__list">
+    {% for meet in meets %}
+      <a href="{{ url_for('meet_day.detail', meet_id=meet.id) }}"><strong>{{ meet.name }}</strong><span>{{ meet.meet_date }} · {{ meet.status }}</span></a>
+    {% else %}<p>No meets created yet.</p>{% endfor %}
+    </div>
+  </section>
+</section>
+{% endblock %}

@@ -7,3 +7,9 @@ variable "location" {
   description = "Azure region for the network resources."
   type        = string
 }
+
+variable "enable_postgresql_delegation" {
+  description = "Delegate the database subnet to Azure PostgreSQL Flexible Server."
+  type        = bool
+  default     = false
+}
