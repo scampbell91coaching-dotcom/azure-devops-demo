@@ -9,6 +9,7 @@ from .checkins import AthleteCheckinSettings, WeeklyCheckin
 from .coaching_application import CoachingApplication
 from .exercise_library import DayTemplate, DayTemplateExercise, Exercise
 from .lead_capture import LeadCapture
+from .meet_day import Meet, MeetEntry, MeetLift
 from .nutrition_checkin import NutritionCheckIn
 from .platform_snapshot import PlatformSnapshot
 from .programming import (
@@ -28,6 +29,9 @@ __all__ = [
     "Exercise",
     "ExercisePrescription",
     "LeadCapture",
+    "Meet",
+    "MeetEntry",
+    "MeetLift",
     "NutritionCheckIn",
     "PlatformSnapshot",
     "TrainingBlock",

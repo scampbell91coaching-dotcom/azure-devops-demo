@@ -23,6 +23,7 @@ from .database_config import resolve_database_uri
 from .exercise_library import exercise_library_bp
 from .extensions import db, migrate
 from .lead_magnets import lead_magnets_bp
+from .meet_day import meet_day_bp
 from .programming import programming_bp
 from .programming_engine import programming_engine_bp
 from .programming_pack2 import programming_pack2_bp
@@ -120,6 +121,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(attempt_selection_bp)
     app.register_blueprint(checkins_bp)
     app.register_blueprint(coach_dashboard_bp)
+    app.register_blueprint(meet_day_bp)
 
     if app.config["LEGACY_STARTUP_INITIALIZATION"]:
         with app.app_context():

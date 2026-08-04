@@ -4,11 +4,10 @@ import os
 from pathlib import Path
 
 import pytest
-from sqlalchemy import inspect
-
 from portal import create_app
 from portal.extensions import db
 from portal.models.exercise_library import DayTemplate, Exercise
+from sqlalchemy import inspect
 
 EXPECTED_TABLES = {
     "athlete_checkin_settings",
@@ -19,6 +18,9 @@ EXPECTED_TABLES = {
     "exercise_prescriptions",
     "exercises",
     "lead_captures",
+    "meet_entries",
+    "meet_lifts",
+    "meets",
     "nutrition_checkins",
     "platform_snapshots",
     "training_blocks",

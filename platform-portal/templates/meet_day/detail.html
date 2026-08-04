@@ -1,0 +1,43 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "meet_day" %}
+{% block title %}{{ board.meet.name }} · Meet Day{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/meet_day.css') }}">{% endblock %}
+{% block content %}
+<section class="meet-day">
+  <header><a href="{{ url_for('meet_day.index') }}">← All meets</a><p class="eyebrow">{{ board.meet.meet_date }}</p><h1>{{ board.meet.name }}</h1>{% if board.meet.notes %}<p>{{ board.meet.notes }}</p>{% endif %}</header>
+  <aside class="meet-day__next" aria-live="polite">
+    <strong>Next lift</strong>
+    {% if board.next_lift %}<span>{{ board.next_lift.entry.athlete.full_name }} · Flight {{ board.next_lift.entry.flight }} · {{ board.next_lift.lift|title }} {{ board.next_lift.sequence }} · {{ board.next_lift.display_weight }}</span>{% else %}<span>No pending platform attempts.</span>{% endif %}
+  </aside>
+  <details class="coach-panel"><summary>Add athlete</summary>
+    <form method="post" action="{{ url_for('meet_day.add_entry', meet_id=board.meet.id) }}" class="meet-day__form meet-day__form--row">
+      <label>Athlete <select name="athlete_id" required>{% for athlete in athletes %}<option value="{{ athlete.id }}">{{ athlete.full_name }}</option>{% endfor %}</select></label>
+      <label>Flight <input name="flight" type="number" min="1" value="1" required></label>
+      <label>Order <input name="platform_order" type="number" min="1" value="1" required></label>
+      <label>Notes <input name="notes" maxlength="1000"></label><button type="submit">Add</button>
+    </form>
+  </details>
+  {% for entry in board.meet.entries %}
+  <article class="meet-day__entry coach-panel">
+    <header><div><p class="eyebrow">Flight {{ entry.flight }} · order {{ entry.platform_order }}</p><h2>{{ entry.athlete.full_name }}</h2></div>
+      {% set athlete_next = board.next_by_entry[entry.id] %}<p><strong>Next:</strong> {% if athlete_next %}{{ athlete_next.lift|title }} {{ athlete_next.sequence }}, {{ athlete_next.display_weight }}{% else %}Complete{% endif %}</p>
+    </header>
+    <details><summary>Edit flight, order and notes</summary><form method="post" action="{{ url_for('meet_day.update_entry', meet_id=board.meet.id, entry_id=entry.id) }}" class="meet-day__form meet-day__form--row"><label>Flight <input name="flight" type="number" min="1" value="{{ entry.flight }}" required></label><label>Order <input name="platform_order" type="number" min="1" value="{{ entry.platform_order }}" required></label><label>Notes <input name="notes" value="{{ entry.notes or '' }}"></label><button>Save entry</button></form></details>
+    {% for lift_name in lifts %}
+    <section class="meet-day__lift"><h3>{{ lift_name|title }}</h3>
+      <div class="meet-day__cards">
+      {% for item in entry.lifts if item.lift == lift_name %}
+        <form method="post" action="{{ url_for('meet_day.update_lift', meet_id=board.meet.id, lift_id=item.id) }}" class="meet-day__card meet-day__card--{{ item.outcome }}">
+          <strong>{{ item.kind|title }} {{ item.sequence }}</strong>
+          <label>kg <input name="weight_kg" type="number" min="0.01" max="9999.99" step="0.01" value="{{ item.weight_kg or '' }}"></label>
+          <label>Outcome <select name="outcome">{% for result in outcomes %}<option value="{{ result }}" {% if item.outcome == result %}selected{% endif %}>{{ result|title }}</option>{% endfor %}</select></label>
+          <label>Notes <input name="notes" maxlength="2000" value="{{ item.notes or '' }}"></label><button>Update</button>
+        </form>
+      {% else %}<p>No lifts logged.</p>{% endfor %}
+      </div>
+      <details><summary>Add warmup or attempt</summary><form method="post" action="{{ url_for('meet_day.add_lift', meet_id=board.meet.id, entry_id=entry.id) }}" class="meet-day__form meet-day__form--row"><input type="hidden" name="lift" value="{{ lift_name }}"><label>Type <select name="kind"><option value="warmup">Warmup</option><option value="attempt">Attempt</option></select></label><label>Number <input name="sequence" type="number" min="1" value="1" required></label><label>kg <input name="weight_kg" type="number" min="0.01" max="9999.99" step="0.01"></label><label>Outcome <select name="outcome">{% for result in outcomes %}<option value="{{ result }}">{{ result|title }}</option>{% endfor %}</select></label><label>Notes <input name="notes" maxlength="2000"></label><button>Add lift</button></form></details>
+    </section>{% endfor %}
+  </article>
+  {% else %}<div class="coach-panel"><p>No athletes entered. Add the first athlete above.</p></div>{% endfor %}
+</section>
+{% endblock %}

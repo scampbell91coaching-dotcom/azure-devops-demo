@@ -84,7 +84,11 @@
           href="{{ url_for('checkins.index') }}"
           {% if coach_section == "checkins" %}aria-current="page"{% endif %}
         >Check-ins</a>
-        <span class="coach-navigation__disabled">Meet Prep</span>
+        <a
+          href="{{ url_for('meet_day.index') }}"
+          aria-label="Meet Prep: Meet Day"
+          {% if coach_section == "meet_day" %}aria-current="page"{% endif %}
+        >Meet Day</a>
       </nav>
 
       <div class="coach-topbar__actions">
