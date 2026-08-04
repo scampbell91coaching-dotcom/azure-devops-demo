@@ -7,6 +7,11 @@ data "azurerm_container_registry" "acr" {
   resource_group_name = var.resource_group_name
 }
 
+data "azurerm_log_analytics_workspace" "aks" {
+  name                = var.log_analytics_workspace_name
+  resource_group_name = var.resource_group_name
+}
+
 resource "azurerm_kubernetes_cluster" "aks" {
   oidc_issuer_enabled          = true
   workload_identity_enabled    = true
@@ -21,20 +26,23 @@ resource "azurerm_kubernetes_cluster" "aks" {
   resource_group_name          = data.azurerm_resource_group.lab.name
   dns_prefix                   = var.dns_prefix
 
-  sku_tier = "Free"
+  sku_tier = "Standard"
 
   api_server_access_profile {
     authorized_ip_ranges = var.api_server_authorized_ip_ranges
   }
 
   default_node_pool {
-    name                 = "system"
-    vm_size              = var.node_vm_size
-    node_count           = var.node_count
-    auto_scaling_enabled = false
+    name                         = "system"
+    vm_size                      = var.node_vm_size
+    node_count                   = var.node_count
+    auto_scaling_enabled         = false
+    max_pods                     = 50
+    only_critical_addons_enabled = true
+    temporary_name_for_rotation  = "systemtemp"
 
     os_disk_size_gb = 30
-    os_disk_type    = "Managed"
+    os_disk_type    = "Ephemeral"
     os_sku          = "AzureLinux"
     type            = "VirtualMachineScaleSets"
 
@@ -50,6 +58,10 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   identity {
     type = "SystemAssigned"
+  }
+
+  oms_agent {
+    log_analytics_workspace_id = data.azurerm_log_analytics_workspace.aks.id
   }
 
   network_profile {

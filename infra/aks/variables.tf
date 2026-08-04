@@ -43,6 +43,17 @@ variable "acr_name" {
   default     = "stevedevopslab6280"
 }
 
+variable "log_analytics_workspace_name" {
+  description = "Name of the existing Log Analytics workspace used by Azure Monitor for containers"
+  type        = string
+  default     = "law-devops-lab"
+
+  validation {
+    condition     = length(trimspace(var.log_analytics_workspace_name)) > 0
+    error_message = "log_analytics_workspace_name must not be empty."
+  }
+}
+
 variable "node_vm_size" {
   description = "VM size used by the AKS system node pool"
   type        = string
