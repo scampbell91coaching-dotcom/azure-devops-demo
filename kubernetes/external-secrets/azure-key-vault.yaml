@@ -37,6 +37,9 @@ spec:
     - secretKey: SECRET_KEY
       remoteRef:
         key: flask-secret-key
+    - secretKey: DATABASE_URL
+      remoteRef:
+        key: database-url
     - secretKey: APPLICATIONINSIGHTS_CONNECTION_STRING
       remoteRef:
         key: applicationinsights-connection-string
