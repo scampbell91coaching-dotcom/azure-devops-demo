@@ -1,131 +1,62 @@
-# Limitations and Future Improvements
+# Limitations and future improvements
 
 ## Scope
 
-This is a production-oriented personal platform project, not a complete enterprise landing zone or multi-region business-critical service.
+Traditional Strength Version 1 is a production platform and portfolio project, not an enterprise landing zone or a multi-region business-critical service. [roadmap.md](roadmap.md) separates completed Version 1 work from Version 2 and Version 3.
 
-## Current Limitations
+## Current limitations
 
-### Single Azure Region
+### Single Azure region
 
-A regional outage can make the service unavailable.
+The platform runs in East US 2. A regional outage can make the application and database unavailable. Multi-region recovery, traffic management, replicated state, and failover exercises are Version 3 work.
 
-Enterprise evolution: secondary region, Azure Front Door or Traffic Manager, replicated state and tested failover.
+### Public AKS control plane
 
-### Public AKS Control Plane
+The AKS API is public with authorized IP ranges and Kubernetes/Azure controls; it is not a private cluster. A private control plane would require private DNS plus a tested operator and CI access path.
 
-Unless restricted in Terraform, the AKS API may be publicly reachable behind Azure and Kubernetes authentication controls.
+### Public ingress without WAF
 
-Enterprise evolution: private AKS, private DNS, VPN/ExpressRoute and restricted administration paths.
+NGINX is the public HTTPS entry point and the Flask Service is `ClusterIP`. Azure Front Door/WAF and a controlled private origin are not implemented.
 
-### Public Ingress Without WAF
+### Single application replica during cutover
 
-NGINX is the public entry point. Azure Front Door, WAF and controlled private origin are not implemented.
+Production deliberately runs one replica with HPA disabled while PostgreSQL cutover behavior is validated. The chart contains topology preferences and an opt-in scale-out overlay, but these do not provide current high availability. Version 2 requires concurrency, connection-pool, failure, and recovery evidence before scale-out.
 
-### Duplicate Application Exposure
+### Production-pool host encryption deferred
 
-The Flask Service is still `LoadBalancer` while NGINX Ingress also exposes the workload.
+The System pool has host encryption. The production User pool does not because Azure could not allocate the temporary two-vCPU rotation node after East US 2 regional quota was exhausted. The exact `CKV_AZURE_227` exception and completion criteria are in [production-backlog.md](production-backlog.md).
 
-Planned remediation:
+### Cost-conscious PostgreSQL resilience
 
-1. Change Flask Service to `ClusterIP`
-2. Verify HTTPS through NGINX
-3. Remove the unused public IP/load-balancer rule
-4. Retest NetworkPolicies
+Flexible Server uses private networking, TLS, auto-grow, and automated point-in-time backups. High availability and geo-redundant backup are disabled. Recovery objectives and a recorded restore exercise remain Version 2 requirements.
 
-### Limited Node Capacity
+### No complete environment promotion model
 
-A small node pool controls cost. Replicas may share one node and cluster capacity may be exhausted before scale-out.
+Production desired state is protected through Git and Argo CD, but the repository does not provide a complete development-to-staging-to-production promotion path with equivalent environment Applications and approval evidence.
 
-Planned: topology spread, pod anti-affinity, Cluster Autoscaler and separate system/user pools.
+### Monitoring is incomplete
 
-### No Full Environment Promotion Model
+The application exposes health and metrics and the Azure monitoring foundation exists. Proposed ServiceMonitor, PrometheusRule, and Grafana dashboard resources are disabled in production until real labels, storage, authentication, notification routing, and failure behavior are validated. There is no formal SLO or error budget.
 
-There is no complete development, staging and production promotion path.
+### Supply-chain enforcement is incomplete
 
-Planned: environment values, separate Argo CD Applications, protected GitHub environments and promotion pull requests.
+CI performs dependency/code analysis, vulnerability and misconfiguration scanning, immutable image validation, and SBOM generation. Images are not signed and the cluster does not enforce signatures or provenance at admission.
 
-### Ingress Isolation Only
+### Recovery and regional resilience are not proven
 
-Default-deny ingress exists, but egress is not denied by default.
+Terraform and Git can reconstruct much of the platform, and PostgreSQL provides managed backup capability, but formal RTO/RPO, a tested application/database restore, and regional failover evidence are not complete.
 
-Planned: default-deny egress, explicit DNS and telemetry allowances, and controlled outbound networking.
+### Cost-driven capacity
 
-### Runtime Hardening Incomplete
+Small pools, a burstable database SKU, single-region deployment, and limited telemetry retention control portfolio cost. Quota and capacity must account for upgrade/rotation surge as well as steady-state workload.
 
-Planned:
+## Priorities
 
-- `runAsNonRoot`
-- fixed non-root UID/GID
-- `allowPrivilegeEscalation: false`
-- drop all Linux capabilities
-- `seccompProfile: RuntimeDefault`
-- read-only root filesystem where compatible
-- writable `emptyDir` volumes only where required
+1. Close the host-encryption quota backlog and validate safe node-pool rotation.
+2. Test database recovery and application scale-out, then enable multiple replicas.
+3. Establish SLOs and verified monitoring/alert delivery.
+4. Add staging and a protected promotion model.
+5. Add image signing/provenance and evaluate WAF/private-origin architecture.
+6. Define multi-region recovery only from measured business requirements.
 
-### Startup and Graceful Termination
-
-Readiness and liveness probes exist. Startup probe, lifecycle hook and validated graceful shutdown are not yet implemented.
-
-### No Image Signature Enforcement
-
-Images use immutable SHA tags and vulnerability scanning, but there is no SBOM, Cosign signature, provenance or admission policy.
-
-### No Formal SLO
-
-Telemetry exists, but formal SLIs, SLOs, error budgets and burn-rate alerts are not yet defined.
-
-### Limited Disaster Recovery
-
-Terraform and Git can reconstruct infrastructure and desired state, but formal RTO/RPO, regional restoration and recovery exercise evidence are not implemented.
-
-### No Service Mesh
-
-This is deliberate for a single application. A mesh would be reconsidered for mutual TLS, advanced traffic policy and multi-service identity.
-
-### Cost-Driven Design
-
-Single region, small nodes, public networking and limited telemetry retention are conscious personal-lab trade-offs.
-
-## Prioritised Backlog
-
-### Priority 1: Runtime and Exposure
-
-1. Change Flask Service to `ClusterIP`
-2. Add pod/container security contexts
-3. Add startup probe
-4. Validate graceful termination
-5. Add topology spread
-
-### Priority 2: Network Security
-
-1. Add default-deny egress
-2. Allow DNS explicitly
-3. Allow required telemetry
-4. Test allowed and blocked paths
-5. Document trust boundaries
-
-### Priority 3: Supply Chain
-
-1. Generate SBOM
-2. Sign image
-3. Publish provenance
-4. Enforce signature policy
-5. Document vulnerability exceptions
-
-### Priority 4: SRE
-
-1. Define SLIs and SLO
-2. Calculate error budget
-3. Create alerts
-4. Conduct failure testing
-5. Capture evidence
-
-### Priority 5: Enterprise Evolution
-
-1. Private AKS
-2. Private endpoints
-3. Dedicated user node pool
-4. Azure Front Door and WAF
-5. Staging environment
-6. Multi-region recovery design
+See [roadmap.md](roadmap.md) for version ownership and exit criteria.

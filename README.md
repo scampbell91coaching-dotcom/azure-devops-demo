@@ -1,581 +1,235 @@
-# Production-Ready Azure Platform on AKS
+# Traditional Strength Production Platform
 
-> An end-to-end Azure Platform Engineering project demonstrating Infrastructure as Code, Kubernetes, GitOps, CI/CD, secure secret management, autoscaling and full-stack observability.
+> A production Azure platform for delivering the Traditional Strength coaching application with Terraform, AKS, PostgreSQL, Helm, Argo CD, and GitHub Actions.
 
-![Azure](https://img.shields.io/badge/Azure-Platform-0078D4?logo=microsoftazure&logoColor=white)
-![Terraform](https://img.shields.io/badge/Terraform-Infrastructure_as_Code-844FBA?logo=terraform&logoColor=white)
+![Azure](https://img.shields.io/badge/Azure-Production_Platform-0078D4?logo=microsoftazure&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-IaC-844FBA?logo=terraform&logoColor=white)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-AKS-326CE5?logo=kubernetes&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-Containers-2496ED?logo=docker&logoColor=white)
-![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI-2088FF?logo=githubactions&logoColor=white)
 ![Argo CD](https://img.shields.io/badge/Argo_CD-GitOps-EF7B4D?logo=argo&logoColor=white)
-![Helm](https://img.shields.io/badge/Helm-Packaging-0F1689?logo=helm&logoColor=white)
-![Prometheus](https://img.shields.io/badge/Prometheus-Monitoring-E6522C?logo=prometheus&logoColor=white)
-![Grafana](https://img.shields.io/badge/Grafana-Dashboards-F46800?logo=grafana&logoColor=white)
 
----
+## Project overview
 
-## Project Overview
+Traditional Strength is both a working coaching product and a platform-engineering portfolio project. The repository brings the Flask application, Azure infrastructure, Kubernetes packaging, deployment automation, security controls, operational tooling, and evidence into one reviewable system.
 
-For local prerequisites and consistent one-command checks, see the
-[`Local development guide`](docs/local-development.md) or run `make help`.
+Its business purpose is to provide a dependable online home for strength-coaching workflows while creating a platform that can evolve without manual server configuration. Version 1 establishes the production foundation: repeatable infrastructure, private database connectivity, controlled secret delivery, immutable releases, and an auditable GitOps path.
 
-This project builds and operates a production-inspired application platform on Microsoft Azure.
+## Version 1 status
 
-Azure infrastructure is provisioned with Terraform, a containerised Flask application is published to Azure Container Registry, and workloads are deployed to Azure Kubernetes Service using Helm and Argo CD.
+Version 1 is complete and running in production. The verified final state is:
 
-The platform combines cloud infrastructure, Kubernetes operations, CI/CD automation, GitOps, secure secret delivery, HTTPS ingress, autoscaling and observability into one reproducible engineering project.
+- Argo CD application `flask-web-production`: **Synced** and **Healthy**.
+- `https://traditionalstrength.co.uk/health`: **healthy**.
+- Azure infrastructure is managed through two Terraform roots.
+- AKS has a dedicated system pool and an autoscaling production User pool.
+- Application and migration workloads select nodes labelled `workload=production`.
+- PostgreSQL Flexible Server has public access disabled and is reached through private DNS and bidirectional VNet peering.
+- Azure Key Vault, Workload Identity, and External Secrets supply runtime secrets.
+- Helm defines the release; Argo CD reconciles it from `main`.
+- GitHub Actions validate application, infrastructure, security, browser tests, tooling, and releases.
 
-### What this project demonstrates
-
-- Azure infrastructure provisioning with Terraform
-- Container image build and publication with GitHub Actions
-- Container image security scanning with Trivy
-- Kubernetes application packaging with Helm
-- GitOps continuous delivery with Argo CD
-- Azure Key Vault integration
-- Managed Identity authentication
-- HTTPS ingress with cert-manager
-- Horizontal Pod Autoscaling
-- Kubernetes health probes and resource controls
-- Prometheus metrics collection
-- Grafana Kubernetes dashboards
-- Azure Application Insights telemetry
-
----
-
-## Live Platform Evidence
-
-### Application over HTTPS
-
-![Application running securely over HTTPS](docs/images/application-https.png)
-
----
+The one deferred AKS control is host encryption on the production User pool. Azure could not create the temporary rotation node because the East US 2 regional vCPU quota was exhausted. The narrowly scoped `CKV_AZURE_227` exception and exit criteria are recorded in [the production backlog](docs/production-backlog.md).
 
 ## Architecture
 
-```text
-Developer
-   |
-   | git push
-   v
-GitHub Repository
-   |
-   v
-GitHub Actions
-   |
-   |-- Build Docker image
-   |-- Run Trivy security scan
-   |-- Push image to ACR
-   |-- Update deployment configuration
-   v
-Azure Container Registry
-   |
-   v
-Argo CD
-   |
-   | GitOps reconciliation
-   v
-Helm Release
-   |
-   v
-Azure Kubernetes Service
-   |
-   |-- Flask application
-   |-- NGINX Ingress
-   |-- cert-manager
-   |-- Horizontal Pod Autoscaler
-   |-- Secrets Store CSI Driver
-   |
-   +-------------------------------+
-   |                               |
-   v                               v
-Azure Key Vault              Observability Stack
-Managed Identity             Prometheus
-Application secrets          Grafana
-                              Application Insights
+```mermaid
+flowchart LR
+    User[Client] -->|HTTPS| Ingress[NGINX ingress]
+    Ingress --> Service[ClusterIP service]
+    Service --> App[Flask pods on production pool]
+    App -->|private DNS and TLS| DB[(PostgreSQL Flexible Server)]
+    App --> Telemetry[Application Insights]
+    Git[GitHub] --> Actions[GitHub Actions]
+    Actions --> ACR[Azure Container Registry]
+    Actions -->|immutable tag update| Git
+    Git --> Argo[Argo CD]
+    Argo -->|render Helm and reconcile| App
+    KV[Azure Key Vault] --> ESO[External Secrets]
+    ESO --> App
 ```
 
-Detailed architecture documentation is available in [`docs/architecture.md`](docs/architecture.md).
+See [architecture.md](docs/architecture.md) for the complete platform, delivery, node-pool, networking, and secret-flow diagrams.
 
----
+## Azure infrastructure
 
-## Technology Stack
+Terraform manages the resource group, virtual network and delegated database subnet, monitoring resources, ACR configuration, PostgreSQL Flexible Server, private DNS, VNet links and peering, AKS, identities, RBAC, and node pools. Remote Azure Storage backends provide locking and separate the root infrastructure state from the AKS state.
 
-| Area | Technologies |
-|---|---|
-| Cloud | Microsoft Azure |
-| Infrastructure | Terraform |
-| Container Platform | Azure Kubernetes Service |
-| Container Registry | Azure Container Registry |
-| Application | Python, Flask, Docker |
-| Kubernetes Packaging | Helm |
-| GitOps | Argo CD |
-| CI/CD | GitHub Actions |
-| Security Scanning | Trivy |
-| Secret Management | Azure Key Vault |
-| Authentication | Managed Identity |
-| Ingress | NGINX Ingress Controller |
-| TLS | cert-manager |
-| Autoscaling | Kubernetes Horizontal Pod Autoscaler |
-| Metrics | Prometheus |
-| Dashboards | Grafana |
-| Application Telemetry | Azure Application Insights |
+The split is deliberate: `infra/` owns shared application infrastructure and the database; `infra/aks/` owns the cluster and its pools. Imported production resources remain under Terraform control without destructive recreation. PostgreSQL carries `prevent_destroy`, and Azure-assigned zone changes are ignored to avoid false replacement plans after import.
 
----
+### AKS node-pool design
 
-## Azure Infrastructure
+| Pool | Mode | Purpose | Key controls |
+| --- | --- | --- | --- |
+| `system` | System | Kubernetes and cluster-critical add-ons | Critical-addons-only, host encryption, Azure Linux, ephemeral OS disk |
+| `production` | User | Traditional Strength application and migration Job | `workload=production` label, cluster autoscaler, Azure Linux, ephemeral OS disk |
 
-Terraform provisions the Azure resources required to operate the platform.
+The Helm chart's default `nodeSelector` sends both the Deployment and migration hook to the production pool. This separates application capacity from system services. Production-pool host encryption remains deferred only because the required rotation node exceeded regional quota.
 
-The environment includes:
+## Application architecture
 
-- Azure Kubernetes Service
-- Azure Container Registry
-- Azure Key Vault
-- Azure Application Insights
-- Log Analytics Workspace
-- Managed identities
-- Virtual networking
-- Network security controls
-- Supporting Azure resources
+The production container runs the Flask portal behind Gunicorn. The Helm release provides a rolling Deployment, `ClusterIP` Service, TLS ingress, startup/readiness/liveness probes, a Pod Disruption Budget, resource requests and limits, topology preferences, restrictive security contexts, and ingress/egress NetworkPolicies.
 
-![Azure resource group overview](docs/images/azure-resource-group-overview.png)
+Production is currently in database-cutover mode: one replica, HPA disabled. A reviewed `values-scale-out.yaml` overlay is available only after the database scale-out checks pass. Every install or upgrade first runs `flask db upgrade` as a no-retry Helm hook using the same immutable image as the Deployment.
 
----
+## PostgreSQL and private networking
 
-## Continuous Integration
+Azure Database for PostgreSQL Flexible Server runs in a delegated subnet with public network access disabled, TLS required, and TLS 1.2 as the minimum. Terraform manages the database, private DNS zone and VNet links. Bidirectional peering connects the AKS VNet to the application VNet; the PostgreSQL private zone is linked so cluster DNS resolves the server's private address.
 
-GitHub Actions automates application build, validation and publication.
+The application receives `DATABASE_URL` from a Kubernetes Secret and never from Helm values. See [Azure PostgreSQL operations](docs/azure-postgresql.md) for migration, backup, restore, and scale-out guidance.
 
-The pipeline performs the following stages:
+## Secrets management
 
-1. Checks out the repository
-2. Builds the Docker image
-3. Scans the image with Trivy
-4. Authenticates to Azure
-5. Pushes the image to Azure Container Registry
-6. Updates the required deployment configuration
-7. Allows Argo CD to reconcile the new desired state
+Secret values live in Azure Key Vault. External Secrets Operator authenticates with Microsoft Entra Workload Identity through the `external-secrets-kv` ServiceAccount, reads approved Key Vault entries, and owns the `flask-runtime-secrets` Kubernetes Secret. The application consumes `SECRET_KEY`, `DATABASE_URL`, and `APPLICATIONINSIGHTS_CONNECTION_STRING` with `secretKeyRef`; values are not committed or printed during validation.
 
-![GitHub Actions pipeline success](docs/images/github-actions-pipeline-success.png)
+## CI/CD and GitOps
 
-The repository provides a single source for infrastructure, application code, Kubernetes configuration, Helm packaging and delivery automation.
+GitHub Actions and Argo CD have separate responsibilities:
 
-![GitHub repository overview](docs/images/github-repository-overview.png)
+1. Pull requests run relevant tests, Helm rendering, Terraform validation, Checkov, Trivy, CodeQL, and browser/release checks according to path filters.
+2. On `main`, the application workflow builds and scans the image, authenticates to Azure with GitHub OIDC, and publishes immutable Git-SHA tags to ACR.
+3. The workflow updates `flask-app/values-production.yaml` in Git.
+4. Argo CD observes `main`, renders the Helm chart, and reconciles the `production` namespace with pruning and self-healing.
+5. The workflow verifies the migration-gated rollout and public health endpoint.
 
----
+Git is the desired-state source of truth; ACR stores deployable images; Argo CD, rather than CI, performs the Kubernetes deployment.
 
-## GitOps Continuous Delivery
-
-Argo CD continuously monitors the Git repository and compares the declared Kubernetes configuration with the live AKS environment.
-
-When a deployment change is committed:
-
-1. Git remains the source of truth
-2. Argo CD detects the change
-3. The Helm release is rendered
-4. Kubernetes resources are reconciled
-5. Configuration drift is detected and corrected
-6. Application health and synchronisation status are exposed through Argo CD
-
-![Argo CD application healthy and synced](docs/images/argocd-application-healthy-synced.png)
-
-This creates a clear separation between continuous integration and continuous delivery:
+## Terraform structure
 
 ```text
-GitHub Actions = build, scan and publish
-Argo CD        = deploy, reconcile and maintain desired state
+infra/
+├── environments/dev/       # backend and reviewed environment inputs
+├── modules/
+│   ├── monitoring/          # Log Analytics and Application Insights
+│   ├── network/             # VNet and delegated database subnet
+│   ├── postgresql/          # Flexible Server, DNS, database, KV metadata
+│   └── resource-group/
+├── aks/                     # independent AKS state and node pools
+└── *.tf                     # root composition, ACR, peering, outputs
 ```
 
----
+## Helm deployment
 
-## Kubernetes Platform
-
-The production namespace contains the application deployment, service, ingress and autoscaler.
-
-Platform safeguards include:
-
-- Readiness probes
-- Liveness probes
-- CPU resource requests
-- Memory resource requests
-- Resource limits
-- Horizontal Pod Autoscaling
-- Helm-managed configuration
-- Namespace separation
-- Ingress routing
-- TLS termination
-
-![Kubernetes production resources](docs/images/kubectl-production-resources.png)
-
-### Validate production resources
+`flask-app/` is the production chart. `values-production.yaml` contains environment-specific routing, resources, database mode, and immutable image selection. The Argo CD Application uses release name `flask-web-prod`; operators should change desired state in Git rather than running an untracked `helm upgrade` or `kubectl scale`.
 
 ```bash
-kubectl get pods,svc,ingress,hpa -n production
-```
-
-### Validate the deployment
-
-```bash
-kubectl get deployment flask-web -n production
-```
-
-### Validate Key Vault integration
-
-```bash
-kubectl get secretproviderclass -n production
-```
-
-### Inspect application pods
-
-```bash
-kubectl get pods -n production -o wide
-```
-
----
-
-## Helm Validation
-
-The application is packaged as a Helm chart with environment-specific production values.
-
-### Lint the chart
-
-```bash
-helm lint flask-app
-```
-
-### Lint production values
-
-```bash
-helm lint flask-app \
-  -f flask-app/values-production.yaml
-```
-
-### Render production manifests
-
-```bash
+helm lint flask-app -f flask-app/values-production.yaml
 helm template flask-web-prod flask-app \
+  --namespace production \
   -f flask-app/values-production.yaml
 ```
 
----
+## Observability and security
 
-## Security
+Version 1 includes `/health` and `/metrics`, structured application logging, OpenTelemetry/Azure Monitor integration, Application Insights and Log Analytics resources, AKS Container Insights, health probes, and operational runbooks. Repository screenshots also record prior Prometheus and Grafana evidence; production ServiceMonitor, PrometheusRule, and Grafana dashboard resources are deliberately disabled until the live monitoring release and alert routing are validated.
 
-Security is implemented across the build, infrastructure and runtime layers.
+Security controls include OIDC-based CI authentication, Workload Identity, Key Vault, External Secrets, Pod Security `restricted`, non-root containers, dropped Linux capabilities, no privilege escalation, RuntimeDefault seccomp, a read-only root filesystem, NetworkPolicies, immutable image tags, Trivy, Checkov, CodeQL, Dependabot, and SBOM generation. Current gaps are listed under [known limitations](docs/limitations.md).
 
-### Build security
+## Repository layout
 
-- Trivy container image scanning
-- Automated pipeline execution
-- Version-controlled deployment configuration
-- Reproducible image builds
+| Path | Purpose |
+| --- | --- |
+| `platform-portal/` | Production Flask coaching portal and migrations |
+| `app/` | Supporting Flask service and tests |
+| `flask-app/` | Production Helm chart and values |
+| `kubernetes/` | Argo CD, External Secrets, ingress, and monitoring manifests |
+| `infra/` | Shared Azure Terraform root and modules |
+| `infra/aks/` | AKS Terraform root |
+| `.github/workflows/` | Application, infrastructure, security, browser, and tooling automation |
+| `e2e/` | Playwright release tests |
+| `scripts/` | Developer, release, inventory, and operational helpers |
+| `docs/` | Architecture, decisions, runbooks, evidence, backlog, and roadmap |
 
-### Identity and secrets
+## Local development
 
-- Azure Managed Identity
-- Azure Key Vault
-- Secrets Store CSI Driver
-- No application secrets stored directly in source control
-- No credentials embedded in container images
-
-### Kubernetes security and resilience
-
-- CPU and memory resource controls
-- Readiness probes
-- Liveness probes
-- Namespace-scoped resources
-- Environment-specific Helm values
-- Declarative deployment state
-
-### Network security
-
-- HTTPS ingress
-- TLS certificates managed by cert-manager
-- Azure networking controls
-- Network Security Group rules
-
----
-
-## Observability
-
-The platform provides visibility across infrastructure, Kubernetes and application layers.
-
-```text
-Infrastructure layer  -> Azure and AKS resource health
-Kubernetes layer      -> Prometheus and Grafana
-Application layer     -> Azure Application Insights
-```
-
----
-
-## Grafana
-
-Grafana provides dashboards for cluster, namespace and workload-level visibility.
-
-### Grafana Home
-
-![Grafana home](docs/images/grafana-home.png)
-
-### Kubernetes Cluster Dashboard
-
-![Grafana Kubernetes cluster dashboard](docs/images/grafana-kubernetes-cluster-dashboard.png)
-
-### Kubernetes Namespace Dashboard
-
-![Grafana Kubernetes namespace dashboard](docs/images/grafana-kubernetes-namespace-dashboard.png)
-
-### Kubernetes Pod Dashboard
-
-![Grafana Kubernetes pod dashboard](docs/images/grafana-kubernetes-pod-dashboard.png)
-
----
-
-## Prometheus
-
-Prometheus collects and exposes Kubernetes and platform metrics.
-
-### Target Health
-
-Configured scrape targets can be inspected through the Prometheus target health page.
-
-![Prometheus targets](docs/images/prometheus-targets.png)
-
-### Query Validation
-
-The `up` query confirms whether monitored targets are reachable and being scraped successfully.
-
-```promql
-up
-```
-
-![Prometheus query results](docs/images/prometheus-query-results.png)
-
----
-
-## Azure Application Insights
-
-Application Insights captures application-level performance and telemetry.
-
-It provides visibility into:
-
-- Request volumes
-- Request duration
-- Operation performance
-- Application failures
-- Dependency behaviour
-- End-to-end transaction telemetry
-
-![Application Insights performance overview](docs/images/application-insights-overview.png)
-
----
-
-## Repository Structure
-
-```text
-.
-├── .github/
-│   └── workflows/
-│
-├── docs/
-│   ├── architecture.md
-│   └── images/
-│
-├── flask-app/
-│   ├── templates/
-│   ├── values.yaml
-│   └── values-production.yaml
-│
-├── kubernetes/
-│   ├── argocd/
-│   ├── ingress/
-│   ├── keyvault/
-│   └── monitoring/
-│
-├── terraform/
-│
-└── README.md
-```
-
----
-
-## Deployment Workflow
-
-```text
-1. Developer commits application or configuration changes
-2. GitHub Actions validates and builds the application
-3. Trivy scans the container image
-4. The image is pushed to Azure Container Registry
-5. Git contains the desired deployment state
-6. Argo CD detects the change
-7. Argo CD synchronises the Helm release
-8. AKS reconciles the workload
-9. Prometheus, Grafana and Application Insights expose platform health
-```
-
----
-
-## Platform Validation
-
-### Check Argo CD applications
+Prerequisites are Python 3.12+, Node.js 20+, npm, GNU Make, Helm 3, Terraform, Git, and optionally loopback PostgreSQL. Follow the [local development guide](docs/local-development.md) for environment setup and safety boundaries.
 
 ```bash
-kubectl get applications -n argocd
+make help
+make setup-check
+make lint
+make test
+make playwright
+make helm-validate
 ```
 
-### Check application health
+`make release-gate` requires a clean worktree and produces sanitised evidence. Local PostgreSQL tests are opt-in through a loopback-only `traditional_strength_test` database.
+
+## Deployment and validation commands
+
+These commands validate declared state; Terraform apply and production mutation remain protected operations.
 
 ```bash
-kubectl get pods -n production
+terraform -chdir=infra fmt -check -recursive
+terraform -chdir=infra init -backend=false
+terraform -chdir=infra validate
+terraform -chdir=infra/aks init -backend=false
+terraform -chdir=infra/aks validate
+checkov --directory infra --framework terraform --compact --quiet
+helm lint flask-app -f flask-app/values-production.yaml
+helm template flask-web-prod flask-app -n production \
+  -f flask-app/values-production.yaml > /tmp/flask-production.yaml
 ```
 
-### Check service and ingress
+For an authenticated, reviewed infrastructure plan:
 
 ```bash
-kubectl get svc,ingress -n production
+terraform -chdir=infra init -backend-config=environments/dev/backend.hcl
+terraform -chdir=infra plan \
+  -var-file=environments/dev/terraform.tfvars \
+  -var=postgresql_enabled=true
+terraform -chdir=infra/aks init -backend-config=environments/dev/backend.hcl
+terraform -chdir=infra/aks plan \
+  -var-file=environments/dev/terraform.tfvars
 ```
 
-### Check autoscaling
+## Production verification
 
 ```bash
-kubectl get hpa -n production
+curl --fail --silent --show-error https://traditionalstrength.co.uk/health
+kubectl get application flask-web-production -n argocd
+argocd app get flask-web-production
+kubectl get deployment,pods,service,ingress -n production
+kubectl get pods -n production -o wide
+kubectl get externalsecret,secretstore -n production
+kubectl get nodes -L agentpool,workload
 ```
 
-### Review application logs
+Expected: HTTP health succeeds; Argo CD is `Synced` and `Healthy`; the Deployment is available; application and migration pods use the production pool; and the ExternalSecret is Ready. Do not decode Kubernetes Secrets during verification.
 
-```bash
-kubectl logs -n production deployment/flask-web
-```
+## Known limitations
 
-### Review recent events
+- Single Azure region and single production application replica during database cutover.
+- Public AKS API restricted by authorized IP ranges, rather than a private control plane.
+- Public NGINX ingress without Azure Front Door/WAF or a private origin.
+- Production-pool host encryption blocked by East US 2 vCPU quota; see [production-backlog.md](docs/production-backlog.md).
+- PostgreSQL geo-redundant backup and high availability are disabled as explicit cost/RPO trade-offs.
+- Proposed Prometheus alerts and dashboard resources are not enabled in production; no formal SLO/error budget exists.
+- No complete dev-to-staging-to-production promotion path, multi-region recovery, or enforced image signatures.
 
-```bash
-kubectl get events -n production \
-  --sort-by=.metadata.creationTimestamp
-```
+## Roadmap
 
----
+- **Version 1 — complete:** production foundation, AKS pool separation, private PostgreSQL, secret delivery, Helm/Argo CD GitOps, CI/CD quality gates, and validated public health.
+- **Version 2 — reliability and delivery:** safe scale-out, active monitoring and alert routing, SLOs, restore exercises, staging and promotion, WAF/private-origin design, image signing, and completion of the quota-blocked host-encryption change.
+- **Version 3 — product and platform evolution:** multi-region recovery, stronger identity and tenant boundaries, event-driven/background services, richer coaching analytics, and capacity/cost automation driven by measured demand.
 
-## Engineering Decisions
+See the [versioned roadmap](docs/roadmap.md) for boundaries and exit criteria.
 
-### Git as the source of truth
+## Screenshots
 
-Kubernetes deployments are managed declaratively through Git rather than by manually changing live cluster resources.
+| Evidence | Screenshot |
+| --- | --- |
+| Application over HTTPS | ![Traditional Strength application over HTTPS](docs/images/application-https.png) |
+| Argo CD Synced and Healthy | ![Argo CD production application](docs/images/argocd-application-healthy-synced.png) |
+| Production Kubernetes resources | ![Production Kubernetes resources](docs/images/kubectl-production-resources.png) |
+| GitHub Actions pipeline | ![GitHub Actions successful pipeline](docs/images/github-actions-pipeline-success.png) |
+| Azure resource group | ![Azure production resources](docs/images/azure-resource-group-overview.png) |
 
-### Separation of CI and CD
+Additional placeholders for a future evidence refresh: AKS node pools and labels, PostgreSQL private networking/DNS, ExternalSecret Ready status, and Terraform plan/apply summaries with sensitive data removed.
 
-GitHub Actions handles image build, security scanning and publication. Argo CD handles deployment and reconciliation.
+## Further documentation
 
-### Managed secret delivery
-
-Secrets are retrieved from Azure Key Vault rather than embedded in source code, container images or static Kubernetes manifests.
-
-### Production-focused Kubernetes configuration
-
-Health probes, resource requests, resource limits and autoscaling are included to improve resilience and runtime behaviour.
-
-### Layered observability
-
-Prometheus and Grafana provide Kubernetes visibility, while Application Insights provides application-level telemetry.
-
-### Reproducible infrastructure
-
-Terraform allows Azure resources to be reviewed, versioned and recreated consistently.
-
----
-
-## Skills Demonstrated
-
-- Azure Platform Engineering
-- Azure Kubernetes Service
-- Infrastructure as Code
-- Terraform
-- Kubernetes administration
-- Docker
-- Helm
-- GitHub Actions
-- CI/CD pipeline engineering
-- GitOps
-- Argo CD
-- Azure Container Registry
-- Azure Key Vault
-- Managed Identity
-- Kubernetes secret integration
-- NGINX ingress
-- TLS certificate automation
-- Horizontal Pod Autoscaling
-- Prometheus
-- Grafana
-- Azure Application Insights
-- Linux
-- Cloud troubleshooting
-- Deployment validation
-- Production monitoring
-
----
-
-## Lessons Learned
-
-This project reinforced several important platform engineering principles:
-
-- Infrastructure should be reproducible and version controlled
-- Git should remain the source of truth for declarative deployments
-- Continuous integration and continuous delivery should have clearly separated responsibilities
-- Secrets should be delivered through managed identity and dedicated secret-management platforms
-- Observability should be designed into a platform rather than added after deployment
-- Kubernetes workloads require health probes, resource controls and autoscaling
-- Platform documentation should include evidence that the deployed system is healthy and operational
-
----
-
-## Future Improvements
-
-Potential production extensions include:
-
-- Private AKS networking
-- Azure Private Endpoints
-- Azure Front Door
-- Azure Application Gateway
-- Workload Identity
-- Azure Policy for Kubernetes
-- Open Policy Agent or Gatekeeper
-- OpenTelemetry Collector
-- Loki log aggregation
-- Tempo distributed tracing
-- Alertmanager
-- Disaster recovery automation
-- Multi-environment promotion
-- Cost monitoring and optimisation
-- Automated Terraform policy checks
-- End-to-end application tests
-
----
-
-## Project Outcome
-
-This project demonstrates an end-to-end Azure platform built with modern cloud-native engineering practices.
-
-It combines:
-
-- Infrastructure provisioning
-- Secure application delivery
-- Kubernetes operations
-- GitOps reconciliation
-- CI/CD automation
-- Secret management
-- HTTPS ingress
-- Autoscaling
-- Metrics and dashboards
-- Application telemetry
-
-The result is a reproducible, observable and production-inspired Azure application platform that demonstrates practical Platform Engineering and DevOps capability.
----
-
-## Platform Documentation
-
-Detailed design and operational documentation:
-
-- [Platform Architecture](docs/architecture.md)
-- [Engineering Decisions](docs/engineering-decisions.md)
-- [Operational Runbook](docs/runbook.md)
-- [Limitations and Future Improvements](docs/limitations.md)
+- [Version 1 summary](docs/version-1-summary.md)
+- [Architecture](docs/architecture.md)
+- [Interview talking points](docs/interview-talking-points.md)
+- [Operational runbook](docs/runbook.md)
+- [Engineering decisions](docs/engineering-decisions.md)
+- [Production backlog](docs/production-backlog.md)

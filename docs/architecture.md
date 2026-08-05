@@ -1,220 +1,184 @@
-# Platform Architecture
+# Version 1 architecture
 
-## Overview
+## Scope and validated state
 
-This repository implements an Azure platform for building, securing, deploying and observing a containerised Flask application on Azure Kubernetes Service.
+This document describes the implemented Traditional Strength Version 1 platform. The production Argo CD Application `flask-web-production` is Synced and Healthy, and the public `/health` endpoint is healthy. Disabled chart features and roadmap items are identified explicitly.
 
-Core components:
-
-- Terraform for Azure infrastructure
-- Azure Kubernetes Service for orchestration
-- Azure Container Registry for images
-- GitHub Actions for CI and promotion
-- GitHub OIDC for secretless Azure authentication
-- Argo CD for GitOps delivery
-- Helm for Kubernetes packaging
-- NGINX Ingress and cert-manager for HTTPS
-- External Secrets Operator and Azure Key Vault for runtime secrets
-- Microsoft Entra Workload Identity for Kubernetes-to-Azure authentication
-- Prometheus and Grafana for metrics
-- OpenTelemetry and Application Insights for application telemetry
-
-## End-to-End Architecture
-
-```mermaid
-flowchart LR
-    Dev[Developer] --> Git[GitHub Repository]
-    Git --> GHA[GitHub Actions]
-    GHA --> Test[Test and Validate]
-    GHA --> Scan[Trivy and Checkov]
-    GHA --> Build[Build Container]
-    Build --> ACR[Azure Container Registry]
-    GHA --> Promote[Update Helm Image Tag]
-    Promote --> Git
-    Git --> Argo[Argo CD]
-    Argo --> Helm[Helm Chart]
-    Helm --> AKS[AKS]
-    AKS --> ACR
-    Internet --> NGINX[NGINX Ingress]
-    NGINX --> Ingress[Ingress Resource]
-    Ingress --> Service[Flask Service]
-    Service --> Pods[Flask Pods]
-    Pods --> Prom[Prometheus]
-    Prom --> Grafana[Grafana]
-    Pods --> AppInsights[Application Insights]
-    KeyVault[Azure Key Vault] --> ESO[External Secrets Operator]
-    ESO --> Secret[flask-runtime-secrets]
-    Secret --> Pods
-```
-
-## Delivery Model
-
-The platform separates image delivery from desired-state delivery.
-
-### Image path
-
-```text
-GitHub Actions -> build and scan -> ACR -> AKS pulls immutable Git SHA image
-```
-
-### Desired-state path
-
-```text
-GitHub Actions -> update Helm image tag in Git -> Argo CD -> Helm -> AKS
-```
-
-Argo CD does not deploy from ACR. Git is the source of truth for desired state; ACR stores deployable images.
-
-## CI/CD and GitOps Flow
-
-```mermaid
-sequenceDiagram
-    participant D as Developer
-    participant G as GitHub
-    participant A as GitHub Actions
-    participant R as ACR
-    participant C as Argo CD
-    participant K as AKS
-
-    D->>G: Push change
-    G->>A: Trigger workflow
-    A->>A: Test and scan
-    A->>R: Push Git SHA image
-    A->>G: Update production Helm tag
-    G->>C: Desired state changes
-    C->>K: Reconcile Helm release
-    K->>R: Pull promoted image
-```
-
-## Azure Infrastructure
+## End-to-end platform architecture
 
 ```mermaid
 flowchart TB
-    RG[Azure Resource Group]
-    RG --> VNET[Virtual Network]
-    RG --> AKS[AKS]
-    RG --> ACR[Container Registry]
-    RG --> KV[Key Vault]
-    RG --> AI[Application Insights]
-    RG --> LAW[Log Analytics]
-    RG --> ID[Managed Identities and RBAC]
-    AKS --> CNI[Azure CNI]
-    AKS --> OIDC[OIDC Issuer]
-    AKS --> WI[Workload Identity]
-    AKS --> NP[Node Pool]
+    Client[Browser or API client]
+    DNS[Public DNS]
+    NGINX[NGINX ingress controller]
+    Ingress[traditionalstrength.co.uk Ingress]
+    Service[flask-app ClusterIP Service]
+    Pods[Flask portal pods]
+    Migration[Helm pre-upgrade migration Job]
+    DB[(Azure PostgreSQL Flexible Server)]
+    AI[Application Insights]
+    LAW[Log Analytics and AKS insights]
+    KV[Azure Key Vault]
+    ESO[External Secrets Operator]
+    Secret[Kubernetes runtime Secret]
+    ACR[Azure Container Registry]
+    Git[GitHub repository]
+    Actions[GitHub Actions]
+    Argo[Argo CD]
+
+    Client --> DNS -->|HTTPS| NGINX --> Ingress --> Service --> Pods
+    Pods -->|TLS over private network| DB
+    Migration -->|schema upgrade| DB
+    Pods --> AI
+    Pods -. cluster telemetry .-> LAW
+    KV --> ESO --> Secret
+    Secret --> Pods
+    Secret --> Migration
+    Git --> Actions
+    Actions --> ACR
+    Actions -->|update immutable image tag| Git
+    Git --> Argo -->|Helm reconciliation| Pods
+    ACR -->|image pull| Pods
+    ACR -->|same image| Migration
 ```
 
-Terraform is split between root Azure infrastructure and AKS configuration. Local state, plans and provider caches are excluded from Git.
+The application is exposed only through an ingress-backed `ClusterIP` Service. Production uses one application replica during PostgreSQL cutover; the scale-out overlay is not active.
 
-## Identity Flows
+## CI/CD and GitOps deployment flow
 
-### GitHub Actions to Azure
+```mermaid
+sequenceDiagram
+    actor Developer
+    participant GitHub
+    participant CI as GitHub Actions
+    participant ACR
+    participant Argo as Argo CD
+    participant Helm
+    participant AKS
+    participant Health as Public health endpoint
 
-GitHub Actions requests a signed OIDC token. Microsoft Entra ID validates the configured issuer, subject and audience and returns a short-lived Azure access token. No long-lived Azure client secret is stored in GitHub.
-
-### AKS to Key Vault
-
-External Secrets Operator uses the `external-secrets-kv` ServiceAccount. Microsoft Entra Workload Identity exchanges its projected token for Azure access, then External Secrets retrieves the Key Vault value and creates or refreshes `flask-runtime-secrets`.
-
-The Flask Deployment consumes the generated Kubernetes Secret through `secretKeyRef`.
-
-## Kubernetes Runtime
-
-Implemented controls include:
-
-- Rolling Deployment
-- readiness and liveness probes
-- CPU and memory requests and limits
-- Horizontal Pod Autoscaler
-- Pod Disruption Budget
-- default-deny ingress NetworkPolicy
-- explicit NGINX ingress allowance
-- explicit Prometheus allowance
-- ServiceMonitor
-- Argo CD automated sync, pruning and self-healing
-
-## Traffic Path
-
-Current production exposure:
-
-```text
-Internet -> NGINX Ingress -> Flask Service -> Pods
-Internet -> Flask LoadBalancer Service -> Pods
+    Developer->>GitHub: Open pull request
+    GitHub->>CI: Run path-scoped validation
+    CI->>CI: Tests, Helm, Trivy, Checkov, CodeQL, browser and release gates
+    Developer->>GitHub: Merge approved change to main
+    GitHub->>CI: Run main release workflow
+    CI->>ACR: Push immutable Git SHA image
+    CI->>GitHub: Commit production image tag
+    Argo->>GitHub: Poll desired state
+    Argo->>Helm: Render flask-app values
+    Helm->>AKS: Run migration hook
+    AKS->>ACR: Pull selected image
+    Helm->>AKS: Reconcile Deployment and services
+    Argo->>AKS: Prune drift and self-heal
+    CI->>Health: Verify HTTPS /health
 ```
 
-Target exposure:
+Feature branches validate but do not publish or promote. GitHub OIDC supplies short-lived Azure authentication. Git contains desired state, ACR contains images, and Argo CD owns delivery to AKS.
 
-```text
-Internet -> NGINX LoadBalancer -> Ingress -> ClusterIP Flask Service -> Ready Pods
+## AKS system pool and production workload pool
+
+```mermaid
+flowchart TB
+    subgraph Cluster[Azure Kubernetes Service]
+        Scheduler[Kubernetes scheduler]
+
+        subgraph SystemPool[system pool - System mode]
+            CoreDNS[CoreDNS]
+            KubeSystem[cluster-critical add-ons]
+            Policy[Azure policy and agents]
+        end
+
+        subgraph ProductionPool[production pool - User mode]
+            Label[workload=production]
+            Web[Flask Deployment]
+            Job[Database migration Job]
+        end
+    end
+
+    Scheduler --> SystemPool
+    Scheduler -->|nodeSelector workload=production| Web
+    Scheduler -->|nodeSelector workload=production| Job
+    Label --- Web
+    Label --- Job
 ```
 
-The Flask Service should be changed from `LoadBalancer` to `ClusterIP` so NGINX remains the single public entry point.
+The system pool uses `only_critical_addons_enabled`, host encryption, an ephemeral OS disk, and Azure Linux. The autoscaling production User pool carries the workload label and also uses Azure Linux and an ephemeral OS disk. Host encryption on that pool is the sole quota-blocked hardening item documented in [production-backlog.md](production-backlog.md).
 
-## Observability
+## AKS-to-PostgreSQL private networking and DNS
 
-### Prometheus path
+```mermaid
+flowchart LR
+    Pod[Flask pod]
+    CoreDNS[AKS CoreDNS]
+    PrivateZone[Private DNS zone<br/>postgres.database.azure.com]
+    PrivateIP[PostgreSQL private address]
+    DB[(Flexible Server<br/>public access disabled)]
 
-```text
-Flask /metrics -> ServiceMonitor -> Prometheus -> Grafana
+    subgraph AKSVNet[AKS virtual network]
+        Pod --> CoreDNS
+    end
+
+    subgraph AppVNet[Application virtual network]
+        DBSubnet[Delegated database subnet]
+        PrivateIP --> DB
+        DBSubnet --- DB
+    end
+
+    AKSVNet <-->|bidirectional VNet peering| AppVNet
+    CoreDNS -->|resolve server FQDN| PrivateZone
+    PrivateZone -->|private A record| PrivateIP
+    Pod -->|TCP 5432 and TLS| PrivateIP
 ```
 
-### Azure telemetry path
+Terraform manages both peering directions and links the private DNS zone to the application VNet and AKS VNet. The application connects by FQDN with TLS rather than by a fixed address. The server has public network access disabled and is protected from accidental Terraform destruction.
 
-```text
-Flask OpenTelemetry -> Azure Monitor exporter -> Application Insights -> Log Analytics
+## Secret flow from Key Vault to Kubernetes
+
+```mermaid
+sequenceDiagram
+    participant Admin as Approved secret owner
+    participant KV as Azure Key Vault
+    participant SA as external-secrets-kv ServiceAccount
+    participant Entra as Microsoft Entra ID
+    participant ESO as External Secrets Operator
+    participant K8s as flask-runtime-secrets
+    participant App as Flask pod or migration Job
+
+    Admin->>KV: Store or rotate approved value
+    ESO->>SA: Use projected workload token
+    SA->>Entra: Exchange token via federated identity
+    Entra-->>ESO: Short-lived Azure access token
+    ESO->>KV: Read named secrets
+    KV-->>ESO: Return values over TLS
+    ESO->>K8s: Create or refresh Kubernetes Secret
+    K8s-->>App: Inject keys through secretKeyRef
 ```
 
-Prometheus supports platform and application metrics. Application Insights supports requests, traces, dependencies, exceptions and Azure-native diagnostics.
+The `ExternalSecret` refreshes `SECRET_KEY`, `DATABASE_URL`, and `APPLICATIONINSIGHTS_CONNECTION_STRING`. Terraform state contains the generated PostgreSQL administrator password because Azure requires it for resource creation, so state access is a sensitive security boundary. Neither Helm nor Git stores the runtime values.
 
-## Availability and Scaling
-
-Production requests two replicas. The PDB keeps at least one available during voluntary disruptions. HPA includes CPU-based scaling and explicit scale-up and scale-down behaviour.
-
-Topology spreading and pod anti-affinity are not yet enforced, so replicas may share the same node.
-
-## Security Controls
-
-Implemented:
-
-- GitHub OIDC
-- Microsoft Entra Workload Identity
-- Azure Key Vault
-- External Secrets Operator
-- immutable Git SHA image tags
-- Trivy and Checkov
-- TLS ingress
-- ingress NetworkPolicies
-- GitOps reconciliation
-- resource requests and limits
-
-Planned:
-
-- non-root execution
-- privilege escalation disabled
-- all capabilities dropped
-- RuntimeDefault seccomp
-- read-only root filesystem where compatible
-- startup probe
-- topology spread
-- default-deny egress
-- image signing and provenance
-
-## Source of Truth
+## Infrastructure ownership
 
 | Concern | Source of truth |
-|---|---|
-| Azure infrastructure | Terraform |
-| Kubernetes package | Helm |
-| Production image | `flask-app/values-production.yaml` |
-| Kubernetes desired state | Git |
-| Container image | ACR |
-| Runtime secret value | Azure Key Vault |
-| Secret synchronisation | ExternalSecret |
-| Deployment reconciliation | Argo CD |
-| CI and promotion | GitHub Actions |
+| --- | --- |
+| Shared Azure resources, network, PostgreSQL | `infra/` Terraform state and configuration |
+| AKS and node pools | `infra/aks/` Terraform state and configuration |
+| Application package | `flask-app/` Helm chart |
+| Production image selection | `flask-app/values-production.yaml` |
+| Kubernetes reconciliation | `kubernetes/argocd/flask-web-production.yaml` and Argo CD |
+| Runtime secret values | Azure Key Vault |
+| Secret synchronisation | `kubernetes/external-secrets/azure-key-vault.yaml` |
+| Images | Azure Container Registry |
 
-## Related Documentation
+## Runtime controls
 
-- [Engineering Decisions](engineering-decisions.md)
-- [Operational Runbook](runbook.md)
-- [Limitations and Future Improvements](limitations.md)
+The chart implements rolling updates, a pre-deployment migration hook, startup/readiness/liveness probes, a Pod Disruption Budget, CPU and memory controls, topology preferences, non-root execution, dropped capabilities, RuntimeDefault seccomp, a read-only root filesystem, Pod Security `restricted`, and default-deny ingress/egress with explicit required paths.
+
+Observability includes application health and metrics endpoints, Application Insights/Log Analytics infrastructure, Azure Monitor instrumentation, and runbooks. Prometheus Operator objects exist in the chart but are disabled in production pending live label and routing validation; screenshots are evidence of prior monitoring use, not proof that every proposed resource is currently active.
+
+## Related documents
+
+- [Version 1 summary](version-1-summary.md)
+- [Engineering decisions](engineering-decisions.md)
+- [Azure PostgreSQL](azure-postgresql.md)
+- [Operational runbook](runbook.md)
+- [Roadmap](roadmap.md)
