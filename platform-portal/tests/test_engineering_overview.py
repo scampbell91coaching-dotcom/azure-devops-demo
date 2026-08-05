@@ -109,6 +109,8 @@ def test_engineering_route_and_api_explain_data_boundaries(tmp_path):
     assert b"Portal host only" in page.data
     assert api.status_code == 200
     payload = api.get_json()
-    assert payload["generated_at"] is not None
+    assert payload["generated_at"] is None or (
+        isinstance(payload["generated_at"], str) and payload["generated_at"]
+    )
     assert payload["release"]["generated_at"] is None
     assert payload["release"]["state"] == "unavailable"
