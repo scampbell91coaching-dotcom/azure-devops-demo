@@ -118,6 +118,9 @@ topologySpreadConstraints: []
 
 affinity: {}
 
+nodeSelector:
+  workload: production
+
 # Proposed production observability resources. Disabled by default so adding the
 # definitions cannot create dashboards or live alerts without an explicit review.
 monitoring:

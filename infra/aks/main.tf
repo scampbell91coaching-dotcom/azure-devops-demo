@@ -25,14 +25,13 @@ resource "azurerm_kubernetes_cluster" "aks" {
   oidc_issuer_enabled          = true
   workload_identity_enabled    = true
   azure_policy_enabled         = true
-  local_account_disabled       = true
   image_cleaner_enabled        = true
   image_cleaner_interval_hours = 48
   automatic_upgrade_channel    = "patch"
   node_os_upgrade_channel      = "NodeImage"
   name                         = var.aks_name
-  location                     = data.azurerm_resource_group.lab.location
-  resource_group_name          = data.azurerm_resource_group.lab.name
+  location                     = data.azurerm_resource_group.production.location
+  resource_group_name          = data.azurerm_resource_group.production.name
   dns_prefix                   = var.dns_prefix
 
   sku_tier = "Standard"
@@ -82,6 +81,34 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 
   role_based_access_control_enabled = true
+
+  tags = {
+    Environment = "production"
+    Project     = "azure-devops-demo"
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "azurerm_kubernetes_cluster_node_pool" "production" {
+  name                  = "production"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.aks.id
+  vm_size               = var.production_node_vm_size
+  node_count            = var.production_node_count
+  auto_scaling_enabled  = true
+  min_count             = var.production_min_node_count
+  max_count             = var.production_max_node_count
+  mode                  = "User"
+  max_pods              = 50
+  os_disk_size_gb       = 30
+  os_disk_type          = "Ephemeral"
+  os_sku                = "AzureLinux"
+  node_labels = {
+    workload = "production"
+  }
+
+  upgrade_settings {
+    max_surge = "10%"
+  }
 
   tags = {
     Environment = "production"

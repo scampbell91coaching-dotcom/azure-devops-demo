@@ -14,7 +14,7 @@ from portal.services.release_readiness import (
 def evidence_payload():
     return {
         "schema_version": 1,
-        "generated_at": "2026-08-04T12:00:00Z",
+        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "status": "ready",
         "repository": {"branch": "main", "commit": "abc123", "dirty": False},
         "checks": [

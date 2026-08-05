@@ -80,3 +80,27 @@ variable "max_node_count" {
   type        = number
   default     = 3
 }
+
+variable "production_node_vm_size" {
+  description = "VM size used by the AKS production workload node pool"
+  type        = string
+  default     = "Standard_D2s_v3"
+}
+
+variable "production_node_count" {
+  description = "Initial number of nodes in the AKS production workload node pool"
+  type        = number
+  default     = 1
+}
+
+variable "production_min_node_count" {
+  description = "Minimum number of production workload nodes used by the cluster autoscaler"
+  type        = number
+  default     = 1
+}
+
+variable "production_max_node_count" {
+  description = "Maximum number of production workload nodes used by the cluster autoscaler"
+  type        = number
+  default     = 3
+}
