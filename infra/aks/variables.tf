@@ -32,8 +32,11 @@ variable "api_server_authorized_ip_ranges" {
   type        = list(string)
 
   validation {
-    condition     = length(var.api_server_authorized_ip_ranges) > 0
-    error_message = "At least one trusted AKS API server CIDR must be supplied."
+    condition = length(var.api_server_authorized_ip_ranges) > 0 && alltrue([
+      for address in var.api_server_authorized_ip_ranges :
+      can(cidrhost(strcontains(trimspace(address), "/") ? trimspace(address) : "${trimspace(address)}/32", 0))
+    ])
+    error_message = "At least one valid trusted AKS API server IP address or CIDR must be supplied."
   }
 }
 

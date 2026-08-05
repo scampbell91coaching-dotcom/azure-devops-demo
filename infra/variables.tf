@@ -164,7 +164,7 @@ variable "postgresql_tags" {
   description = "Tags applied to PostgreSQL resources."
   type        = map(string)
   default = {
-    Environment = "lab"
+    Environment = "production"
     ManagedBy   = "Terraform"
     Project     = "traditional-strength"
   }
@@ -179,4 +179,34 @@ variable "postgresql_additional_virtual_network_links" {
   description = "Additional VNets that require PostgreSQL private DNS resolution."
   type        = map(string)
   default     = {}
+}
+
+variable "terraform_key_vault_reader_principal_id" {
+  description = "Object ID of the CI principal that needs read-only access to Terraform-managed Key Vault secrets during refresh."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.terraform_key_vault_reader_principal_id == null || can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", var.terraform_key_vault_reader_principal_id))
+    error_message = "terraform_key_vault_reader_principal_id must be null or a valid principal object ID."
+  }
+}
+
+variable "aks_node_resource_group_name" {
+  description = "AKS-managed node resource group containing the cluster VNet."
+  type        = string
+  default     = "MC_rg-devops-assessment-lab_aks-devops-lab_eastus2"
+}
+
+variable "aks_virtual_network_name" {
+  description = "Name of the AKS-managed virtual network."
+  type        = string
+  default     = "aks-vnet-38128856"
+}
+
+variable "aks_virtual_network_id" {
+  description = "Resource ID of the AKS-managed virtual network."
+  type        = string
+  default     = "/subscriptions/abac1d73-0524-4172-a292-64f8a7595728/resourceGroups/MC_rg-devops-assessment-lab_aks-devops-lab_eastus2/providers/Microsoft.Network/virtualNetworks/aks-vnet-38128856"
 }

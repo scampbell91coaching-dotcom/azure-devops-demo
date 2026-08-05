@@ -1,4 +1,11 @@
-data "azurerm_resource_group" "lab" {
+locals {
+  api_server_authorized_ip_ranges = [
+    for address in var.api_server_authorized_ip_ranges :
+    strcontains(trimspace(address), "/") ? trimspace(address) : "${trimspace(address)}/32"
+  ]
+}
+
+data "azurerm_resource_group" "production" {
   name = var.resource_group_name
 }
 
@@ -31,7 +38,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   sku_tier = "Standard"
 
   api_server_access_profile {
-    authorized_ip_ranges = var.api_server_authorized_ip_ranges
+    authorized_ip_ranges = local.api_server_authorized_ip_ranges
   }
 
   default_node_pool {
@@ -77,7 +84,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   role_based_access_control_enabled = true
 
   tags = {
-    Environment = "lab"
+    Environment = "production"
     Project     = "azure-devops-demo"
     ManagedBy   = "terraform"
   }

@@ -6,7 +6,7 @@ resource "azurerm_log_analytics_workspace" "main" {
   retention_in_days   = 30
 
   tags = {
-    Environment = "Lab"
+    Environment = "production"
     Project     = "Azure DevOps Assessment"
   }
 }
@@ -19,7 +19,7 @@ resource "azurerm_application_insights" "main" {
   application_type    = "web"
 
   tags = {
-    Environment = "Lab"
+    Environment = "production"
     Project     = "Azure DevOps Assessment"
   }
 }
@@ -70,7 +70,7 @@ resource "azurerm_monitor_data_collection_rule" "linux_vm" {
   }
 
   tags = {
-    Environment = "Lab"
+    Environment = "production"
     Project     = "Azure DevOps Assessment"
   }
 }
