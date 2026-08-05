@@ -50,17 +50,21 @@ jobs:
             -t "$IMAGE" \
             .
 
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@e07451d2e059ed86c2870430ea286b3a9e0bf241
+
       - name: Scan image with Trivy (blocking)
-        uses: aquasecurity/trivy-action@76071ef0d7ec797419534a183b498b4d6366cf37
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           image-ref: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: table
           severity: HIGH,CRITICAL
           exit-code: "1"
 
+          skip-setup-trivy: true
       - name: Generate image scan SARIF
         if: always()
-        uses: aquasecurity/trivy-action@76071ef0d7ec797419534a183b498b4d6366cf37
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           image-ref: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: sarif
@@ -68,6 +72,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "0"
 
+          skip-setup-trivy: true
       - name: Upload image scan SARIF
         if: always() && hashFiles('trivy-lead-magnets-results.sarif') != ''
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
