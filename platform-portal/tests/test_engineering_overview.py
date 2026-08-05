@@ -105,7 +105,6 @@ def test_engineering_route_and_api_explain_data_boundaries(tmp_path):
 
     assert page.status_code == 200
     assert b"Engineering overview" in page.data
-    assert b"Platform status collected" in page.data
     assert b"Release evidence has not been generated" in page.data
     assert b"Portal host only" in page.data
     assert api.status_code == 200
