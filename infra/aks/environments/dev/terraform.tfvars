@@ -12,5 +12,5 @@ node_count     = 2
 min_node_count = 1
 max_node_count = 1
 api_server_authorized_ip_ranges = [
-  " 51.6.97.140",
+  "51.6.97.140/32",
 ]
