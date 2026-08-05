@@ -149,3 +149,18 @@ variable "tags" {
     error_message = "tags cannot contain empty or whitespace-only keys or values."
   }
 }
+
+variable "additional_virtual_network_links" {
+  description = "Additional virtual networks that must resolve the PostgreSQL private DNS zone. Map keys are stable logical names and values are full VNet resource IDs."
+  type        = map(string)
+  default     = {}
+
+  validation {
+    condition = alltrue([
+      for name, id in var.additional_virtual_network_links :
+      length(trimspace(name)) > 0 &&
+      can(regex("^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\\.Network/virtualNetworks/[^/]+$", id))
+    ])
+    error_message = "Each additional_virtual_network_links value must be a complete Azure virtual network resource ID."
+  }
+}

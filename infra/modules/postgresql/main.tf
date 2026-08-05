@@ -23,6 +23,17 @@ resource "azurerm_private_dns_zone_virtual_network_link" "this" {
   tags                  = var.tags
 }
 
+resource "azurerm_private_dns_zone_virtual_network_link" "additional" {
+  for_each = var.additional_virtual_network_links
+
+  name                  = "${each.key}-postgres-dns-link"
+  private_dns_zone_name = azurerm_private_dns_zone.this.name
+  virtual_network_id    = each.value
+  resource_group_name   = var.resource_group_name
+  registration_enabled  = false
+  tags                  = var.tags
+}
+
 resource "azurerm_postgresql_flexible_server" "this" {
   #checkov:skip=CKV_AZURE_136:Geo-redundant backup is an explicit, region-dependent cost option; local PITR remains enabled.
   #checkov:skip=CKV2_AZURE_57:Flexible Server private access uses a delegated subnet and private DNS, not a Private Endpoint.
@@ -59,7 +70,10 @@ resource "azurerm_postgresql_flexible_server" "this" {
 
   tags = var.tags
 
-  depends_on = [azurerm_private_dns_zone_virtual_network_link.this]
+  depends_on = [
+    azurerm_private_dns_zone_virtual_network_link.this,
+    azurerm_private_dns_zone_virtual_network_link.additional,
+  ]
 
   lifecycle {
     ignore_changes = [
