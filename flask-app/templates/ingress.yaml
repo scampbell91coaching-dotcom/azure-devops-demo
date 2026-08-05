@@ -4,7 +4,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "flask-app.fullname" . }}
+  name: {{ default (include "flask-app.fullname" .) .Values.ingress.nameOverride }}
   labels:
     {{- include "flask-app.labels" . | nindent 4 }}
   annotations:

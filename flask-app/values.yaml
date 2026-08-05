@@ -99,6 +99,7 @@ containerSecurityContext:
   readOnlyRootFilesystem: true
 
 ingress:
+  nameOverride: ""
   enabled: false
   className: nginx
   hosts: []
