@@ -43,6 +43,11 @@ spec:
           env:
             - name: DATABASE_URL
               value: sqlite:////data/platform-history.db
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: flask-runtime-secrets
+                  key: SECRET_KEY
           readinessProbe:
             httpGet:
               path: /health
