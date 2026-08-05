@@ -19,6 +19,7 @@ data "azurerm_log_analytics_workspace" "aks" {
   resource_group_name = var.resource_group_name
 }
 
+#checkov:skip=CKV_AZURE_141: Existing non-Entra AKS cluster cannot disable local accounts until a separately planned Microsoft Entra migration
 resource "azurerm_kubernetes_cluster" "aks" {
   # checkov:skip=CKV_AZURE_115:Private AKS is deferred until private DNS, runner connectivity and operator access are designed and tested.
   # checkov:skip=CKV_AZURE_117:Customer-managed disk encryption is deferred until Key Vault, key rotation and identity permissions are implemented.
@@ -89,6 +90,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 }
 
+#checkov:skip=CKV_AZURE_227: Host encryption requires temporary node-pool rotation, currently blocked by exhausted East US 2 regional vCPU quota; tracked in the production backlog.
 resource "azurerm_kubernetes_cluster_node_pool" "production" {
   name                  = "production"
   kubernetes_cluster_id = azurerm_kubernetes_cluster.aks.id
