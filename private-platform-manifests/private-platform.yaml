@@ -42,7 +42,10 @@ spec:
               containerPort: 8080
           env:
             - name: DATABASE_URL
-              value: sqlite:////data/platform-history.db
+              valueFrom:
+                secretKeyRef:
+                  name: flask-runtime-secrets
+                  key: DATABASE_URL
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
