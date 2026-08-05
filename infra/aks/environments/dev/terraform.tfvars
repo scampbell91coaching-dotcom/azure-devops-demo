@@ -11,6 +11,12 @@ node_vm_size = "Standard_D2s_v3"
 node_count     = 2
 min_node_count = 1
 max_node_count = 1
+
+production_node_vm_size   = "Standard_D2s_v3"
+production_node_count     = 1
+production_min_node_count = 1
+production_max_node_count = 3
+
 api_server_authorized_ip_ranges = [
-  " 51.6.97.140",
+  "51.6.97.140/32",
 ]

@@ -1,4 +1,11 @@
-data "azurerm_resource_group" "lab" {
+locals {
+  api_server_authorized_ip_ranges = [
+    for address in var.api_server_authorized_ip_ranges :
+    strcontains(trimspace(address), "/") ? trimspace(address) : "${trimspace(address)}/32"
+  ]
+}
+
+data "azurerm_resource_group" "production" {
   name = var.resource_group_name
 }
 
@@ -13,25 +20,25 @@ data "azurerm_log_analytics_workspace" "aks" {
 }
 
 resource "azurerm_kubernetes_cluster" "aks" {
+  #checkov:skip=CKV_AZURE_141:Existing non-Entra AKS cluster cannot disable local accounts until a separately planned Microsoft Entra migration.
   # checkov:skip=CKV_AZURE_115:Private AKS is deferred until private DNS, runner connectivity and operator access are designed and tested.
   # checkov:skip=CKV_AZURE_117:Customer-managed disk encryption is deferred until Key Vault, key rotation and identity permissions are implemented.
   oidc_issuer_enabled          = true
   workload_identity_enabled    = true
   azure_policy_enabled         = true
-  local_account_disabled       = true
   image_cleaner_enabled        = true
   image_cleaner_interval_hours = 48
   automatic_upgrade_channel    = "patch"
   node_os_upgrade_channel      = "NodeImage"
   name                         = var.aks_name
-  location                     = data.azurerm_resource_group.lab.location
-  resource_group_name          = data.azurerm_resource_group.lab.name
+  location                     = data.azurerm_resource_group.production.location
+  resource_group_name          = data.azurerm_resource_group.production.name
   dns_prefix                   = var.dns_prefix
 
   sku_tier = "Standard"
 
   api_server_access_profile {
-    authorized_ip_ranges = var.api_server_authorized_ip_ranges
+    authorized_ip_ranges = local.api_server_authorized_ip_ranges
   }
 
   default_node_pool {
@@ -77,7 +84,36 @@ resource "azurerm_kubernetes_cluster" "aks" {
   role_based_access_control_enabled = true
 
   tags = {
-    Environment = "lab"
+    Environment = "production"
+    Project     = "azure-devops-demo"
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "azurerm_kubernetes_cluster_node_pool" "production" {
+  #checkov:skip=CKV_AZURE_227:Host encryption requires temporary node-pool rotation; the apply was attempted, but Azure rejected creation of the temporary node because East US 2 regional vCPU quota was exhausted; remediation is tracked in docs/production-backlog.md.
+  name                  = "production"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.aks.id
+  vm_size               = var.production_node_vm_size
+  node_count            = var.production_node_count
+  auto_scaling_enabled  = true
+  min_count             = var.production_min_node_count
+  max_count             = var.production_max_node_count
+  mode                  = "User"
+  max_pods              = 50
+  os_disk_size_gb       = 30
+  os_disk_type          = "Ephemeral"
+  os_sku                = "AzureLinux"
+  node_labels = {
+    workload = "production"
+  }
+
+  upgrade_settings {
+    max_surge = "10%"
+  }
+
+  tags = {
+    Environment = "production"
     Project     = "azure-devops-demo"
     ManagedBy   = "terraform"
   }

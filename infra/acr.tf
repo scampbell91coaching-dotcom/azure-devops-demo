@@ -15,7 +15,7 @@ resource "azurerm_container_registry" "main" {
   public_network_access_enabled = true
 
   tags = {
-    Environment = "lab"
+    Environment = "production"
     ManagedBy   = "Terraform"
   }
 }

@@ -50,3 +50,34 @@ module "postgresql" {
   private_dns_zone_name            = var.postgresql_private_dns_zone_name
   tags                             = var.postgresql_tags
 }
+
+resource "azurerm_role_assignment" "terraform_key_vault_secrets_user" {
+  count = var.postgresql_enabled && var.terraform_key_vault_reader_principal_id != null ? 1 : 0
+
+  scope                = data.azurerm_key_vault.application[0].id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = var.terraform_key_vault_reader_principal_id
+  principal_type       = "ServicePrincipal"
+}
+
+resource "azurerm_virtual_network_peering" "app_to_aks" {
+  name                      = "app-to-aks"
+  resource_group_name       = module.resource_group.name
+  virtual_network_name      = module.network.virtual_network_name
+  remote_virtual_network_id = var.aks_virtual_network_id
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "azurerm_virtual_network_peering" "aks_to_app" {
+  name                      = "aks-to-app"
+  resource_group_name       = var.aks_node_resource_group_name
+  virtual_network_name      = var.aks_virtual_network_name
+  remote_virtual_network_id = module.network.virtual_network_id
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
