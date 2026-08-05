@@ -174,3 +174,9 @@ variable "postgresql_tags" {
     error_message = "postgresql_tags cannot contain empty or whitespace-only keys or values."
   }
 }
+
+variable "postgresql_additional_virtual_network_links" {
+  description = "Additional VNets that require PostgreSQL private DNS resolution."
+  type        = map(string)
+  default     = {}
+}

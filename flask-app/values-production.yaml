@@ -89,6 +89,7 @@ containerSecurityContext:
   readOnlyRootFilesystem: true
 
 ingress:
+  nameOverride: "flask-web-prod"
   enabled: true
   className: nginx
   hosts:
