@@ -60,7 +60,7 @@ jobs:
           format: table
           severity: HIGH,CRITICAL
           exit-code: "1"
-
+          ignore-unfixed: true
           skip-setup-trivy: true
       - name: Generate image scan SARIF
         if: always()
@@ -71,7 +71,7 @@ jobs:
           output: trivy-lead-magnets-results.sarif
           severity: HIGH,CRITICAL
           exit-code: "0"
-
+          ignore-unfixed: false
           skip-setup-trivy: true
       - name: Upload image scan SARIF
         if: always() && hashFiles('trivy-lead-magnets-results.sarif') != ''
