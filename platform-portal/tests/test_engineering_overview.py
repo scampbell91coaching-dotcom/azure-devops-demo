@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import json
 
 from portal import create_app
@@ -20,7 +21,7 @@ def test_adapter_reuses_live_platform_and_release_evidence(tmp_path, monkeypatch
             {
                 "schema_version": 1,
                 "status": "ready",
-                "generated_at": "2026-08-04T12:00:00Z",
+                "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "repository": {"branch": "main", "commit": "abc123"},
                 "checks": [
                     {
