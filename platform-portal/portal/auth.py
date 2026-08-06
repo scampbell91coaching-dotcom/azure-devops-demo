@@ -127,6 +127,7 @@ def _requested_athlete_id() -> int | None:
 
 def _load_identity() -> None:
     g.current_user = None
+    g.session_expired = False
     if current_app.config["AUTHENTICATION_DISABLED"]:
         return
     user_id = session.get("user_id")
@@ -139,6 +140,7 @@ def _load_identity() -> None:
     session_age = time.time() - authenticated_at
     if session_age > current_app.permanent_session_lifetime.total_seconds():
         session.clear()
+        g.session_expired = True
         return
     user = db.session.get(User, user_id)
     if user is None or not user.active:
@@ -159,7 +161,10 @@ def _authorize_request() -> Response | None:
         wants_json = request.accept_mimetypes.best == "application/json"
         if wants_json or request.path.startswith("/api/"):
             abort(401)
-        return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
+        login_args = {"next": request.full_path.rstrip("?")}
+        if g.get("session_expired"):
+            login_args["reason"] = "session_expired"
+        return redirect(url_for("auth.login", **login_args))
     if user.role == UserRole.COACH:
         return None
     if user.role != UserRole.ATHLETE or endpoint not in _ATHLETE_ENDPOINTS:
@@ -272,6 +277,7 @@ def login():
         )
         return redirect(url_for(endpoint))
     error = None
+    session_expired = request.args.get("reason") == "session_expired"
     if request.method == "POST":
         email = request.form.get("email", "").strip().casefold()
         password = request.form.get("password", "")
@@ -305,7 +311,10 @@ def login():
         status = 429 if limited else 401
         response = Response(
             render_template(
-                "auth/login.html", error=error, next=request.values.get("next", "")
+                "auth/login.html",
+                error=error,
+                next=request.values.get("next", ""),
+                session_expired=session_expired,
             ),
             status=status,
             content_type="text/html; charset=utf-8",
@@ -316,7 +325,10 @@ def login():
             )
         return response
     return render_template(
-        "auth/login.html", error=error, next=request.values.get("next", "")
+        "auth/login.html",
+        error=error,
+        next=request.values.get("next", ""),
+        session_expired=session_expired,
     )
 
 
