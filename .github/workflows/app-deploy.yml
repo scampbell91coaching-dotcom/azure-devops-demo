@@ -410,33 +410,58 @@ jobs:
 
       - name: Wait for migration-gated rollout
         env:
-          EXPECTED_IMAGE: ${{ needs.build-and-push.outputs.image }}
+          EXPECTED_IMAGE: ${{ needs.promote.outputs.image }}
+          AKS_RESOURCE_GROUP: ${{ vars.AKS_RESOURCE_GROUP }}
+          AKS_CLUSTER_NAME: ${{ vars.AKS_CLUSTER_NAME }}
         run: |
           set -euo pipefail
 
-          echo "Waiting for Argo CD. Its Helm pre-upgrade migration must succeed before the Deployment changes."
-          echo "Expected image: $EXPECTED_IMAGE"
-          deadline=$((SECONDS + 600))
-          while (( SECONDS < deadline )); do
-            current_image=$(kubectl get deployment flask-web \
-              --namespace "$K8S_NAMESPACE" \
-              --output jsonpath='{.spec.template.spec.containers[0].image}' \
-              2>/dev/null || true)
-            echo "Observed image: ${current_image:-<not found>}"
-            if [[ "$current_image" == "$EXPECTED_IMAGE" ]]; then
-              kubectl rollout status deployment/flask-web \
-                --namespace "$K8S_NAMESPACE" \
-                --timeout=5m
-              exit 0
-            fi
-            sleep 10
-          done
+          test -n "$EXPECTED_IMAGE"
+          test -n "$AKS_RESOURCE_GROUP"
+          test -n "$AKS_CLUSTER_NAME"
 
-          echo "ERROR: migration-gated rollout did not reach $EXPECTED_IMAGE"
-          kubectl get jobs,pods,deployments --namespace "$K8S_NAMESPACE" || true
-          kubectl logs job/flask-web-prod-flask-app-migration \
-            --namespace "$K8S_NAMESPACE" || true
-          exit 1
+          echo "Expected image: $EXPECTED_IMAGE"
+          echo "Verifying deployment through Azure AKS command invoke."
+
+          for attempt in 1 2 3 4 5; do
+            echo "AKS verification attempt ${attempt}/5"
+
+            if result="$(
+              az aks command invoke \
+                --resource-group "$AKS_RESOURCE_GROUP" \
+                --name "$AKS_CLUSTER_NAME" \
+                --command "
+                  set -eu
+                  current_image=\$(kubectl get deployment flask-web \
+                    --namespace '$K8S_NAMESPACE' \
+                    --output jsonpath='{.spec.template.spec.containers[0].image}')
+
+                  echo \"Expected image: $EXPECTED_IMAGE\"
+                  echo \"Observed image: \$current_image\"
+
+                  test \"\$current_image\" = \"$EXPECTED_IMAGE\"
+
+                  kubectl rollout status deployment/flask-web \
+                    --namespace '$K8S_NAMESPACE' \
+                    --timeout=5m
+                " \
+                --query logs \
+                --output tsv
+            )"; then
+              printf '%s\n' "$result"
+              echo "GitOps deployment verification passed."
+              break
+            fi
+
+            if [ "$attempt" -eq 5 ]; then
+              echo "ERROR: AKS deployment verification failed after 5 attempts."
+              exit 1
+            fi
+
+            delay=$((attempt * 15))
+            echo "Verification failed; retrying in ${delay}s."
+            sleep "$delay"
+          done
 
       - name: Wait for production health endpoint
         run: |
