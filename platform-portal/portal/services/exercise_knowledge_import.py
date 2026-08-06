@@ -74,8 +74,8 @@ def import_exercise_knowledge(
             invalid += 1
             continue
 
-        identities = {_identity(values["name"])} | {
-            _identity(alias) for alias in json.loads(values["aliases"])
+        identities = {exercise_identity(values["name"])} | {
+            exercise_identity(alias) for alias in json.loads(values["aliases"])
         }
         if seen_identities.intersection(identities):
             invalid += 1
@@ -266,11 +266,13 @@ def _validated_aliases(
         normalised_alias = _required_string(alias, maximum_length=160)
         if normalised_alias is None:
             return None
-        if canonical_name is not None and _identity(normalised_alias) == _identity(
-            canonical_name
-        ):
+        if canonical_name is not None and exercise_identity(
+            normalised_alias
+        ) == exercise_identity(canonical_name):
             return None
-        if _identity(normalised_alias) not in {_identity(item) for item in aliases}:
+        if exercise_identity(normalised_alias) not in {
+            exercise_identity(item) for item in aliases
+        }:
             aliases.append(normalised_alias)
     return aliases
 
@@ -289,9 +291,17 @@ def _validated_string_list(
     return items
 
 
-def _identity(value: str) -> str:
+def exercise_identity(value: str) -> str:
+    """Return the punctuation- and case-insensitive exercise identity."""
+
     normalised = unicodedata.normalize("NFKD", value).casefold()
     return re.sub(r"[^a-z0-9]+", " ", normalised).strip()
+
+
+def find_exercise_by_identity(value: str) -> Exercise | None:
+    """Find an exercise by canonical name or alias using import semantics."""
+
+    return _existing_identity_map().get(exercise_identity(value))
 
 
 def _existing_identity_map() -> dict[str, Exercise]:
@@ -306,7 +316,7 @@ def _existing_identity_map() -> dict[str, Exercise]:
             except json.JSONDecodeError:
                 pass
         for value in values:
-            identities.setdefault(_identity(value), exercise)
+            identities.setdefault(exercise_identity(value), exercise)
     return identities
 
 

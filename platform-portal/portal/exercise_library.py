@@ -1,12 +1,27 @@
 from __future__ import annotations
 
+import re
+
 from flask import Blueprint, abort, redirect, render_template, request, url_for
-from sqlalchemy import or_
+from sqlalchemy import and_, func, or_
 
 from .extensions import db
 from .models.exercise_library import Exercise
+from .services.exercise_knowledge_import import find_exercise_by_identity
 
 exercise_library_bp = Blueprint("exercise_library", __name__)
+
+
+SEARCHABLE_FIELDS = (
+    Exercise.name,
+    Exercise.aliases,
+    Exercise.family,
+    Exercise.category,
+    Exercise.primary_muscles,
+    Exercise.secondary_muscles,
+    Exercise.equipment,
+    Exercise.goal,
+)
 
 
 def _optional_int(value: str | None) -> int | None:
@@ -28,7 +43,7 @@ def index():
     search = request.args.get("q", "").strip()
     page = max(1, request.args.get("page", 1, type=int))
 
-    query = Exercise.query
+    query = Exercise.query.filter_by(active=True)
 
     if movement:
         query = query.filter_by(movement=movement)
@@ -36,17 +51,25 @@ def index():
         query = query.filter_by(category=category)
 
     if search:
-        pattern = f"%{search}%"
-        query = query.filter(
-            or_(
-                Exercise.name.ilike(pattern),
-                Exercise.aliases.ilike(pattern),
-                Exercise.family.ilike(pattern),
-                Exercise.primary_muscles.ilike(pattern),
-                Exercise.secondary_muscles.ilike(pattern),
-                Exercise.equipment.ilike(pattern),
+        terms = re.findall(r"[a-z0-9]+", search.casefold())
+        if terms:
+            query = query.filter(
+                and_(
+                    *(
+                        or_(
+                            *(
+                                func.replace(
+                                    func.replace(func.lower(field), "-", " "),
+                                    "'",
+                                    "",
+                                ).like(f"%{term}%")
+                                for field in SEARCHABLE_FIELDS
+                            )
+                        )
+                        for term in terms
+                    )
+                )
             )
-        )
 
     pagination = query.order_by(
         Exercise.movement.asc(),
@@ -82,7 +105,7 @@ def create_exercise():
     }:
         abort(400)
 
-    if Exercise.query.filter_by(name=name).first() is not None:
+    if find_exercise_by_identity(name) is not None:
         abort(409)
 
     exercise = Exercise(
@@ -128,7 +151,11 @@ def update(exercise_id: int):
     if exercise is None:
         abort(404)
 
-    exercise.name = request.form.get("name", "").strip() or exercise.name
+    requested_name = request.form.get("name", "").strip() or exercise.name
+    identity_match = find_exercise_by_identity(requested_name)
+    if identity_match is not None and identity_match.id != exercise.id:
+        abort(409)
+    exercise.name = requested_name
     exercise.movement = (
         request.form.get("movement", "").strip().lower() or exercise.movement
     )
@@ -150,6 +177,10 @@ def update(exercise_id: int):
     )
     exercise.coaching_cues = request.form.get("coaching_cues", "").strip() or None
     exercise.video_url = request.form.get("video_url", "").strip() or None
+    # A coach edit transfers ownership of the complete row. Future catalogue
+    # imports still use its name and aliases for duplicate detection, but do
+    # not replace any coach-maintained values.
+    exercise.catalogue_version = None
 
     db.session.commit()
 
