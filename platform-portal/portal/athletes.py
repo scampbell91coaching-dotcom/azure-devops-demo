@@ -18,6 +18,7 @@ from .extensions import db
 from .models.athlete import Athlete
 from .models.checkins import AthleteCheckinSettings
 from .models.nutrition_checkin import NutritionCheckIn
+from .models.programming import TrainingBlock, TrainingSession
 from .services.athlete_dashboard import get_athlete_dashboard
 from .services.nutrition_dashboard import get_nutrition_dashboard
 
@@ -49,6 +50,44 @@ def dashboard():
     return render_template(
         "athletes/athlete_dashboard.html",
         dashboard=dashboard_data,
+    )
+
+
+def _signed_in_athlete_id() -> int:
+    user = g.get("current_user")
+    athlete_id = user.athlete_id if user is not None else session.get("athlete_id")
+    if isinstance(athlete_id, bool) or not isinstance(athlete_id, int):
+        abort(401)
+    return athlete_id
+
+
+@athletes_bp.get("/athlete/programme")
+def programme():
+    athlete_id = _signed_in_athlete_id()
+    athlete = db.session.get(Athlete, athlete_id)
+    if athlete is None:
+        abort(401)
+    block = (
+        TrainingBlock.query.filter_by(athlete_id=athlete_id, status="active")
+        .order_by(TrainingBlock.created_at.desc(), TrainingBlock.id.desc())
+        .first()
+    )
+    return render_template("athletes/programme.html", athlete=athlete, block=block)
+
+
+@athletes_bp.get("/athlete/programme/sessions/<int:session_id>")
+def programme_session(session_id: int):
+    athlete_id = _signed_in_athlete_id()
+    training_session = db.session.get(TrainingSession, session_id)
+    if training_session is None or training_session.week.block.athlete_id != athlete_id:
+        abort(404)
+    if training_session.week.block.status != "active":
+        abort(404)
+    return render_template(
+        "athletes/programme_session.html",
+        session=training_session,
+        week=training_session.week,
+        block=training_session.week.block,
     )
 
 

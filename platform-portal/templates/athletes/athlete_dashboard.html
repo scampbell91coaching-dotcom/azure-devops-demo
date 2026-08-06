@@ -1,5 +1,6 @@
 {% extends "athletes/base.html" %}
 {% block title %}Your dashboard | Traditional Strength{% endblock %}
+{% block athlete_page %}home{% endblock %}
 {% block content %}
 <section class="dashboard">
   <header class="dashboard__welcome">
@@ -16,7 +17,7 @@
   </nav>
 
   <div class="dashboard-grid">
-    <section class="dashboard-card dashboard-card--wide" id="programme">
+    <section class="dashboard-card dashboard-card--wide dashboard-card--priority" id="programme">
       <div class="card-heading">
         <div><span class="eyebrow">Current programme</span><h2>Training</h2></div>
         {% if dashboard.current_block %}<span class="status">{{ dashboard.current_block.status | title }}</span>{% endif %}
@@ -27,9 +28,10 @@
         <p class="muted">{{ dashboard.current_block.weeks | length }}-week block</p>
         {% if dashboard.next_session %}
           <div class="next-item">
-            <span>Next session</span>
+            <span>Up next</span>
             <strong>{{ dashboard.next_session.name }}</strong>
             {% if dashboard.next_session.day_label %}<small>{{ dashboard.next_session.day_label }}</small>{% endif %}
+            <a class="button" href="{{ url_for('athletes.programme_session', session_id=dashboard.next_session.id) }}">View session</a>
           </div>
         {% else %}
           <div class="empty-state"><strong>No session available</strong><p>Your coach has not added a session to this block yet.</p></div>
@@ -37,6 +39,7 @@
       {% else %}
         <div class="empty-state"><strong>No current programme</strong><p>Your programme will appear here when it is ready.</p></div>
       {% endif %}
+      {% if dashboard.current_block %}<a class="text-link" href="{{ url_for('athletes.programme') }}">View full programme →</a>{% endif %}
     </section>
 
     <section class="dashboard-card" id="check-in">
@@ -131,6 +134,16 @@
       {% else %}
         <div class="empty-state"><strong>No coach response yet</strong><p>Your latest feedback will appear here when it is available.</p></div>
       {% endif %}
+    </section>
+
+    <section class="dashboard-card dashboard-card--wide" id="profile">
+      <div class="card-heading"><div><span class="eyebrow">Athlete details</span><h2>Profile</h2></div></div>
+      <dl class="profile-grid">
+        <div><dt>Name</dt><dd>{{ dashboard.athlete.full_name }}</dd></div>
+        {% if dashboard.athlete.weight_class %}<div><dt>Weight class</dt><dd>{{ dashboard.athlete.weight_class }}</dd></div>{% endif %}
+        {% if dashboard.athlete.federation %}<div><dt>Federation</dt><dd>{{ dashboard.athlete.federation }}</dd></div>{% endif %}
+        {% if dashboard.athlete.next_competition %}<div><dt>Next competition</dt><dd>{{ dashboard.athlete.next_competition }}</dd></div>{% endif %}
+      </dl>
     </section>
   </div>
 </section>
