@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
+from sqlalchemy import or_
 
 from flask import (
     Blueprint,
@@ -18,6 +19,7 @@ from flask import (
 
 from .extensions import db
 from .models.athlete import Athlete
+from .models.exercise_library import Exercise
 from .models.programming import (
     ExercisePrescription,
     TrainingBlock,
@@ -41,6 +43,7 @@ class FactoryRequest:
     deadlift_frequency: int
     deadlift_style: str
     meet_date: date | None
+    accessory_exercise_ids: tuple[int, ...] = ()
 
 
 GOAL_RPE = {
@@ -201,6 +204,10 @@ def _parse_factory_request() -> FactoryRequest:
     week_count = _form_int_or_default("week_count", 4)
     training_days = _form_int_or_default("training_days", 4)
 
+    accessory_ids = tuple(
+        value for value in request.form.getlist("accessory_exercise_id", type=int)
+        if value is not None
+    )
     return FactoryRequest(
         athlete_id=athlete_id,
         name=request.form.get("name", "").strip() or "Generated Block",
@@ -216,6 +223,7 @@ def _parse_factory_request() -> FactoryRequest:
             "conventional",
         ).strip(),
         meet_date=_parse_date(request.form.get("meet_date", "")),
+        accessory_exercise_ids=accessory_ids,
     )
 
 
@@ -425,6 +433,16 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
     days = _day_sequence(factory)
 
     preview = []
+    selected_accessories = []
+    if factory.accessory_exercise_ids:
+        rows = Exercise.query.filter(
+            Exercise.id.in_(factory.accessory_exercise_ids),
+            Exercise.active.is_(True),
+        ).all()
+        by_id = {item.id: item.name for item in rows}
+        if len(by_id) != len(set(factory.accessory_exercise_ids)):
+            raise ValueError("One or more selected accessories are unavailable.")
+        selected_accessories = [by_id[item_id] for item_id in factory.accessory_exercise_ids]
 
     for day_index, day_type in enumerate(days):
         exercises = _candidate_exercises(
@@ -441,6 +459,9 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
             day_type,
             factory.deadlift_style,
         )
+        for accessory in selected_accessories:
+            if accessory not in exercises:
+                exercises.append(accessory)
 
         preview.append(
             {
@@ -465,6 +486,10 @@ def wizard():
         Athlete.first_name.asc(),
         Athlete.last_name.asc(),
     ).all()
+    accessory_exercises = Exercise.query.filter(
+        Exercise.active.is_(True),
+        or_(Exercise.accessory_suitable.is_(True), Exercise.movement == "accessory"),
+    ).order_by(Exercise.category.asc(), Exercise.name.asc()).all()
 
     return render_template(
         "programming/factory.html",
@@ -472,6 +497,7 @@ def wizard():
         preview=None,
         form={},
         selected_athlete=selected_athlete,
+        accessory_exercises=accessory_exercises,
     )
 
 
@@ -487,6 +513,10 @@ def preview():
         Athlete.first_name.asc(),
         Athlete.last_name.asc(),
     ).all()
+    accessory_exercises = Exercise.query.filter(
+        Exercise.active.is_(True),
+        or_(Exercise.accessory_suitable.is_(True), Exercise.movement == "accessory"),
+    ).order_by(Exercise.category.asc(), Exercise.name.asc()).all()
 
     try:
         scheduled_preview = _preview(factory)
@@ -499,6 +529,7 @@ def preview():
         preview=scheduled_preview,
         form=request.form,
         selected_athlete=athlete,
+        accessory_exercises=accessory_exercises,
     )
 
 

@@ -1,27 +1,35 @@
-import { test as base, expect, type APIRequestContext, type BrowserContext } from '@playwright/test';
+import { test as base, expect, type APIRequestContext, type Page } from '@playwright/test';
 
 type Fixtures = {
   athleteIds: { primary: number; isolated: number };
-  authenticatedState: (context: BrowserContext) => Promise<void>;
+  authenticatedState: (page: Page) => Promise<void>;
   athleteSession: (request: APIRequestContext, athleteId: number) => Promise<void>;
 };
 
 export const test = base.extend<Fixtures>({
   athleteIds: async ({}, use) => use({ primary: 101, isolated: 202 }),
 
-  // AUTH PLACEHOLDER: there is no login/session workflow to exercise yet.
-  // Keep callers behind this fixture so real storageState setup can replace it.
   authenticatedState: async ({}, use) => {
-    await use(async (_context: BrowserContext) => {});
+    await use(async (page: Page) => {
+      await page.goto('/login');
+      await page.locator('input[name="email"]').fill('coach.e2e@example.test');
+      await page.locator('input[name="password"]').fill('Coach E2E password!');
+      await page.getByRole('button', { name: /sign in/i }).click();
+      await expect(page).toHaveURL(/\/coach$/);
+    });
   },
 
-  // This selects a test identity directly; it must not be described as login/auth coverage.
   athleteSession: async ({}, use) => {
     await use(async (request, athleteId) => {
-      const response = await request.post(`/__e2e__/athlete-session/${athleteId}`, {
-        headers: {
-          'X-E2E-Run-Token': process.env.E2E_RUN_TOKEN ?? '',
-        },
+      expect(athleteId).toBe(101);
+      const current = await request.get('/coach');
+      const currentToken = (await current.text()).match(/name="csrf_token" value="([^"]+)"/)?.[1];
+      if (currentToken) await request.post('/logout', { form: { csrf_token: currentToken } });
+      const login = await request.get('/login');
+      const token = (await login.text()).match(/name="csrf_token" value="([^"]+)"/)?.[1];
+      expect(token).toBeTruthy();
+      const response = await request.post('/login', {
+        form: { email: 'alex.e2e@example.test', password: 'Athlete E2E password!', csrf_token: token! },
       });
       expect(
         response.ok(),

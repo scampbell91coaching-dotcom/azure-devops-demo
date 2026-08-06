@@ -209,6 +209,40 @@ def test_authorized_coach_can_use_every_new_route(secured_coaching_app):
         assert client.post(path, data=data).status_code == 302
 
 
+def test_authenticated_prescription_form_carries_csrf_and_posts_successfully(
+    secured_coaching_app,
+):
+    ids = secured_coaching_app.config["SECURITY_TEST_IDS"]
+    client = secured_coaching_app.test_client()
+    csrf_token = _sign_in(client, ids["coach_user"])
+    with secured_coaching_app.app_context():
+        from portal.models.programming import TrainingBlock, TrainingSession, TrainingWeek
+
+        athlete = db.session.get(Athlete, ids["athlete"])
+        block = TrainingBlock(athlete=athlete, name="CSRF regression")
+        week = TrainingWeek(block=block, name="Week 1", position=1)
+        training_session = TrainingSession(week=week, name="Lower", position=1)
+        db.session.add(block)
+        db.session.commit()
+        session_id = training_session.id
+
+    page = client.get(f"/programming/sessions/{session_id}")
+    assert page.status_code == 200
+    assert b'data-new-prescription-form' in page.data
+    assert f'name="csrf_token" value="{csrf_token}"'.encode() in page.data
+    response = client.post(
+        f"/programming/sessions/{session_id}/prescriptions",
+        data={
+            "csrf_token": csrf_token,
+            "exercise_name": "Competition Squat",
+            "sets": "4",
+            "reps": "5",
+            "rpe": "7.5",
+        },
+    )
+    assert response.status_code == 302
+
+
 def test_existing_athlete_authorization_boundaries_remain_intact(
     secured_coaching_app,
 ):

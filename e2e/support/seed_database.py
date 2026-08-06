@@ -14,6 +14,8 @@ from portal.models.programming import (
     TrainingSession,
     TrainingWeek,
 )
+from portal.models.user import User, UserRole
+from werkzeug.security import generate_password_hash
 
 
 def seed_database(app: Flask) -> None:
@@ -86,8 +88,14 @@ def seed_database(app: Flask) -> None:
             movement="accessory",
             category="accessory",
             fatigue_rating=2,
+            accessory_suitable=True,
         )
+        row = Exercise(name="Cable Row", movement="accessory", category="upper body", fatigue_rating=2, accessory_suitable=True)
+        split_squat = Exercise(name="Bulgarian Split Squat", movement="accessory", category="lower body", fatigue_rating=3, accessory_suitable=True)
+        plank = Exercise(name="Weighted Plank", movement="accessory", category="trunk", fatigue_rating=2, accessory_suitable=True)
+        coach = User(email="coach.e2e@example.test", role=UserRole.COACH, password_hash=generate_password_hash("Coach E2E password!", method="scrypt"))
+        athlete_user = User(email=alex.email, role=UserRole.ATHLETE, athlete_id=alex.id, password_hash=generate_password_hash("Athlete E2E password!", method="scrypt"))
         db.session.add_all(
-            [alex, sam, block, week, session, prescription, settings, squat, pulldown]
+            [alex, sam, block, week, session, prescription, settings, squat, pulldown, row, split_squat, plank, coach, athlete_user]
         )
         db.session.commit()

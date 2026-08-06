@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ status }} | Traditional Strength Platform</title><link rel="stylesheet" href="{{ url_for('static', filename='css/coach_workspace.css') }}"></head>
+<body class="coach-workspace"><main class="coach-main"><section class="coach-page coach-page--narrow">
+  <div class="coach-panel coach-empty-state" role="alert">
+    <span class="coach-eyebrow">{{ status }}</span>
+    <h1>{{ title }}</h1>
+    <p>{{ message }}</p>
+    <a class="coach-primary-button" href="{{ back_url }}">Return to the platform</a>
+  </div>
+</section></main></body></html>

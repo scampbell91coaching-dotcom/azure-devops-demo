@@ -22,7 +22,8 @@ def test_programming_page_loads():
     app = app_with_db()
     response = app.test_client().get("/programming")
     assert response.status_code == 200
-    assert b"Training blocks" in response.data
+    assert b"<h1>Programming</h1>" in response.data
+    assert b"<h1>Training blocks</h1>" not in response.data
 
 
 def test_create_full_programming_hierarchy():

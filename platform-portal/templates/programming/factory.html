@@ -170,6 +170,27 @@
       >
     </label>
 
+    <fieldset class="factory-accessories" data-factory-accessories>
+      <legend>Accessories</legend>
+      <p>Select as many upper-body, lower-body, trunk or GPP exercises as the session needs. Order is preserved.</p>
+      <label><span>Filter catalogue</span><input type="search" data-accessory-filter placeholder="Search by exercise, category or movement"></label>
+      <div data-accessory-rows>
+        {% set selected_ids = form.getlist('accessory_exercise_id') if form.getlist is defined else [] %}
+        {% for selected_id in selected_ids %}
+          <div class="factory-accessory-row">
+            <select name="accessory_exercise_id" aria-label="Accessory exercise" required>
+              {% for exercise in accessory_exercises %}<option value="{{ exercise.id }}" data-search="{{ exercise.name }} {{ exercise.category }} {{ exercise.movement }}" {% if selected_id|int == exercise.id %}selected{% endif %}>{{ exercise.name }} · {{ exercise.category|title }}</option>{% endfor %}
+            </select>
+            <button class="coach-link-button" type="button" data-move-up aria-label="Move accessory up">↑</button>
+            <button class="coach-link-button" type="button" data-move-down aria-label="Move accessory down">↓</button>
+            <button class="coach-link-button" type="button" data-remove-accessory>Remove</button>
+          </div>
+        {% endfor %}
+      </div>
+      <button class="coach-link-button" type="button" data-add-accessory>Add accessory</button>
+      <template data-accessory-template><div class="factory-accessory-row"><select name="accessory_exercise_id" aria-label="Accessory exercise" required>{% for exercise in accessory_exercises %}<option value="{{ exercise.id }}" data-search="{{ exercise.name }} {{ exercise.category }} {{ exercise.movement }}">{{ exercise.name }} · {{ exercise.category|title }}</option>{% endfor %}</select><button class="coach-link-button" type="button" data-move-up aria-label="Move accessory up">↑</button><button class="coach-link-button" type="button" data-move-down aria-label="Move accessory down">↓</button><button class="coach-link-button" type="button" data-remove-accessory>Remove</button></div></template>
+    </fieldset>
+
     <div class="coach-form__actions">
       <button
         class="coach-link-button"
@@ -203,7 +224,7 @@
 
             <ol>
               {% for exercise in day.exercises %}
-                <li>{{ exercise }}</li>
+                <li><span>{{ "Primary lift" if loop.first else ("Secondary variation" if loop.index == 2 else "Accessory") }}</span> {{ exercise }}</li>
               {% endfor %}
             </ol>
           </article>
@@ -213,3 +234,4 @@
   {% endif %}
 </section>
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/block_factory.js') }}" defer></script>{% endblock %}

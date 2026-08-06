@@ -133,13 +133,7 @@
       <select name="movement">
         <option value="">All movements</option>
 
-        {% for item in (
-          "squat",
-          "bench",
-          "deadlift",
-          "accessory",
-          "warmup"
-        ) %}
+        {% for item in movements %}
           <option
             value="{{ item }}"
             {% if movement == item %}selected{% endif %}
@@ -147,6 +141,11 @@
             {{ item | title }}
           </option>
         {% endfor %}
+      </select>
+
+      <select name="category" aria-label="Category">
+        <option value="">All categories</option>
+        {% for item in categories %}<option value="{{ item }}" {% if category == item %}selected{% endif %}>{{ item | title }}</option>{% endfor %}
       </select>
 
       <button class="coach-link-button" type="submit">
@@ -175,6 +174,13 @@
         </div>
       {% endfor %}
     </div>
+    {% if pagination.pages > 1 %}
+      <nav class="exercise-pagination" aria-label="Exercise pages">
+        {% if pagination.has_prev %}<a class="coach-link-button" href="{{ url_for('exercise_library.index', q=search, movement=movement, category=category, page=pagination.prev_num) }}">Previous</a>{% endif %}
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        {% if pagination.has_next %}<a class="coach-link-button" href="{{ url_for('exercise_library.index', q=search, movement=movement, category=category, page=pagination.next_num) }}">Next</a>{% endif %}
+      </nav>
+    {% endif %}
   </section>
 </section>
 {% endblock %}

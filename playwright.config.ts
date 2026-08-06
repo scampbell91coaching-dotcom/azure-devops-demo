@@ -38,8 +38,8 @@ export default defineConfig({
     actionTimeout: 10_000,
     navigationTimeout: 15_000,
     extraHTTPHeaders: { 'X-E2E-Run-Token': runToken },
-    screenshot: 'off',
-    trace: 'off',
+    screenshot: 'only-on-failure',
+    trace: 'retain-on-failure',
     video: 'off',
   },
   webServer: {
