@@ -73,17 +73,28 @@ jobs:
       - name: Validate private manifests
         run: |
           set -euo pipefail
-          docker run --rm \
-            -v "$PWD:/work" \
-            --entrypoint /bin/sh \
-            ghcr.io/yannh/kubeconform:v0.7.0 \
-            -c 'kubeconform \
-              -strict \
-              -summary \
-              -ignore-missing-schemas \
-              /work/private-platform-manifests/*.yaml \
-              /work/argocd-applications/platform-portal-private.yaml'
-          test "$(grep -c 'image: stevedevopslab6280.azurecr.io/platform-portal-private:' "$MANIFEST")" -eq 2
+
+          mapfile -t manifest_files < <(
+            find private-platform-manifests               -maxdepth 1               -type f               -name '*.yaml'               -print |
+            sort
+          )
+
+          manifest_files+=(
+            "argocd-applications/platform-portal-private.yaml"
+          )
+
+          docker_args=()
+
+          for file in "${manifest_files[@]}"; do
+            docker_args+=("/work/${file}")
+          done
+
+          docker run --rm             -v "$PWD:/work"             ghcr.io/yannh/kubeconform:v0.7.0             -strict             -summary             -ignore-missing-schemas             "${docker_args[@]}"
+
+          test "$(
+            grep -c               'image: stevedevopslab6280.azurecr.io/platform-portal-private:'               "$MANIFEST"
+          )" -eq 2
+
           grep -q 'name: DATABASE_URL' "$MANIFEST"
           grep -q 'name: SECRET_KEY' "$MANIFEST"
 
