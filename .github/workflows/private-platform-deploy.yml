@@ -211,28 +211,53 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Update both private workload image references
+      - name: Update private image tag
         env:
-          EXPECTED_IMAGE: ${{ needs.build-scan-push.outputs.image }}
+          IMAGE_TAG: ${{ needs.build-scan-push.outputs.image_tag }}
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import os
-          import re
-          from pathlib import Path
 
-          path = Path("private-platform-manifests/private-platform.yaml")
-          text = path.read_text()
-          updated, count = re.subn(
-              r"stevedevopslab6280\.azurecr\.io/platform-portal-private:[a-f0-9]{7,64}",
-              os.environ["EXPECTED_IMAGE"],
+          test -n "$IMAGE_TAG"
+
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+
+          path = Path("private-platform-manifests/kustomization.yaml")
+          text = path.read_text(encoding="utf-8")
+          image_tag = os.environ["IMAGE_TAG"]
+
+          pattern = re.compile(r"(?m)^(\s*newTag:\s*).+$")
+          updated, count = pattern.subn(
+              lambda match: f"{match.group(1)}{image_tag}",
               text,
+              count=1,
           )
-          if count != 2:
-              raise RuntimeError(f"Expected two private image references, found {count}")
-          path.write_text(updated)
+
+          if count != 1:
+              raise RuntimeError(
+                  f"Expected exactly one Kustomize newTag, updated {count}"
+              )
+
+          path.write_text(updated, encoding="utf-8")
+          print(f"Promoted private image tag to {image_tag}")
           PY
 
+          rendered="$(mktemp)"
+          kubectl kustomize private-platform-manifests > "$rendered"
+
+          expected="${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}"
+          count="$(grep -c "image: ${expected}$" "$rendered")"
+
+          if [ "$count" -ne 2 ]; then
+            echo "Expected the rendered init and app containers to use:"
+            echo "$expected"
+            echo "Rendered occurrence count: $count"
+            exit 1
+          fi
+
+          git add private-platform-manifests/kustomization.yaml
       - name: Commit private GitOps promotion
         run: |
           set -euo pipefail
