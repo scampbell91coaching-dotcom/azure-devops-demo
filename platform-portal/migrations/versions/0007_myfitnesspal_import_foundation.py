@@ -7,7 +7,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "0007_myfitnesspal_import"
-down_revision = "0006_meet_day_v2"
+down_revision = "0006"
 branch_labels = None
 depends_on = None
 
