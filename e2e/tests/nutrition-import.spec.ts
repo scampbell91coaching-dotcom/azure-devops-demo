@@ -18,7 +18,9 @@ test('athlete import preview, commit and mobile summary have no overflow', async
   await expect(page.getByText('1500')).toBeVisible();
   await page.getByRole('button', { name: /Import 1 days/ }).click();
   await expect(page.getByText(/1 of 7 days present/)).toBeVisible();
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+  const overflow = await page.evaluate(() =>
+    document.documentElement.scrollWidth > document.documentElement.clientWidth
+  );
   expect(overflow).toBeFalsy();
 });
 

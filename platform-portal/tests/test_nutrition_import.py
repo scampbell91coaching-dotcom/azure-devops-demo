@@ -1,7 +1,7 @@
 import io
 import json
 import zipfile
-from datetime import date
+from datetime import UTC, date, datetime
 
 import pytest
 
@@ -104,7 +104,7 @@ def test_preview_consent_type_size_commit_repeat_update_and_disconnect(app):
 def test_checkin_prefill_is_snapshot_and_not_changed_by_later_import(app):
     athlete_id = _athlete(app)
     with app.app_context():
-        db.session.add(DailyNutrition(athlete_id=athlete_id, date=date.today(), calories=2000, protein_g=150, carbohydrate_g=220, fat_g=60, fibre_g=25, provider="myfitnesspal")); db.session.commit()
+        db.session.add(DailyNutrition(athlete_id=athlete_id, date=datetime.now(UTC).date(), calories=2000, protein_g=150, carbohydrate_g=220, fat_g=60, fibre_g=25, provider="myfitnesspal")); db.session.commit()
     client = app.test_client()
     client.post(f"/athletes/{athlete_id}/check-in-settings", data={"nutrition_enabled":"1", "workflow_active":"1", "checkin_day":"0"})
     with client.session_transaction() as sess: sess["athlete_id"] = athlete_id
