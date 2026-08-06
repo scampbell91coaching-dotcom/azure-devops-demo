@@ -23,6 +23,9 @@ class Meet(db.Model):  # type: ignore[name-defined]
         db.Date, nullable=False, default=lambda: datetime.now(UTC).date(), index=True
     )
     status = db.Column(db.String(20), nullable=False, default="planned", index=True)
+    federation = db.Column(db.String(80))
+    bodyweight_kg = db.Column(db.Numeric(6, 2))
+    weight_class = db.Column(db.String(40))
     notes = db.Column(db.Text)
     created_at = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.now(UTC)

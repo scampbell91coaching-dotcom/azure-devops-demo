@@ -4,11 +4,23 @@
 {% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/meet_day.css') }}">{% endblock %}
 {% block content %}
 <section class="meet-day">
-  <header><a href="{{ url_for('meet_day.index') }}">← All meets</a><p class="eyebrow">{{ board.meet.meet_date }}</p><h1>{{ board.meet.name }}</h1>{% if board.meet.notes %}<p>{{ board.meet.notes }}</p>{% endif %}</header>
+  <header class="meet-day__hero"><a href="{{ url_for('meet_day.index') }}">← All meets</a><p class="eyebrow">{{ board.meet.meet_date }}{% if board.meet.federation %} · {{ board.meet.federation }}{% endif %}</p><h1>{{ board.meet.name }}</h1>{% if board.meet.weight_class or board.meet.bodyweight_kg %}<p>{{ board.meet.weight_class or '' }}{% if board.meet.bodyweight_kg %} · {{ board.meet.bodyweight_kg|float }} kg bodyweight{% endif %}</p>{% endif %}{% if board.meet.notes %}<p>{{ board.meet.notes }}</p>{% endif %}</header>
   <aside class="meet-day__next" aria-live="polite">
     <strong>Next lift</strong>
     {% if board.next_lift %}<span>{{ board.next_lift.entry.athlete.full_name }} · Flight {{ board.next_lift.entry.flight }} · {{ board.next_lift.lift|title }} {{ board.next_lift.sequence }} · {{ board.next_lift.display_weight }}</span>{% else %}<span>No pending platform attempts.</span>{% endif %}
   </aside>
+  <section class="meet-day__tools">
+    <details class="coach-panel" open><summary><strong>Calibrated plate calculator</strong></summary>
+      <form method="post" action="{{ url_for('meet_day.plate_calculator', meet_id=board.meet.id) }}" class="meet-day__form">
+        <div class="meet-day__form meet-day__form--row"><label>Target (kg) <input name="target_kg" type="number" min="0" step="0.001" value="{{ request.form.get('target_kg','') }}" required></label><label>Bar <select name="bar_kg"><option value="20">20 kg</option><option value="15" {% if request.form.get('bar_kg') == '15' %}selected{% endif %}>15 kg</option></select></label><label>Custom bar (kg) <input name="custom_bar" type="number" min="0" step="0.001" value="{{ request.form.get('custom_bar','') }}" placeholder="Overrides selection"></label><label>Collars total (kg) <input name="collars_kg" type="number" min="0" step="0.001" value="{{ request.form.get('collars_kg','0') }}"></label></div>
+        <details><summary>Available plates per side</summary><div class="meet-day__inventory">{% for plate in default_plates %}<label>{{ plate }} kg <input name="plate_{{ plate }}" type="number" min="0" max="20" value="{{ request.form.get('plate_' ~ plate, '8') }}"></label>{% endfor %}</div></details>
+        <button type="submit" class="meet-day__primary">Calculate plate load</button>
+      </form>
+      {% if calculator_error %}<p class="meet-day__error" role="alert">{{ calculator_error }}</p>{% endif %}
+      {% if plate_result %}<div class="meet-day__result" aria-live="polite"><h3>{{ plate_result.target_kg }} kg target</h3><p>Bar and collars: {{ plate_result.fixed_kg }} kg</p><p><strong>{{ plate_result.instruction }}</strong></p>{% if plate_result.exact %}<div class="barbell" aria-label="One side of barbell loaded with {{ plate_result.instruction }}">{% for plate in plate_result.plates_per_side %}{% for copy in range(plate.count) %}<span class="plate plate--{{ plate.colour }}">{{ plate.kg }} kg</span>{% endfor %}{% endfor %}</div>{% endif %}</div>{% endif %}
+    </details>
+    <aside class="coach-panel"><p class="eyebrow">Warm-up room</p><h2>Loading sheet</h2><p>Plans appear below each athlete in competition order. Use Print for a clean room copy.</p><button type="button" onclick="window.print()">Print loading sheet</button></aside>
+  </section>
   <details class="coach-panel"><summary>Add athlete</summary>
     <form method="post" action="{{ url_for('meet_day.add_entry', meet_id=board.meet.id) }}" class="meet-day__form meet-day__form--row">
       <label>Athlete <select name="athlete_id" required>{% for athlete in athletes %}<option value="{{ athlete.id }}">{{ athlete.full_name }}</option>{% endfor %}</select></label>
@@ -25,6 +37,9 @@
     <details><summary>Edit flight, order and notes</summary><form method="post" action="{{ url_for('meet_day.update_entry', meet_id=board.meet.id, entry_id=entry.id) }}" class="meet-day__form meet-day__form--row"><label>Flight <input name="flight" type="number" min="1" value="{{ entry.flight }}" required></label><label>Order <input name="platform_order" type="number" min="1" value="{{ entry.platform_order }}" required></label><label>Notes <input name="notes" value="{{ entry.notes or '' }}"></label><button>Save entry</button></form></details>
     {% for lift_name in lifts %}
     <section class="meet-day__lift"><h3>{{ lift_name|title }}</h3>
+      <details><summary>Calculate {{ lift_name }} warm-ups</summary><form method="post" action="{{ url_for('meet_day.generate_warmups', meet_id=board.meet.id, entry_id=entry.id) }}" class="meet-day__form"><input type="hidden" name="lift" value="{{ lift_name }}"><div class="meet-day__form meet-day__form--row"><label>Opener (kg) <input name="opener_kg" type="number" min="1" step="0.001" required></label><label>Bar (kg) <input name="bar_kg" type="number" min="1" step="0.001" value="20" required></label><label>Collars total (kg) <input name="collars_kg" type="number" min="0" step="0.001" value="0"></label><label>First loaded warm-up <input name="first_loaded_kg" type="number" min="1" step="0.001"></label><label>Stages <input name="stages" type="number" min="1" max="7" placeholder="Default"></label><label>Minimum increment <input name="minimum_increment_kg" type="number" min="0.25" step="0.25" value="2.5"></label></div><label>Manual weights (optional, comma separated) <input name="manual_overrides" placeholder="20, 60, 90, 115"></label><div class="meet-day__inventory">{% for plate in default_plates %}<label>{{ plate }} kg/side <input name="plate_{{ plate }}" type="number" min="0" max="20" value="8"></label>{% endfor %}</div><button class="meet-day__primary">Save {{ lift_name }} plan</button></form></details>
+      {% set lift_items = entry.lifts|selectattr('lift', 'equalto', lift_name)|list %}
+      {% if lift_items %}<table class="loading-table"><thead><tr><th>Set</th><th>Weight</th><th>Coach instruction</th><th>Status</th></tr></thead><tbody>{% for item in lift_items %}<tr><td>{{ item.kind|title }} {{ item.sequence }}</td><td>{{ item.display_weight }}</td><td>{{ item.notes or '—' }}</td><td>{{ item.outcome|title }}</td></tr>{% endfor %}</tbody></table>{% endif %}
       <div class="meet-day__cards">
       {% for item in entry.lifts if item.lift == lift_name %}
         <form method="post" action="{{ url_for('meet_day.update_lift', meet_id=board.meet.id, lift_id=item.id) }}" class="meet-day__card meet-day__card--{{ item.outcome }}">

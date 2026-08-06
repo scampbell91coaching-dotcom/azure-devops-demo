@@ -142,11 +142,25 @@ def _state_changing_routes(ids: dict[str, int]) -> list[tuple[str, dict[str, str
             f"/meet-day/{meet_id}/lifts/{lift_id}",
             {"weight_kg": "182.5", "outcome": "good"},
         ),
+        (
+            f"/meet-day/{meet_id}/plate-calculator",
+            {"target_kg": "180", "bar_kg": "20", "collars_kg": "0"},
+        ),
+        (
+            f"/meet-day/{meet_id}/entries/{entry_id}/warmups",
+            {
+                "lift": "bench",
+                "opener_kg": "100",
+                "bar_kg": "20",
+                "collars_kg": "0",
+                "minimum_increment_kg": "2.5",
+            },
+        ),
     ]
 
 
 @pytest.mark.parametrize("token", [None, "invalid-csrf-token"])
-@pytest.mark.parametrize("route_index", range(5))
+@pytest.mark.parametrize("route_index", range(7))
 def test_state_changing_coach_routes_reject_missing_or_invalid_csrf(
     secured_coaching_app, route_index, token
 ):
@@ -206,7 +220,8 @@ def test_authorized_coach_can_use_every_new_route(secured_coaching_app):
 
     for path, data in _state_changing_routes(ids):
         data["csrf_token"] = csrf_token
-        assert client.post(path, data=data).status_code == 302
+        expected = 200 if path.endswith("plate-calculator") else 302
+        assert client.post(path, data=data).status_code == expected
 
 
 def test_authenticated_prescription_form_carries_csrf_and_posts_successfully(
