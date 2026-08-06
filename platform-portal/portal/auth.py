@@ -39,6 +39,8 @@ _PUBLIC_ENDPOINTS = {
 }
 _ATHLETE_ENDPOINTS = {
     "athletes.dashboard",
+    "athletes.programme",
+    "athletes.programme_session",
     "athletes.nutrition_checkin_form",
     "athletes.create_nutrition_checkin",
     "checkins.new",
@@ -184,7 +186,16 @@ def init_auth(app) -> None:
     app.before_request(_authorize_request)
     app.before_request(_enforce_csrf)
     app.jinja_env.globals["csrf_token"] = _csrf_token
-    app.context_processor(lambda: {"current_user": g.get("current_user")})
+    app.context_processor(
+        lambda: {
+            "current_user": g.get("current_user"),
+            "athlete_navigation_id": (
+                g.current_user.athlete_id
+                if g.get("current_user") is not None
+                else session.get("athlete_id")
+            ),
+        }
+    )
     app.after_request(_inject_csrf_fields)
 
     @app.cli.command("create-user")

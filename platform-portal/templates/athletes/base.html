@@ -8,17 +8,32 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/athlete_dashboard.css') }}">
   {% block head %}{% endblock %}
 </head>
-<body class="athlete-workspace">
+<body class="athlete-workspace" data-athlete-page="{% block athlete_page %}{% endblock %}">
   <a class="athlete-skip-link" href="#main">Skip to content</a>
   <header class="athlete-topbar">
     <a class="athlete-brand" href="{{ url_for('athletes.dashboard') }}">
       <span aria-hidden="true">TS</span>
       <strong>Traditional Strength</strong>
     </a>
-    <form method="post" action="{{ url_for('auth.logout') }}">
+    <nav class="athlete-desktop-nav" aria-label="Athlete navigation">
+      <a href="{{ url_for('athletes.dashboard') }}">Home</a>
+      <a href="{{ url_for('athletes.programme') }}">Programme</a>
+      <a href="{{ url_for('checkins.athlete_history') }}">Check-in</a>
+      <a href="{{ url_for('athletes.nutrition_checkin_form', athlete_id=athlete_navigation_id) }}">Nutrition</a>
+      <a href="{{ url_for('athletes.dashboard') }}#profile">Profile</a>
+    </nav>
+    <form class="athlete-signout" method="post" action="{{ url_for('auth.logout') }}">
       <button type="submit">Sign out</button>
     </form>
   </header>
   <main id="main" class="athlete-shell">{% block content %}{% endblock %}</main>
+  <nav class="athlete-mobile-nav" aria-label="Athlete navigation">
+    <a data-nav-page="home" href="{{ url_for('athletes.dashboard') }}"><span aria-hidden="true">⌂</span>Home</a>
+    <a data-nav-page="programme" href="{{ url_for('athletes.programme') }}"><span aria-hidden="true">▤</span>Programme</a>
+    <a data-nav-page="checkin" href="{{ url_for('checkins.athlete_history') }}"><span aria-hidden="true">✓</span>Check-in</a>
+    <a data-nav-page="nutrition" href="{{ url_for('athletes.nutrition_checkin_form', athlete_id=athlete_navigation_id) }}"><span aria-hidden="true">◇</span>Nutrition</a>
+    <a data-nav-page="profile" href="{{ url_for('athletes.dashboard') }}#profile"><span aria-hidden="true">○</span>Profile</a>
+  </nav>
+  <script src="{{ url_for('static', filename='js/athlete.js') }}" defer></script>
 </body>
 </html>

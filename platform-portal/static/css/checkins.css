@@ -19,7 +19,7 @@
 .checkin-checkbox small, .checkin-history__item small { color: var(--muted); font-weight: 400; }
 .checkin-error { margin: 0; color: #ffb4ab; font-weight: 700; }
 .checkin-error--summary { border: 1px solid #9f4a43; padding: 1rem; background: #291615; }
-.checkin-submit { width: 100%; margin: 0; border: 0; cursor: pointer; font: inherit; }
+.checkin-submit { position: sticky; bottom: 5rem; z-index: 2; width: 100%; margin: 0; border: 0; cursor: pointer; font: inherit; box-shadow: 0 -.5rem 1.5rem var(--bg); }
 .checkin-history-link { text-align: center; }
 .checkin-history { gap: .75rem; }
 .checkin-history__item { display: flex; flex-direction: column; gap: .8rem; border: 1px solid var(--border); padding: 1rem; background: var(--panel); text-decoration: none; }
@@ -31,3 +31,4 @@
 .checkin-values dd { margin: .3rem 0 0; font-size: 1.2rem; font-weight: 800; }
 .checkin-notes, .coach-response { white-space: pre-wrap; }
 @media (min-width: 600px) { .checkin-card { padding: 1.5rem; } .checkin-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .checkin-history__item { flex-direction: row; align-items: center; justify-content: space-between; } }
+@media (min-width: 760px) { .checkin-submit { position: static; box-shadow: none; } }

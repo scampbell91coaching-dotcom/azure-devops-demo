@@ -5,7 +5,7 @@ from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from portal.models.nutrition_checkin import NutritionCheckIn
-from portal.models.programming import TrainingBlock, TrainingSession, TrainingWeek
+from portal.models.programming import ExercisePrescription, TrainingBlock, TrainingSession, TrainingWeek
 from portal.services.athlete_dashboard import get_athlete_dashboard
 
 
@@ -241,6 +241,44 @@ def test_dashboard_renders_data_empty_states_links_and_no_coach_controls():
     assert "Mark reviewed" not in page
     assert "Generate new block" not in page
     assert "Coach Workspace" not in page
+
+
+def test_athlete_can_view_only_their_active_programme_and_session():
+    app = _app()
+    with app.app_context():
+        athlete = _athlete("Alex", "alex@example.com")
+        other = _athlete("Sam", "sam@example.com")
+        block = TrainingBlock(athlete=athlete, name="Meet prep", status="active")
+        week = TrainingWeek(block=block, name="Week 1", position=1)
+        training_session = TrainingSession(week=week, name="Squat day", position=1)
+        training_session.prescriptions.append(
+            ExercisePrescription(
+                exercise_name="Competition squat", sets=3, reps="5", rpe=7
+            )
+        )
+        private_block = TrainingBlock(athlete=other, name="Private", status="active")
+        private_week = TrainingWeek(block=private_block, name="Week 1", position=1)
+        private_session = TrainingSession(week=private_week, name="Private session", position=1)
+        db.session.add_all([block, private_block])
+        db.session.commit()
+        athlete_id = athlete.id
+        session_id = training_session.id
+        private_session_id = private_session.id
+
+    client = app.test_client()
+    _sign_in(client, athlete_id)
+    programme = client.get("/athlete/programme")
+    session_response = client.get(f"/athlete/programme/sessions/{session_id}")
+
+    assert programme.status_code == 200
+    assert b"Meet prep" in programme.data
+    assert b"Private" not in programme.data
+    assert session_response.status_code == 200
+    assert b"Competition squat" in session_response.data
+    assert (
+        client.get(f"/athlete/programme/sessions/{private_session_id}").status_code
+        == 404
+    )
 
 
 def test_dashboard_renders_compliance_recovery_trends_and_coach_notes():

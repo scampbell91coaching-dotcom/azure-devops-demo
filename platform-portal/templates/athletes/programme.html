@@ -1,0 +1,36 @@
+{% extends "athletes/base.html" %}
+{% block title %}Your programme | Traditional Strength{% endblock %}
+{% block athlete_page %}programme{% endblock %}
+{% block content %}
+<section class="athlete-programme">
+  <header class="athlete-page-header">
+    <span class="eyebrow">Training plan</span>
+    <h1>Your programme</h1>
+    <p>Everything you need for the gym, organised by week and session.</p>
+  </header>
+  {% if block %}
+    <section class="programme-summary">
+      <div><span class="eyebrow">Current block</span><h2>{{ block.name }}</h2></div>
+      <span class="status">{{ block.status | title }}</span>
+      {% if block.objective %}<p>{{ block.objective }}</p>{% endif %}
+    </section>
+    <div class="programme-weeks">
+      {% for week in block.weeks %}
+        <section class="programme-week" aria-labelledby="week-{{ week.id }}">
+          <header><span class="eyebrow">Week {{ week.position }}</span><h2 id="week-{{ week.id }}">{{ week.name }}</h2>{% if week.notes %}<p>{{ week.notes }}</p>{% endif %}</header>
+          <div class="session-list">
+            {% for item in week.sessions %}
+              <a class="session-card" href="{{ url_for('athletes.programme_session', session_id=item.id) }}">
+                <span><small>{{ item.day_label or 'Session ' ~ item.position }}</small><strong>{{ item.name }}</strong><span>{{ item.prescriptions | length }} exercise{{ '' if item.prescriptions | length == 1 else 's' }}</span></span>
+                <span class="session-card__action" aria-hidden="true">Open →</span>
+              </a>
+            {% else %}<div class="empty-state"><strong>No sessions this week</strong><p>Your coach is still building this week.</p></div>{% endfor %}
+          </div>
+        </section>
+      {% else %}<div class="empty-state"><strong>No weeks available</strong><p>Your coach is still building this block.</p></div>{% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state empty-state--large"><strong>Your programme is being prepared</strong><p>There is no active training block yet. Check back after your coach publishes it.</p><a class="button button--secondary" href="{{ url_for('athletes.dashboard') }}">Back home</a></div>
+  {% endif %}
+</section>
+{% endblock %}

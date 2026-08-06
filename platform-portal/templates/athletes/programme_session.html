@@ -1,0 +1,31 @@
+{% extends "athletes/base.html" %}
+{% block title %}{{ session.name }} | Traditional Strength{% endblock %}
+{% block athlete_page %}programme{% endblock %}
+{% block content %}
+<section class="athlete-session">
+  <header class="athlete-page-header">
+    <a class="back-link" href="{{ url_for('athletes.programme') }}">← Programme</a>
+    <span class="eyebrow">{{ block.name }} · Week {{ week.position }}</span>
+    <h1>{{ session.name }}</h1>
+    <p>{{ session.day_label or week.name }}</p>
+  </header>
+  {% if session.notes %}<aside class="session-note"><strong>Session notes</strong><p>{{ session.notes }}</p></aside>{% endif %}
+  <ol class="exercise-list">
+    {% for item in session.prescriptions %}
+      <li class="exercise-card">
+        <header><span class="exercise-number">{{ loop.index }}</span><h2>{{ item.exercise_name }}</h2></header>
+        <div class="prescription-grid">
+          <div><span>Sets × reps</span><strong>{{ item.sets or '—' }} × {{ item.reps or (item.reps_min ~ '–' ~ item.reps_max if item.reps_min and item.reps_max else '—') }}</strong></div>
+          <div><span>RPE</span><strong>{{ item.rpe or item.target_rpe or ('≤ ' ~ item.rpe_cap if item.rpe_cap else '—') }}</strong></div>
+          {% if item.load_kg or item.target_load_kg or item.load_cap_kg %}<div><span>Load</span><strong>{{ item.load_kg or item.target_load_kg or item.load_cap_kg }} kg</strong></div>{% endif %}
+          {% if item.percentage %}<div><span>Percentage</span><strong>{{ item.percentage }}%</strong></div>{% endif %}
+          {% if item.rest_seconds %}<div><span>Rest</span><strong>{{ item.rest_seconds }} sec</strong></div>{% endif %}
+          {% if item.tempo %}<div><span>Tempo</span><strong>{{ item.tempo }}</strong></div>{% endif %}
+        </div>
+        {% if item.notes %}<p class="exercise-notes"><strong>Coach note:</strong> {{ item.notes }}</p>{% endif %}
+      </li>
+    {% else %}<li class="empty-state"><strong>No exercises added</strong><p>Your coach has not added the session exercises yet.</p></li>{% endfor %}
+  </ol>
+  <div class="session-sticky-action"><a class="button" href="{{ url_for('athletes.programme') }}">Back to programme</a></div>
+</section>
+{% endblock %}
