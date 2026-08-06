@@ -1,4 +1,4 @@
-"""Build the reviewed Traditional Strength starter exercise catalogue.
+"""Build the reviewed Traditional Strength practical exercise catalogue.
 
 Run from the repository root. The compact source lists make duplicate review
 practical; the emitted JSON is the production import asset.
@@ -7,6 +7,8 @@ practical; the emitted JSON is the production import asset.
 from __future__ import annotations
 
 import json
+import re
+import unicodedata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -135,6 +137,24 @@ ACCESSORIES = {
         "T-Bar Row",
         "Helms Row",
         "Shrug",
+    ],
+    "Upper back": [
+        "Chest-Supported T-Bar Row",
+        "Wide-Grip Cable Row",
+        "High Row",
+        "Single-Arm Machine Row",
+        "Kelso Shrug",
+        "Dumbbell Pullover",
+        "Cable Pullover",
+        "Prone Rear-Delt Row",
+    ],
+    "Lower back": [
+        "Bird-Dog Row",
+        "Roman-Chair Back Extension",
+        "Sorensen Hold",
+        "Machine Back Extension",
+        "Weighted Back Extension",
+        "Quadruped Rock-Back",
     ],
     "Quads": [
         "Leg Extension",
@@ -280,6 +300,54 @@ ACCESSORIES = {
         "Dead Hang",
         "Fat-Grip Hold",
     ],
+    "GPP and carries": [
+        "Heavy Sled Push",
+        "Forward Sled Drag",
+        "Lateral Sled Drag",
+        "Sled Rope Pull",
+        "Trap-Bar Carry",
+        "Double-Kettlebell Front-Rack Carry",
+        "Sandbag Bear-Hug Carry",
+        "Overhead Carry",
+        "Uneven Farmer Carry",
+        "Plate Carry",
+    ],
+    "Conditioning": [
+        "Air Bike Intervals",
+        "Rowing Ergometer Intervals",
+        "Ski Ergometer Intervals",
+        "Incline Treadmill Walk",
+        "Prowler Sprint",
+        "Battle Rope Waves",
+        "Kettlebell Swing Intervals",
+        "Medicine-Ball Slam",
+    ],
+    "Strongman": [
+        "Log Clean and Press",
+        "Axle Clean and Press",
+        "Push Press",
+        "Sandbag to Shoulder",
+        "Sandbag Load",
+        "Atlas Stone Load",
+        "Yoke Walk",
+        "Frame Carry",
+        "Keg Carry",
+        "Tire Flip",
+        "Sled Arm-Over-Arm Pull",
+        "Zercher Carry",
+    ],
+    "Rehabilitation regressions": [
+        "Supported Split Squat",
+        "Sit-to-Stand",
+        "Low Box Step-Up",
+        "Assisted Calf Raise",
+        "Isometric Calf Raise",
+        "Short-Lever Copenhagen Plank",
+        "Banded Terminal Knee Extension",
+        "Wall Push-Up",
+        "Supported Single-Leg Romanian Deadlift",
+        "Isometric Hamstring Bridge",
+    ],
 }
 
 
@@ -324,6 +392,18 @@ WARMUPS = [
     ("Heel-Elevated Glute Bridge", "Hinge preparation"),
     ("Dowel Hip Hinge", "Hinge preparation"),
     ("Wall Hip Hinge", "Hinge preparation"),
+    ("Supine 90/90 Breathing", "Breathing and position"),
+    ("Hook-Lying Heel-Dig Breathing", "Breathing and position"),
+    ("Half-Kneeling Breathing", "Breathing and position"),
+    ("All-Fours Breathing", "Breathing and position"),
+    ("Wall-Supported Reach", "Breathing and position"),
+    ("Dead-Bug Breathing", "Breathing and position"),
+    ("Bench Lat Stretch", "Upper-body mobility"),
+    ("Prayer Stretch", "Upper-body mobility"),
+    ("Wrist Rock", "Wrist preparation"),
+    ("Banded Ankle Dorsiflexion", "Ankle mobility"),
+    ("Prying Cossack Squat", "Hip mobility"),
+    ("Hamstring Sweep", "Lower-body preparation"),
 ]
 
 
@@ -342,6 +422,17 @@ ALIASES = {
     "Farmer's Carry": ["Farmers Carry", "Farmer Walk"],
     "Pallof Press": ["Anti-Rotation Press"],
     "Knee-to-Wall Ankle Mobilisation": ["Knee to Wall"],
+    "Air Bike Intervals": ["Assault Bike", "Fan Bike"],
+    "Rowing Ergometer Intervals": ["Rower Intervals", "Row Erg Intervals"],
+    "Ski Ergometer Intervals": ["SkiErg Intervals", "Ski Erg"],
+    "Log Clean and Press": ["Log Press"],
+    "Axle Clean and Press": ["Axle Press"],
+    "Atlas Stone Load": ["Stone Load", "Atlas Stones"],
+    "Yoke Walk": ["Yoke Carry"],
+    "Banded Terminal Knee Extension": ["TKE", "Band TKE"],
+    "Supine 90/90 Breathing": ["90 90 Breathing"],
+    "Double-Kettlebell Front-Rack Carry": ["Double KB Front Rack Carry"],
+    "Roman-Chair Back Extension": ["Roman Chair Extension"],
 }
 
 
@@ -488,6 +579,42 @@ FAMILY_KNOWLEDGE = {
             "Hold without compensating",
         ],
         ["Bouncing repetitions", "Letting the implement slip out of position"],
+    ),
+    "Upper back": (
+        "Set the support or cable height, brace the trunk and let the shoulder blades reach without losing position.",
+        "Draw the elbows or implement towards the torso, pause briefly, then return to the start under control.",
+        ["Reach then row", "Keep the chest supported", "Lower under control"],
+        ["Jerking from the start", "Shortening the return"],
+    ),
+    "Lower back": (
+        "Set the support so the hips can move freely and establish a gently braced trunk before starting.",
+        "Move through the hips or hold the chosen trunk position while maintaining steady breathing and control.",
+        ["Brace before moving", "Use the hips", "Stop before position changes"],
+        ["Chasing excessive range", "Losing control to finish a repetition"],
+    ),
+    "GPP and carries": (
+        "Clear the route, secure the load and establish a tall, braced start before moving.",
+        "Walk or drive with short purposeful steps, keeping the implement controlled until the set is complete.",
+        ["Brace before the first step", "Take quick controlled steps", "Finish under control"],
+        ["Starting before the route is clear", "Letting posture collapse as fatigue rises"],
+    ),
+    "Conditioning": (
+        "Check the machine or training area, select a sustainable starting effort and keep the work interval unobstructed.",
+        "Build to the prescribed effort, maintain repeatable mechanics, then reduce speed deliberately for recovery.",
+        ["Start under control", "Keep each interval repeatable", "Recover deliberately"],
+        ["Sprinting the first interval blindly", "Allowing technique to deteriorate"],
+    ),
+    "Strongman": (
+        "Inspect the implement, clear the working area and take a balanced grip or contact position before applying force.",
+        "Move the implement with a braced trunk and deliberate footwork, completing each phase before changing direction.",
+        ["Secure the implement", "Brace before each phase", "Use deliberate footwork"],
+        ["Rushing the pickup", "Continuing after control is lost"],
+    ),
+    "Rehabilitation regressions": (
+        "Arrange stable support and choose a range that can be completed smoothly without compensating.",
+        "Move slowly through the selected range or hold the position while breathing, then return with the same control.",
+        ["Use support as needed", "Keep the repetition smooth", "Build range gradually"],
+        ["Forcing range", "Removing support before control is established"],
     ),
 }
 
@@ -825,14 +952,26 @@ def build() -> list[dict[str, object]]:
         "Biceps": "barbell, dumbbell or cable",
         "Trunk": "bodyweight, cable or free weights",
         "Calves and grip": "machine, free weights or bodyweight",
+        "Upper back": "cable, machine, dumbbell or bodyweight",
+        "Lower back": "bodyweight, bench or machine",
+        "GPP and carries": "sled, kettlebells, sandbag or free weights",
+        "Conditioning": "conditioning machine or training implement",
+        "Strongman": "strongman implement",
+        "Rehabilitation regressions": "bodyweight, band or light resistance",
     }
     for family, names in ACCESSORIES.items():
         for name in names:
-            category = (
-                "unilateral"
-                if any(term in name for term in ("Single-", "Split", "Lunge", "Step-"))
-                else "accessory"
-            )
+            category = "accessory"
+            if family == "Conditioning":
+                category = "conditioning"
+            elif family == "GPP and carries":
+                category = "gpp"
+            elif family == "Strongman":
+                category = "strongman"
+            elif family == "Rehabilitation regressions":
+                category = "regression"
+            elif any(term in name for term in ("Single-", "Split", "Lunge", "Step-")):
+                category = "unilateral"
             equipment = accessory_equipment(name, equipment_by_family[family])
             records.append(
                 make_record(
@@ -851,16 +990,26 @@ def build() -> list[dict[str, object]]:
                 warmup=True,
             )
         )
-    identities = [record["name"].casefold() for record in records]
-    if len(records) != 276 or len(set(identities)) != len(records):
-        raise RuntimeError(f"Expected 276 unique exercises, found {len(records)}")
+    identity_owners: dict[str, str] = {}
+    for record in records:
+        name = str(record["name"])
+        for value in [name, *record["aliases"]]:
+            normalised = unicodedata.normalize("NFKD", str(value)).casefold()
+            identity = re.sub(r"[^a-z0-9]+", " ", normalised).strip()
+            owner = identity_owners.setdefault(identity, name)
+            if owner != name:
+                raise RuntimeError(
+                    f"Exercise identity {value!r} is shared by {owner!r} and {name!r}"
+                )
+    if len(records) < 300:
+        raise RuntimeError(f"Expected at least 300 exercises, found {len(records)}")
     return records
 
 
 if __name__ == "__main__":
     payload = {
-        "schema_version": 3,
-        "catalogue": "Traditional Strength starter exercise library",
+        "schema_version": 4,
+        "catalogue": "Traditional Strength practical exercise library",
         "language": "en-GB",
         "exercises": build(),
     }

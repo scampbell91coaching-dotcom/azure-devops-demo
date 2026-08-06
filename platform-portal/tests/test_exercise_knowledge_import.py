@@ -91,13 +91,13 @@ def test_bundled_production_dataset_imports_cleanly():
         exercise = Exercise.query.filter_by(name="Competition Bench Press").one()
 
         assert result.as_dict() == {
-            "inserted": 273,
+            "inserted": 339,
             "updated": 3,
             "skipped": 0,
             "invalid": 0,
         }
-        assert Exercise.query.count() == 276
-        assert exercise.catalogue_version == 3
+        assert Exercise.query.count() == 342
+        assert exercise.catalogue_version == 4
         assert exercise.id == original_id
         assert exercise.competition_relevance == "direct"
         assert json.loads(exercise.aliases) == ["Comp Bench", "Competition Bench"]
@@ -106,10 +106,10 @@ def test_bundled_production_dataset_imports_cleanly():
         assert second.as_dict() == {
             "inserted": 0,
             "updated": 0,
-            "skipped": 276,
+            "skipped": 342,
             "invalid": 0,
         }
-        assert Exercise.query.count() == 276
+        assert Exercise.query.count() == 342
 
 
 def test_repeated_import_is_idempotent():
@@ -173,6 +173,35 @@ def test_import_does_not_overwrite_manually_created_matching_exercise():
         assert Exercise.query.filter_by(name="Cable Row").count() == 1
 
 
+def test_coach_edit_opts_catalogue_record_out_of_future_updates():
+    app = create_test_app()
+    with app.app_context():
+        import_exercise_knowledge_file(DEFAULT_DATA_PATH)
+        exercise = Exercise.query.filter_by(name="Cable Row").one()
+        exercise_id = exercise.id
+
+    response = app.test_client().post(
+        f"/exercise-library/{exercise_id}/edit",
+        data={
+            "name": "Cable Row",
+            "movement": "accessory",
+            "category": "coach preferred",
+            "coaching_cues": "Keep this coach-authored cue",
+        },
+    )
+    assert response.status_code == 302
+
+    with app.app_context():
+        edited = db.session.get(Exercise, exercise_id)
+        assert edited.catalogue_version is None
+        result = import_exercise_knowledge_file(DEFAULT_DATA_PATH)
+        preserved = db.session.get(Exercise, exercise_id)
+
+        assert result.skipped == 342
+        assert preserved.category == "coach preferred"
+        assert preserved.coaching_cues == "Keep this coach-authored cue"
+
+
 def test_import_counts_malformed_records_without_persisting_them():
     app = create_test_app()
     malformed_records = [
@@ -223,18 +252,48 @@ def test_alias_and_canonical_names_deduplicate_across_punctuation_and_case():
         assert Exercise.query.filter_by(name="Close-Grip Bench Press").count() == 1
 
 
+def test_manual_create_rejects_normalised_name_and_alias_duplicates():
+    app = create_test_app()
+    with app.app_context():
+        import_exercise_knowledge([exercise_record()])
+
+    client = app.test_client()
+    for name in ("tempo-front squat", "FRONT SQUAT WITH TEMPO"):
+        response = client.post(
+            "/exercise-library",
+            data={"name": name, "movement": "squat"},
+        )
+        assert response.status_code == 409
+
+    with app.app_context():
+        assert Exercise.query.count() == 4
+
+
 def test_catalogue_meets_starter_coverage_targets():
     payload = json.loads(DEFAULT_DATA_PATH.read_text(encoding="utf-8"))
     records = payload["exercises"]
 
-    assert payload["schema_version"] == 3
-    assert 250 <= len(records) <= 350
+    assert payload["schema_version"] == 4
+    assert 300 <= len(records) <= 400
     assert sum(item["movement"] == "squat" for item in records) >= 20
     assert sum(item["movement"] == "bench" for item in records) >= 20
     assert sum(item["movement"] == "deadlift" for item in records) >= 20
     assert sum(item["movement"] == "accessory" for item in records) >= 100
     assert sum(item["movement"] == "warmup" for item in records) >= 30
     assert len({item["name"].casefold() for item in records}) == len(records)
+
+    families = {item["family"] for item in records}
+    categories = {item["category"] for item in records}
+    assert {
+        "Upper back",
+        "Lower back",
+        "GPP and carries",
+        "Conditioning",
+        "Strongman",
+        "Rehabilitation regressions",
+        "Breathing and position",
+    } <= families
+    assert {"conditioning", "gpp", "strongman", "regression"} <= categories
 
 
 def test_representative_records_contain_specific_coaching_knowledge():
@@ -286,6 +345,9 @@ def test_representative_canonical_alias_muscle_and_equipment_searches_render():
         "RFESS": b"Bulgarian Split Squat",
         "hamstrings": b"Romanian Deadlift",
         "cable": b"Cable Row",
+        "assault bike": b"Air Bike Intervals",
+        "safety bar squat": b"Safety-Bar Squat",
+        "upper back cable": b"Wide-Grip Cable Row",
     }
     for query, expected_name in expectations.items():
         response = client.get("/exercise-library", query_string={"q": query})
@@ -297,6 +359,20 @@ def test_representative_canonical_alias_muscle_and_equipment_searches_render():
     detail = client.get(f"/exercise-library/{exercise_id}/edit")
     assert detail.status_code == 200
     assert b"Competition Squat" in detail.data
+
+
+def test_category_filtering_includes_only_the_selected_category():
+    app = create_test_app()
+    with app.app_context():
+        import_exercise_knowledge_file(DEFAULT_DATA_PATH)
+
+    response = app.test_client().get(
+        "/exercise-library", query_string={"category": "strongman"}
+    )
+
+    assert response.status_code == 200
+    assert b"Log Clean and Press" in response.data
+    assert b"Competition Squat" not in response.data
 
 
 def test_file_import_returns_counts_and_cli_reports_them(tmp_path: Path):

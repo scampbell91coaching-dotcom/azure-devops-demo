@@ -1,6 +1,6 @@
 {
-  "schema_version": 3,
-  "catalogue": "Traditional Strength starter exercise library",
+  "schema_version": 4,
+  "catalogue": "Traditional Strength practical exercise library",
   "language": "en-GB",
   "exercises": [
     {
@@ -5842,6 +5842,736 @@
       "common_mistakes": [
         "Using momentum",
         "Shrugging instead of pulling through the target range"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Chest-Supported T-Bar Row",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Upper back",
+      "category": "accessory",
+      "equipment": "cable, machine, dumbbell or bodyweight",
+      "primary_muscles": [
+        "upper back"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop upper back strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Set the support or cable height, brace the trunk and let the shoulder blades reach without losing position.",
+      "execution": "Draw the elbows or implement towards the torso, pause briefly, then return to the start under control.",
+      "coaching_cues": [
+        "Reach then row",
+        "Keep the chest supported",
+        "Lower under control"
+      ],
+      "common_mistakes": [
+        "Jerking from the start",
+        "Shortening the return"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Wide-Grip Cable Row",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Upper back",
+      "category": "accessory",
+      "equipment": "cable",
+      "primary_muscles": [
+        "upper back"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop upper back strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Set the support or cable height, brace the trunk and let the shoulder blades reach without losing position.",
+      "execution": "Draw the elbows or implement towards the torso, pause briefly, then return to the start under control.",
+      "coaching_cues": [
+        "Reach then row",
+        "Keep the chest supported",
+        "Lower under control"
+      ],
+      "common_mistakes": [
+        "Jerking from the start",
+        "Shortening the return"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "High Row",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Upper back",
+      "category": "accessory",
+      "equipment": "cable, machine, dumbbell or bodyweight",
+      "primary_muscles": [
+        "upper back"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop upper back strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Set the support or cable height, brace the trunk and let the shoulder blades reach without losing position.",
+      "execution": "Draw the elbows or implement towards the torso, pause briefly, then return to the start under control.",
+      "coaching_cues": [
+        "Reach then row",
+        "Keep the chest supported",
+        "Lower under control"
+      ],
+      "common_mistakes": [
+        "Jerking from the start",
+        "Shortening the return"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Single-Arm Machine Row",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Upper back",
+      "category": "unilateral",
+      "equipment": "machine",
+      "primary_muscles": [
+        "upper back"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop upper back strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Set the support or cable height, brace the trunk and let the shoulder blades reach without losing position.",
+      "execution": "Draw the elbows or implement towards the torso, pause briefly, then return to the start under control.",
+      "coaching_cues": [
+        "Reach then row",
+        "Keep the chest supported",
+        "Lower under control"
+      ],
+      "common_mistakes": [
+        "Jerking from the start",
+        "Shortening the return"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Kelso Shrug",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Upper back",
+      "category": "accessory",
+      "equipment": "cable, machine, dumbbell or bodyweight",
+      "primary_muscles": [
+        "upper back"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop upper back strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Set the support or cable height, brace the trunk and let the shoulder blades reach without losing position.",
+      "execution": "Draw the elbows or implement towards the torso, pause briefly, then return to the start under control.",
+      "coaching_cues": [
+        "Reach then row",
+        "Keep the chest supported",
+        "Lower under control"
+      ],
+      "common_mistakes": [
+        "Jerking from the start",
+        "Shortening the return"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Dumbbell Pullover",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Upper back",
+      "category": "accessory",
+      "equipment": "dumbbell",
+      "primary_muscles": [
+        "upper back"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop upper back strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Set the support or cable height, brace the trunk and let the shoulder blades reach without losing position.",
+      "execution": "Draw the elbows or implement towards the torso, pause briefly, then return to the start under control.",
+      "coaching_cues": [
+        "Reach then row",
+        "Keep the chest supported",
+        "Lower under control"
+      ],
+      "common_mistakes": [
+        "Jerking from the start",
+        "Shortening the return"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Cable Pullover",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Upper back",
+      "category": "accessory",
+      "equipment": "cable",
+      "primary_muscles": [
+        "upper back"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop upper back strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Set the support or cable height, brace the trunk and let the shoulder blades reach without losing position.",
+      "execution": "Draw the elbows or implement towards the torso, pause briefly, then return to the start under control.",
+      "coaching_cues": [
+        "Reach then row",
+        "Keep the chest supported",
+        "Lower under control"
+      ],
+      "common_mistakes": [
+        "Jerking from the start",
+        "Shortening the return"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Prone Rear-Delt Row",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Upper back",
+      "category": "accessory",
+      "equipment": "cable, machine, dumbbell or bodyweight",
+      "primary_muscles": [
+        "upper back"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop upper back strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Set the support or cable height, brace the trunk and let the shoulder blades reach without losing position.",
+      "execution": "Draw the elbows or implement towards the torso, pause briefly, then return to the start under control.",
+      "coaching_cues": [
+        "Reach then row",
+        "Keep the chest supported",
+        "Lower under control"
+      ],
+      "common_mistakes": [
+        "Jerking from the start",
+        "Shortening the return"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Bird-Dog Row",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Lower back",
+      "category": "accessory",
+      "equipment": "bodyweight, bench or machine",
+      "primary_muscles": [
+        "lower back"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop lower back strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Set the support so the hips can move freely and establish a gently braced trunk before starting.",
+      "execution": "Move through the hips or hold the chosen trunk position while maintaining steady breathing and control.",
+      "coaching_cues": [
+        "Brace before moving",
+        "Use the hips",
+        "Stop before position changes"
+      ],
+      "common_mistakes": [
+        "Chasing excessive range",
+        "Losing control to finish a repetition"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Roman-Chair Back Extension",
+      "aliases": [
+        "Roman Chair Extension"
+      ],
+      "movement": "accessory",
+      "family": "Lower back",
+      "category": "accessory",
+      "equipment": "bodyweight, bench or machine",
+      "primary_muscles": [
+        "lower back"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop lower back strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Set the support so the hips can move freely and establish a gently braced trunk before starting.",
+      "execution": "Move through the hips or hold the chosen trunk position while maintaining steady breathing and control.",
+      "coaching_cues": [
+        "Brace before moving",
+        "Use the hips",
+        "Stop before position changes"
+      ],
+      "common_mistakes": [
+        "Chasing excessive range",
+        "Losing control to finish a repetition"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Sorensen Hold",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Lower back",
+      "category": "accessory",
+      "equipment": "bodyweight, bench or machine",
+      "primary_muscles": [
+        "lower back"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop lower back strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Set the support so the hips can move freely and establish a gently braced trunk before starting.",
+      "execution": "Move through the hips or hold the chosen trunk position while maintaining steady breathing and control.",
+      "coaching_cues": [
+        "Brace before moving",
+        "Use the hips",
+        "Stop before position changes"
+      ],
+      "common_mistakes": [
+        "Chasing excessive range",
+        "Losing control to finish a repetition"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Machine Back Extension",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Lower back",
+      "category": "accessory",
+      "equipment": "machine",
+      "primary_muscles": [
+        "lower back"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop lower back strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Set the support so the hips can move freely and establish a gently braced trunk before starting.",
+      "execution": "Move through the hips or hold the chosen trunk position while maintaining steady breathing and control.",
+      "coaching_cues": [
+        "Brace before moving",
+        "Use the hips",
+        "Stop before position changes"
+      ],
+      "common_mistakes": [
+        "Chasing excessive range",
+        "Losing control to finish a repetition"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Weighted Back Extension",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Lower back",
+      "category": "accessory",
+      "equipment": "bodyweight, bench or machine",
+      "primary_muscles": [
+        "lower back"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop lower back strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Set the support so the hips can move freely and establish a gently braced trunk before starting.",
+      "execution": "Move through the hips or hold the chosen trunk position while maintaining steady breathing and control.",
+      "coaching_cues": [
+        "Brace before moving",
+        "Use the hips",
+        "Stop before position changes"
+      ],
+      "common_mistakes": [
+        "Chasing excessive range",
+        "Losing control to finish a repetition"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Quadruped Rock-Back",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Lower back",
+      "category": "accessory",
+      "equipment": "bodyweight, bench or machine",
+      "primary_muscles": [
+        "lower back"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop lower back strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Set the support so the hips can move freely and establish a gently braced trunk before starting.",
+      "execution": "Move through the hips or hold the chosen trunk position while maintaining steady breathing and control.",
+      "coaching_cues": [
+        "Brace before moving",
+        "Use the hips",
+        "Stop before position changes"
+      ],
+      "common_mistakes": [
+        "Chasing excessive range",
+        "Losing control to finish a repetition"
       ],
       "regressions": [
         "Reduce the load",
@@ -12422,6 +13152,2109 @@
       "occurrences": 0
     },
     {
+      "name": "Heavy Sled Push",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "GPP and carries",
+      "category": "gpp",
+      "equipment": "sled",
+      "primary_muscles": [
+        "gpp and carries"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop gpp and carries strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Clear the route, secure the load and establish a tall, braced start before moving.",
+      "execution": "Walk or drive with short purposeful steps, keeping the implement controlled until the set is complete.",
+      "coaching_cues": [
+        "Brace before the first step",
+        "Take quick controlled steps",
+        "Finish under control"
+      ],
+      "common_mistakes": [
+        "Starting before the route is clear",
+        "Letting posture collapse as fatigue rises"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Forward Sled Drag",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "GPP and carries",
+      "category": "gpp",
+      "equipment": "sled",
+      "primary_muscles": [
+        "gpp and carries"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop gpp and carries strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Clear the route, secure the load and establish a tall, braced start before moving.",
+      "execution": "Walk or drive with short purposeful steps, keeping the implement controlled until the set is complete.",
+      "coaching_cues": [
+        "Brace before the first step",
+        "Take quick controlled steps",
+        "Finish under control"
+      ],
+      "common_mistakes": [
+        "Starting before the route is clear",
+        "Letting posture collapse as fatigue rises"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Lateral Sled Drag",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "GPP and carries",
+      "category": "gpp",
+      "equipment": "sled",
+      "primary_muscles": [
+        "gpp and carries"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop gpp and carries strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Clear the route, secure the load and establish a tall, braced start before moving.",
+      "execution": "Walk or drive with short purposeful steps, keeping the implement controlled until the set is complete.",
+      "coaching_cues": [
+        "Brace before the first step",
+        "Take quick controlled steps",
+        "Finish under control"
+      ],
+      "common_mistakes": [
+        "Starting before the route is clear",
+        "Letting posture collapse as fatigue rises"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Sled Rope Pull",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "GPP and carries",
+      "category": "gpp",
+      "equipment": "sled",
+      "primary_muscles": [
+        "gpp and carries"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop gpp and carries strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Clear the route, secure the load and establish a tall, braced start before moving.",
+      "execution": "Walk or drive with short purposeful steps, keeping the implement controlled until the set is complete.",
+      "coaching_cues": [
+        "Brace before the first step",
+        "Take quick controlled steps",
+        "Finish under control"
+      ],
+      "common_mistakes": [
+        "Starting before the route is clear",
+        "Letting posture collapse as fatigue rises"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Trap-Bar Carry",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "GPP and carries",
+      "category": "gpp",
+      "equipment": "sled, kettlebells, sandbag or free weights",
+      "primary_muscles": [
+        "gpp and carries"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop gpp and carries strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Clear the route, secure the load and establish a tall, braced start before moving.",
+      "execution": "Walk or drive with short purposeful steps, keeping the implement controlled until the set is complete.",
+      "coaching_cues": [
+        "Brace before the first step",
+        "Take quick controlled steps",
+        "Finish under control"
+      ],
+      "common_mistakes": [
+        "Starting before the route is clear",
+        "Letting posture collapse as fatigue rises"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Double-Kettlebell Front-Rack Carry",
+      "aliases": [
+        "Double KB Front Rack Carry"
+      ],
+      "movement": "accessory",
+      "family": "GPP and carries",
+      "category": "gpp",
+      "equipment": "sled, kettlebells, sandbag or free weights",
+      "primary_muscles": [
+        "gpp and carries"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop gpp and carries strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Clear the route, secure the load and establish a tall, braced start before moving.",
+      "execution": "Walk or drive with short purposeful steps, keeping the implement controlled until the set is complete.",
+      "coaching_cues": [
+        "Brace before the first step",
+        "Take quick controlled steps",
+        "Finish under control"
+      ],
+      "common_mistakes": [
+        "Starting before the route is clear",
+        "Letting posture collapse as fatigue rises"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Sandbag Bear-Hug Carry",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "GPP and carries",
+      "category": "gpp",
+      "equipment": "sled, kettlebells, sandbag or free weights",
+      "primary_muscles": [
+        "gpp and carries"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop gpp and carries strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Clear the route, secure the load and establish a tall, braced start before moving.",
+      "execution": "Walk or drive with short purposeful steps, keeping the implement controlled until the set is complete.",
+      "coaching_cues": [
+        "Brace before the first step",
+        "Take quick controlled steps",
+        "Finish under control"
+      ],
+      "common_mistakes": [
+        "Starting before the route is clear",
+        "Letting posture collapse as fatigue rises"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Overhead Carry",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "GPP and carries",
+      "category": "gpp",
+      "equipment": "sled, kettlebells, sandbag or free weights",
+      "primary_muscles": [
+        "gpp and carries"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop gpp and carries strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Clear the route, secure the load and establish a tall, braced start before moving.",
+      "execution": "Walk or drive with short purposeful steps, keeping the implement controlled until the set is complete.",
+      "coaching_cues": [
+        "Brace before the first step",
+        "Take quick controlled steps",
+        "Finish under control"
+      ],
+      "common_mistakes": [
+        "Starting before the route is clear",
+        "Letting posture collapse as fatigue rises"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Uneven Farmer Carry",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "GPP and carries",
+      "category": "gpp",
+      "equipment": "sled, kettlebells, sandbag or free weights",
+      "primary_muscles": [
+        "gpp and carries"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop gpp and carries strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Clear the route, secure the load and establish a tall, braced start before moving.",
+      "execution": "Walk or drive with short purposeful steps, keeping the implement controlled until the set is complete.",
+      "coaching_cues": [
+        "Brace before the first step",
+        "Take quick controlled steps",
+        "Finish under control"
+      ],
+      "common_mistakes": [
+        "Starting before the route is clear",
+        "Letting posture collapse as fatigue rises"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Plate Carry",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "GPP and carries",
+      "category": "gpp",
+      "equipment": "sled, kettlebells, sandbag or free weights",
+      "primary_muscles": [
+        "gpp and carries"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop gpp and carries strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Clear the route, secure the load and establish a tall, braced start before moving.",
+      "execution": "Walk or drive with short purposeful steps, keeping the implement controlled until the set is complete.",
+      "coaching_cues": [
+        "Brace before the first step",
+        "Take quick controlled steps",
+        "Finish under control"
+      ],
+      "common_mistakes": [
+        "Starting before the route is clear",
+        "Letting posture collapse as fatigue rises"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Air Bike Intervals",
+      "aliases": [
+        "Assault Bike",
+        "Fan Bike"
+      ],
+      "movement": "accessory",
+      "family": "Conditioning",
+      "category": "conditioning",
+      "equipment": "conditioning machine or training implement",
+      "primary_muscles": [
+        "conditioning"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop conditioning strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Check the machine or training area, select a sustainable starting effort and keep the work interval unobstructed.",
+      "execution": "Build to the prescribed effort, maintain repeatable mechanics, then reduce speed deliberately for recovery.",
+      "coaching_cues": [
+        "Start under control",
+        "Keep each interval repeatable",
+        "Recover deliberately"
+      ],
+      "common_mistakes": [
+        "Sprinting the first interval blindly",
+        "Allowing technique to deteriorate"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Rowing Ergometer Intervals",
+      "aliases": [
+        "Rower Intervals",
+        "Row Erg Intervals"
+      ],
+      "movement": "accessory",
+      "family": "Conditioning",
+      "category": "conditioning",
+      "equipment": "conditioning machine or training implement",
+      "primary_muscles": [
+        "conditioning"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop conditioning strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Check the machine or training area, select a sustainable starting effort and keep the work interval unobstructed.",
+      "execution": "Build to the prescribed effort, maintain repeatable mechanics, then reduce speed deliberately for recovery.",
+      "coaching_cues": [
+        "Start under control",
+        "Keep each interval repeatable",
+        "Recover deliberately"
+      ],
+      "common_mistakes": [
+        "Sprinting the first interval blindly",
+        "Allowing technique to deteriorate"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Ski Ergometer Intervals",
+      "aliases": [
+        "SkiErg Intervals",
+        "Ski Erg"
+      ],
+      "movement": "accessory",
+      "family": "Conditioning",
+      "category": "conditioning",
+      "equipment": "conditioning machine or training implement",
+      "primary_muscles": [
+        "conditioning"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop conditioning strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Check the machine or training area, select a sustainable starting effort and keep the work interval unobstructed.",
+      "execution": "Build to the prescribed effort, maintain repeatable mechanics, then reduce speed deliberately for recovery.",
+      "coaching_cues": [
+        "Start under control",
+        "Keep each interval repeatable",
+        "Recover deliberately"
+      ],
+      "common_mistakes": [
+        "Sprinting the first interval blindly",
+        "Allowing technique to deteriorate"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Incline Treadmill Walk",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Conditioning",
+      "category": "conditioning",
+      "equipment": "conditioning machine or training implement",
+      "primary_muscles": [
+        "conditioning"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop conditioning strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Check the machine or training area, select a sustainable starting effort and keep the work interval unobstructed.",
+      "execution": "Build to the prescribed effort, maintain repeatable mechanics, then reduce speed deliberately for recovery.",
+      "coaching_cues": [
+        "Start under control",
+        "Keep each interval repeatable",
+        "Recover deliberately"
+      ],
+      "common_mistakes": [
+        "Sprinting the first interval blindly",
+        "Allowing technique to deteriorate"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Prowler Sprint",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Conditioning",
+      "category": "conditioning",
+      "equipment": "conditioning machine or training implement",
+      "primary_muscles": [
+        "conditioning"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop conditioning strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Check the machine or training area, select a sustainable starting effort and keep the work interval unobstructed.",
+      "execution": "Build to the prescribed effort, maintain repeatable mechanics, then reduce speed deliberately for recovery.",
+      "coaching_cues": [
+        "Start under control",
+        "Keep each interval repeatable",
+        "Recover deliberately"
+      ],
+      "common_mistakes": [
+        "Sprinting the first interval blindly",
+        "Allowing technique to deteriorate"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Battle Rope Waves",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Conditioning",
+      "category": "conditioning",
+      "equipment": "conditioning machine or training implement",
+      "primary_muscles": [
+        "conditioning"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop conditioning strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Check the machine or training area, select a sustainable starting effort and keep the work interval unobstructed.",
+      "execution": "Build to the prescribed effort, maintain repeatable mechanics, then reduce speed deliberately for recovery.",
+      "coaching_cues": [
+        "Start under control",
+        "Keep each interval repeatable",
+        "Recover deliberately"
+      ],
+      "common_mistakes": [
+        "Sprinting the first interval blindly",
+        "Allowing technique to deteriorate"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Kettlebell Swing Intervals",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Conditioning",
+      "category": "conditioning",
+      "equipment": "conditioning machine or training implement",
+      "primary_muscles": [
+        "conditioning"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop conditioning strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Check the machine or training area, select a sustainable starting effort and keep the work interval unobstructed.",
+      "execution": "Build to the prescribed effort, maintain repeatable mechanics, then reduce speed deliberately for recovery.",
+      "coaching_cues": [
+        "Start under control",
+        "Keep each interval repeatable",
+        "Recover deliberately"
+      ],
+      "common_mistakes": [
+        "Sprinting the first interval blindly",
+        "Allowing technique to deteriorate"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Medicine-Ball Slam",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Conditioning",
+      "category": "conditioning",
+      "equipment": "conditioning machine or training implement",
+      "primary_muscles": [
+        "conditioning"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop conditioning strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Check the machine or training area, select a sustainable starting effort and keep the work interval unobstructed.",
+      "execution": "Build to the prescribed effort, maintain repeatable mechanics, then reduce speed deliberately for recovery.",
+      "coaching_cues": [
+        "Start under control",
+        "Keep each interval repeatable",
+        "Recover deliberately"
+      ],
+      "common_mistakes": [
+        "Sprinting the first interval blindly",
+        "Allowing technique to deteriorate"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Log Clean and Press",
+      "aliases": [
+        "Log Press"
+      ],
+      "movement": "accessory",
+      "family": "Strongman",
+      "category": "strongman",
+      "equipment": "strongman implement",
+      "primary_muscles": [
+        "strongman"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop strongman strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Inspect the implement, clear the working area and take a balanced grip or contact position before applying force.",
+      "execution": "Move the implement with a braced trunk and deliberate footwork, completing each phase before changing direction.",
+      "coaching_cues": [
+        "Secure the implement",
+        "Brace before each phase",
+        "Use deliberate footwork"
+      ],
+      "common_mistakes": [
+        "Rushing the pickup",
+        "Continuing after control is lost"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Axle Clean and Press",
+      "aliases": [
+        "Axle Press"
+      ],
+      "movement": "accessory",
+      "family": "Strongman",
+      "category": "strongman",
+      "equipment": "strongman implement",
+      "primary_muscles": [
+        "strongman"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop strongman strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Inspect the implement, clear the working area and take a balanced grip or contact position before applying force.",
+      "execution": "Move the implement with a braced trunk and deliberate footwork, completing each phase before changing direction.",
+      "coaching_cues": [
+        "Secure the implement",
+        "Brace before each phase",
+        "Use deliberate footwork"
+      ],
+      "common_mistakes": [
+        "Rushing the pickup",
+        "Continuing after control is lost"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Push Press",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Strongman",
+      "category": "strongman",
+      "equipment": "strongman implement",
+      "primary_muscles": [
+        "strongman"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop strongman strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Inspect the implement, clear the working area and take a balanced grip or contact position before applying force.",
+      "execution": "Move the implement with a braced trunk and deliberate footwork, completing each phase before changing direction.",
+      "coaching_cues": [
+        "Secure the implement",
+        "Brace before each phase",
+        "Use deliberate footwork"
+      ],
+      "common_mistakes": [
+        "Rushing the pickup",
+        "Continuing after control is lost"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Sandbag to Shoulder",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Strongman",
+      "category": "strongman",
+      "equipment": "strongman implement",
+      "primary_muscles": [
+        "strongman"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop strongman strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Inspect the implement, clear the working area and take a balanced grip or contact position before applying force.",
+      "execution": "Move the implement with a braced trunk and deliberate footwork, completing each phase before changing direction.",
+      "coaching_cues": [
+        "Secure the implement",
+        "Brace before each phase",
+        "Use deliberate footwork"
+      ],
+      "common_mistakes": [
+        "Rushing the pickup",
+        "Continuing after control is lost"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Sandbag Load",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Strongman",
+      "category": "strongman",
+      "equipment": "strongman implement",
+      "primary_muscles": [
+        "strongman"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop strongman strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Inspect the implement, clear the working area and take a balanced grip or contact position before applying force.",
+      "execution": "Move the implement with a braced trunk and deliberate footwork, completing each phase before changing direction.",
+      "coaching_cues": [
+        "Secure the implement",
+        "Brace before each phase",
+        "Use deliberate footwork"
+      ],
+      "common_mistakes": [
+        "Rushing the pickup",
+        "Continuing after control is lost"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Atlas Stone Load",
+      "aliases": [
+        "Stone Load",
+        "Atlas Stones"
+      ],
+      "movement": "accessory",
+      "family": "Strongman",
+      "category": "strongman",
+      "equipment": "strongman implement",
+      "primary_muscles": [
+        "strongman"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop strongman strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Inspect the implement, clear the working area and take a balanced grip or contact position before applying force.",
+      "execution": "Move the implement with a braced trunk and deliberate footwork, completing each phase before changing direction.",
+      "coaching_cues": [
+        "Secure the implement",
+        "Brace before each phase",
+        "Use deliberate footwork"
+      ],
+      "common_mistakes": [
+        "Rushing the pickup",
+        "Continuing after control is lost"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Yoke Walk",
+      "aliases": [
+        "Yoke Carry"
+      ],
+      "movement": "accessory",
+      "family": "Strongman",
+      "category": "strongman",
+      "equipment": "strongman implement",
+      "primary_muscles": [
+        "strongman"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop strongman strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Inspect the implement, clear the working area and take a balanced grip or contact position before applying force.",
+      "execution": "Move the implement with a braced trunk and deliberate footwork, completing each phase before changing direction.",
+      "coaching_cues": [
+        "Secure the implement",
+        "Brace before each phase",
+        "Use deliberate footwork"
+      ],
+      "common_mistakes": [
+        "Rushing the pickup",
+        "Continuing after control is lost"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Frame Carry",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Strongman",
+      "category": "strongman",
+      "equipment": "strongman implement",
+      "primary_muscles": [
+        "strongman"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop strongman strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Inspect the implement, clear the working area and take a balanced grip or contact position before applying force.",
+      "execution": "Move the implement with a braced trunk and deliberate footwork, completing each phase before changing direction.",
+      "coaching_cues": [
+        "Secure the implement",
+        "Brace before each phase",
+        "Use deliberate footwork"
+      ],
+      "common_mistakes": [
+        "Rushing the pickup",
+        "Continuing after control is lost"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Keg Carry",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Strongman",
+      "category": "strongman",
+      "equipment": "strongman implement",
+      "primary_muscles": [
+        "strongman"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop strongman strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Inspect the implement, clear the working area and take a balanced grip or contact position before applying force.",
+      "execution": "Move the implement with a braced trunk and deliberate footwork, completing each phase before changing direction.",
+      "coaching_cues": [
+        "Secure the implement",
+        "Brace before each phase",
+        "Use deliberate footwork"
+      ],
+      "common_mistakes": [
+        "Rushing the pickup",
+        "Continuing after control is lost"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Tire Flip",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Strongman",
+      "category": "strongman",
+      "equipment": "strongman implement",
+      "primary_muscles": [
+        "strongman"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop strongman strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Inspect the implement, clear the working area and take a balanced grip or contact position before applying force.",
+      "execution": "Move the implement with a braced trunk and deliberate footwork, completing each phase before changing direction.",
+      "coaching_cues": [
+        "Secure the implement",
+        "Brace before each phase",
+        "Use deliberate footwork"
+      ],
+      "common_mistakes": [
+        "Rushing the pickup",
+        "Continuing after control is lost"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Sled Arm-Over-Arm Pull",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Strongman",
+      "category": "strongman",
+      "equipment": "sled",
+      "primary_muscles": [
+        "strongman"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop strongman strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Inspect the implement, clear the working area and take a balanced grip or contact position before applying force.",
+      "execution": "Move the implement with a braced trunk and deliberate footwork, completing each phase before changing direction.",
+      "coaching_cues": [
+        "Secure the implement",
+        "Brace before each phase",
+        "Use deliberate footwork"
+      ],
+      "common_mistakes": [
+        "Rushing the pickup",
+        "Continuing after control is lost"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Zercher Carry",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Strongman",
+      "category": "strongman",
+      "equipment": "strongman implement",
+      "primary_muscles": [
+        "strongman"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop strongman strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Inspect the implement, clear the working area and take a balanced grip or contact position before applying force.",
+      "execution": "Move the implement with a braced trunk and deliberate footwork, completing each phase before changing direction.",
+      "coaching_cues": [
+        "Secure the implement",
+        "Brace before each phase",
+        "Use deliberate footwork"
+      ],
+      "common_mistakes": [
+        "Rushing the pickup",
+        "Continuing after control is lost"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Supported Split Squat",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Rehabilitation regressions",
+      "category": "regression",
+      "equipment": "bodyweight, band or light resistance",
+      "primary_muscles": [
+        "rehabilitation regressions"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop rehabilitation regressions strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Arrange stable support and choose a range that can be completed smoothly without compensating.",
+      "execution": "Move slowly through the selected range or hold the position while breathing, then return with the same control.",
+      "coaching_cues": [
+        "Use support as needed",
+        "Keep the repetition smooth",
+        "Build range gradually"
+      ],
+      "common_mistakes": [
+        "Forcing range",
+        "Removing support before control is established"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Sit-to-Stand",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Rehabilitation regressions",
+      "category": "regression",
+      "equipment": "bodyweight, band or light resistance",
+      "primary_muscles": [
+        "rehabilitation regressions"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop rehabilitation regressions strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Arrange stable support and choose a range that can be completed smoothly without compensating.",
+      "execution": "Move slowly through the selected range or hold the position while breathing, then return with the same control.",
+      "coaching_cues": [
+        "Use support as needed",
+        "Keep the repetition smooth",
+        "Build range gradually"
+      ],
+      "common_mistakes": [
+        "Forcing range",
+        "Removing support before control is established"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Low Box Step-Up",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Rehabilitation regressions",
+      "category": "regression",
+      "equipment": "bodyweight, band or light resistance",
+      "primary_muscles": [
+        "rehabilitation regressions"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop rehabilitation regressions strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Arrange stable support and choose a range that can be completed smoothly without compensating.",
+      "execution": "Move slowly through the selected range or hold the position while breathing, then return with the same control.",
+      "coaching_cues": [
+        "Use support as needed",
+        "Keep the repetition smooth",
+        "Build range gradually"
+      ],
+      "common_mistakes": [
+        "Forcing range",
+        "Removing support before control is established"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Assisted Calf Raise",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Rehabilitation regressions",
+      "category": "regression",
+      "equipment": "bodyweight, band or light resistance",
+      "primary_muscles": [
+        "rehabilitation regressions"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop rehabilitation regressions strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Arrange stable support and choose a range that can be completed smoothly without compensating.",
+      "execution": "Move slowly through the selected range or hold the position while breathing, then return with the same control.",
+      "coaching_cues": [
+        "Use support as needed",
+        "Keep the repetition smooth",
+        "Build range gradually"
+      ],
+      "common_mistakes": [
+        "Forcing range",
+        "Removing support before control is established"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Isometric Calf Raise",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Rehabilitation regressions",
+      "category": "regression",
+      "equipment": "bodyweight, band or light resistance",
+      "primary_muscles": [
+        "rehabilitation regressions"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop rehabilitation regressions strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Arrange stable support and choose a range that can be completed smoothly without compensating.",
+      "execution": "Move slowly through the selected range or hold the position while breathing, then return with the same control.",
+      "coaching_cues": [
+        "Use support as needed",
+        "Keep the repetition smooth",
+        "Build range gradually"
+      ],
+      "common_mistakes": [
+        "Forcing range",
+        "Removing support before control is established"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Short-Lever Copenhagen Plank",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Rehabilitation regressions",
+      "category": "regression",
+      "equipment": "bodyweight, band or light resistance",
+      "primary_muscles": [
+        "rehabilitation regressions"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop rehabilitation regressions strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Arrange stable support and choose a range that can be completed smoothly without compensating.",
+      "execution": "Move slowly through the selected range or hold the position while breathing, then return with the same control.",
+      "coaching_cues": [
+        "Use support as needed",
+        "Keep the repetition smooth",
+        "Build range gradually"
+      ],
+      "common_mistakes": [
+        "Forcing range",
+        "Removing support before control is established"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Banded Terminal Knee Extension",
+      "aliases": [
+        "TKE",
+        "Band TKE"
+      ],
+      "movement": "accessory",
+      "family": "Rehabilitation regressions",
+      "category": "regression",
+      "equipment": "resistance band",
+      "primary_muscles": [
+        "rehabilitation regressions"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop rehabilitation regressions strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Arrange stable support and choose a range that can be completed smoothly without compensating.",
+      "execution": "Move slowly through the selected range or hold the position while breathing, then return with the same control.",
+      "coaching_cues": [
+        "Use support as needed",
+        "Keep the repetition smooth",
+        "Build range gradually"
+      ],
+      "common_mistakes": [
+        "Forcing range",
+        "Removing support before control is established"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Wall Push-Up",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Rehabilitation regressions",
+      "category": "regression",
+      "equipment": "bodyweight, band or light resistance",
+      "primary_muscles": [
+        "rehabilitation regressions"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop rehabilitation regressions strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Arrange stable support and choose a range that can be completed smoothly without compensating.",
+      "execution": "Move slowly through the selected range or hold the position while breathing, then return with the same control.",
+      "coaching_cues": [
+        "Use support as needed",
+        "Keep the repetition smooth",
+        "Build range gradually"
+      ],
+      "common_mistakes": [
+        "Forcing range",
+        "Removing support before control is established"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Supported Single-Leg Romanian Deadlift",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Rehabilitation regressions",
+      "category": "regression",
+      "equipment": "bodyweight, band or light resistance",
+      "primary_muscles": [
+        "rehabilitation regressions"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop rehabilitation regressions strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Arrange stable support and choose a range that can be completed smoothly without compensating.",
+      "execution": "Move slowly through the selected range or hold the position while breathing, then return with the same control.",
+      "coaching_cues": [
+        "Use support as needed",
+        "Keep the repetition smooth",
+        "Build range gradually"
+      ],
+      "common_mistakes": [
+        "Forcing range",
+        "Removing support before control is established"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
+      "name": "Isometric Hamstring Bridge",
+      "aliases": [],
+      "movement": "accessory",
+      "family": "Rehabilitation regressions",
+      "category": "regression",
+      "equipment": "bodyweight, band or light resistance",
+      "primary_muscles": [
+        "rehabilitation regressions"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "develop rehabilitation regressions strength and capacity",
+      "difficulty": "beginner",
+      "setup": "Arrange stable support and choose a range that can be completed smoothly without compensating.",
+      "execution": "Move slowly through the selected range or hold the position while breathing, then return with the same control.",
+      "coaching_cues": [
+        "Use support as needed",
+        "Keep the repetition smooth",
+        "Build range gradually"
+      ],
+      "common_mistakes": [
+        "Forcing range",
+        "Removing support before control is established"
+      ],
+      "regressions": [
+        "Reduce the load",
+        "Shorten the range while retaining control"
+      ],
+      "progressions": [
+        "Add load gradually",
+        "Increase the controlled range or repetitions"
+      ],
+      "cautions": "Set the equipment securely and stop if discomfort changes the intended movement or prevents a controlled repetition.",
+      "competition_relevance": "moderate",
+      "prescription_styles": [
+        "sets and repetitions",
+        "RPE",
+        "percentage for established barbell lifts"
+      ],
+      "rep_ranges": "6-20 reps",
+      "warmup_suitable": false,
+      "accessory_suitable": true,
+      "active": true,
+      "fatigue_rating": 2,
+      "default_sets": 3,
+      "default_reps": "12",
+      "default_rpe": 7.0,
+      "default_rest_seconds": 90,
+      "occurrences": 0
+    },
+    {
       "name": "Bodyweight Squat",
       "aliases": [],
       "movement": "warmup",
@@ -14390,6 +17223,608 @@
       "difficulty": "beginner",
       "setup": "Use a clear space and arrange any light equipment needed for the wall hip hinge; begin in a relaxed, stable position.",
       "execution": "Move through the wall hip hinge slowly for controlled repetitions, exploring only the range that can be kept smooth and repeatable.",
+      "coaching_cues": [
+        "Move slowly",
+        "Keep breathing",
+        "Use only a controllable range"
+      ],
+      "common_mistakes": [
+        "Forcing extra range",
+        "Rushing through repetitions"
+      ],
+      "regressions": [
+        "Use support or reduce the range"
+      ],
+      "progressions": [
+        "Increase the range gradually while retaining control"
+      ],
+      "cautions": "This is a preparation drill, not a loaded stretch. Reduce the range or stop if the movement becomes painful or uncontrolled.",
+      "competition_relevance": "none",
+      "prescription_styles": [
+        "sets and repetitions",
+        "controlled repetitions",
+        "time"
+      ],
+      "rep_ranges": "5-10 controlled reps or 20-40 seconds",
+      "warmup_suitable": true,
+      "accessory_suitable": false,
+      "active": true,
+      "fatigue_rating": 1,
+      "default_sets": 2,
+      "default_reps": "8",
+      "default_rpe": 5.0,
+      "default_rest_seconds": 30,
+      "occurrences": 0
+    },
+    {
+      "name": "Supine 90/90 Breathing",
+      "aliases": [
+        "90 90 Breathing"
+      ],
+      "movement": "warmup",
+      "family": "Breathing and position",
+      "category": "movement preparation",
+      "equipment": "bodyweight, band or light implement",
+      "primary_muscles": [
+        "movement-specific musculature"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "movement quality and training readiness",
+      "difficulty": "beginner",
+      "setup": "Use a clear space and arrange any light equipment needed for the supine 90/90 breathing; begin in a relaxed, stable position.",
+      "execution": "Move through the supine 90/90 breathing slowly for controlled repetitions, exploring only the range that can be kept smooth and repeatable.",
+      "coaching_cues": [
+        "Move slowly",
+        "Keep breathing",
+        "Use only a controllable range"
+      ],
+      "common_mistakes": [
+        "Forcing extra range",
+        "Rushing through repetitions"
+      ],
+      "regressions": [
+        "Use support or reduce the range"
+      ],
+      "progressions": [
+        "Increase the range gradually while retaining control"
+      ],
+      "cautions": "This is a preparation drill, not a loaded stretch. Reduce the range or stop if the movement becomes painful or uncontrolled.",
+      "competition_relevance": "none",
+      "prescription_styles": [
+        "sets and repetitions",
+        "controlled repetitions",
+        "time"
+      ],
+      "rep_ranges": "5-10 controlled reps or 20-40 seconds",
+      "warmup_suitable": true,
+      "accessory_suitable": false,
+      "active": true,
+      "fatigue_rating": 1,
+      "default_sets": 2,
+      "default_reps": "8",
+      "default_rpe": 5.0,
+      "default_rest_seconds": 30,
+      "occurrences": 0
+    },
+    {
+      "name": "Hook-Lying Heel-Dig Breathing",
+      "aliases": [],
+      "movement": "warmup",
+      "family": "Breathing and position",
+      "category": "movement preparation",
+      "equipment": "bodyweight, band or light implement",
+      "primary_muscles": [
+        "movement-specific musculature"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "movement quality and training readiness",
+      "difficulty": "beginner",
+      "setup": "Use a clear space and arrange any light equipment needed for the hook-lying heel-dig breathing; begin in a relaxed, stable position.",
+      "execution": "Move through the hook-lying heel-dig breathing slowly for controlled repetitions, exploring only the range that can be kept smooth and repeatable.",
+      "coaching_cues": [
+        "Move slowly",
+        "Keep breathing",
+        "Use only a controllable range"
+      ],
+      "common_mistakes": [
+        "Forcing extra range",
+        "Rushing through repetitions"
+      ],
+      "regressions": [
+        "Use support or reduce the range"
+      ],
+      "progressions": [
+        "Increase the range gradually while retaining control"
+      ],
+      "cautions": "This is a preparation drill, not a loaded stretch. Reduce the range or stop if the movement becomes painful or uncontrolled.",
+      "competition_relevance": "none",
+      "prescription_styles": [
+        "sets and repetitions",
+        "controlled repetitions",
+        "time"
+      ],
+      "rep_ranges": "5-10 controlled reps or 20-40 seconds",
+      "warmup_suitable": true,
+      "accessory_suitable": false,
+      "active": true,
+      "fatigue_rating": 1,
+      "default_sets": 2,
+      "default_reps": "8",
+      "default_rpe": 5.0,
+      "default_rest_seconds": 30,
+      "occurrences": 0
+    },
+    {
+      "name": "Half-Kneeling Breathing",
+      "aliases": [],
+      "movement": "warmup",
+      "family": "Breathing and position",
+      "category": "movement preparation",
+      "equipment": "bodyweight, band or light implement",
+      "primary_muscles": [
+        "movement-specific musculature"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "movement quality and training readiness",
+      "difficulty": "beginner",
+      "setup": "Use a clear space and arrange any light equipment needed for the half-kneeling breathing; begin in a relaxed, stable position.",
+      "execution": "Move through the half-kneeling breathing slowly for controlled repetitions, exploring only the range that can be kept smooth and repeatable.",
+      "coaching_cues": [
+        "Move slowly",
+        "Keep breathing",
+        "Use only a controllable range"
+      ],
+      "common_mistakes": [
+        "Forcing extra range",
+        "Rushing through repetitions"
+      ],
+      "regressions": [
+        "Use support or reduce the range"
+      ],
+      "progressions": [
+        "Increase the range gradually while retaining control"
+      ],
+      "cautions": "This is a preparation drill, not a loaded stretch. Reduce the range or stop if the movement becomes painful or uncontrolled.",
+      "competition_relevance": "none",
+      "prescription_styles": [
+        "sets and repetitions",
+        "controlled repetitions",
+        "time"
+      ],
+      "rep_ranges": "5-10 controlled reps or 20-40 seconds",
+      "warmup_suitable": true,
+      "accessory_suitable": false,
+      "active": true,
+      "fatigue_rating": 1,
+      "default_sets": 2,
+      "default_reps": "8",
+      "default_rpe": 5.0,
+      "default_rest_seconds": 30,
+      "occurrences": 0
+    },
+    {
+      "name": "All-Fours Breathing",
+      "aliases": [],
+      "movement": "warmup",
+      "family": "Breathing and position",
+      "category": "movement preparation",
+      "equipment": "bodyweight, band or light implement",
+      "primary_muscles": [
+        "movement-specific musculature"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "movement quality and training readiness",
+      "difficulty": "beginner",
+      "setup": "Use a clear space and arrange any light equipment needed for the all-fours breathing; begin in a relaxed, stable position.",
+      "execution": "Move through the all-fours breathing slowly for controlled repetitions, exploring only the range that can be kept smooth and repeatable.",
+      "coaching_cues": [
+        "Move slowly",
+        "Keep breathing",
+        "Use only a controllable range"
+      ],
+      "common_mistakes": [
+        "Forcing extra range",
+        "Rushing through repetitions"
+      ],
+      "regressions": [
+        "Use support or reduce the range"
+      ],
+      "progressions": [
+        "Increase the range gradually while retaining control"
+      ],
+      "cautions": "This is a preparation drill, not a loaded stretch. Reduce the range or stop if the movement becomes painful or uncontrolled.",
+      "competition_relevance": "none",
+      "prescription_styles": [
+        "sets and repetitions",
+        "controlled repetitions",
+        "time"
+      ],
+      "rep_ranges": "5-10 controlled reps or 20-40 seconds",
+      "warmup_suitable": true,
+      "accessory_suitable": false,
+      "active": true,
+      "fatigue_rating": 1,
+      "default_sets": 2,
+      "default_reps": "8",
+      "default_rpe": 5.0,
+      "default_rest_seconds": 30,
+      "occurrences": 0
+    },
+    {
+      "name": "Wall-Supported Reach",
+      "aliases": [],
+      "movement": "warmup",
+      "family": "Breathing and position",
+      "category": "movement preparation",
+      "equipment": "bodyweight, band or light implement",
+      "primary_muscles": [
+        "movement-specific musculature"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "movement quality and training readiness",
+      "difficulty": "beginner",
+      "setup": "Use a clear space and arrange any light equipment needed for the wall-supported reach; begin in a relaxed, stable position.",
+      "execution": "Move through the wall-supported reach slowly for controlled repetitions, exploring only the range that can be kept smooth and repeatable.",
+      "coaching_cues": [
+        "Move slowly",
+        "Keep breathing",
+        "Use only a controllable range"
+      ],
+      "common_mistakes": [
+        "Forcing extra range",
+        "Rushing through repetitions"
+      ],
+      "regressions": [
+        "Use support or reduce the range"
+      ],
+      "progressions": [
+        "Increase the range gradually while retaining control"
+      ],
+      "cautions": "This is a preparation drill, not a loaded stretch. Reduce the range or stop if the movement becomes painful or uncontrolled.",
+      "competition_relevance": "none",
+      "prescription_styles": [
+        "sets and repetitions",
+        "controlled repetitions",
+        "time"
+      ],
+      "rep_ranges": "5-10 controlled reps or 20-40 seconds",
+      "warmup_suitable": true,
+      "accessory_suitable": false,
+      "active": true,
+      "fatigue_rating": 1,
+      "default_sets": 2,
+      "default_reps": "8",
+      "default_rpe": 5.0,
+      "default_rest_seconds": 30,
+      "occurrences": 0
+    },
+    {
+      "name": "Dead-Bug Breathing",
+      "aliases": [],
+      "movement": "warmup",
+      "family": "Breathing and position",
+      "category": "movement preparation",
+      "equipment": "bodyweight, band or light implement",
+      "primary_muscles": [
+        "movement-specific musculature"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "movement quality and training readiness",
+      "difficulty": "beginner",
+      "setup": "Use a clear space and arrange any light equipment needed for the dead-bug breathing; begin in a relaxed, stable position.",
+      "execution": "Move through the dead-bug breathing slowly for controlled repetitions, exploring only the range that can be kept smooth and repeatable.",
+      "coaching_cues": [
+        "Move slowly",
+        "Keep breathing",
+        "Use only a controllable range"
+      ],
+      "common_mistakes": [
+        "Forcing extra range",
+        "Rushing through repetitions"
+      ],
+      "regressions": [
+        "Use support or reduce the range"
+      ],
+      "progressions": [
+        "Increase the range gradually while retaining control"
+      ],
+      "cautions": "This is a preparation drill, not a loaded stretch. Reduce the range or stop if the movement becomes painful or uncontrolled.",
+      "competition_relevance": "none",
+      "prescription_styles": [
+        "sets and repetitions",
+        "controlled repetitions",
+        "time"
+      ],
+      "rep_ranges": "5-10 controlled reps or 20-40 seconds",
+      "warmup_suitable": true,
+      "accessory_suitable": false,
+      "active": true,
+      "fatigue_rating": 1,
+      "default_sets": 2,
+      "default_reps": "8",
+      "default_rpe": 5.0,
+      "default_rest_seconds": 30,
+      "occurrences": 0
+    },
+    {
+      "name": "Bench Lat Stretch",
+      "aliases": [],
+      "movement": "warmup",
+      "family": "Upper-body mobility",
+      "category": "movement preparation",
+      "equipment": "bodyweight, band or light implement",
+      "primary_muscles": [
+        "movement-specific musculature"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "movement quality and training readiness",
+      "difficulty": "beginner",
+      "setup": "Use a clear space and arrange any light equipment needed for the bench lat stretch; begin in a relaxed, stable position.",
+      "execution": "Move through the bench lat stretch slowly for controlled repetitions, exploring only the range that can be kept smooth and repeatable.",
+      "coaching_cues": [
+        "Move slowly",
+        "Keep breathing",
+        "Use only a controllable range"
+      ],
+      "common_mistakes": [
+        "Forcing extra range",
+        "Rushing through repetitions"
+      ],
+      "regressions": [
+        "Use support or reduce the range"
+      ],
+      "progressions": [
+        "Increase the range gradually while retaining control"
+      ],
+      "cautions": "This is a preparation drill, not a loaded stretch. Reduce the range or stop if the movement becomes painful or uncontrolled.",
+      "competition_relevance": "none",
+      "prescription_styles": [
+        "sets and repetitions",
+        "controlled repetitions",
+        "time"
+      ],
+      "rep_ranges": "5-10 controlled reps or 20-40 seconds",
+      "warmup_suitable": true,
+      "accessory_suitable": false,
+      "active": true,
+      "fatigue_rating": 1,
+      "default_sets": 2,
+      "default_reps": "8",
+      "default_rpe": 5.0,
+      "default_rest_seconds": 30,
+      "occurrences": 0
+    },
+    {
+      "name": "Prayer Stretch",
+      "aliases": [],
+      "movement": "warmup",
+      "family": "Upper-body mobility",
+      "category": "movement preparation",
+      "equipment": "bodyweight, band or light implement",
+      "primary_muscles": [
+        "movement-specific musculature"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "movement quality and training readiness",
+      "difficulty": "beginner",
+      "setup": "Use a clear space and arrange any light equipment needed for the prayer stretch; begin in a relaxed, stable position.",
+      "execution": "Move through the prayer stretch slowly for controlled repetitions, exploring only the range that can be kept smooth and repeatable.",
+      "coaching_cues": [
+        "Move slowly",
+        "Keep breathing",
+        "Use only a controllable range"
+      ],
+      "common_mistakes": [
+        "Forcing extra range",
+        "Rushing through repetitions"
+      ],
+      "regressions": [
+        "Use support or reduce the range"
+      ],
+      "progressions": [
+        "Increase the range gradually while retaining control"
+      ],
+      "cautions": "This is a preparation drill, not a loaded stretch. Reduce the range or stop if the movement becomes painful or uncontrolled.",
+      "competition_relevance": "none",
+      "prescription_styles": [
+        "sets and repetitions",
+        "controlled repetitions",
+        "time"
+      ],
+      "rep_ranges": "5-10 controlled reps or 20-40 seconds",
+      "warmup_suitable": true,
+      "accessory_suitable": false,
+      "active": true,
+      "fatigue_rating": 1,
+      "default_sets": 2,
+      "default_reps": "8",
+      "default_rpe": 5.0,
+      "default_rest_seconds": 30,
+      "occurrences": 0
+    },
+    {
+      "name": "Wrist Rock",
+      "aliases": [],
+      "movement": "warmup",
+      "family": "Wrist preparation",
+      "category": "movement preparation",
+      "equipment": "bodyweight, band or light implement",
+      "primary_muscles": [
+        "movement-specific musculature"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "movement quality and training readiness",
+      "difficulty": "beginner",
+      "setup": "Use a clear space and arrange any light equipment needed for the wrist rock; begin in a relaxed, stable position.",
+      "execution": "Move through the wrist rock slowly for controlled repetitions, exploring only the range that can be kept smooth and repeatable.",
+      "coaching_cues": [
+        "Move slowly",
+        "Keep breathing",
+        "Use only a controllable range"
+      ],
+      "common_mistakes": [
+        "Forcing extra range",
+        "Rushing through repetitions"
+      ],
+      "regressions": [
+        "Use support or reduce the range"
+      ],
+      "progressions": [
+        "Increase the range gradually while retaining control"
+      ],
+      "cautions": "This is a preparation drill, not a loaded stretch. Reduce the range or stop if the movement becomes painful or uncontrolled.",
+      "competition_relevance": "none",
+      "prescription_styles": [
+        "sets and repetitions",
+        "controlled repetitions",
+        "time"
+      ],
+      "rep_ranges": "5-10 controlled reps or 20-40 seconds",
+      "warmup_suitable": true,
+      "accessory_suitable": false,
+      "active": true,
+      "fatigue_rating": 1,
+      "default_sets": 2,
+      "default_reps": "8",
+      "default_rpe": 5.0,
+      "default_rest_seconds": 30,
+      "occurrences": 0
+    },
+    {
+      "name": "Banded Ankle Dorsiflexion",
+      "aliases": [],
+      "movement": "warmup",
+      "family": "Ankle mobility",
+      "category": "movement preparation",
+      "equipment": "bodyweight, band or light implement",
+      "primary_muscles": [
+        "movement-specific musculature"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "movement quality and training readiness",
+      "difficulty": "beginner",
+      "setup": "Use a clear space and arrange any light equipment needed for the banded ankle dorsiflexion; begin in a relaxed, stable position.",
+      "execution": "Move through the banded ankle dorsiflexion slowly for controlled repetitions, exploring only the range that can be kept smooth and repeatable.",
+      "coaching_cues": [
+        "Move slowly",
+        "Keep breathing",
+        "Use only a controllable range"
+      ],
+      "common_mistakes": [
+        "Forcing extra range",
+        "Rushing through repetitions"
+      ],
+      "regressions": [
+        "Use support or reduce the range"
+      ],
+      "progressions": [
+        "Increase the range gradually while retaining control"
+      ],
+      "cautions": "This is a preparation drill, not a loaded stretch. Reduce the range or stop if the movement becomes painful or uncontrolled.",
+      "competition_relevance": "none",
+      "prescription_styles": [
+        "sets and repetitions",
+        "controlled repetitions",
+        "time"
+      ],
+      "rep_ranges": "5-10 controlled reps or 20-40 seconds",
+      "warmup_suitable": true,
+      "accessory_suitable": false,
+      "active": true,
+      "fatigue_rating": 1,
+      "default_sets": 2,
+      "default_reps": "8",
+      "default_rpe": 5.0,
+      "default_rest_seconds": 30,
+      "occurrences": 0
+    },
+    {
+      "name": "Prying Cossack Squat",
+      "aliases": [],
+      "movement": "warmup",
+      "family": "Hip mobility",
+      "category": "movement preparation",
+      "equipment": "bodyweight, band or light implement",
+      "primary_muscles": [
+        "movement-specific musculature"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "movement quality and training readiness",
+      "difficulty": "beginner",
+      "setup": "Use a clear space and arrange any light equipment needed for the prying cossack squat; begin in a relaxed, stable position.",
+      "execution": "Move through the prying cossack squat slowly for controlled repetitions, exploring only the range that can be kept smooth and repeatable.",
+      "coaching_cues": [
+        "Move slowly",
+        "Keep breathing",
+        "Use only a controllable range"
+      ],
+      "common_mistakes": [
+        "Forcing extra range",
+        "Rushing through repetitions"
+      ],
+      "regressions": [
+        "Use support or reduce the range"
+      ],
+      "progressions": [
+        "Increase the range gradually while retaining control"
+      ],
+      "cautions": "This is a preparation drill, not a loaded stretch. Reduce the range or stop if the movement becomes painful or uncontrolled.",
+      "competition_relevance": "none",
+      "prescription_styles": [
+        "sets and repetitions",
+        "controlled repetitions",
+        "time"
+      ],
+      "rep_ranges": "5-10 controlled reps or 20-40 seconds",
+      "warmup_suitable": true,
+      "accessory_suitable": false,
+      "active": true,
+      "fatigue_rating": 1,
+      "default_sets": 2,
+      "default_reps": "8",
+      "default_rpe": 5.0,
+      "default_rest_seconds": 30,
+      "occurrences": 0
+    },
+    {
+      "name": "Hamstring Sweep",
+      "aliases": [],
+      "movement": "warmup",
+      "family": "Lower-body preparation",
+      "category": "movement preparation",
+      "equipment": "bodyweight, band or light implement",
+      "primary_muscles": [
+        "movement-specific musculature"
+      ],
+      "secondary_muscles": [
+        "trunk"
+      ],
+      "goal": "movement quality and training readiness",
+      "difficulty": "beginner",
+      "setup": "Use a clear space and arrange any light equipment needed for the hamstring sweep; begin in a relaxed, stable position.",
+      "execution": "Move through the hamstring sweep slowly for controlled repetitions, exploring only the range that can be kept smooth and repeatable.",
       "coaching_cues": [
         "Move slowly",
         "Keep breathing",

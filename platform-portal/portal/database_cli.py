@@ -86,6 +86,9 @@ def register_database_commands(app: Flask) -> None:
         )
 
         before = Exercise.query.count()
+        catalogue_records = len(
+            json.loads(DEFAULT_DATA_PATH.read_text(encoding="utf-8"))["exercises"]
+        )
         result = None if verify_only else import_exercise_knowledge_file(DEFAULT_DATA_PATH)
         after = Exercise.query.count()
         click.echo(
@@ -93,7 +96,7 @@ def register_database_commands(app: Flask) -> None:
                 {
                     "before": before,
                     "after": after,
-                    "catalogue_records": 276,
+                    "catalogue_records": catalogue_records,
                     "changes": result.as_dict() if result is not None else None,
                     "mode": "verify" if verify_only else "seed",
                 },
