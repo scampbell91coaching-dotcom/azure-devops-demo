@@ -44,6 +44,27 @@ def test_create_athlete_and_view_dashboard():
     assert b"93.5 kg" in dashboard.data
 
 
+def test_duplicate_athlete_email_returns_error_and_preserves_values():
+    app = create_test_app()
+    client = app.test_client()
+    assert client.post("/athletes", data={
+        "first_name": "Original", "last_name": "Athlete", "email": "same@example.com",
+    }).status_code == 302
+
+    response = client.post("/athletes", data={
+        "first_name": "Submitted", "last_name": "Again", "email": "SAME@example.com",
+        "instagram": "@preserved", "weight_class": "93",
+    })
+
+    assert response.status_code == 400
+    assert b"An athlete with this email already exists." in response.data
+    assert b'value="Submitted"' in response.data
+    assert b'value="@preserved"' in response.data
+    with app.app_context():
+        assert Athlete.query.count() == 1
+        assert Athlete.query.one().first_name == "Original"
+
+
 def test_create_nutrition_checkin():
     app = create_test_app()
 
