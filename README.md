@@ -84,11 +84,11 @@ Secret values live in Azure Key Vault. External Secrets Operator authenticates w
 
 GitHub Actions and Argo CD have separate responsibilities:
 
-1. Pull requests run relevant tests, Helm rendering, Terraform validation, Checkov, Trivy, CodeQL, and browser/release checks according to path filters.
-2. On `main`, the application workflow builds and scans the image, authenticates to Azure with GitHub OIDC, and publishes immutable Git-SHA tags to ACR.
-3. The workflow updates `flask-app/values-production.yaml` in Git.
-4. Argo CD observes `main`, renders the Helm chart, and reconciles the `production` namespace with pruning and self-healing.
-5. The workflow verifies the migration-gated rollout and public health endpoint.
+1. Pull requests run relevant tests, manifest rendering, Trivy, CodeQL, and browser/release checks according to path filters. Publish, promotion, and deployment-verification jobs are skipped entirely.
+2. On `main`, the public and private workflows build and scan separate `flask-web` and `platform-portal-private` images, authenticate to Azure with GitHub OIDC, and publish immutable full-Git-SHA tags to ACR.
+3. Public promotion updates `flask-app/values-production.yaml`; private promotion updates the single image tag in `private-platform-manifests/kustomization.yaml`.
+4. Argo CD observes `main`, renders the public Helm chart and private Kustomization, and reconciles the `production` namespace with pruning and self-healing.
+5. Each workflow independently verifies its expected image and rollout through Azure-mediated AKS commands. The private check confirms its init and application containers use the same image.
 
 Git is the desired-state source of truth; ACR stores deployable images; Argo CD, rather than CI, performs the Kubernetes deployment.
 
