@@ -21,6 +21,9 @@ NON_NEGATIVE_FIELDS = {
     "average_bodyweight_kg": "Average bodyweight",
     "calories_average": "Average calories",
     "protein_average_g": "Average protein",
+    "carbohydrate_average_g": "Average carbohydrate",
+    "fat_average_g": "Average fat",
+    "fibre_average_g": "Average fibre",
     "steps_average": "Average steps",
 }
 
@@ -113,7 +116,7 @@ def validate_submission(
                 name,
                 label,
                 minimum=0,
-                as_float=name == "average_bodyweight_kg",
+                as_float=name in {"average_bodyweight_kg", "fibre_average_g"},
             )
 
     if "week_ending" in result.values:

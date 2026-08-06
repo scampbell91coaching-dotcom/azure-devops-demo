@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from flask import (
     Blueprint,
@@ -17,6 +17,7 @@ from .extensions import db
 from .models.athlete import Athlete
 from .models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from .services.checkins import athlete_checkins, due_message, validate_submission
+from .nutrition_imports import _summary
 
 checkins_bp = Blueprint("checkins", __name__)
 
@@ -91,14 +92,29 @@ def new(athlete_id: int):
         abort(403)
 
     settings = _settings_for(athlete)
+    today = datetime.now(UTC).date()
+    try:
+        period_end = date.fromisoformat(request.args.get("week_ending", today.isoformat()))
+    except ValueError:
+        period_end = today
+    imported = _summary(athlete.id, period_end - timedelta(days=6), period_end)
+    prefill = {
+        "average_bodyweight_kg": imported["averages"]["bodyweight_kg"],
+        "calories_average": imported["averages"]["calories"],
+        "protein_average_g": imported["averages"]["protein_g"],
+        "carbohydrate_average_g": imported["averages"]["carbohydrate_g"],
+        "fat_average_g": imported["averages"]["fat_g"],
+        "fibre_average_g": imported["averages"]["fibre_g"],
+    }
 
     return render_template(
         "checkins/form.html",
         athlete=athlete,
         settings=settings,
-        today=datetime.now(UTC).date().isoformat(),
+        today=period_end.isoformat(),
         errors={},
-        form={},
+        form={key: value for key, value in prefill.items() if value is not None},
+        imported_summary=imported if imported["rows"] else None,
         due_message=due_message(settings, datetime.now(UTC).date()),
     )
 
@@ -147,6 +163,13 @@ def create(athlete_id: int):
         item.average_bodyweight_kg = submission.values["average_bodyweight_kg"]
         item.calories_average = submission.values["calories_average"]
         item.protein_average_g = submission.values["protein_average_g"]
+        item.carbohydrate_average_g = submission.values["carbohydrate_average_g"]
+        item.fat_average_g = submission.values["fat_average_g"]
+        item.fibre_average_g = submission.values["fibre_average_g"]
+        if request.form.get("nutrition_data_source") == "myfitnesspal":
+            item.nutrition_data_source = "myfitnesspal"
+            item.nutrition_period_end = submission.values["week_ending"]
+            item.nutrition_period_start = item.nutrition_period_end - timedelta(days=6)
         item.steps_average = submission.values["steps_average"]
         item.nutrition_adherence = submission.values["nutrition_adherence"]
         item.nutrition_notes = request.form.get("nutrition_notes", "").strip() or None

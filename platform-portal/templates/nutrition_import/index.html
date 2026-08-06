@@ -1,0 +1,23 @@
+{% extends "athletes/base.html" %}
+{% block title %}Nutrition import · Traditional Strength{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/nutrition_import.css') }}">{% endblock %}
+{% block content %}
+<div class="nutrition-import">
+  <header><p class="eyebrow">MyFitnessPal</p><h1>Import nutrition data</h1><p>Upload your own MyFitnessPal Premium ZIP or nutrition CSV. We parse it, then delete the uploaded file.</p></header>
+  {% if error %}<div class="import-error" role="alert">{{ error }}</div>{% endif %}
+  <section class="import-card"><h2>Status</h2><p><strong>{{ connection.status|capitalize if connection else 'Not connected' }}</strong></p><p>Last import: {{ connection.last_import_at.strftime('%d %b %Y %H:%M') if connection and connection.last_import_at else 'Never' }}</p></section>
+  <section class="import-card"><h2>Upload an export</h2>
+    <form method="post" enctype="multipart/form-data" action="{{ url_for('nutrition_imports.preview', athlete_id=athlete.id) }}">
+      <label for="export">MyFitnessPal ZIP or CSV (maximum 10 MB)</label><input id="export" name="export" type="file" accept=".zip,.csv,text/csv,application/zip" required>
+      <label class="consent"><input type="checkbox" name="consent" value="1" required> I consent to Traditional Strength importing my calories, macronutrients, fibre and bodyweight for coaching and check-in summaries. I can disconnect and delete imported records.</label>
+      <button type="submit">Preview import</button>
+    </form>
+  </section>
+  <section class="import-card"><h2>Last seven days</h2><p>{{ summary.rows|length }} of {{ summary.expected_days }} days present; {{ summary.complete_days }} complete.</p>
+    <div class="import-metrics">{% for key, label in [('calories','Calories'),('protein_g','Protein (g)'),('carbohydrate_g','Carbs (g)'),('fat_g','Fat (g)'),('fibre_g','Fibre (g)'),('bodyweight_kg','Bodyweight (kg)')] %}<div><span>{{ label }}</span><strong>{{ summary.averages[key] if summary.averages[key] is not none else '—' }}</strong></div>{% endfor %}</div>
+    <div class="table-wrap"><div class="nutrition-import__table-scroll" role="region" aria-label="Imported nutrition data" tabindex="0">
+<table><thead><tr><th>Date</th><th>Calories</th><th>Protein</th><th>Carbs</th><th>Fat</th><th>Fibre</th><th>Status</th></tr></thead><tbody>{% for row in summary.rows %}<tr><td>{{ row.date }}</td><td>{{ row.calories if row.calories is not none else '—' }}</td><td>{{ row.protein_g if row.protein_g is not none else '—' }}</td><td>{{ row.carbohydrate_g if row.carbohydrate_g is not none else '—' }}</td><td>{{ row.fat_g if row.fat_g is not none else '—' }}</td><td>{{ row.fibre_g if row.fibre_g is not none else '—' }}</td><td>{{ 'Partial' if row.is_partial else 'Complete' }}</td></tr>{% else %}<tr><td colspan="7">No imported days yet.</td></tr>{% endfor %}</tbody></table>
+</div></div>
+  </section>
+  {% if connection and connection.status == 'connected' %}<form method="post" action="{{ url_for('nutrition_imports.disconnect', athlete_id=athlete.id) }}"><button class="danger" type="submit">Disconnect and delete imported data</button></form>{% endif %}
+</div>{% endblock %}

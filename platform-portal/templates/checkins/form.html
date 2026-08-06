@@ -64,10 +64,14 @@
     {% if settings.nutrition_enabled %}
       <section class="checkin-card">
         <p class="eyebrow">Nutrition</p><h2>Your weekly averages</h2>
+        {% if imported_summary %}<p class="checkin-alert">Pre-filled from MyFitnessPal: {{ imported_summary.rows|length }} of {{ imported_summary.expected_days }} days present. You can correct these values before submitting.</p><input type="hidden" name="nutrition_data_source" value="myfitnesspal">{% endif %}
         <div class="checkin-grid">
           {{ number_field('average_bodyweight_kg', 'Average bodyweight (kg)', '0.1') }}
           {{ number_field('calories_average', 'Average calories') }}
           {{ number_field('protein_average_g', 'Average protein (g)') }}
+          {{ number_field('carbohydrate_average_g', 'Average carbohydrate (g)') }}
+          {{ number_field('fat_average_g', 'Average fat (g)') }}
+          {{ number_field('fibre_average_g', 'Average fibre (g)', '0.1') }}
           {{ number_field('steps_average', 'Average daily steps') }}
           {{ score_field('nutrition_adherence', 'Nutrition adherence', 'How closely did you follow the plan?', 0, 100, '%') }}
         </div>

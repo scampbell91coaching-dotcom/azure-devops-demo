@@ -24,6 +24,7 @@ from .exercise_library import exercise_library_bp
 from .extensions import db, migrate
 from .lead_magnets import lead_magnets_bp
 from .meet_day import meet_day_bp
+from .nutrition_imports import nutrition_imports_bp
 from .programming import programming_bp
 from .programming_engine import programming_engine_bp
 from .programming_pack2 import programming_pack2_bp
@@ -59,6 +60,8 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         SESSION_COOKIE_SAMESITE="Lax",
         LOGIN_RATE_LIMIT_ATTEMPTS=5,
         LOGIN_RATE_LIMIT_WINDOW_SECONDS=15 * 60,
+        NUTRITION_UPLOAD_MAX_BYTES=10 * 1024 * 1024,
+        MFP_API_ENABLED=False,
         REPOSITORY_ROOT=portal_root.parent,
         RELEASE_EVIDENCE_MAX_AGE_SECONDS=24 * 60 * 60,
     )
@@ -122,6 +125,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(checkins_bp)
     app.register_blueprint(coach_dashboard_bp)
     app.register_blueprint(meet_day_bp)
+    app.register_blueprint(nutrition_imports_bp)
 
     if app.config["LEGACY_STARTUP_INITIALIZATION"]:
         with app.app_context():
