@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11100e">
+  <title>Access denied · Traditional Strength</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body class="auth-page">
+  <main class="auth-shell">
+    <section class="auth-brand" aria-label="Traditional Strength">
+      <div class="brand-lockup">
+        <img class="brand-mark" src="{{ url_for('static', filename='img/traditional-strength-logo.png') }}" alt="Traditional Strength">
+        <div><p class="brand-name">Traditional Strength</p><p class="brand-product">Coaching platform</p></div>
+      </div>
+      <div class="brand-statement"><p class="eyebrow">Protected workspace</p><h1>Your data stays<br>in the right hands.</h1><p>Account permissions protect each coach and athlete workspace.</p></div>
+      <p class="brand-footnote">Strength is built over time.</p>
+    </section>
+    <section class="auth-panel">
+      <div class="auth-card" role="alert">
+        <header class="auth-header">
+          <p class="eyebrow">403 · Permission required</p>
+          <h1 id="denied-title">Access denied</h1>
+          <p>Your account doesn’t have access to this area. Your account and session are still secure.</p>
+        </header>
+        <a class="auth-submit auth-return" href="{{ back_url }}">Return to your workspace</a>
+        <p class="auth-help">Think this is a mistake? Contact your coach or platform administrator.</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

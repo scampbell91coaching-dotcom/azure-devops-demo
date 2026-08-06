@@ -138,6 +138,31 @@ def test_login_is_generic_and_password_is_scrypt_hashed(secured_app):
         assert "correct horse" not in user.password_hash
 
 
+def test_login_template_has_branded_accessible_controls(secured_app):
+    response = secured_app.test_client().get("/login")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert 'alt="Traditional Strength"' in html
+    assert 'name="email"' in html and 'autocomplete="username"' in html
+    assert 'name="password"' in html and 'autocomplete="current-password"' in html
+    assert 'data-password-toggle' in html
+    assert 'aria-label="Show password"' in html
+    assert "Coach access" in html
+    assert "Athlete access" in html
+
+
+def test_invalid_login_error_is_announced_without_account_disclosure(secured_app):
+    response = _login(secured_app.test_client(), "missing@example.test", "wrong")
+    html = response.get_data(as_text=True)
+
+    assert 'role="alert"' in html
+    assert 'aria-live="assertive"' in html
+    assert 'aria-invalid="true"' in html
+    assert "Invalid email or password." in html
+    assert "missing@example.test" not in html
+
+
 @pytest.mark.parametrize(
     "target",
     [
@@ -291,8 +316,22 @@ def test_csrf_logout_and_expired_sessions(secured_app):
     assert response.status_code == 302
     with client.session_transaction() as auth_session:
         auth_session["authenticated_at"] = time.time() - 9 * 60 * 60
-    assert client.get("/coach").status_code == 302
+    expired = client.get("/coach")
+    assert expired.status_code == 302
+    assert "reason=session_expired" in expired.headers["Location"]
+    notice = client.get(expired.headers["Location"])
+    assert b"Your session has ended" in notice.data
 
+
+def test_access_denied_uses_auth_specific_secure_state(secured_app):
+    client = secured_app.test_client()
+    assert _login(client, "ada@example.test", "athlete secure password").status_code == 302
+    response = client.get("/coach")
+
+    assert response.status_code == 403
+    assert b"Access denied" in response.data
+    assert b"Your account and session are still secure" in response.data
+    assert b'href="/athlete/dashboard"' in response.data
 
 def test_login_rate_limit_is_bounded_and_configurable(secured_app):
     secured_app.config["LOGIN_RATE_LIMIT_ATTEMPTS"] = 2

@@ -4,7 +4,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from flask import Flask, render_template
+from flask import Flask, g, render_template
 
 from .api.engineering import engineering_bp
 from .api.executive import executive_bp
@@ -150,6 +150,15 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     for status, (title, message) in error_copy.items():
         def render_error(error, status=status, title=title, message=message):
             description = getattr(error, "description", None)
+            if status == 403:
+                user = g.get("current_user")
+                if user is not None and getattr(user, "role", None) == "athlete":
+                    back_url = "/athlete/dashboard"
+                else:
+                    back_url = "/coach"
+                return render_template(
+                    "errors/access_denied.html", back_url=back_url
+                ), status
             return render_template(
                 "errors/error.html",
                 status=status,
