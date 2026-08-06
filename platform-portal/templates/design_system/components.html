@@ -1,0 +1,109 @@
+{# Traditional Strength Design System V1 macros. All macros return one root element. #}
+
+{% macro button(label, variant='primary', type='button', href=none, disabled=false, loading=false, extra_classes='') -%}
+  {% set classes = 'ts-button ts-button--' ~ variant ~ (' ' ~ extra_classes if extra_classes else '') %}
+  {% if href %}
+    <a class="{{ classes }}" href="{{ href }}"{% if disabled %} aria-disabled="true" tabindex="-1"{% endif %}{% if loading %} aria-busy="true"{% endif %}>{{ label }}</a>
+  {% else %}
+    <button class="{{ classes }}" type="{{ type }}"{% if disabled %} disabled{% endif %}{% if loading %} aria-busy="true"{% endif %}>{{ label }}</button>
+  {% endif %}
+{%- endmacro %}
+
+{% macro icon_button(label, icon, type='button', disabled=false) -%}
+  <button class="ts-icon-button" type="{{ type }}" aria-label="{{ label }}"{% if disabled %} disabled{% endif %}><span aria-hidden="true">{{ icon }}</span></button>
+{%- endmacro %}
+
+{% macro input_field(name, label, value='', type='text', help=none, error=none, required=false, disabled=false, placeholder=none, autocomplete=none) -%}
+  {% set help_id = name ~ '-help' %}{% set error_id = name ~ '-error' %}
+  <div class="ts-field">
+    <label class="ts-field__label" for="{{ name }}">{{ label }}{% if required %} <span class="ts-field__required" aria-hidden="true">*</span><span class="ts-visually-hidden"> (required)</span>{% endif %}</label>
+    <input class="ts-input" id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}"{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if autocomplete %} autocomplete="{{ autocomplete }}"{% endif %}{% if required %} required{% endif %}{% if disabled %} disabled{% endif %}{% if error %} aria-invalid="true" aria-describedby="{{ error_id }}{% if help %} {{ help_id }}{% endif %}"{% elif help %} aria-describedby="{{ help_id }}"{% endif %}>
+    {% if help %}<p class="ts-field__help" id="{{ help_id }}">{{ help }}</p>{% endif %}
+    {% if error %}<p class="ts-field__error" id="{{ error_id }}">{{ error }}</p>{% endif %}
+  </div>
+{%- endmacro %}
+
+{% macro textarea_field(name, label, value='', help=none, error=none, required=false, disabled=false, rows=5) -%}
+  {% set help_id = name ~ '-help' %}{% set error_id = name ~ '-error' %}
+  <div class="ts-field">
+    <label class="ts-field__label" for="{{ name }}">{{ label }}{% if required %} <span class="ts-field__required" aria-hidden="true">*</span><span class="ts-visually-hidden"> (required)</span>{% endif %}</label>
+    <textarea class="ts-textarea" id="{{ name }}" name="{{ name }}" rows="{{ rows }}"{% if required %} required{% endif %}{% if disabled %} disabled{% endif %}{% if error %} aria-invalid="true" aria-describedby="{{ error_id }}{% if help %} {{ help_id }}{% endif %}"{% elif help %} aria-describedby="{{ help_id }}"{% endif %}>{{ value }}</textarea>
+    {% if help %}<p class="ts-field__help" id="{{ help_id }}">{{ help }}</p>{% endif %}
+    {% if error %}<p class="ts-field__error" id="{{ error_id }}">{{ error }}</p>{% endif %}
+  </div>
+{%- endmacro %}
+
+{% macro select_field(name, label, options, selected=none, help=none, error=none, required=false, disabled=false) -%}
+  {% set help_id = name ~ '-help' %}{% set error_id = name ~ '-error' %}
+  <div class="ts-field">
+    <label class="ts-field__label" for="{{ name }}">{{ label }}{% if required %} <span class="ts-field__required" aria-hidden="true">*</span><span class="ts-visually-hidden"> (required)</span>{% endif %}</label>
+    <select class="ts-select" id="{{ name }}" name="{{ name }}"{% if required %} required{% endif %}{% if disabled %} disabled{% endif %}{% if error %} aria-invalid="true" aria-describedby="{{ error_id }}{% if help %} {{ help_id }}{% endif %}"{% elif help %} aria-describedby="{{ help_id }}"{% endif %}>
+      {% for value, text in options %}<option value="{{ value }}"{% if value == selected %} selected{% endif %}>{{ text }}</option>{% endfor %}
+    </select>
+    {% if help %}<p class="ts-field__help" id="{{ help_id }}">{{ help }}</p>{% endif %}
+    {% if error %}<p class="ts-field__error" id="{{ error_id }}">{{ error }}</p>{% endif %}
+  </div>
+{%- endmacro %}
+
+{% macro choice(name, label, value='yes', type='checkbox', checked=false, disabled=false) -%}
+  <label class="ts-choice"><input name="{{ name }}" value="{{ value }}" type="{{ type }}"{% if checked %} checked{% endif %}{% if disabled %} disabled{% endif %}><span>{{ label }}</span></label>
+{%- endmacro %}
+
+{% macro card(extra_classes='') -%}
+  <div class="ts-card{% if extra_classes %} {{ extra_classes }}{% endif %}">{{ caller() }}</div>
+{%- endmacro %}
+
+{% macro panel(extra_classes='') -%}
+  <section class="ts-panel{% if extra_classes %} {{ extra_classes }}{% endif %}">{{ caller() }}</section>
+{%- endmacro %}
+
+{% macro metric_card(label, value, context=none) -%}
+  <article class="ts-card ts-metric-card"><span class="ts-metric-card__label">{{ label }}</span><strong class="ts-metric-card__value">{{ value }}</strong>{% if context %}<span class="ts-metric-card__context">{{ context }}</span>{% endif %}</article>
+{%- endmacro %}
+
+{% macro badge(label, status='info') -%}
+  <span class="ts-badge ts-badge--{{ status }}">{{ label }}</span>
+{%- endmacro %}
+
+{% macro alert(title, message, status='info', live=false) -%}
+  <div class="ts-alert ts-alert--{{ status }}" role="{{ 'alert' if status == 'danger' or live else 'status' }}"{% if not live and status != 'danger' %} aria-live="polite"{% endif %}><p class="ts-alert__title">{{ title }}</p><p class="ts-alert__body">{{ message }}</p></div>
+{%- endmacro %}
+
+{% macro empty_state(title, message, action_label=none, action_href=none) -%}
+  <div class="ts-empty-state"><h3 class="ts-empty-state__title">{{ title }}</h3><p class="ts-empty-state__body">{{ message }}</p>{% if action_label and action_href %}{{ button(action_label, href=action_href) }}{% endif %}</div>
+{%- endmacro %}
+
+{% macro table_wrapper(label) -%}
+  <div class="ts-table-wrap" role="region" aria-label="{{ label }}" tabindex="0">{{ caller() }}</div>
+{%- endmacro %}
+
+{% macro pagination(current_page, page_count, url_pattern) -%}
+  <nav aria-label="Pagination"><ul class="ts-pagination">
+    <li><a class="ts-pagination__link" href="{{ url_pattern|replace('{page}', (current_page - 1)|string) if current_page > 1 else '#' }}"{% if current_page <= 1 %} aria-disabled="true" tabindex="-1"{% endif %}><span aria-hidden="true">←</span><span class="ts-visually-hidden"> Previous page</span></a></li>
+    {% for page_number in range(1, page_count + 1) %}<li><a class="ts-pagination__link" href="{{ url_pattern|replace('{page}', page_number|string) }}"{% if page_number == current_page %} aria-current="page"{% endif %}><span class="ts-visually-hidden">Page </span>{{ page_number }}</a></li>{% endfor %}
+    <li><a class="ts-pagination__link" href="{{ url_pattern|replace('{page}', (current_page + 1)|string) if current_page < page_count else '#' }}"{% if current_page >= page_count %} aria-disabled="true" tabindex="-1"{% endif %}><span class="ts-visually-hidden">Next page </span><span aria-hidden="true">→</span></a></li>
+  </ul></nav>
+{%- endmacro %}
+
+{% macro tabs(items, current) -%}
+  <nav class="ts-tabs" aria-label="Section navigation">{% for key, label, href in items %}<a class="ts-tabs__link" href="{{ href }}"{% if key == current %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
+{%- endmacro %}
+
+{% macro dialog(id, title, description=none) -%}
+  <dialog class="ts-dialog" id="{{ id }}" aria-labelledby="{{ id }}-title"{% if description %} aria-describedby="{{ id }}-description"{% endif %}>
+    <header class="ts-dialog__header"><div><h2 class="ts-type-h3" id="{{ id }}-title">{{ title }}</h2>{% if description %}<p id="{{ id }}-description">{{ description }}</p>{% endif %}</div><form method="dialog"><button class="ts-dialog__close" aria-label="Close dialog" value="cancel"><span aria-hidden="true">×</span></button></form></header>
+    <div class="ts-dialog__body">{{ caller() }}</div>
+  </dialog>
+{%- endmacro %}
+
+{% macro skeleton(label='Loading content', lines=3) -%}
+  <div role="status" aria-label="{{ label }}" aria-busy="true" class="ts-stack ts-stack--tight">{% for _ in range(lines) %}<span class="ts-skeleton" aria-hidden="true">Loading</span>{% endfor %}<span class="ts-visually-hidden">{{ label }}</span></div>
+{%- endmacro %}
+
+{% macro page_header(title, description=none, eyebrow=none) -%}
+  <header class="ts-page-header"><div>{% if eyebrow %}<p class="ts-page-header__eyebrow">{{ eyebrow }}</p>{% endif %}<h1 class="ts-type-h1">{{ title }}</h1>{% if description %}<p class="ts-page-header__description">{{ description }}</p>{% endif %}</div>{% if caller %}<div class="ts-page-header__actions">{{ caller() }}</div>{% endif %}</header>
+{%- endmacro %}
+
+{% macro section_header(title, description=none, heading_level=2) -%}
+  <header class="ts-section-header"><div><h{{ heading_level }} class="ts-type-h2">{{ title }}</h{{ heading_level }}>{% if description %}<p class="ts-section-header__description">{{ description }}</p>{% endif %}</div>{% if caller %}<div class="ts-section-header__actions">{{ caller() }}</div>{% endif %}</header>
+{%- endmacro %}
