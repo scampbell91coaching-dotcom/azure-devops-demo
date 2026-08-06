@@ -1,5 +1,33 @@
 import { test, expect } from '../fixtures/test';
 
+async function expectNoHorizontalOverflow(page: import('@playwright/test').Page) {
+  const overflow = await page.locator('html').evaluate((root) => {
+    const viewportWidth = root.clientWidth;
+    const offenders = Array.from(document.querySelectorAll<HTMLElement>('body *'))
+      .filter((element) => {
+        const style = getComputedStyle(element);
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+        const rect = element.getBoundingClientRect();
+        return rect.left < -0.5 || rect.right > viewportWidth + 0.5;
+      })
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        return `${element.tagName.toLowerCase()}.${Array.from(element.classList).join('.')} (${rect.left.toFixed(1)}..${rect.right.toFixed(1)})`;
+      });
+
+    return {
+      fits: root.scrollWidth <= viewportWidth,
+      rootWidth: `${root.scrollWidth}/${viewportWidth}`,
+      offenders,
+    };
+  });
+
+  expect(
+    overflow.fits,
+    `Horizontal overflow ${overflow.rootWidth}; outside viewport: ${overflow.offenders.join(', ') || 'none detected'}`,
+  ).toBe(true);
+}
+
 test('public and coach pages render and navigation toggles at a mobile viewport', async ({ page, authenticatedState }) => {
   await page.goto('/guides/shoulder-pain');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -16,7 +44,11 @@ test('public and coach pages render and navigation toggles at a mobile viewport'
   await page.keyboard.press('Escape');
   await expect(menu).toHaveAttribute('aria-expanded', 'false');
   await expect(menu).toBeFocused();
-  expect(await page.locator('html').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 800 });
+    await expectNoHorizontalOverflow(page);
+  }
 });
 
 test('athlete core workflow fits a 320px phone viewport', async ({ page, athleteSession, athleteIds }) => {

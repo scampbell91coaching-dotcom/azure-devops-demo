@@ -248,6 +248,7 @@ select {
 
 .coach-page {
   display: grid;
+  min-width: 0;
   gap: 1.5rem;
 }
 
@@ -300,6 +301,7 @@ select {
 }
 
 .coach-panel {
+  min-width: 0;
   border: 1px solid var(--coach-border);
   padding: 1.4rem;
   background: linear-gradient(145deg, rgba(255,255,255,0.012), transparent 45%), var(--coach-panel);
@@ -406,6 +408,8 @@ select {
 }
 
 .coach-table-wrap {
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
 }
 
@@ -655,7 +659,7 @@ select {
 
 @media (max-width: 1080px) {
   .coach-topbar__inner {
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .coach-menu-button {
@@ -699,14 +703,15 @@ select {
 @media (max-width: 650px) {
   .coach-shell,
   .coach-topbar__inner {
-    width: min(100% - 1rem, var(--coach-shell));
+    width: min(calc(100% - 1rem), var(--coach-shell));
   }
 
   .coach-brand__copy small {
     display: none;
   }
 
-  .coach-brand__copy strong { max-width: 10rem; white-space: normal; }
+  .coach-brand__copy { min-width: 0; }
+  .coach-brand__copy strong { overflow-wrap: anywhere; white-space: normal; }
 
   .coach-page__header--split {
     align-items: stretch;
