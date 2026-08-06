@@ -16,6 +16,13 @@
 
 .factory-accessories { grid-column: 1 / -1; border: 1px solid var(--coach-border); padding: 1rem; }
 .factory-accessory-row { display: grid; grid-template-columns: minmax(12rem, 1fr) auto auto auto; gap: .5rem; margin-top: .65rem; }
+.factory-accessory-controls,
+.factory-custom-count { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.factory-emphasis { border: 0; display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: 1rem 0; padding: 0; }
+.factory-emphasis legend { margin-bottom: .5rem; width: 100%; }
+.factory-emphasis label { align-items: center; display: flex; gap: .3rem; }
+.factory-accessory-summary { color: var(--coach-muted); font-weight: 700; }
+.factory-preview__count { display: block; margin-top: .35rem; }
 
 .factory-preview {
   margin-top: 1rem;
@@ -51,7 +58,9 @@
 
 @media (max-width: 720px) {
   .block-factory-form,
-  .factory-preview__grid {
+  .factory-preview__grid,
+  .factory-accessory-controls,
+  .factory-custom-count {
     grid-template-columns: 1fr;
   }
 

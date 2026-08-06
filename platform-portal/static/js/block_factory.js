@@ -3,6 +3,24 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!factory) return;
   const rows = factory.querySelector("[data-accessory-rows]");
   const template = factory.querySelector("[data-accessory-template]");
+  const volume = factory.querySelector("[data-accessory-volume]");
+  const customCount = factory.querySelector("[data-custom-count]");
+  const summary = factory.querySelector("[data-accessory-summary]");
+  const volumeLabels = {
+    minimal: "1–2 accessories per session",
+    standard: "3–4 accessories per session (lift-aware defaults may use 2–5)",
+    high: "5–6 accessories per session",
+    custom: "the custom count or range below",
+  };
+  const updateVolume = () => {
+    const custom = volume.value === "custom";
+    customCount.hidden = !custom;
+    customCount.querySelectorAll("input").forEach((input, index) => {
+      input.required = custom && index === 0;
+      input.disabled = !custom;
+    });
+    summary.textContent = `Preview will show roles and ${volumeLabels[volume.value]}.`;
+  };
   const bind = (row) => {
     row.querySelector("[data-remove-accessory]").onclick = () => row.remove();
     row.querySelector("[data-move-up]").onclick = () => row.previousElementSibling && rows.insertBefore(row, row.previousElementSibling);
@@ -17,4 +35,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const query = event.target.value.toLowerCase();
     factory.querySelectorAll("option[data-search]").forEach((option) => option.hidden = !option.dataset.search.toLowerCase().includes(query));
   });
+  volume.addEventListener("change", updateVolume);
+  updateVolume();
 });
