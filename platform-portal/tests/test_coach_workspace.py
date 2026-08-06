@@ -12,6 +12,9 @@ def test_coach_base_has_dedicated_navigation():
     assert "Programming" in text
     assert "Check-ins" in text
     assert "Meet Prep" in text
+    assert "img/traditional-strength-logo.png" in text
+    assert "Exercise Library" in text
+    assert ">Operations</a>" in text
 
 
 def test_athlete_pages_use_coach_base():
@@ -41,3 +44,14 @@ def test_coach_workspace_has_mobile_navigation():
     assert ".coach-menu-button" in css
     assert ".coach-navigation.is-open" in css
     assert 'classList.toggle("is-open")' in javascript
+    assert 'event.key === "Escape"' in javascript
+
+
+def test_coach_workspace_has_consistent_button_states_and_header_spacing():
+    css = (ROOT / "static" / "css" / "coach_workspace.css").read_text()
+
+    assert ".coach-primary-button:disabled" in css
+    assert ".coach-primary-button:active" in css
+    assert ":focus-visible" in css
+    assert "scroll-padding-top" in css
+    assert "overflow-x: clip" in css

@@ -4,6 +4,52 @@ test.beforeEach(async ({ page, authenticatedState }) => {
   await authenticatedState(page);
 });
 
+test('coach shell presents the full brand and accessible navigation', async ({ page }) => {
+  await page.goto('/coach');
+  const brand = page.getByRole('link', { name: /Traditional Strength/ });
+  const logo = brand.locator('img');
+  await expect(brand).toBeVisible();
+  await expect(logo).toBeVisible();
+  expect(await logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+
+  const navigation = page.getByRole('navigation', { name: 'Traditional Strength Platform' });
+  for (const name of ['Dashboard', 'Athletes', 'Programming', 'Check-ins', 'Meet Prep: Meet Day']) {
+    await expect(navigation.getByRole('link', { name, exact: true })).toBeVisible();
+  }
+
+  const more = navigation.locator('summary').filter({ hasText: /^More/ });
+  await more.click();
+  await expect(navigation.getByRole('link', { name: 'Exercise Library' })).toBeVisible();
+  await expect(navigation.getByRole('link', { name: 'Operations' })).toHaveAttribute('href', '/');
+  await page.keyboard.press('Escape');
+  await expect(navigation.getByRole('link', { name: 'Exercise Library' })).not.toBeVisible();
+  await expect(more).toBeFocused();
+});
+
+test('coach page titles clear the sticky header without horizontal overflow', async ({ page }) => {
+  for (const path of ['/programming', '/meet-day', '/athletes', '/exercise-library']) {
+    await page.goto(path);
+    const header = page.locator('.coach-topbar');
+    const title = page.getByRole('heading', { level: 1 }).first();
+    await expect(title).toBeVisible();
+    const [headerBox, titleBox] = await Promise.all([header.boundingBox(), title.boundingBox()]);
+    expect(headerBox, `${path} should have a coach header`).not.toBeNull();
+    expect(titleBox, `${path} should have a page title`).not.toBeNull();
+    expect(titleBox!.y, `${path} title should clear the sticky header`).toBeGreaterThanOrEqual(
+      headerBox!.y + headerBox!.height,
+    );
+    expect(await page.locator('html').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  }
+});
+
+test('primary coach actions use the high-contrast semantic class', async ({ page }) => {
+  await page.goto('/programming');
+  const primary = page.getByRole('button', { name: 'Create block' });
+  await expect(primary).toHaveClass(/coach-primary-button/);
+  await expect(primary).toHaveCSS('color', 'rgb(24, 17, 9)');
+  await expect(primary).toHaveCSS('background-color', 'rgb(196, 154, 92)');
+});
+
 test('coach dashboard renders deterministic athlete data', async ({ page }) => {
   await page.goto('/coach');
   await expect(page.getByRole('heading', { name: 'Daily review' })).toBeVisible();
