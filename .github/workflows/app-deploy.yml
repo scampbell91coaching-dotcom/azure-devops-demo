@@ -242,35 +242,39 @@ jobs:
           password: ${{ steps.acr.outputs.token }}
 
       - name: Push images
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: |
           set -euo pipefail
 
-          docker push "${{ steps.meta.outputs.sha_tag }}"
-          docker push "${{ steps.meta.outputs.full_sha_tag }}"
+          push_with_retry() {
+            local image="$1"
+
+            for attempt in 1 2 3; do
+              echo "Pushing ${image} (attempt ${attempt}/3)"
+
+              if docker push "$image"; then
+                return 0
+              fi
+
+              if [ "$attempt" -lt 3 ]; then
+                delay=$((attempt * 20))
+                echo "Push failed; retrying in ${delay}s"
+                sleep "$delay"
+              fi
+            done
+
+            echo "ERROR: failed to push ${image} after 3 attempts"
+            return 1
+          }
+
+          push_with_retry "${{ steps.meta.outputs.sha_tag }}"
+          push_with_retry "${{ steps.meta.outputs.full_sha_tag }}"
 
           docker tag \
             "${{ steps.meta.outputs.full_sha_tag }}" \
             "${{ steps.meta.outputs.latest_tag }}"
 
-          docker push "${{ steps.meta.outputs.latest_tag }}"
+          push_with_retry "${{ steps.meta.outputs.latest_tag }}"
 
-  promote:
-    name: Promote image through GitOps
-    needs: build-and-push
-    runs-on: ubuntu-latest
-
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-
-    permissions:
-      contents: write
-
-    outputs:
-      image: ${{ needs.build-and-push.outputs.image }}
-
-    environment: ${{ inputs.environment || 'production' }}
-
-    steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
