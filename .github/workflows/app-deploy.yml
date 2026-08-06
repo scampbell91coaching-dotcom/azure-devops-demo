@@ -275,6 +275,22 @@ jobs:
 
           push_with_retry "${{ steps.meta.outputs.latest_tag }}"
 
+  promote:
+    name: Promote image through GitOps
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+
+    permissions:
+      contents: write
+
+    outputs:
+      image: ${{ needs.build-and-push.outputs.image }}
+
+    environment: ${{ inputs.environment || 'production' }}
+
+    steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
