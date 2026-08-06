@@ -12,10 +12,7 @@ test('health endpoint and public landing page render', async ({ request, page })
 });
 
 test('coaching application progress updates under its CSP', async ({ page }) => {
-  const publicBaseUrl =
-    process.env.E2E_PUBLIC_BASE_URL ?? 'http://127.0.0.1:8092';
-
-  await page.goto(`${publicBaseUrl}/apply`);
+  await page.goto('/apply');
 
   const progress = page.locator('[data-progress-bar]');
   await expect(progress).toHaveCSS('width', '0px');
