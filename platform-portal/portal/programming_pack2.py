@@ -4,6 +4,7 @@ from flask import Blueprint, abort, jsonify, request
 
 from .extensions import db
 from .models.programming import ExercisePrescription, TrainingSession
+from .models.exercise_library import Exercise
 
 programming_pack2_bp = Blueprint("programming_pack2", __name__)
 
@@ -39,19 +40,12 @@ def _serialize(item):
 def exercise_suggestions():
     query = request.args.get("q", "").strip().lower()
 
-    rows = (
-        db.session.query(ExercisePrescription.exercise_name)
-        .distinct()
-        .order_by(ExercisePrescription.exercise_name.asc())
-        .all()
-    )
-
-    names = [row[0] for row in rows if row[0]]
-
+    catalogue = Exercise.query.filter_by(active=True)
     if query:
-        names = [name for name in names if query in name.lower()]
+        catalogue = catalogue.filter(Exercise.name.ilike(f"%{query}%"))
+    names = [item.name for item in catalogue.order_by(Exercise.name.asc()).limit(40)]
 
-    return jsonify(names[:40])
+    return jsonify(names)
 
 
 @programming_pack2_bp.post("/programming/api/sessions/<int:session_id>/prescriptions")

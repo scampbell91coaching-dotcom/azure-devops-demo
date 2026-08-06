@@ -121,6 +121,7 @@ select {
   justify-content: center;
   gap: 1.5rem;
 }
+.coach-navigation__group { color: var(--coach-accent); font-size: .65rem; font-weight: 900; text-transform: uppercase; align-self: center; }
 
 .coach-navigation a,
 .coach-navigation__disabled {
@@ -147,7 +148,10 @@ select {
 .coach-topbar__actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: .6rem;
 }
+.coach-user { color: var(--coach-muted); font-size: .75rem; max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .coach-link-button,
 .coach-primary-button {
@@ -217,7 +221,7 @@ select {
   margin: 0.25rem 0 0.45rem;
   color: var(--coach-heading);
   font-family: var(--coach-display);
-  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-size: clamp(2.25rem, 4vw, 3.75rem);
   line-height: 0.9;
   letter-spacing: -0.04em;
   text-transform: uppercase;

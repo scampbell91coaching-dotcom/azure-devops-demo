@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const newRowForm = builder.querySelector("[data-new-prescription-form]");
   const status = builder.querySelector("[data-autosave-status]");
   const suggestions = builder.querySelector("[data-exercise-suggestions]");
-  const csrfToken = newRowForm.elements.csrf_token.value;
+  const csrfToken = newRowForm.elements.csrf_token?.value;
   let draggedRow = null;
   let saveTimer = null;
 
@@ -24,6 +24,9 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const api = async (url, options = {}) => {
+    if (!csrfToken) {
+      throw new Error("The page security token is missing. Reload and try again.");
+    }
     const response = await fetch(url, {
       headers: {
         "Content-Type": "application/json",

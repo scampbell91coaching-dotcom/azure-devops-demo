@@ -110,7 +110,12 @@
         {% endfor %}
       </div>
 
-      <form class="programming-sheet__new-row" data-new-prescription-form>
+      <form
+        class="programming-sheet__new-row"
+        method="post"
+        action="{{ url_for('programming.create_prescription', session_id=session.id) }}"
+        data-new-prescription-form
+      >
         <input name="exercise_name" placeholder="Add exercise" list="exercise-suggestions" required>
         <input name="sets" type="number" placeholder="Sets">
         <input name="reps" placeholder="Reps">

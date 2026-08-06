@@ -29,8 +29,8 @@
         <span class="coach-brand__mark" aria-hidden="true">TS</span>
 
         <span class="coach-brand__copy">
-          <strong>Traditional Strength</strong>
-          <small>Coach Workspace</small>
+          <strong>Traditional Strength Platform</strong>
+          <small>Coaching</small>
         </span>
       </a>
 
@@ -47,9 +47,10 @@
       <nav
         class="coach-navigation"
         id="coach-navigation"
-        aria-label="Coach workspace"
+        aria-label="Traditional Strength Platform"
         data-coach-navigation
       >
+        <span class="coach-navigation__group">Coaching</span>
         <a
           href="{{ url_for('coach_dashboard.index') }}"
           {% if coach_section == "dashboard" %}aria-current="page"{% endif %}
@@ -72,14 +73,15 @@
           Applications
         </a>
 
-                <a
+        <a
           href="/exercise-library"
           {% if coach_section == "exercise_library" %}aria-current="page"{% endif %}
         >
           Exercises
         </a>
 
-<a href="/programming" {% if coach_section == "programming" %}aria-current="page"{% endif %}>Programming</a>
+        <a href="/programming" {% if coach_section == "programming" %}aria-current="page"{% endif %}>Programming</a>
+        <span class="coach-navigation__group">Operations</span>
         <a
           href="{{ url_for('checkins.index') }}"
           {% if coach_section == "checkins" %}aria-current="page"{% endif %}
@@ -92,6 +94,7 @@
       </nav>
 
       <div class="coach-topbar__actions">
+        {% if current_user %}<span class="coach-user">{{ current_user.email }} · {{ current_user.role }}</span>{% endif %}
         <a
           class="coach-link-button"
           href="/"
@@ -113,7 +116,7 @@
 
   <footer class="coach-footer">
     <div class="coach-shell coach-footer__inner">
-      <span>Traditional Strength Coach Workspace</span>
+      <span>Traditional Strength Platform</span>
       <span>Private</span>
     </div>
   </footer>

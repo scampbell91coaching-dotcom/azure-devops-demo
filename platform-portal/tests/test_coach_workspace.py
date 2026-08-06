@@ -6,7 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_coach_base_has_dedicated_navigation():
     text = (ROOT / "templates" / "coach" / "base.html").read_text()
 
-    assert "Coach Workspace" in text
+    assert "Traditional Strength Platform" in text
+    assert "Coach Workspace" not in text
     assert 'href="/athletes"' in text
     assert "Programming" in text
     assert "Check-ins" in text

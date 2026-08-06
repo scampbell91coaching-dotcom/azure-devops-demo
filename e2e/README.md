@@ -1,11 +1,7 @@
 # Playwright release tests
 
-This suite covers only Traditional Strength workflows currently present in the
-Flask portal. It does not claim to test authentication: application login has
-not landed. `authenticatedState` in `e2e/fixtures/test.ts` is an intentionally
-empty seam for a future Playwright `storageState` login fixture.
-The runner exposes a test-only athlete-session selector so isolation can be
-checked without pretending that selector is authentication coverage.
+This suite exercises the real Traditional Strength coach and athlete login,
+session, role and CSRF flows against disposable deterministic users.
 
 ## Prerequisites
 
@@ -40,7 +36,5 @@ always rejected, shared/production environment markers are refused, an
 unpredictable per-run token protects test-only hooks, and existing servers are
 never reused.
 
-Screenshots, videos, traces, HTML reports, and CI artifact uploads are disabled
-because pages can contain sensitive health and coaching data. Use the bounded
-console reporter for diagnostics. Temporary runner output is always deleted at
-the end of the run.
+Screenshots and traces are retained only for failed tests. The database contains
+synthetic records only and temporary runner output is deleted after the run.

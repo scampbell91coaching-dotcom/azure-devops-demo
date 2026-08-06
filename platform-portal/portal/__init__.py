@@ -4,7 +4,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from flask import Flask
+from flask import Flask, render_template
 
 from .api.engineering import engineering_bp
 from .api.executive import executive_bp
@@ -140,5 +140,23 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
 
     register_exercise_knowledge_import_command(app)
     register_database_commands(app)
+
+    error_copy = {
+        400: ("Check your request", "Review the highlighted information and try again."),
+        403: ("Access denied", "Your account does not have access to this area."),
+        404: ("Page not found", "The page may have moved or no longer exists."),
+        500: ("Something went wrong", "The platform could not complete that request."),
+    }
+    for status, (title, message) in error_copy.items():
+        def render_error(error, status=status, title=title, message=message):
+            description = getattr(error, "description", None)
+            return render_template(
+                "errors/error.html",
+                status=status,
+                title=title,
+                message=description or message,
+                back_url="/programming" if status != 403 else "/",
+            ), status
+        app.register_error_handler(status, render_error)
 
     return app

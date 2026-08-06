@@ -38,17 +38,25 @@ export default defineConfig({
     actionTimeout: 10_000,
     navigationTimeout: 15_000,
     extraHTTPHeaders: { 'X-E2E-Run-Token': runToken },
-    screenshot: 'off',
-    trace: 'off',
+    screenshot: 'only-on-failure',
+    trace: 'retain-on-failure',
     video: 'off',
   },
-  webServer: {
-    command: `${pythonExecutable} e2e/support/run_server.py --port ${port}`,
-    env: { E2E_TEST_ONLY: '1', E2E_RUN_TOKEN: runToken },
-    url: `${baseURL}/health`,
-    reuseExistingServer: false,
-    timeout: 60_000,
-  },
+  webServer: [
+    {
+      command: 'python e2e/support/run_server.py',
+      url: 'http://127.0.0.1:8091/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    {
+      command: 'python e2e/support/run_public_server.py',
+      url: 'http://127.0.0.1:8092/apply',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+  ],
+
   projects: [
     {
       name: 'chromium',

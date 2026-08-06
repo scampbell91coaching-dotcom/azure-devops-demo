@@ -6,6 +6,7 @@ from portal import create_app
 from portal.block_factory import FactoryRequest, _day_sequence
 from portal.extensions import db
 from portal.models.athlete import Athlete
+from portal.models.exercise_library import Exercise
 from portal.models.programming import TrainingBlock
 
 
@@ -210,3 +211,25 @@ def test_factory_v3_generates_complete_block():
         assert sum(name == "Competition Squat" for name in exercise_names) == 2
         assert sum(name == "Competition Bench Press" for name in exercise_names) == 3
         assert sum(name == "Sumo Deadlift" for name in exercise_names) == 1
+
+
+def test_factory_uses_multiple_ordered_catalogue_accessories():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    with app.app_context():
+        upper = Exercise(name="Chest Supported Row", movement="accessory", category="upper body", accessory_suitable=True)
+        lower = Exercise(name="Reverse Lunge", movement="accessory", category="lower body", accessory_suitable=True)
+        db.session.add_all([upper, lower])
+        db.session.commit()
+        accessory_ids = [str(upper.id), str(lower.id)]
+    response = app.test_client().post("/programming/factory", data={
+        "athlete_id": athlete_id, "name": "Accessory catalogue", "week_count": 1,
+        "training_days": 3, "squat_frequency": 1, "bench_frequency": 1,
+        "deadlift_frequency": 1, "accessory_exercise_id": accessory_ids,
+    })
+    assert response.status_code == 302
+    with app.app_context():
+        block = TrainingBlock.query.one()
+        for session in block.weeks[0].sessions:
+            names = [item.exercise_name for item in session.prescriptions]
+            assert names[-2:] == ["Chest Supported Row", "Reverse Lunge"]

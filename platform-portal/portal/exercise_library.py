@@ -24,12 +24,16 @@ def _optional_float(value: str | None) -> float | None:
 @exercise_library_bp.get("/exercise-library")
 def index():
     movement = request.args.get("movement", "").strip()
+    category = request.args.get("category", "").strip()
     search = request.args.get("q", "").strip()
+    page = max(1, request.args.get("page", 1, type=int))
 
     query = Exercise.query
 
     if movement:
         query = query.filter_by(movement=movement)
+    if category:
+        query = query.filter_by(category=category)
 
     if search:
         pattern = f"%{search}%"
@@ -44,16 +48,23 @@ def index():
             )
         )
 
-    exercises = query.order_by(
+    pagination = query.order_by(
         Exercise.movement.asc(),
         Exercise.name.asc(),
-    ).all()
+    ).paginate(page=page, per_page=24, error_out=False)
+
+    movements = [value for value, in db.session.query(Exercise.movement).filter_by(active=True).distinct().order_by(Exercise.movement)]
+    categories = [value for value, in db.session.query(Exercise.category).filter_by(active=True).distinct().order_by(Exercise.category)]
 
     return render_template(
         "exercises/index.html",
-        exercises=exercises,
+        exercises=pagination.items,
+        pagination=pagination,
         movement=movement,
+        category=category,
         search=search,
+        movements=movements,
+        categories=categories,
     )
 
 
