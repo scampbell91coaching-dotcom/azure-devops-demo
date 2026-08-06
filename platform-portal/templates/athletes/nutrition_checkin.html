@@ -1,131 +1,20 @@
 {% extends "coach/base.html" %}
-
-{% set coach_section = "athletes" %}
-
-{% block title %}Nutrition Check-in | Traditional Strength{% endblock %}
-
+{% block title %}Nutrition check-in | Traditional Strength{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/nutrition.css') }}">{% endblock %}
+{% macro field(name, label, unit='', step='1', minimum='0', maximum='') %}
+<label class="nutrition-field" for="{{ name }}"><span>{{ label }}{% if unit %} <small>({{ unit }})</small>{% endif %}</span><input id="{{ name }}" name="{{ name }}" type="number" inputmode="decimal" step="{{ step }}" min="{{ minimum }}"{% if maximum %} max="{{ maximum }}"{% endif %} value="{{ form.get(name, '') }}"{% if errors.get(name) %} aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>{% if errors.get(name) %}<small class="coach-form-error" id="{{ name }}-error">{{ errors[name] }}</small>{% endif %}</label>
+{% endmacro %}
 {% block content %}
-<section class="coach-page coach-page--narrow">
-  <header class="coach-page__header">
-    <a
-      class="coach-back-link"
-      href="{{ url_for(
-        'athletes.athlete_dashboard',
-        athlete_id=athlete.id
-      ) }}"
-    >
-      ← {{ athlete.full_name }}
-    </a>
-
-    <span class="coach-eyebrow">Nutrition check-in</span>
-    <h1>Weekly check-in</h1>
-    <p>Capture the week clearly so the next decision is easy.</p>
-  </header>
-
-  <form
-    class="coach-panel coach-form"
-    method="post"
-    action="{{ url_for(
-      'athletes.create_nutrition_checkin',
-      athlete_id=athlete.id
-    ) }}"
-  >
-    {% if errors.get("scores") %}
-      <p class="coach-form-error">{{ errors["scores"] }}</p>
-    {% endif %}
-
-    <div class="coach-form-grid coach-form-grid--four">
-      <label>
-        <span>Bodyweight (kg)</span>
-        <input
-          name="bodyweight_kg"
-          type="number"
-          step="0.1"
-          value="{{ form.get('bodyweight_kg', athlete.bodyweight_kg or '') }}"
-        >
-      </label>
-
-      <label>
-        <span>Average calories</span>
-        <input
-          name="average_calories"
-          type="number"
-          value="{{ form.get('average_calories', '') }}"
-        >
-      </label>
-
-      <label>
-        <span>Average protein (g)</span>
-        <input
-          name="average_protein_g"
-          type="number"
-          value="{{ form.get('average_protein_g', '') }}"
-        >
-      </label>
-
-      <label>
-        <span>Average steps</span>
-        <input
-          name="average_steps"
-          type="number"
-          value="{{ form.get('average_steps', '') }}"
-        >
-      </label>
-    </div>
-
-    <div class="coach-score-fields">
-      {% for name, label in (
-        ("nutrition_adherence", "Nutrition adherence"),
-        ("hunger", "Hunger"),
-        ("energy", "Energy"),
-        ("sleep_quality", "Sleep quality"),
-        ("stress", "Stress"),
-        ("digestion", "Digestion"),
-        ("training_performance", "Training performance")
-      ) %}
-        <label>
-          <span>{{ label }}</span>
-          <select name="{{ name }}" required>
-            <option value="">Choose</option>
-
-            {% for score in range(1, 11) %}
-              <option
-                value="{{ score }}"
-                {% if form.get(name) == score|string %}selected{% endif %}
-              >
-                {{ score }}
-              </option>
-            {% endfor %}
-          </select>
-        </label>
-      {% endfor %}
-    </div>
-
-    <label>
-      <span>What went well?</span>
-      <textarea name="wins" rows="5">{{ form.get('wins', '') }}</textarea>
-    </label>
-
-    <label>
-      <span>What was difficult?</span>
-      <textarea name="challenges" rows="5">{{ form.get('challenges', '') }}</textarea>
-    </label>
-
-    <label>
-      <span>Anything coming up that affects the plan?</span>
-      <textarea name="upcoming_events" rows="4">{{ form.get('upcoming_events', '') }}</textarea>
-    </label>
-
-    <label>
-      <span>Questions for your coach</span>
-      <textarea name="questions" rows="5">{{ form.get('questions', '') }}</textarea>
-    </label>
-
-    <div class="coach-form__actions">
-      <button class="coach-primary-button" type="submit">
-        Save nutrition check-in
-      </button>
-    </div>
-  </form>
+<section class="coach-page coach-page--narrow nutrition-checkin-form">
+ <header class="coach-page__header"><a class="coach-back-link" href="{{ url_for('athletes.dashboard') if current_user and current_user.role == 'athlete' else url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}">← Back</a><span class="coach-eyebrow">Nutrition check-in</span><h1>How was your week?</h1><p>Use weekly averages where possible. Optional numbers may be left blank.</p></header>
+ {% if errors %}<div class="nutrition-error-summary" role="alert" aria-live="assertive" tabindex="-1"><strong>Check the highlighted fields.</strong><span>Your answers are still here.</span></div>{% endif %}
+ <form class="coach-form nutrition-form" method="post" action="{{ url_for('athletes.create_nutrition_checkin', athlete_id=athlete.id) }}">
+  <fieldset><legend>Week and bodyweight</legend><div class="nutrition-form-grid"><label class="nutrition-field" for="checkin_date"><span>Check-in date</span><input id="checkin_date" name="checkin_date" type="date" required max="{{ today }}" value="{{ form.get('checkin_date', '') }}"{% if errors.get('checkin_date') %} aria-invalid="true" aria-describedby="checkin_date-error"{% endif %}>{% if errors.get('checkin_date') %}<small class="coach-form-error" id="checkin_date-error">{{ errors.checkin_date }}</small>{% endif %}</label>{{ field('bodyweight_kg', 'Average bodyweight', 'kg', '0.1', '25', '350') }}</div></fieldset>
+  <fieldset><legend>Calories and macros</legend><p class="nutrition-help">Enter your coach-set target and your actual daily average.</p><div class="nutrition-form-grid">{{ field('calorie_target', 'Calorie target', 'kcal', '1', '500', '10000') }}{{ field('average_calories', 'Average calorie intake', 'kcal', '1', '0', '10000') }}{{ field('protein_target_g', 'Protein target', 'g', '1', '0', '500') }}{{ field('average_protein_g', 'Average protein', 'g', '1', '0', '500') }}{{ field('carbohydrate_target_g', 'Carbohydrate target', 'g', '1', '0', '1000') }}{{ field('average_carbohydrate_g', 'Average carbohydrate', 'g', '1', '0', '1000') }}{{ field('fat_target_g', 'Fat target', 'g', '1', '0', '400') }}{{ field('average_fat_g', 'Average fat', 'g', '1', '0', '400') }}</div></fieldset>
+  <fieldset><legend>Daily foundations</legend><div class="nutrition-form-grid">{{ field('average_fibre_g', 'Average fibre', 'g', '0.1', '0', '150') }}{{ field('average_fluid_l', 'Average fluid', 'litres', '0.1', '0', '15') }}{{ field('average_steps', 'Average steps', 'steps', '1', '0', '100000') }}{{ field('average_sleep_hours', 'Average sleep duration', 'hours', '0.1', '0', '24') }}</div></fieldset>
+  <fieldset><legend>How you felt</legend><p class="nutrition-help" id="score-help">1 is low/poor; 10 is high/excellent. For hunger, 10 means very hungry.</p><div class="nutrition-score-grid">{% for name, label in (("nutrition_adherence", "Adherence"), ("hunger", "Hunger"), ("energy", "Energy"), ("sleep_quality", "Sleep quality"), ("digestion", "Digestion")) %}<label for="{{ name }}"><span>{{ label }}</span><select id="{{ name }}" name="{{ name }}" required aria-describedby="score-help{% if errors.get(name) %} {{ name }}-error{% endif %}"{% if errors.get(name) %} aria-invalid="true"{% endif %}><option value="">Choose</option>{% for score in range(1, 11) %}<option value="{{ score }}"{% if form.get(name) == score|string %} selected{% endif %}>{{ score }}</option>{% endfor %}</select>{% if errors.get(name) %}<small class="coach-form-error" id="{{ name }}-error">{{ errors[name] }}</small>{% endif %}</label>{% endfor %}</div></fieldset>
+  <fieldset><legend>Your week</legend><label for="wins"><span>Wins</span><textarea id="wins" name="wins" rows="4" maxlength="5000">{{ form.get('wins', '') }}</textarea></label><label for="challenges"><span>Difficulties</span><textarea id="challenges" name="challenges" rows="4" maxlength="5000">{{ form.get('challenges', '') }}</textarea></label><label for="questions"><span>Questions for your coach</span><textarea id="questions" name="questions" rows="4" maxlength="5000">{{ form.get('questions', '') }}</textarea></label></fieldset>
+  <div class="coach-form__actions"><button class="coach-primary-button" type="submit">Submit nutrition check-in</button></div>
+ </form>
 </section>
 {% endblock %}

@@ -134,3 +134,29 @@ def test_invalid_checkin_scores_are_rejected():
     )
 
     assert response.status_code == 400
+
+
+def test_numeric_validation_preserves_submitted_values_and_announces_errors():
+    app = create_test_app()
+    with app.app_context():
+        athlete = Athlete(first_name="Alex", last_name="Lifter", email="alex@example.com")
+        db.session.add(athlete)
+        db.session.commit()
+        athlete_id = athlete.id
+
+    response = app.test_client().post(
+        f"/athletes/{athlete_id}/nutrition-checkins",
+        data={
+            "checkin_date": "2026-08-01", "bodyweight_kg": "999",
+            "nutrition_adherence": "8", "hunger": "6", "energy": "7",
+            "sleep_quality": "7", "digestion": "8", "wins": "Still preserved",
+        },
+    )
+
+    assert response.status_code == 400
+    assert b'role="alert"' in response.data
+    assert b'aria-invalid="true"' in response.data
+    assert b'value="999"' in response.data
+    assert b"Still preserved" in response.data
+    with app.app_context():
+        assert NutritionCheckIn.query.count() == 0

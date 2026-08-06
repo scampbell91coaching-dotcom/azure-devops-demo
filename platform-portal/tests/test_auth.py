@@ -55,6 +55,11 @@ def _login(client, email: str, password: str):
     )
 
 
+def _csrf_from_session(client) -> str:
+    with client.session_transaction() as auth_session:
+        return auth_session["csrf_token"]
+
+
 def test_production_startup_requires_secret_key(monkeypatch):
     monkeypatch.delenv("SECRET_KEY", raising=False)
 
@@ -232,6 +237,43 @@ def test_roles_and_athlete_isolation(secured_app):
     assert client.get("/coach").status_code == 403
     assert client.get(f"/athletes/{ids['second']}/check-ins/new").status_code == 404
     assert client.get(f"/athletes/{ids['first']}/check-ins/new").status_code == 200
+    assert client.get(f"/athletes/{ids['second']}/nutrition-checkins/new").status_code == 404
+    assert client.get(f"/athletes/{ids['first']}/nutrition-checkins/new").status_code == 200
+
+
+def test_coach_can_create_and_update_nutrition_response(secured_app):
+    client = secured_app.test_client()
+    assert _login(client, "coach@example.test", "correct horse battery staple").status_code == 302
+    athlete_id = secured_app.config["TEST_IDS"]["first"]
+    with secured_app.app_context():
+        from portal.models.nutrition_checkin import NutritionCheckIn
+        item = NutritionCheckIn(
+            athlete_id=athlete_id, nutrition_adherence=8, hunger=5, energy=7,
+            sleep_quality=7, digestion=8, stress=5, training_performance=7,
+        )
+        db.session.add(item)
+        db.session.commit()
+        item_id = item.id
+    page = client.get(f"/athletes/{athlete_id}/nutrition-checkins/new")
+    csrf = page.data.split(b'name="csrf_token" value="', 1)[1].split(b'"', 1)[0].decode()
+    response = client.post(
+        f"/athletes/{athlete_id}/nutrition-checkins/{item_id}/review",
+        data={"csrf_token": csrf, "coach_response": "Good consistency.", "review_status": "reviewed"},
+    )
+    assert response.status_code == 302
+    with secured_app.app_context():
+        item = db.session.get(NutritionCheckIn, item_id)
+        assert item.coach_response == "Good consistency."
+        assert item.reviewed is True
+        assert item.reviewed_at is not None
+    client.post(
+        f"/athletes/{athlete_id}/nutrition-checkins/{item_id}/review",
+        data={"csrf_token": csrf, "coach_response": "Updated feedback.", "review_status": "needs_review"},
+    )
+    with secured_app.app_context():
+        item = db.session.get(NutritionCheckIn, item_id)
+        assert item.coach_response == "Updated feedback."
+        assert item.reviewed is False
 
 
 def test_csrf_logout_and_expired_sessions(secured_app):

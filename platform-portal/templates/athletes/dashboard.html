@@ -92,7 +92,7 @@
           <h2>Nutrition check-in</h2>
         </div>
 
-        <span>{{ latest_checkin.submitted_at.strftime("%d %b %Y") }}</span>
+        <span>{{ latest_checkin.checkin_date.strftime("%d %b %Y") }}</span>
       </div>
 
       <div class="coach-score-grid">
@@ -130,7 +130,7 @@
           <article class="coach-checkin-card">
             <header class="coach-checkin-card__header">
               <div>
-                <strong>{{ checkin.submitted_at.strftime("%d %B %Y") }}</strong>
+                <strong>{{ checkin.checkin_date.strftime("%d %B %Y") }}</strong>
 
                 <span
                   class="coach-status {% if checkin.reviewed %}coach-status--active{% else %}coach-status--pending{% endif %}"
@@ -144,7 +144,7 @@
               </div>
 
               {% if checkin.bodyweight_kg %}
-                <strong>{{ checkin.bodyweight_kg }} kg</strong>
+                <strong>{{ checkin.bodyweight_kg }} kg{% if checkin.weekly_bodyweight_change_kg is not none %} ({{ '%+.2f'|format(checkin.weekly_bodyweight_change_kg) }} kg){% endif %}</strong>
               {% endif %}
             </header>
 
@@ -154,6 +154,15 @@
               <span>Stress {{ checkin.stress }}/10</span>
               <span>Training {{ checkin.training_performance }}/10</span>
             </div>
+            {% if checkin.alerts %}<div class="nutrition-alerts" role="status"><strong>Review prompts</strong><ul>{% for alert in checkin.alerts %}<li>{{ alert }}</li>{% endfor %}</ul></div>{% endif %}
+            <dl class="nutrition-detail-grid">
+              <div><dt>Calories</dt><dd>{{ checkin.average_calories if checkin.average_calories is not none else '—' }} / {{ checkin.calorie_target if checkin.calorie_target is not none else '—' }} target</dd></div>
+              <div><dt>Protein</dt><dd>{{ checkin.average_protein_g if checkin.average_protein_g is not none else '—' }} / {{ checkin.protein_target_g if checkin.protein_target_g is not none else '—' }} g</dd></div>
+              <div><dt>Carbohydrate</dt><dd>{{ checkin.average_carbohydrate_g if checkin.average_carbohydrate_g is not none else '—' }} / {{ checkin.carbohydrate_target_g if checkin.carbohydrate_target_g is not none else '—' }} g</dd></div>
+              <div><dt>Fat</dt><dd>{{ checkin.average_fat_g if checkin.average_fat_g is not none else '—' }} / {{ checkin.fat_target_g if checkin.fat_target_g is not none else '—' }} g</dd></div>
+              <div><dt>Fibre / fluid</dt><dd>{{ checkin.average_fibre_g if checkin.average_fibre_g is not none else '—' }} g / {{ checkin.average_fluid_l if checkin.average_fluid_l is not none else '—' }} L</dd></div>
+              <div><dt>Steps / sleep</dt><dd>{{ checkin.average_steps if checkin.average_steps is not none else '—' }} / {{ checkin.average_sleep_hours if checkin.average_sleep_hours is not none else '—' }} h</dd></div>
+            </dl>
 
             <div class="coach-checkin-card__copy">
               {% if checkin.wins %}
@@ -162,6 +171,7 @@
                   <p>{{ checkin.wins }}</p>
                 </div>
               {% endif %}
+              {% if checkin.questions %}<div><h3>Questions</h3><p>{{ checkin.questions }}</p></div>{% endif %}
 
               {% if checkin.challenges %}
                 <div>
@@ -184,6 +194,7 @@
                 <span>Coach response</span>
                 <textarea name="coach_response" rows="4">{{ checkin.coach_response or "" }}</textarea>
               </label>
+              <label><span>Review status</span><select name="review_status"><option value="reviewed"{% if checkin.reviewed %} selected{% endif %}>Reviewed</option><option value="needs_review"{% if not checkin.reviewed %} selected{% endif %}>Needs review</option></select></label>
 
               <button class="coach-primary-button" type="submit">
                 {% if checkin.reviewed %}
