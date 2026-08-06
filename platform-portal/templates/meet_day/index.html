@@ -4,24 +4,21 @@
 {% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/meet_day.css') }}">{% endblock %}
 {% block content %}
 <section class="meet-day">
-  <header><p class="eyebrow">Competition control</p><h1>Meet Day</h1><p>Coach-controlled flights, warmups and platform attempts.</p></header>
+  <header class="meet-day__hero"><p class="eyebrow">Competition control</p><h1>Meet Day</h1><p>Build the roster, warm-up plan and platform attempts in one coach workspace.</p></header>
   {% if error %}<p class="meet-day__error" role="alert">{{ error }}</p>{% endif %}
-  <section class="coach-panel">
-    <h2>Create a meet</h2>
-    <form method="post" class="meet-day__form">
-      <label>Name <input name="name" maxlength="160" required></label>
-      <label>Date <input name="meet_date" type="date" value="{{ today }}" required></label>
-      <label>Coach notes <textarea name="notes" rows="2"></textarea></label>
-      <button type="submit">Create meet</button>
+  <section class="coach-panel meet-day__create">
+    <div><p class="eyebrow">New competition</p><h2>Create a meet</h2><p>Fields marked <span aria-hidden="true">*</span> are required.</p></div>
+    <form method="post" class="meet-day__form meet-day__form--create">
+      <label>Meet name <span aria-hidden="true">*</span><input name="name" maxlength="160" value="{{ form.get('name', '') }}" required aria-required="true"></label>
+      <label>Date <span aria-hidden="true">*</span><input name="meet_date" type="date" value="{{ form.get('meet_date', today) }}" required aria-required="true"></label>
+      <label>Athlete <select name="athlete_id"><option value="">Add later</option>{% for athlete in athletes %}<option value="{{ athlete.id }}" {% if form.get('athlete_id') == athlete.id|string %}selected{% endif %}>{{ athlete.full_name }}</option>{% endfor %}</select></label>
+      <label>Federation <input name="federation" maxlength="80" value="{{ form.get('federation', '') }}" placeholder="e.g. GBPF"></label>
+      <label>Bodyweight (kg) <input name="bodyweight_kg" type="number" min="0.01" step="0.01" value="{{ form.get('bodyweight_kg', '') }}"></label>
+      <label>Weight class <input name="weight_class" maxlength="40" value="{{ form.get('weight_class', '') }}" placeholder="e.g. 83 kg"></label>
+      <label class="meet-day__wide">Coach notes <textarea name="notes" rows="2" maxlength="2000">{{ form.get('notes', '') }}</textarea></label>
+      <button type="submit" class="meet-day__primary">Create meet</button>
     </form>
   </section>
-  <section class="coach-panel">
-    <h2>Meets</h2>
-    <div class="meet-day__list">
-    {% for meet in meets %}
-      <a href="{{ url_for('meet_day.detail', meet_id=meet.id) }}"><strong>{{ meet.name }}</strong><span>{{ meet.meet_date }} · {{ meet.status }}</span></a>
-    {% else %}<p>No meets created yet.</p>{% endfor %}
-    </div>
-  </section>
+  <section class="coach-panel"><h2>Meets</h2><div class="meet-day__list">{% for meet in meets %}<a href="{{ url_for('meet_day.detail', meet_id=meet.id) }}"><strong>{{ meet.name }}</strong><span>{{ meet.meet_date }} · {{ meet.status }}</span></a>{% else %}<p>No meets created yet.</p>{% endfor %}</div></section>
 </section>
 {% endblock %}

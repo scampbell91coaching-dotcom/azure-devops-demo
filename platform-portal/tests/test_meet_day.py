@@ -181,3 +181,28 @@ def test_cross_meet_lift_update_is_not_found(app):
         data={"weight_kg": "100", "outcome": "good"},
     )
     assert response.status_code == 404
+
+
+def test_create_validation_preserves_values_and_calculators_persist_three_lifts(app):
+    client = app.test_client()
+    invalid = client.post("/meet-day", data={"name": "Preserved Open", "meet_date": "bad", "federation": "GBPF"})
+    assert invalid.status_code == 400
+    assert b'value="Preserved Open"' in invalid.data
+    assert b'value="GBPF"' in invalid.data
+    with app.app_context():
+        athlete = _athlete("Taylor", "taylor@example.test")
+        meet = Meet(name="Loading Open", meet_date=date(2026, 9, 1))
+        entry = MeetEntry(meet=meet, athlete=athlete, flight=1, platform_order=1)
+        db.session.add(entry)
+        db.session.commit()
+        meet_id, entry_id = meet.id, entry.id
+    inventory = {f"plate_{plate}": "8" for plate in ("25", "20", "15", "10", "5", "2.5", "1.25", "0.5", "0.25")}
+    load = client.post(f"/meet-day/{meet_id}/plate-calculator", data={"target_kg": "202.5", "bar_kg": "20", "collars_kg": "0", **inventory})
+    assert load.status_code == 200
+    assert b"Per side, load" in load.data
+    for lift, opener in (("squat", "200"), ("bench", "120"), ("deadlift", "220")):
+        response = client.post(f"/meet-day/{meet_id}/entries/{entry_id}/warmups", data={"lift": lift, "opener_kg": opener, "bar_kg": "20", "collars_kg": "0", "minimum_increment_kg": "2.5", **inventory})
+        assert response.status_code == 302
+    with app.app_context():
+        assert {item.lift for item in MeetLift.query.filter_by(entry_id=entry_id, kind="warmup")} == {"squat", "bench", "deadlift"}
+        assert MeetLift.query.filter_by(entry_id=entry_id, kind="attempt", sequence=1).count() == 3

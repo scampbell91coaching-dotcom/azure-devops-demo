@@ -10,8 +10,20 @@ from .extensions import db
 from .models.athlete import Athlete
 from .models.meet_day import LIFTS, OUTCOMES, Meet, MeetEntry, MeetLift
 from .services.meet_day import build_board
+from .services.plate_loading import DEFAULT_PLATES_KG, build_warmups, calculate_load
 
 meet_day_bp = Blueprint("meet_day", __name__, url_prefix="/meet-day")
+
+
+def _render_index_error(message: str, form):
+    return render_template(
+        "meet_day/index.html",
+        meets=Meet.query.order_by(Meet.meet_date.desc(), Meet.id.desc()).all(),
+        today=datetime.now(UTC).date().isoformat(),
+        athletes=Athlete.query.order_by(Athlete.last_name, Athlete.first_name).all(),
+        form=form,
+        error=message,
+    ), 400
 
 
 def _optional_text(value: str | None, field: str, limit: int = 2000) -> str | None:
@@ -57,29 +69,46 @@ def index():
         "meet_day/index.html",
         meets=meets,
         today=datetime.now(UTC).date().isoformat(),
+        athletes=Athlete.query.order_by(Athlete.last_name, Athlete.first_name).all(),
+        form={},
     )
 
 
 @meet_day_bp.post("")
 def create():
+    form = request.form
     name = request.form.get("name", "").strip()
     try:
         meet_date = date.fromisoformat(request.form.get("meet_date", ""))
     except ValueError:
         meet_date = None
     if not name or len(name) > 160 or meet_date is None:
-        return render_template(
-            "meet_day/index.html",
-            meets=Meet.query.all(),
-            today=datetime.now(UTC).date().isoformat(),
-            error="Enter a name and valid meet date.",
-        ), 400
+        return _render_index_error("Enter a name and valid meet date.", form)
     try:
         notes = _optional_text(request.form.get("notes"), "Notes")
     except ValueError as exc:
-        return str(exc), 400
-    meet = Meet(name=name, meet_date=meet_date, notes=notes)
+        return _render_index_error(str(exc), form)
+    try:
+        bodyweight = _weight(form.get("bodyweight_kg"))
+        federation = _optional_text(form.get("federation"), "Federation", 80)
+        weight_class = _optional_text(form.get("weight_class"), "Weight class", 40)
+        athlete_id = int(form.get("athlete_id")) if form.get("athlete_id") else None
+    except (ValueError, TypeError) as exc:
+        return _render_index_error(str(exc), form)
+    athlete = db.session.get(Athlete, athlete_id) if athlete_id else None
+    if athlete_id and athlete is None:
+        abort(404)
+    meet = Meet(
+        name=name,
+        meet_date=meet_date,
+        notes=notes,
+        federation=federation,
+        bodyweight_kg=bodyweight,
+        weight_class=weight_class,
+    )
     db.session.add(meet)
+    if athlete:
+        db.session.add(MeetEntry(meet=meet, athlete=athlete, flight=1, platform_order=1))
     db.session.commit()
     return redirect(url_for("meet_day.detail", meet_id=meet.id))
 
@@ -94,7 +123,110 @@ def detail(meet_id: int):
         athletes=athletes,
         lifts=LIFTS,
         outcomes=OUTCOMES,
+        default_plates=DEFAULT_PLATES_KG,
+        plate_result=None,
     )
+
+
+def _inventory_from_form():
+    inventory = {}
+    for plate in DEFAULT_PLATES_KG:
+        value = request.form.get(f"plate_{plate}", "8")
+        try:
+            count = int(value)
+        except ValueError as exc:
+            raise ValueError(
+                "Plate inventory must use whole-number counts per side."
+            ) from exc
+        if count < 0 or count > 20:
+            raise ValueError("Plate inventory must be between 0 and 20 per side.")
+        inventory[plate] = count
+    return inventory
+
+
+@meet_day_bp.post("/<int:meet_id>/plate-calculator")
+def plate_calculator(meet_id: int):
+    meet = _meet(meet_id)
+    try:
+        bar_kg = request.form.get("custom_bar") or request.form.get("bar_kg", "20")
+        result = calculate_load(
+            request.form.get("target_kg", ""),
+            bar_kg=bar_kg,
+            collars_kg=request.form.get("collars_kg", "0"),
+            inventory=_inventory_from_form(),
+        )
+    except ValueError as exc:
+        result, error = None, str(exc)
+    else:
+        error = None
+    return render_template(
+        "meet_day/detail.html",
+        board=build_board(meet),
+        athletes=Athlete.query.order_by(Athlete.last_name, Athlete.first_name).all(),
+        lifts=LIFTS,
+        outcomes=OUTCOMES,
+        default_plates=DEFAULT_PLATES_KG,
+        plate_result=result,
+        calculator_error=error,
+    ), 400 if error else 200
+
+
+@meet_day_bp.post("/<int:meet_id>/entries/<int:entry_id>/warmups")
+def generate_warmups(meet_id: int, entry_id: int):
+    meet = _meet(meet_id)
+    entry = db.session.get(MeetEntry, entry_id)
+    if entry is None or entry.meet_id != meet.id:
+        abort(404)
+    lift = request.form.get("lift", "")
+    try:
+        overrides = [
+            value.strip()
+            for value in request.form.get("manual_overrides", "").split(",")
+            if value.strip()
+        ]
+        plan = build_warmups(
+            lift,
+            request.form.get("opener_kg", ""),
+            bar_kg=request.form.get("bar_kg", "20"),
+            collars_kg=request.form.get("collars_kg", "0"),
+            first_loaded_kg=request.form.get("first_loaded_kg") or None,
+            stages=(
+                int(request.form["stages"])
+                if request.form.get("stages")
+                else None
+            ),
+            minimum_increment_kg=request.form.get("minimum_increment_kg", "2.5"),
+            inventory=_inventory_from_form(),
+            overrides_kg=overrides or None,
+        )
+    except (ValueError, KeyError) as exc:
+        return str(exc), 400
+    MeetLift.query.filter_by(entry_id=entry.id, lift=lift, kind="warmup").delete()
+    for warmup in plan:
+        kind = "attempt" if warmup.opener else "warmup"
+        if kind == "attempt":
+            existing = MeetLift.query.filter_by(
+                entry_id=entry.id, lift=lift, kind="attempt", sequence=1
+            ).one_or_none()
+            if existing:
+                existing.weight_kg = Decimal(warmup.weight_kg)
+                existing.notes = "Opener"
+                continue
+        db.session.add(
+            MeetLift(
+                entry=entry,
+                lift=lift,
+                kind=kind,
+                sequence=1 if kind == "attempt" else warmup.sequence,
+                weight_kg=Decimal(warmup.weight_kg),
+                notes=(
+                    f"{warmup.repetitions} reps · {warmup.percentage}% · "
+                    f"{warmup.loading.instruction}"
+                ),
+            )
+        )
+    db.session.commit()
+    return redirect(url_for("meet_day.detail", meet_id=meet.id))
 
 
 @meet_day_bp.post("/<int:meet_id>/entries")
