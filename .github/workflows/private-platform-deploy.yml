@@ -12,6 +12,7 @@ on:
       - "package-lock.json"
       - "playwright.config.ts"
       - "pytest.ini"
+      - "scripts/ci/push-images-with-retry.sh"
       - ".github/workflows/private-platform-deploy.yml"
   pull_request:
     branches: [main]
@@ -24,6 +25,7 @@ on:
       - "package-lock.json"
       - "playwright.config.ts"
       - "pytest.ini"
+      - "scripts/ci/push-images-with-retry.sh"
       - ".github/workflows/private-platform-deploy.yml"
   workflow_dispatch:
 
@@ -39,6 +41,7 @@ env:
   ACR_LOGIN_SERVER: stevedevopslab6280.azurecr.io
   IMAGE_NAME: platform-portal-private
   MANIFEST: private-platform-manifests/private-platform.yaml
+  KUSTOMIZATION: private-platform-manifests/kustomization.yaml
   NAMESPACE: production
   DEPLOYMENT: platform-portal-private
   APP_URL: https://platform.traditionalstrength.co.uk
@@ -70,30 +73,34 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
 
-      - name: Validate private manifests
+      - name: Render and validate private manifests
         run: |
           set -euo pipefail
 
-          mapfile -t manifest_files < <(
-            find private-platform-manifests               -maxdepth 1               -type f               -name '*.yaml'               -print |
-            sort
+          kubectl kustomize private-platform-manifests > /tmp/private-platform.yaml
+          docker run --rm \
+            -i \
+            ghcr.io/yannh/kubeconform:v0.7.0 \
+            -strict \
+            -summary \
+            -ignore-missing-schemas \
+            < /tmp/private-platform.yaml
+          docker run --rm \
+            -v "$PWD:/work" \
+            ghcr.io/yannh/kubeconform:v0.7.0 \
+            -strict \
+            -summary \
+            -ignore-missing-schemas \
+            /work/argocd-applications/platform-portal-private.yaml
+
+          mapfile -t private_images < <(
+            grep 'image: stevedevopslab6280.azurecr.io/platform-portal-private:' \
+              /tmp/private-platform.yaml |
+            awk '{print $2}'
           )
-
-          manifest_files+=(
-            "argocd-applications/platform-portal-private.yaml"
-          )
-
-          docker_args=()
-
-          for file in "${manifest_files[@]}"; do
-            docker_args+=("/work/${file}")
-          done
-
-          docker run --rm             -v "$PWD:/work"             ghcr.io/yannh/kubeconform:v0.7.0             -strict             -summary             -ignore-missing-schemas             "${docker_args[@]}"
-
-          test "$(
-            grep -c               'image: stevedevopslab6280.azurecr.io/platform-portal-private:'               "$MANIFEST"
-          )" -eq 2
+          test "${#private_images[@]}" -eq 2
+          test "${private_images[0]}" = "${private_images[1]}"
+          [[ "${private_images[0]}" =~ :[a-f0-9]{40}$ ]]
 
           grep -q 'name: DATABASE_URL' "$MANIFEST"
           grep -q 'name: SECRET_KEY' "$MANIFEST"
@@ -110,14 +117,13 @@ jobs:
         if: github.ref != 'refs/heads/main'
         run: echo "Pull requests and feature branches validate only; they cannot publish or promote."
 
-  build-scan-push:
-    name: Build, scan and conditionally publish
+  build-scan:
+    name: Build and scan private image
     needs: validate-and-test
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
-      id-token: write
     outputs:
       image: ${{ steps.meta.outputs.image }}
     steps:
@@ -173,8 +179,43 @@ jobs:
           path: trivy-private-platform.sarif
           retention-days: 14
 
+      - name: Export scanned image for publication
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: docker save "${{ steps.meta.outputs.image }}" | gzip > /tmp/private-platform-image.tar.gz
+
+      - name: Upload scanned image
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: private-platform-image-${{ github.sha }}
+          path: /tmp/private-platform-image.tar.gz
+          retention-days: 1
+
+  publish:
+    name: Publish private image
+    needs: build-scan
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      image: ${{ needs.build-scan.outputs.image }}
+    steps:
+      - name: Checkout release scripts
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Download scanned image
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: private-platform-image-${{ github.sha }}
+          path: /tmp/private-platform-image
+
+      - name: Load scanned image
+        run: gzip --decompress --stdout /tmp/private-platform-image/private-platform-image.tar.gz | docker load
+
       - name: Azure login with OIDC
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
@@ -182,38 +223,30 @@ jobs:
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Authenticate Docker to ACR
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: az acr login --name "$ACR_NAME"
 
       - name: Push immutable image with retries
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        run: |
-          set -euo pipefail
-          for attempt in 1 2 3; do
-            if docker push "${{ steps.meta.outputs.image }}"; then exit 0; fi
-            if [ "$attempt" -eq 3 ]; then exit 1; fi
-            sleep $((attempt * 20))
-          done
+        run: scripts/ci/push-images-with-retry.sh "${{ needs.build-scan.outputs.image }}"
 
   promote:
     name: Promote private image through GitOps
-    needs: build-scan-push
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: publish
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     environment: production
     outputs:
-      image: ${{ needs.build-scan-push.outputs.image }}
+      image: ${{ needs.publish.outputs.image }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           ref: main
           fetch-depth: 0
 
-      - name: Update both private workload image references
+      - name: Update private Kustomize image tag
         env:
-          EXPECTED_IMAGE: ${{ needs.build-scan-push.outputs.image }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -221,32 +254,34 @@ jobs:
           import re
           from pathlib import Path
 
-          path = Path("private-platform-manifests/private-platform.yaml")
+          path = Path("private-platform-manifests/kustomization.yaml")
           text = path.read_text()
           updated, count = re.subn(
-              r"stevedevopslab6280\.azurecr\.io/platform-portal-private:[a-f0-9]{7,64}",
-              os.environ["EXPECTED_IMAGE"],
+              r"(?m)^(    newTag: )[a-f0-9]{40}$",
+              rf"\g<1>{os.environ['IMAGE_TAG']}",
               text,
           )
-          if count != 2:
-              raise RuntimeError(f"Expected two private image references, found {count}")
+          if count != 1:
+              raise RuntimeError(f"Expected one private Kustomize image tag, found {count}")
           path.write_text(updated)
           PY
+          kubectl kustomize private-platform-manifests > /tmp/private-platform.yaml
+          test "$(grep -c "image: ${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}" /tmp/private-platform.yaml)" -eq 2
 
       - name: Commit private GitOps promotion
         run: |
           set -euo pipefail
-          if git diff --quiet -- "$MANIFEST"; then exit 0; fi
+          if git diff --quiet -- "$KUSTOMIZATION"; then exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$MANIFEST"
+          git add "$KUSTOMIZATION"
           git commit -m "chore(gitops): promote private platform ${GITHUB_SHA::7} [skip ci]"
           git push origin HEAD:main
 
   verify:
     name: Verify Argo CD reconciled private image
     needs: promote
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

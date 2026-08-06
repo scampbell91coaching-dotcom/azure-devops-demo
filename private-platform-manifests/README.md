@@ -1,6 +1,6 @@
 # Private Platform Source Manifests
 
-These files preserve the working private portal, oauth2-proxy, ingress buffer settings, TLS routing and NetworkPolicies.
+These files preserve the working private portal, oauth2-proxy, ingress buffer settings, TLS routing and NetworkPolicies. Argo CD renders this directory with Kustomize.
 
 `platform-portal-private` is the authenticated Flask coaching application behind
 OAuth2 Proxy. Its image is promoted independently from the public `flask-web`
@@ -9,15 +9,19 @@ Alembic migrations, imports the bundled 276-exercise catalogue idempotently,
 and verifies PostgreSQL without logging the connection string. Existing rows
 without a catalogue version are coach-maintained and are never overwritten.
 
+`kustomization.yaml` is the single source of truth for the private image tag.
+Its image transformer applies the same immutable full-SHA image to the database
+init container and the `portal` application container.
+
 The Secret `platform-oauth2-proxy` is intentionally excluded from Git. It must contain:
 
 - `client-secret`
 - `cookie-secret`
 
-Apply with:
+Render and apply with:
 
 ```bash
-kubectl apply -f private-platform-manifests/
+kubectl apply -k private-platform-manifests/
 ```
 
 Safe live verification (does not display secret values):

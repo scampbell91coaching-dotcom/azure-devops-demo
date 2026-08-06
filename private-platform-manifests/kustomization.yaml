@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ingresses.yaml
+  - networkpolicies.yaml
+  - private-platform.yaml
+  - redis-session-store.yaml
+
+images:
+  - name: stevedevopslab6280.azurecr.io/platform-portal-private
+    newTag: 2c399e3ce50bc3aa5fe5e36ce097b07f81b82f01
