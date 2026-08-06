@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from flask import (
     Blueprint,
@@ -21,6 +21,7 @@ from .models.nutrition_checkin import NutritionCheckIn
 from .models.programming import TrainingBlock, TrainingSession
 from .services.athlete_dashboard import get_athlete_dashboard
 from .services.nutrition_dashboard import get_nutrition_dashboard
+from .nutrition_imports import _summary
 
 athletes_bp = Blueprint("athletes", __name__)
 
@@ -285,6 +286,7 @@ def athlete_dashboard(athlete_id: int):
         latest_checkin=latest_checkin,
         checkin_settings=settings,
         weekly_checkin_due=settings.is_due_on(datetime.now(UTC).date()),
+        imported_nutrition=_summary(athlete.id, datetime.now(UTC).date() - timedelta(days=6), datetime.now(UTC).date()),
     )
 
 
