@@ -17,6 +17,7 @@ EXERCISES = [
         "default_reps": "3",
         "default_rpe": 7,
         "default_rest_seconds": 240,
+        "catalogue_version": 0,
     },
     {
         "name": "Competition Bench Press",
@@ -27,6 +28,7 @@ EXERCISES = [
         "default_reps": "4",
         "default_rpe": 7,
         "default_rest_seconds": 180,
+        "catalogue_version": 0,
     },
     {
         "name": "Competition Deadlift",
@@ -37,6 +39,7 @@ EXERCISES = [
         "default_reps": "3",
         "default_rpe": 7,
         "default_rest_seconds": 240,
+        "catalogue_version": 0,
     },
 ]
 

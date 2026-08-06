@@ -71,6 +71,36 @@ def register_database_commands(app: Flask) -> None:
         seed_programming_engine()
         click.echo("Programming seed complete.")
 
+    @app.cli.command("seed-exercise-catalogue")
+    @click.option(
+        "--verify-only",
+        is_flag=True,
+        help="Report counts without writing to the database.",
+    )
+    def seed_exercise_catalogue_command(verify_only: bool) -> None:
+        """Add the reviewed catalogue without changing coach-maintained rows."""
+        from .models.exercise_library import Exercise
+        from .services.exercise_knowledge_import import (
+            DEFAULT_DATA_PATH,
+            import_exercise_knowledge_file,
+        )
+
+        before = Exercise.query.count()
+        result = None if verify_only else import_exercise_knowledge_file(DEFAULT_DATA_PATH)
+        after = Exercise.query.count()
+        click.echo(
+            json.dumps(
+                {
+                    "before": before,
+                    "after": after,
+                    "catalogue_records": 276,
+                    "changes": result.as_dict() if result is not None else None,
+                    "mode": "verify" if verify_only else "seed",
+                },
+                sort_keys=True,
+            )
+        )
+
     @app.cli.command("verify-schema")
     def verify_schema_command() -> None:
         """Check that database tables and columns match coaching metadata."""
@@ -100,3 +130,28 @@ def register_database_commands(app: Flask) -> None:
             )
 
         click.echo(f"Schema verified: {len(expected_tables)} coaching tables.")
+
+    @app.cli.command("verify-production-db")
+    def verify_production_db_command() -> None:
+        """Safely verify the private portal's PostgreSQL schema and catalogue count."""
+        dialect = db.engine.dialect.name
+        if dialect != "postgresql":
+            raise click.ClickException(
+                f"Production database verification requires PostgreSQL; found {dialect}."
+            )
+        inspector = inspect(db.engine)
+        tables = set(inspector.get_table_names())
+        required = {"users", "exercises"}
+        missing = sorted(required - tables)
+        if missing:
+            raise click.ClickException(
+                "Production database verification failed; missing tables: "
+                + ", ".join(missing)
+            )
+        exercise_count = db.session.execute(
+            db.select(db.func.count()).select_from(db.metadata.tables["exercises"])
+        ).scalar_one()
+        click.echo(
+            f"Production database verified: driver={dialect}; "
+            f"users_table=yes; exercises_table=yes; exercises={exercise_count}."
+        )

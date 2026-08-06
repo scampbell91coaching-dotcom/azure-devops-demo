@@ -12,6 +12,7 @@ from flask import (
     session,
     url_for,
 )
+from sqlalchemy.exc import IntegrityError
 
 from .extensions import db
 from .models.athlete import Athlete
@@ -88,6 +89,8 @@ def athlete_list():
     return render_template(
         "athletes/list.html",
         athletes=athletes,
+        errors={},
+        form={},
     )
 
 
@@ -97,8 +100,24 @@ def create_athlete():
     last_name = request.form.get("last_name", "").strip()
     email = request.form.get("email", "").strip().lower()
 
+    form = request.form
     if not first_name or not last_name or not email:
-        return redirect(url_for("athletes.athlete_list"))
+        athletes = Athlete.query.order_by(
+            Athlete.status.asc(), Athlete.last_name.asc(), Athlete.first_name.asc()
+        ).all()
+        return render_template(
+            "athletes/list.html", athletes=athletes,
+            errors={"form": "First name, last name and email are required."}, form=form,
+        ), 400
+
+    if Athlete.query.filter(db.func.lower(Athlete.email) == email).first() is not None:
+        athletes = Athlete.query.order_by(
+            Athlete.status.asc(), Athlete.last_name.asc(), Athlete.first_name.asc()
+        ).all()
+        return render_template(
+            "athletes/list.html", athletes=athletes,
+            errors={"email": "An athlete with this email already exists."}, form=form,
+        ), 400
 
     athlete = Athlete(
         first_name=first_name,
@@ -112,7 +131,18 @@ def create_athlete():
     )
 
     db.session.add(athlete)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # The unique constraint closes the race after the friendly pre-check.
+        db.session.rollback()
+        athletes = Athlete.query.order_by(
+            Athlete.status.asc(), Athlete.last_name.asc(), Athlete.first_name.asc()
+        ).all()
+        return render_template(
+            "athletes/list.html", athletes=athletes,
+            errors={"email": "An athlete with this email already exists."}, form=form,
+        ), 400
 
     return redirect(
         url_for(

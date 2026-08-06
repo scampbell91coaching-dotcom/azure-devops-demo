@@ -96,6 +96,11 @@ def import_exercise_knowledge(
             db.session.add(exercise)
             db.session.flush()
             inserted += 1
+        elif exercise.catalogue_version is None:
+            # A NULL catalogue version is reserved for coach-maintained or
+            # legacy rows. Its identity prevents duplicates, but its values
+            # are never replaced by production seeding.
+            skipped += 1
         elif _apply_values(exercise, values):
             updated += 1
         else:

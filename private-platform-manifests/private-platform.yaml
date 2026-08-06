@@ -29,11 +29,44 @@ spec:
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
-        runAsUser: 100
-        runAsGroup: 101
-        fsGroup: 101
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+        - name: prepare-database
+          image: stevedevopslab6280.azurecr.io/platform-portal-private:465108a2b17fec57e0c87624bda90ac1e7ca4ec6
+          command: ["/bin/sh", "-ec"]
+          args:
+            - >-
+              flask db upgrade &&
+              flask seed-exercise-catalogue &&
+              flask seed-programming &&
+              flask verify-production-db
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: flask-runtime-secrets
+                  key: DATABASE_URL
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: flask-runtime-secrets
+                  key: SECRET_KEY
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
       containers:
         - name: portal
           image: stevedevopslab6280.azurecr.io/platform-portal-private:465108a2b17fec57e0c87624bda90ac1e7ca4ec6

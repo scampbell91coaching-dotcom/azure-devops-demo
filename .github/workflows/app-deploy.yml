@@ -242,6 +242,7 @@ jobs:
           password: ${{ steps.acr.outputs.token }}
 
       - name: Push images
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: |
           set -euo pipefail
 

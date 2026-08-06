@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from portal import create_app
+from portal.extensions import db
 from portal.models.exercise_library import Exercise
 from portal.services.exercise_knowledge_import import (
     DEFAULT_DATA_PATH,
@@ -128,7 +129,7 @@ def test_repeated_import_is_idempotent():
         assert Exercise.query.filter_by(name="Tempo Front Squat").count() == 1
 
 
-def test_import_updates_existing_canonical_exercise():
+def test_import_updates_existing_catalogue_exercise():
     app = create_test_app()
 
     with app.app_context():
@@ -146,6 +147,30 @@ def test_import_updates_existing_canonical_exercise():
         }
         assert exercise.occurrence_count == 42
         assert json.loads(exercise.aliases) == ["Front Squat Tempo"]
+
+
+def test_import_does_not_overwrite_manually_created_matching_exercise():
+    app = create_test_app()
+    with app.app_context():
+        manual = Exercise(
+            name="Cable Row",
+            movement="accessory",
+            category="coach custom",
+            fatigue_rating=1,
+            coaching_cues="Coach-maintained cue",
+        )
+        db.session.add(manual)
+        db.session.commit()
+        manual_id = manual.id
+
+        result = import_exercise_knowledge_file(DEFAULT_DATA_PATH)
+        preserved = db.session.get(Exercise, manual_id)
+
+        assert result.invalid == 0
+        assert preserved.category == "coach custom"
+        assert preserved.coaching_cues == "Coach-maintained cue"
+        assert preserved.catalogue_version is None
+        assert Exercise.query.filter_by(name="Cable Row").count() == 1
 
 
 def test_import_counts_malformed_records_without_persisting_them():
