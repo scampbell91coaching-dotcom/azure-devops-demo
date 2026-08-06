@@ -3,7 +3,7 @@ import re
 import pytest
 
 from portal import create_app
-from portal.block_factory import FactoryRequest, _day_sequence
+from portal.block_factory import FactoryRequest, _accessory_target, _day_sequence, _preview
 from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.exercise_library import Exercise
@@ -233,3 +233,91 @@ def test_factory_uses_multiple_ordered_catalogue_accessories():
         for session in block.weeks[0].sessions:
             names = [item.exercise_name for item in session.prescriptions]
             assert names[-2:] == ["Chest Supported Row", "Reverse Lunge"]
+
+
+@pytest.mark.parametrize(
+    ("mode", "minimum", "maximum"),
+    [("minimal", 1, 2), ("standard", 3, 4), ("high", 5, 6)],
+)
+def test_accessory_volume_modes_generate_within_range(mode, minimum, maximum):
+    app = create_test_app()
+    with app.app_context():
+        request = factory_request(3, 1, 1, 1)
+        request = FactoryRequest(**{**request.__dict__, "accessory_volume": mode})
+        days = _preview(request)
+        assert all(
+            _accessory_target(request, day["day_type"])[0]
+            <= day["accessory_count"]
+            <= _accessory_target(request, day["day_type"])[1]
+            for day in days
+        )
+        assert all(len(day["accessories"]) == len({item["name"] for item in day["accessories"]}) for day in days)
+
+
+@pytest.mark.parametrize(
+    ("day_type", "expected"),
+    [("S", (3, 4)), ("B", (4, 5)), ("D", (3, 4)), ("SBD", (2, 4))],
+)
+def test_standard_lift_aware_accessory_defaults(day_type, expected):
+    assert _accessory_target(factory_request(3, 1, 1, 1), day_type) == expected
+
+
+def test_custom_exact_accessory_count_and_stable_balanced_output():
+    app = create_test_app()
+    with app.app_context():
+        base = factory_request(3, 1, 1, 1)
+        request = FactoryRequest(**{
+            **base.__dict__, "accessory_volume": "custom",
+            "accessory_count_min": 6, "accessory_count_max": 6,
+            "accessory_emphasis": ("trunk",),
+        })
+        first = _preview(request)
+        second = _preview(request)
+        assert first == second
+        assert all(day["accessory_count"] == 6 for day in first)
+        assert all(len({item["role"] for item in day["accessories"]}) >= 4 for day in first)
+
+
+def test_deadlift_day_guards_lower_back_fatigue():
+    app = create_test_app()
+    with app.app_context():
+        request = factory_request(3, 0, 0, 1)
+        request = FactoryRequest(**{**request.__dict__, "accessory_volume": "high"})
+        deadlift_day = next(day for day in _preview(request) if day["day_type"] == "D")
+        risky = ("good morning", "barbell row", "pendlay", "back extension", "romanian deadlift")
+        assert not any(term in item["name"].casefold() for item in deadlift_day["accessories"] for term in risky)
+
+
+def test_automatic_accessories_do_not_repeat_across_a_week():
+    app = create_test_app()
+    with app.app_context():
+        days = _preview(factory_request(5, 2, 3, 1))
+        generated = [
+            item["name"]
+            for day in days
+            for item in day["accessories"]
+            if item["source"] == "Generated"
+        ]
+        assert len(generated) == len(set(generated))
+
+
+def test_custom_count_http_generation_persists_after_reload():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    data = {
+        "athlete_id": athlete_id, "name": "Exact accessories", "week_count": 1,
+        "training_days": 3, "squat_frequency": 1, "bench_frequency": 1,
+        "deadlift_frequency": 1, "accessory_volume": "custom",
+        "accessory_count_min": 4, "accessory_count_max": 4,
+    }
+    assert app.test_client().post("/programming/factory/preview", data=data).status_code == 200
+    assert app.test_client().post("/programming/factory", data=data).status_code == 302
+    with app.app_context():
+        block_id = TrainingBlock.query.one().id
+        db.session.expire_all()
+        reloaded = db.session.get(TrainingBlock, block_id)
+        for session in reloaded.weeks[0].sessions:
+            day_type = session.name.rsplit("·", 1)[1].strip()
+            main_count = 0 if day_type == "ACCESSORY" else len(day_type)
+            assert len(session.prescriptions) - main_count == 4
+            assert [item.position for item in session.prescriptions] == list(range(1, len(session.prescriptions) + 1))
