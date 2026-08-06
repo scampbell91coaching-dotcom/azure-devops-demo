@@ -11,8 +11,12 @@ test('public and coach pages render and navigation toggles at a mobile viewport'
   await menu.click();
   await expect(menu).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('[data-coach-navigation]')).toHaveClass(/is-open/);
-  await menu.click();
+  await expect(page.getByRole('link', { name: 'Meet Prep: Meet Day' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  await page.keyboard.press('Escape');
   await expect(menu).toHaveAttribute('aria-expanded', 'false');
+  await expect(menu).toBeFocused();
+  expect(await page.locator('html').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
 });
 
 test('athlete core workflow fits a 320px phone viewport', async ({ page, athleteSession, athleteIds }) => {
