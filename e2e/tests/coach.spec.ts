@@ -44,6 +44,71 @@ test('filters the exercise library', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Competition Squat' })).toHaveCount(0);
 });
 
+test('Meet Day creates a meet and calculates plates and all warm-up plans without overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/meet-day');
+  await expect(page.getByRole('button', { name: 'Create meet' })).toBeVisible();
+  await page.locator('input[name="name"]').fill('E2E Meet Day Open');
+  await page.locator('select[name="athlete_id"]').selectOption('101');
+  await page.getByRole('button', { name: 'Create meet' }).click();
+  await expect(page.getByRole('heading', { name: 'E2E Meet Day Open' })).toBeVisible();
+  const plateForm = page.locator('form[action$="/plate-calculator"]');
+  await plateForm.locator('input[name="target_kg"]').fill('202.5');
+  await plateForm.getByRole('button', { name: 'Calculate plate load' }).click();
+  await expect(page.getByText(/Per side, load/)).toBeVisible();
+  for (const [lift, opener] of [
+    ['squat', '200'],
+    ['bench', '120'],
+    ['deadlift', '220'],
+  ] as const) {
+    const form = page
+      .locator('form[action$="/warmups"]')
+      .filter({ has: page.locator(`input[value="${lift}"]`) });
+
+    const openerInput = form.locator('input[name="opener_kg"]');
+
+    if (!(await openerInput.isVisible())) {
+      const details = form.locator('xpath=ancestor::details[1]');
+
+      if (await details.count()) {
+        const isOpen = await details.evaluate(
+          element => element.hasAttribute('open')
+        );
+
+        if (!isOpen) {
+          await details.locator('summary').click();
+        }
+      }
+    }
+
+    await expect(openerInput).toBeVisible();
+    await openerInput.fill(opener);
+
+    await form
+      .getByRole('button', { name: `Save ${lift} plan` })
+      .click();
+
+    const liftSection = page
+      .getByRole('heading', {
+        level: 3,
+        name: new RegExp(`^${lift}$`, 'i'),
+      })
+      .locator('xpath=ancestor::section[contains(@class, "meet-day__lift")][1]');
+
+    const openerRow = liftSection
+      .getByRole('row')
+      .filter({ has: page.getByRole('cell', { name: 'Attempt 1', exact: true }) });
+
+    await expect(openerRow).toBeVisible();
+    await expect(openerRow).toContainText(
+      new RegExp(`${opener}(?:\\.0+)? kg`)
+    );
+    await expect(openerRow).toContainText('100%');
+  }
+
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+});
+
 test('adds, edits, deletes, and preserves prescription order without an HTTP 400', async ({ page }) => {
   await page.goto('/programming/sessions/501');
   const failedResponses: number[] = [];
