@@ -390,17 +390,19 @@ jobs:
 
       - name: Wait for migration-gated rollout
         env:
-          EXPECTED_IMAGE: ${{ needs.promote.outputs.image }}
+          EXPECTED_IMAGE: ${{ needs.build-and-push.outputs.image }}
         run: |
           set -euo pipefail
 
           echo "Waiting for Argo CD. Its Helm pre-upgrade migration must succeed before the Deployment changes."
+          echo "Expected image: $EXPECTED_IMAGE"
           deadline=$((SECONDS + 600))
           while (( SECONDS < deadline )); do
             current_image=$(kubectl get deployment flask-web \
               --namespace "$K8S_NAMESPACE" \
               --output jsonpath='{.spec.template.spec.containers[0].image}' \
               2>/dev/null || true)
+            echo "Observed image: ${current_image:-<not found>}"
             if [[ "$current_image" == "$EXPECTED_IMAGE" ]]; then
               kubectl rollout status deployment/flask-web \
                 --namespace "$K8S_NAMESPACE" \
