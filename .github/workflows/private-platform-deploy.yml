@@ -27,6 +27,7 @@ on:
       - "pytest.ini"
       - "scripts/ci/push-images-with-retry.sh"
       - ".github/workflows/private-platform-deploy.yml"
+      - "scripts/ci/**"
   workflow_dispatch:
 
 permissions:

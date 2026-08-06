@@ -27,6 +27,7 @@ on:
       - "scripts/ci/push-images-with-retry.sh"
       - ".github/workflows/app-deploy.yml"
 
+      - "scripts/ci/**"
   workflow_dispatch:
     inputs:
       environment:
