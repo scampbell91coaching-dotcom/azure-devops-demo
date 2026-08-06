@@ -36,6 +36,7 @@ class AthleteDashboard:
     latest_bodyweight_kg: float | None
     bodyweight_trend: tuple[TrendPoint, ...]
     performance_trend: tuple[TrendPoint, ...]
+    nutrition_history: tuple[NutritionCheckIn, ...]
     latest_coach_response: CoachResponse | None
 
 
@@ -89,8 +90,28 @@ def get_athlete_dashboard(athlete_id: int, *, today: date) -> AthleteDashboard |
         ),
         bodyweight_trend=bodyweight_trend,
         performance_trend=_performance_trend(athlete_id),
+        nutrition_history=_nutrition_history(athlete_id),
         latest_coach_response=_latest_coach_response(athlete_id),
     )
+
+
+def _nutrition_history(athlete_id: int) -> tuple[NutritionCheckIn, ...]:
+    items = (
+        NutritionCheckIn.query.filter_by(athlete_id=athlete_id)
+        .order_by(NutritionCheckIn.checkin_date.desc(), NutritionCheckIn.id.desc())
+        .limit(12)
+        .all()
+    )
+    for index, item in enumerate(items):
+        older = items[index + 1] if index + 1 < len(items) else None
+        item.weekly_bodyweight_change_kg = (
+            round(item.bodyweight_kg - older.bodyweight_kg, 2)
+            if older is not None
+            and item.bodyweight_kg is not None
+            and older.bodyweight_kg is not None
+            else None
+        )
+    return tuple(items)
 
 
 def _bodyweight_trend(athlete_id: int) -> tuple[TrendPoint, ...]:

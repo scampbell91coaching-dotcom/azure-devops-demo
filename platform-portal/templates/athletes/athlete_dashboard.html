@@ -75,6 +75,14 @@
         {% if dashboard.latest_bodyweight_kg is not none %}<p class="metric"><span>Latest bodyweight</span><strong>{{ dashboard.latest_bodyweight_kg }} kg</strong></p>{% endif %}
       {% endif %}
       <a class="button button--secondary" href="{{ url_for('athletes.nutrition_checkin_form', athlete_id=dashboard.athlete.id) }}">Add nutrition check-in</a>
+      {% if dashboard.nutrition_history %}
+        <h3>Previous submissions</h3>
+        <ol class="trend-list trend-list--checkins">
+        {% for item in dashboard.nutrition_history %}
+          <li><span>{{ item.checkin_date.strftime('%d %b %Y') }} · Adherence {{ item.nutrition_adherence }}/10{% if item.weekly_bodyweight_change_kg is not none %} · Weight {{ '%+.2f'|format(item.weekly_bodyweight_change_kg) }} kg{% endif %}</span><strong>{{ 'Coach replied' if item.coach_response else 'Awaiting review' }}</strong>{% if item.coach_response %}<p class="coach-response">{{ item.coach_response }}</p>{% endif %}</li>
+        {% endfor %}
+        </ol>
+      {% endif %}
     </section>
 
     <section class="dashboard-card dashboard-card--wide" id="trends">
@@ -91,14 +99,18 @@
           {% endif %}
         </div>
         <div>
-          <h3>Training performance</h3>
-          {% if dashboard.performance_trend %}
+          <h3>Adherence, calories &amp; protein</h3>
+          {% if dashboard.nutrition_history %}
             <ol class="trend-list">
-              {% for point in dashboard.performance_trend %}<li><span>{{ point.recorded_on.strftime('%d %b') }}</span><strong>{{ point.value | int }}/10</strong></li>{% endfor %}
+              {% for item in dashboard.nutrition_history|reverse %}<li><span>{{ item.checkin_date.strftime('%d %b') }}</span><strong>{{ item.nutrition_adherence }}/10 · {{ item.average_calories if item.average_calories is not none else '—' }} kcal · {{ (item.average_protein_g ~ ' g') if item.average_protein_g is not none else '—' }}</strong></li>{% endfor %}
             </ol>
           {% else %}
-            <div class="empty-state"><strong>No performance trend yet</strong><p>Performance scores will appear after nutrition updates.</p></div>
+            <div class="empty-state"><strong>No nutrition trend yet</strong><p>Adherence, calories and protein appear after submissions.</p></div>
           {% endif %}
+        </div>
+        <div>
+          <h3>Training performance</h3>
+          {% if dashboard.performance_trend %}<ol class="trend-list">{% for point in dashboard.performance_trend %}<li><span>{{ point.recorded_on.strftime('%d %b') }}</span><strong>{{ point.value | int }}/10</strong></li>{% endfor %}</ol>{% else %}<div class="empty-state"><strong>No performance trend yet</strong><p>Performance scores will appear after nutrition updates.</p></div>{% endif %}
         </div>
       </div>
       {% if dashboard.recent_checkins %}

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from flask import (
     Blueprint,
@@ -76,6 +76,62 @@ def _required_score(name: str) -> int:
         raise ValueError(name)
 
     return score
+
+
+def _parse_date(name: str, errors: dict[str, str]) -> date | None:
+    value = request.form.get(name, "").strip()
+    # Compatibility for established API/form clients; the browser form always
+    # supplies an explicit required date.
+    if not value:
+        return datetime.now(UTC).date()
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError:
+        errors[name] = "Enter a valid check-in date."
+        return None
+    if parsed > datetime.now(UTC).date():
+        errors[name] = "Check-in date cannot be in the future."
+    return parsed
+
+
+def _number(name: str, label: str, minimum: float, maximum: float, errors: dict[str, str], *, integer: bool = False):
+    value = request.form.get(name, "").strip()
+    if not value:
+        return None
+    try:
+        result = int(value) if integer else float(value)
+    except ValueError:
+        errors[name] = f"{label} must be a number."
+        return None
+    if result < minimum or result > maximum:
+        errors[name] = f"{label} must be between {minimum:g} and {maximum:g}."
+    return result
+
+
+def _nutrition_form_values() -> tuple[dict, dict[str, str]]:
+    errors: dict[str, str] = {}
+    values = {
+        "checkin_date": _parse_date("checkin_date", errors),
+        "bodyweight_kg": _number("bodyweight_kg", "Average bodyweight", 25, 350, errors),
+        "calorie_target": _number("calorie_target", "Calorie target", 500, 10000, errors, integer=True),
+        "average_calories": _number("average_calories", "Average calorie intake", 0, 10000, errors, integer=True),
+        "protein_target_g": _number("protein_target_g", "Protein target", 0, 500, errors, integer=True),
+        "average_protein_g": _number("average_protein_g", "Average protein", 0, 500, errors, integer=True),
+        "carbohydrate_target_g": _number("carbohydrate_target_g", "Carbohydrate target", 0, 1000, errors, integer=True),
+        "average_carbohydrate_g": _number("average_carbohydrate_g", "Average carbohydrate", 0, 1000, errors, integer=True),
+        "fat_target_g": _number("fat_target_g", "Fat target", 0, 400, errors, integer=True),
+        "average_fat_g": _number("average_fat_g", "Average fat", 0, 400, errors, integer=True),
+        "average_fibre_g": _number("average_fibre_g", "Average fibre", 0, 150, errors),
+        "average_fluid_l": _number("average_fluid_l", "Average fluid", 0, 15, errors),
+        "average_steps": _number("average_steps", "Average steps", 0, 100000, errors, integer=True),
+        "average_sleep_hours": _number("average_sleep_hours", "Average sleep", 0, 24, errors),
+    }
+    for name in ("nutrition_adherence", "hunger", "energy", "sleep_quality", "digestion"):
+        try:
+            values[name] = _required_score(name)
+        except (TypeError, ValueError):
+            errors[name] = "Choose a score from 1 to 10."
+    return values, errors
 
 
 @athletes_bp.get("/athletes")
@@ -161,10 +217,16 @@ def athlete_dashboard(athlete_id: int):
 
     checkins = NutritionCheckIn.query.filter_by(athlete_id=athlete.id).all()
 
-    checkins.sort(
-        key=lambda checkin: checkin.submitted_at,
-        reverse=True,
-    )
+    checkins.sort(key=lambda checkin: (checkin.checkin_date, checkin.id), reverse=True)
+    for index, checkin in enumerate(checkins):
+        older = checkins[index + 1] if index + 1 < len(checkins) else None
+        checkin.weekly_bodyweight_change_kg = (
+            round(checkin.bodyweight_kg - older.bodyweight_kg, 2)
+            if older is not None
+            and checkin.bodyweight_kg is not None
+            and older.bodyweight_kg is not None
+            else None
+        )
 
     latest_checkin = checkins[0] if checkins else None
     settings = AthleteCheckinSettings.query.filter_by(athlete_id=athlete.id).first()
@@ -198,7 +260,8 @@ def nutrition_checkin_form(athlete_id: int):
         "athletes/nutrition_checkin.html",
         athlete=athlete,
         errors={},
-        form={},
+        form={"checkin_date": datetime.now(UTC).date().isoformat()},
+        today=datetime.now(UTC).date().isoformat(),
     )
 
 
@@ -209,35 +272,27 @@ def create_nutrition_checkin(athlete_id: int):
     if athlete is None:
         abort(404)
 
-    try:
-        checkin = NutritionCheckIn(
-            athlete=athlete,
-            bodyweight_kg=_optional_float(request.form.get("bodyweight_kg")),
-            average_calories=_optional_int(request.form.get("average_calories")),
-            average_protein_g=_optional_int(request.form.get("average_protein_g")),
-            average_steps=_optional_int(request.form.get("average_steps")),
-            nutrition_adherence=_required_score("nutrition_adherence"),
-            hunger=_required_score("hunger"),
-            energy=_required_score("energy"),
-            sleep_quality=_required_score("sleep_quality"),
-            stress=_required_score("stress"),
-            digestion=_required_score("digestion"),
-            training_performance=_required_score("training_performance"),
-            wins=request.form.get("wins", "").strip() or None,
-            challenges=request.form.get("challenges", "").strip() or None,
-            upcoming_events=request.form.get("upcoming_events", "").strip() or None,
-            questions=request.form.get("questions", "").strip() or None,
-        )
-    except (TypeError, ValueError):
+    values, errors = _nutrition_form_values()
+    if errors:
         return (
             render_template(
                 "athletes/nutrition_checkin.html",
                 athlete=athlete,
-                errors={"scores": "Complete every score using a number from 1 to 10."},
+                errors=errors,
                 form=request.form,
+                today=datetime.now(UTC).date().isoformat(),
             ),
             400,
         )
+    checkin = NutritionCheckIn(
+        athlete=athlete,
+        **values,
+        stress=5,
+        training_performance=values["energy"],
+        wins=request.form.get("wins", "").strip() or None,
+        challenges=request.form.get("challenges", "").strip() or None,
+        questions=request.form.get("questions", "").strip() or None,
+    )
 
     if checkin.bodyweight_kg is not None:
         athlete.bodyweight_kg = checkin.bodyweight_kg
@@ -264,8 +319,12 @@ def review_nutrition_checkin(athlete_id: int, checkin_id: int):
         athlete_id=athlete_id,
     ).first_or_404()
 
-    checkin.coach_response = request.form.get("coach_response", "").strip() or None
-    checkin.reviewed = True
+    response = request.form.get("coach_response", "").strip()
+    if len(response) > 5000:
+        abort(400, description="Coach response must be 5,000 characters or fewer.")
+    checkin.coach_response = response or None
+    checkin.reviewed = request.form.get("review_status", "reviewed") == "reviewed"
+    checkin.reviewed_at = datetime.now(UTC) if checkin.reviewed else None
 
     db.session.commit()
 

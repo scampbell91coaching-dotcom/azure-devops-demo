@@ -38,3 +38,25 @@
   .nutrition-weekly dl { grid-template-columns: 1fr 1fr; }
   .nutrition-card { padding: 1rem; }
 }
+.nutrition-form { display: grid; gap: 1rem; }
+.nutrition-form fieldset { min-width: 0; margin: 0; padding: 1rem; border: 1px solid var(--coach-border); }
+.nutrition-form legend { padding: 0 .4rem; color: var(--coach-heading); font-weight: 800; }
+.nutrition-form-grid, .nutrition-score-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem; }
+.nutrition-field, .nutrition-score-grid label { display: grid; align-content: start; gap: .35rem; }
+.nutrition-field input, .nutrition-score-grid select { width: 100%; min-height: 2.75rem; }
+.nutrition-help { margin-top: 0; color: var(--coach-muted); font-size: .85rem; }
+.nutrition-error-summary { display: grid; gap: .2rem; padding: 1rem; border-left: 4px solid #d85c5c; background: var(--coach-panel); }
+.nutrition-error-summary span { color: var(--coach-muted); }
+.coach-form-error { color: #ffaaaa; }
+.nutrition-alerts { margin: 1rem 0; padding: .8rem; border-left: 3px solid #e0a84d; background: var(--coach-panel-soft); }
+.nutrition-alerts ul { margin: .4rem 0 0; }
+.nutrition-detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .7rem; }
+.nutrition-detail-grid div { padding: .7rem; background: var(--coach-panel-soft); }
+.nutrition-detail-grid dt { color: var(--coach-muted); font-size: .75rem; }
+.nutrition-detail-grid dd { margin: .2rem 0 0; font-weight: 700; }
+@media (max-width: 680px) {
+  .nutrition-form-grid, .nutrition-score-grid { grid-template-columns: 1fr; }
+  .nutrition-form fieldset { padding: .85rem; }
+  .nutrition-form input, .nutrition-form select, .nutrition-form textarea { font-size: 16px; }
+  .nutrition-detail-grid { grid-template-columns: 1fr; }
+}
