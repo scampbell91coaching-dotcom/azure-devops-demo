@@ -31,9 +31,18 @@ test('athlete core workflow fits a 320px phone viewport', async ({ page, athlete
   await expect(page).toHaveURL('/athlete/programme');
   await expect(page.getByRole('heading', { level: 1, name: 'Your programme' })).toBeVisible();
   await page.getByRole('link', { name: /Squat day/ }).click();
-  await expect(page.getByRole('heading', { level: 2, name: 'Competition Squat' })).toBeVisible();
-  await expect(page.getByText('3 × 5')).toBeVisible();
-  await expect(page.getByText('7', { exact: true })).toBeVisible();
+  const squatHeading = page.getByRole('heading', {
+    level: 2,
+    name: 'Competition Squat',
+  });
+  await expect(squatHeading).toBeVisible();
+
+  const squatCard = squatHeading.locator(
+    'xpath=ancestor::*[self::article or contains(@class, "exercise") or contains(@class, "session")][1]',
+  );
+
+  await expect(squatCard).toContainText('3 × 5');
+  await expect(squatCard).toContainText(/(?:RPE|@)\s*7(?:\.0)?/i);
   await expect(page.locator('html')).toHaveJSProperty('scrollWidth', 320);
 });
 
