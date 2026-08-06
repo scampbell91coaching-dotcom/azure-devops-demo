@@ -189,11 +189,50 @@ test('Block Factory adds ordered upper and lower accessories and persists genera
     page.locator('select[name="accessory_exercise_id"]').nth(1),
     'Bulgarian Split Squat'
   );
+  await page.getByRole('button', { name: 'Preview' }).click();
+  const firstPreview = page.locator('.factory-preview__day').first();
+  const previewText = await firstPreview.locator('li').allTextContents();
+  expect(previewText.findIndex(text => text.includes('Cable Row'))).toBeLessThan(
+    previewText.findIndex(text => text.includes('Bulgarian Split Squat'))
+  );
   await page.getByRole('button', { name: 'Generate block' }).click();
   await expect(page.getByRole('heading', { name: 'Catalogue accessory block' })).toBeVisible();
   await page.getByRole('link', { name: /Week 1/ }).click();
   await expect(page.getByText('Cable Row').first()).toBeVisible();
   await expect(page.getByText('Bulgarian Split Squat').first()).toBeVisible();
+});
+
+test('Block Factory previews Standard role-balanced accessory volume', async ({ page }) => {
+  await page.goto('/programming/factory');
+  await page.locator('select[name="athlete_id"]').selectOption('101');
+  await page.locator('input[name="training_days"]').fill('3');
+  await page.locator('input[name="squat_frequency"]').fill('0');
+  await page.locator('input[name="bench_frequency"]').fill('3');
+  await page.locator('input[name="deadlift_frequency"]').fill('0');
+  await page.locator('select[name="accessory_volume"]').selectOption('standard');
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await expect(page.locator('.factory-preview__count')).toHaveCount(3);
+  await expect(page.locator('.factory-preview__count').first()).toContainText('4 accessories');
+  await expect(page.locator('.factory-preview__day').first()).toContainText('balancing');
+});
+
+test('Block Factory previews High and exact Custom accessory volume', async ({ page }) => {
+  await page.goto('/programming/factory');
+  await page.locator('select[name="athlete_id"]').selectOption('101');
+  await page.locator('select[name="accessory_volume"]').selectOption('high');
+  await page.getByRole('button', { name: 'Preview' }).click();
+  for (const count of await page.locator('.factory-preview__count').allTextContents()) {
+    expect(Number(count.match(/\d+/)?.[0])).toBeGreaterThanOrEqual(5);
+    expect(Number(count.match(/\d+/)?.[0])).toBeLessThanOrEqual(6);
+  }
+
+  await page.locator('select[name="accessory_volume"]').selectOption('custom');
+  await page.locator('input[name="accessory_count_min"]').fill('4');
+  await page.locator('input[name="accessory_count_max"]').fill('4');
+  await page.getByRole('button', { name: 'Preview' }).click();
+  for (const count of await page.locator('.factory-preview__count').allTextContents()) {
+    expect(count).toContain('4 accessories · target 4');
+  }
 });
 
 test(
