@@ -62,6 +62,25 @@ def seed_database(app: Flask) -> None:
             reps="5",
             rpe=7.0,
         )
+
+        mobile_session = db.session.get(TrainingSession, 502) or TrainingSession(
+            id=502,
+            week=week,
+            name="Mobile test session",
+            day_label="Tuesday",
+            position=2,
+        )
+        mobile_prescription = db.session.get(
+            ExercisePrescription, 602
+        ) or ExercisePrescription(
+            id=602,
+            session=mobile_session,
+            exercise_name="Competition Squat",
+            position=1,
+            sets=3,
+            reps="5",
+            rpe=7.0,
+        )
         settings = AthleteCheckinSettings.query.filter_by(
             athlete_id=alex.id
         ).one_or_none() or AthleteCheckinSettings(
@@ -140,6 +159,8 @@ def seed_database(app: Flask) -> None:
                 week,
                 session,
                 prescription,
+                mobile_session,
+                mobile_prescription,
                 settings,
                 squat,
                 pulldown,

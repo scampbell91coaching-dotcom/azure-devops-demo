@@ -69,7 +69,7 @@ for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
     await athleteSession(page.request, athleteIds.primary);
 
-    for (const route of ['/athlete/dashboard', '/athlete/programme', '/athlete/programme/sessions/501']) {
+    for (const route of ['/athlete/dashboard', '/athlete/programme', '/athlete/programme/sessions/502']) {
       await page.goto(route);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(page.getByRole('navigation', { name: 'Athlete navigation' }).last()).toBeVisible();

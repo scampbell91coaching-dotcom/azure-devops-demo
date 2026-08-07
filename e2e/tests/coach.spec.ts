@@ -33,7 +33,9 @@ test('navigates from a programming block to its week', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Deterministic strength block' })).toBeVisible();
   await page.getByRole('link', { name: /Foundation week/ }).click();
   await expect(page.getByRole('heading', { name: 'Foundation week' })).toBeVisible();
-  await expect(page.getByText('Competition Squat')).toBeVisible();
+  await expect(
+    page.locator('#session-501').getByText('Competition Squat')
+  ).toBeVisible();
 });
 
 test('filters the exercise library', async ({ page }) => {
