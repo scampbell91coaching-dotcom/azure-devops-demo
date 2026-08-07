@@ -26,11 +26,17 @@
   <header class="coach-topbar">
     <div class="coach-topbar__inner">
       <a class="coach-brand" href="{{ url_for('coach_dashboard.index') }}">
-        <span class="coach-brand__mark" aria-hidden="true">TS</span>
+        <img
+          class="coach-brand__logo"
+          src="{{ url_for('static', filename='img/traditional-strength-logo.png') }}"
+          alt=""
+          width="1170"
+          height="1675"
+        >
 
         <span class="coach-brand__copy">
-          <strong>Traditional Strength Platform</strong>
-          <small>Coaching</small>
+          <strong>Traditional Strength</strong>
+          <small>Coach platform</small>
         </span>
       </a>
 
@@ -41,7 +47,8 @@
         aria-controls="coach-navigation"
         data-coach-menu-button
       >
-        Menu
+        <span>Menu</span>
+        <span class="coach-menu-button__icon" aria-hidden="true"></span>
       </button>
 
       <nav
@@ -50,7 +57,6 @@
         aria-label="Traditional Strength Platform"
         data-coach-navigation
       >
-        <span class="coach-navigation__group">Coaching</span>
         <a
           href="{{ url_for('coach_dashboard.index') }}"
           {% if coach_section == "dashboard" %}aria-current="page"{% endif %}
@@ -65,23 +71,7 @@
           Athletes
         </a>
 
-        <a
-          href="https://traditionalstrength.co.uk/apply"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Applications
-        </a>
-
-        <a
-          href="/exercise-library"
-          {% if coach_section == "exercise_library" %}aria-current="page"{% endif %}
-        >
-          Exercises
-        </a>
-
         <a href="/programming" {% if coach_section == "programming" %}aria-current="page"{% endif %}>Programming</a>
-        <span class="coach-navigation__group">Operations</span>
         <a
           href="{{ url_for('checkins.index') }}"
           {% if coach_section == "checkins" %}aria-current="page"{% endif %}
@@ -91,18 +81,45 @@
           aria-label="Meet Prep: Meet Day"
           {% if coach_section == "meet_day" %}aria-current="page"{% endif %}
         >Meet Day</a>
+
+        <details class="coach-more" data-coach-more>
+          <summary>More <span aria-hidden="true">⌄</span></summary>
+          <div class="coach-more__menu">
+            <a
+              href="/exercise-library"
+              {% if coach_section == "exercise_library" %}aria-current="page"{% endif %}
+            >Exercise Library</a>
+            <a
+              href="https://traditionalstrength.co.uk/apply"
+              target="_blank"
+              rel="noreferrer"
+            >Applications <span class="coach-external-mark" aria-hidden="true">↗</span></a>
+            <a href="/">Operations</a>
+          </div>
+        </details>
+
+        <div class="coach-navigation__account">
+          {% if current_user %}
+            <span class="coach-user">
+              <span class="coach-user__email">{{ current_user.email }}</span>
+              <span class="coach-user__role">{{ current_user.role }}</span>
+            </span>
+          {% endif %}
+          <form method="post" action="{{ url_for('auth.logout') }}">
+            <button class="coach-signout" type="submit">Sign out</button>
+          </form>
+        </div>
       </nav>
 
       <div class="coach-topbar__actions">
-        {% if current_user %}<span class="coach-user">{{ current_user.email }} · {{ current_user.role }}</span>{% endif %}
-        <a
-          class="coach-link-button"
-          href="/"
-        >
-          Platform
-        </a>
+        {% if current_user %}
+          <span class="coach-user" title="{{ current_user.email }}">
+            <span class="coach-user__email">{{ current_user.email }}</span>
+            <span class="coach-user__role">{{ current_user.role }}</span>
+          </span>
+        {% endif %}
         <form method="post" action="{{ url_for('auth.logout') }}">
-          <button class="coach-link-button" type="submit">Sign out</button>
+          <button class="coach-signout" type="submit">Sign out</button>
         </form>
       </div>
     </div>
