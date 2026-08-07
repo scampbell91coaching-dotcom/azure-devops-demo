@@ -1,0 +1,98 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "applications" %}
+{% block title %}{{ application.first_name }} {{ application.last_name }} | Applications{% endblock %}
+
+{% macro answer(label, value, fallback='Not provided') -%}
+<div><dt>{{ label }}</dt><dd>{{ value if value is not none and value != '' else fallback }}</dd></div>
+{%- endmacro %}
+
+{% macro readiness(label, value) -%}
+<div><dt>{{ label }}</dt><dd><span class="readiness readiness--{{ 'yes' if value else 'no' }}">{{ 'Yes' if value else 'No' }}</span></dd></div>
+{%- endmacro %}
+
+{% block content %}
+<article class="coach-page application-detail">
+  <header class="coach-page__header application-detail__header">
+    <a class="coach-back-link" href="{{ url_for('coach_applications.index') }}">← Applications inbox</a>
+    <div class="application-detail__heading">
+      <div>
+        <span class="coach-eyebrow">Submitted <time datetime="{{ application.submitted_at.isoformat() }}">{{ application.submitted_at.strftime('%d %b %Y at %H:%M') }}</time></span>
+        <h1>{{ application.first_name }} {{ application.last_name }}</h1>
+        <p><a href="mailto:{{ application.email }}">{{ application.email }}</a>{% if application.instagram %} · Instagram: {{ application.instagram }}{% endif %}</p>
+      </div>
+      <span class="application-status application-status--{{ application.status }}" aria-label="Current status: {{ application.status }}">{{ application.status | title }}</span>
+    </div>
+  </header>
+
+  <section class="coach-panel status-workflow" aria-labelledby="status-heading">
+    <div><span class="coach-eyebrow">Workflow</span><h2 id="status-heading">Application status</h2></div>
+    <form class="status-form" method="post" action="{{ url_for('coach_applications.update_status', application_id=application.id) }}">
+      <label for="application-status">Update status</label>
+      <select id="application-status" name="status">
+        {% for status in application_statuses %}<option value="{{ status }}"{% if status == application.status %} selected{% endif %}>{{ status | title }}</option>{% endfor %}
+      </select>
+      <button class="coach-primary-button" type="submit">Save status</button>
+    </form>
+  </section>
+
+  <div class="application-detail__grid">
+    <section class="coach-panel" aria-labelledby="identity-heading">
+      <div class="coach-panel__heading"><span class="coach-eyebrow">Applicant</span><h2 id="identity-heading">Identity & contact</h2></div>
+      <dl class="answer-list">
+        {{ answer('Name', application.first_name ~ ' ' ~ application.last_name) }}
+        {{ answer('Email', application.email) }}
+        {{ answer('Instagram', application.instagram) }}
+        {{ answer('Country', application.country) }}
+        {{ answer('Age', application.age) }}
+        {{ answer('Bodyweight', (application.bodyweight_kg | string) ~ ' kg' if application.bodyweight_kg is not none else none) }}
+      </dl>
+    </section>
+
+    <section class="coach-panel" aria-labelledby="training-heading">
+      <div class="coach-panel__heading"><span class="coach-eyebrow">Background</span><h2 id="training-heading">Training history</h2></div>
+      <dl class="answer-list">
+        {{ answer('Training age', (application.years_training | string) ~ ' years' if application.years_training is not none else none) }}
+        {{ answer('Training days per week', application.training_days) }}
+        {{ answer('Squat', (application.squat_kg | string) ~ ' kg' if application.squat_kg is not none else none) }}
+        {{ answer('Bench', (application.bench_kg | string) ~ ' kg' if application.bench_kg is not none else none) }}
+        {{ answer('Deadlift', (application.deadlift_kg | string) ~ ' kg' if application.deadlift_kg is not none else none) }}
+        {{ answer('Current programme', application.current_program) }}
+        {{ answer('Previous coaching', application.previous_coaching) }}
+      </dl>
+    </section>
+
+    <section class="coach-panel application-detail__wide" aria-labelledby="goals-heading">
+      <div class="coach-panel__heading"><span class="coach-eyebrow">Direction</span><h2 id="goals-heading">Goals & challenges</h2></div>
+      <dl class="answer-list answer-list--prose">
+        {{ answer('Primary goal', application.primary_goal) }}
+        {{ answer('Biggest problem', application.biggest_problem) }}
+        {{ answer('Next competition', application.next_competition) }}
+        {{ answer('Injury history', application.injury_history) }}
+      </dl>
+    </section>
+
+    <section class="coach-panel" aria-labelledby="coaching-heading">
+      <div class="coach-panel__heading"><span class="coach-eyebrow">Fit</span><h2 id="coaching-heading">Coaching expectations</h2></div>
+      <dl class="answer-list answer-list--prose">{{ answer('What they need from a coach', application.coaching_expectations) }}</dl>
+    </section>
+
+    <section class="coach-panel" aria-labelledby="readiness-heading">
+      <div class="coach-panel__heading"><span class="coach-eyebrow">Commitment</span><h2 id="readiness-heading">Readiness</h2></div>
+      <dl class="answer-list">
+        {{ readiness('Ready to send training videos', application.video_feedback_ready) }}
+        {{ readiness('Ready for regular communication', application.communication_ready) }}
+        {{ readiness('Ready for the minimum term', application.minimum_term_ready) }}
+      </dl>
+    </section>
+
+    <section class="coach-panel application-detail__wide" aria-labelledby="final-heading">
+      <div class="coach-panel__heading"><span class="coach-eyebrow">Final answers</span><h2 id="final-heading">Referral & anything else</h2></div>
+      <dl class="answer-list answer-list--prose">
+        {{ answer('How they heard about coaching', application.referral_source) }}
+        {{ answer('Anything else', application.anything_else) }}
+        {{ readiness('Privacy consent', application.privacy_consent) }}
+      </dl>
+    </section>
+  </div>
+</article>
+{% endblock %}

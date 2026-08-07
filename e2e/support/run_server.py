@@ -24,7 +24,15 @@ def main() -> None:
     args = parser.parse_args()
 
     run_token = require_test_only_environment()
-    database = create_disposable_database(ROOT / ".tmp")
+    shared_database = os.getenv("E2E_DATABASE_PATH")
+    database = Path(shared_database) if shared_database else create_disposable_database(ROOT / ".tmp")
+    if shared_database:
+        allowed_root = (ROOT / ".tmp").resolve()
+        database = database.resolve()
+        if allowed_root not in database.parents:
+            raise RuntimeError("E2E_DATABASE_PATH must be inside the repository .tmp directory")
+        database.parent.mkdir(parents=True, exist_ok=True)
+        database.touch(exist_ok=True)
     atexit.register(database.unlink, missing_ok=True)
     os.environ["DATABASE_URL"] = f"sqlite:///{database}"
 

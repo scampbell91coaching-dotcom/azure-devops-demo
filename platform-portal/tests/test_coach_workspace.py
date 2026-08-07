@@ -12,6 +12,8 @@ def test_coach_base_has_dedicated_navigation():
     assert "Programming" in text
     assert "Check-ins" in text
     assert "Meet Prep" in text
+    assert "coach_applications.index" in text
+    assert "traditionalstrength.co.uk/apply" not in text
 
 
 def test_athlete_pages_use_coach_base():
