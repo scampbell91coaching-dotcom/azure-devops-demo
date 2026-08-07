@@ -23,6 +23,10 @@ database:
 
 migration:
   enabled: true
+  # CURRENT STATE: migration and runtime use the same credential. Change these
+  # only after the restricted runtime role and separate Key Vault value exist.
+  secretName: flask-runtime-secrets
+  secretKey: DATABASE_URL
   command:
     - flask
     - db

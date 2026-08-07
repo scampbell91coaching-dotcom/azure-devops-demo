@@ -26,6 +26,11 @@ database:
 
 migration:
   enabled: false
+  # Defaults preserve the current single-credential deployment. Point these at
+  # a separately provisioned owner/migration Secret before enabling production
+  # privilege separation; never put the connection string in Helm values.
+  secretName: flask-runtime-secrets
+  secretKey: DATABASE_URL
   command:
     - flask
     - db
