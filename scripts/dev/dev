@@ -13,7 +13,9 @@ fail() {
 have() { command -v "$1" >/dev/null 2>&1; }
 
 portal_python() {
-  if [[ -x "$PORTAL/.venv/bin/python" ]]; then
+  if [[ -x "$REPO_ROOT/.venv/bin/python" ]]; then
+    printf '%s\n' "$REPO_ROOT/.venv/bin/python"
+  elif [[ -x "$PORTAL/.venv/bin/python" ]]; then
     printf '%s\n' "$PORTAL/.venv/bin/python"
   else
     command -v python3
@@ -21,7 +23,9 @@ portal_python() {
 }
 
 portal_ruff() {
-  if [[ -x "$PORTAL/.venv/bin/ruff" ]]; then
+  if [[ -x "$REPO_ROOT/.venv/bin/ruff" ]]; then
+    printf '%s\n' "$REPO_ROOT/.venv/bin/ruff"
+  elif [[ -x "$PORTAL/.venv/bin/ruff" ]]; then
     printf '%s\n' "$PORTAL/.venv/bin/ruff"
   else
     command -v ruff
