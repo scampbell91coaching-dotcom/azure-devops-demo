@@ -72,8 +72,14 @@ for (const width of [320, 390, 430]) {
 }
 
 test('guide offers a contextual route into coaching', async ({ page }) => {
-  await page.goto('/guides/shoulder-pain');
+  const publicBaseUrl =
+    process.env.E2E_PUBLIC_BASE_URL ?? 'http://127.0.0.1:8092';
+
+  await page.goto(`${publicBaseUrl}/guides/shoulder-pain`);
   await page.getByRole('link', { name: 'Explore coaching' }).click();
-  await expect(page).toHaveURL(/\/apply$/);
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Coaching built around');
+
+  await expect(page).toHaveURL(`${publicBaseUrl}/apply`);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(
+    'Coaching built around'
+  );
 });
