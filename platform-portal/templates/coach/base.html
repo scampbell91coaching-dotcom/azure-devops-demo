@@ -87,6 +87,10 @@
           {% if coach_section == "checkins" %}aria-current="page"{% endif %}
         >Check-ins</a>
         <a
+          href="{{ url_for('athletes.nutrition_dashboard') }}"
+          {% if coach_section == "nutrition" %}aria-current="page"{% endif %}
+        >Nutrition</a>
+        <a
           href="{{ url_for('meet_day.index') }}"
           aria-label="Meet Prep: Meet Day"
           {% if coach_section == "meet_day" %}aria-current="page"{% endif %}

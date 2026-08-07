@@ -3,17 +3,36 @@
 {% block title %}Check-ins{% endblock %}
 {% block content %}
 <section class="coach-page">
-  <header class="coach-page__header"><h1>Check-ins</h1></header>
+  <header class="coach-page__header coach-page__header--split">
+    <div>
+      <span class="coach-eyebrow">Athlete review</span>
+      <h1>Check-ins</h1>
+      <p>Review the newest athlete updates first and close the feedback loop.</p>
+    </div>
+    <div class="coach-inbox-summary" aria-label="Check-in summary">
+      <strong>{{ checkins | selectattr('status', 'ne', 'reviewed') | list | length }}</strong>
+      <span>awaiting review</span>
+    </div>
+  </header>
   <section class="coach-panel">
-    {% for item in checkins %}
-      <p>
-        <a href="{{ url_for('checkins.detail', checkin_id=item.id) }}">
-          {{ item.athlete.full_name }} · {{ item.week_ending }} · {{ "Reviewed" if item.status == "reviewed" else "Pending review" }}
-        </a>
-      </p>
+    {% if checkins %}
+      <div class="coach-inbox-list" aria-label="Submitted check-ins">
+      {% for item in checkins %}
+        <article class="coach-inbox-item">
+          <div class="coach-inbox-item__body">
+            <span class="coach-status coach-status--{{ 'active' if item.status == 'reviewed' else 'pending' }}">{{ "Reviewed" if item.status == "reviewed" else "Pending review" }}</span>
+            <h2><a href="{{ url_for('checkins.detail', checkin_id=item.id) }}">{{ item.athlete.full_name }}</a></h2>
+            <p>Week ending <time datetime="{{ item.week_ending.isoformat() }}">{{ item.week_ending.strftime('%d %b %Y') }}</time></p>
+          </div>
+          <a class="{{ 'coach-link-button' if item.status == 'reviewed' else 'coach-primary-button' }}" href="{{ url_for('checkins.detail', checkin_id=item.id) }}">
+            {{ "View check-in" if item.status == "reviewed" else "Review check-in" }}
+          </a>
+        </article>
+      {% endfor %}
+      </div>
     {% else %}
       <div class="coach-empty-state"><h2>No weekly check-ins yet</h2><p>Submitted athlete check-ins will appear here for review.</p></div>
-    {% endfor %}
+    {% endif %}
   </section>
 </section>
 {% endblock %}
