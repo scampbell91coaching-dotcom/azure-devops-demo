@@ -7,10 +7,15 @@ on:
     paths:
       - "platform-portal/**"
       - "lead-magnets-chart/**"
+      - "scripts/gitops/**"
       - ".github/workflows/lead-magnets-deploy.yml"
   workflow_dispatch:
 permissions:
   contents: read
+
+concurrency:
+  group: lead-magnets-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   ACR_LOGIN_SERVER: stevedevopslab6280.azurecr.io
@@ -90,41 +95,9 @@ jobs:
 
           docker push "$IMAGE"
 
-      - name: Update GitOps image tag
+      - name: Commit GitOps update safely
         run: |
           set -euo pipefail
-
-          python3 - <<'PY'
-          from pathlib import Path
-          import os
-          import re
-
-          path = Path("lead-magnets-chart/values.yaml")
-          text = path.read_text()
-
-          text = re.sub(
-              r"(?m)^  tag: .+$",
-              f"  tag: {os.environ['GITHUB_SHA']}",
-              text,
-              count=1,
-          )
-
-          path.write_text(text)
-          PY
-
-      - name: Commit GitOps update
-        run: |
-          set -euo pipefail
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add lead-magnets-chart/values.yaml
-
-          if git diff --cached --quiet; then
-            echo "No values change required."
-            exit 0
-          fi
-
-          git commit -m "chore(lead-magnets): deploy ${GITHUB_SHA::7}"
-          git push
+          python3 scripts/gitops/promote_image.py \
+            lead-magnets "$GITHUB_SHA" \
+            "chore(lead-magnets): deploy ${GITHUB_SHA::7}"
