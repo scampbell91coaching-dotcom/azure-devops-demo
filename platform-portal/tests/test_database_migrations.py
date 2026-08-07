@@ -88,6 +88,19 @@ def test_upgrade_and_schema_verification_on_empty_sqlite(tmp_path: Path):
 
     with app.app_context():
         assert EXPECTED_TABLES <= set(inspect(db.engine).get_table_names())
+        exercise_columns = {
+            column["name"] for column in inspect(db.engine).get_columns("exercises")
+        }
+        assert {
+            "lift_family",
+            "movement_pattern",
+            "specificity",
+            "technical_purposes",
+            "equipment_options",
+            "constraint_tags",
+            "variation_of",
+            "swap_group",
+        } <= exercise_columns
 
 
 def test_athlete_state_upgrade_preserves_existing_athletes(tmp_path: Path):

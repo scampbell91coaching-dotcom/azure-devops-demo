@@ -40,6 +40,14 @@ class Exercise(db.Model):  # type: ignore[name-defined]
     progressions = db.Column(db.Text, nullable=True)
     cautions = db.Column(db.Text, nullable=True)
     competition_relevance = db.Column(db.String(40), nullable=True)
+    lift_family = db.Column(db.String(20), nullable=True, index=True)
+    movement_pattern = db.Column(db.String(40), nullable=True, index=True)
+    specificity = db.Column(db.String(30), nullable=True)
+    technical_purposes = db.Column(db.Text, nullable=True)
+    equipment_options = db.Column(db.Text, nullable=True)
+    constraint_tags = db.Column(db.Text, nullable=True)
+    variation_of = db.Column(db.String(160), nullable=True)
+    swap_group = db.Column(db.String(80), nullable=True, index=True)
     prescription_styles = db.Column(db.Text, nullable=True)
     rep_ranges = db.Column(db.String(80), nullable=True)
     warmup_suitable = db.Column(db.Boolean, nullable=False, default=False)
@@ -88,6 +96,14 @@ def ensure_exercise_knowledge_columns() -> None:
         "warmup_suitable": "BOOLEAN NOT NULL DEFAULT 0",
         "accessory_suitable": "BOOLEAN NOT NULL DEFAULT 0",
         "catalogue_version": "INTEGER",
+        "lift_family": "VARCHAR(20)",
+        "movement_pattern": "VARCHAR(40)",
+        "specificity": "VARCHAR(30)",
+        "technical_purposes": "TEXT",
+        "equipment_options": "TEXT",
+        "constraint_tags": "TEXT",
+        "variation_of": "VARCHAR(160)",
+        "swap_group": "VARCHAR(80)",
     }
     existing_columns = {
         column["name"] for column in inspect(db.engine).get_columns("exercises")

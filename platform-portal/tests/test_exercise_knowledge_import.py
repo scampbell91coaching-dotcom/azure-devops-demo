@@ -97,7 +97,12 @@ def test_bundled_production_dataset_imports_cleanly():
             "invalid": 0,
         }
         assert Exercise.query.count() == 342
-        assert exercise.catalogue_version == 4
+        assert exercise.catalogue_version == 6
+        assert exercise.lift_family == "bench"
+        assert exercise.movement_pattern == "horizontal_press"
+        assert exercise.specificity == "competition"
+        assert exercise.variation_of is None
+        assert exercise.swap_group == "bench:horizontal_press"
         assert exercise.id == original_id
         assert exercise.competition_relevance == "direct"
         assert json.loads(exercise.aliases) == ["Comp Bench", "Competition Bench"]
@@ -235,6 +240,37 @@ def test_import_counts_malformed_records_without_persisting_them():
         assert Exercise.query.filter_by(name="Tempo Front Squat").count() == 1
 
 
+def test_v6_import_rejects_missing_or_inconsistent_swap_metadata():
+    valid_v6 = exercise_record(
+        lift_family="squat",
+        movement_pattern="squat",
+        specificity="close_variation",
+        technical_purposes=["technique_variation"],
+        equipment_options=["barbell"],
+        constraint_tags=[],
+        variation_of="Competition Squat",
+        swap_group="squat:squat",
+    )
+    invalid = [
+        {key: value for key, value in valid_v6.items() if key != "swap_group"},
+        {**valid_v6, "lift_family": "bench"},
+        {**valid_v6, "specificity": "competition"},
+        {**valid_v6, "technical_purposes": []},
+        {**valid_v6, "equipment_options": []},
+    ]
+    app = create_test_app()
+    with app.app_context():
+        result = import_exercise_knowledge(
+            [*invalid, valid_v6], catalogue_version=6
+        )
+        assert result.as_dict() == {
+            "inserted": 1,
+            "updated": 0,
+            "skipped": 0,
+            "invalid": 5,
+        }
+
+
 def test_alias_and_canonical_names_deduplicate_across_punctuation_and_case():
     app = create_test_app()
 
@@ -273,7 +309,7 @@ def test_catalogue_meets_starter_coverage_targets():
     payload = json.loads(DEFAULT_DATA_PATH.read_text(encoding="utf-8"))
     records = payload["exercises"]
 
-    assert payload["schema_version"] == 4
+    assert payload["schema_version"] == 6
     assert 300 <= len(records) <= 400
     assert sum(item["movement"] == "squat" for item in records) >= 20
     assert sum(item["movement"] == "bench" for item in records) >= 20
@@ -281,6 +317,15 @@ def test_catalogue_meets_starter_coverage_targets():
     assert sum(item["movement"] == "accessory" for item in records) >= 100
     assert sum(item["movement"] == "warmup" for item in records) >= 30
     assert len({item["name"].casefold() for item in records}) == len(records)
+    assert all(item["movement_pattern"] for item in records)
+    assert all(item["swap_group"] for item in records)
+    assert all(item["equipment_options"] for item in records)
+    assert all(item["technical_purposes"] for item in records)
+    assert all(
+        item["lift_family"] == item["movement"]
+        for item in records
+        if item["movement"] in {"squat", "bench", "deadlift"}
+    )
 
     families = {item["family"] for item in records}
     categories = {item["category"] for item in records}
