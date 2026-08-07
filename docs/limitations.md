@@ -60,3 +60,23 @@ Small pools, a burstable database SKU, single-region deployment, and limited tel
 6. Define multi-region recovery only from measured business requirements.
 
 See [roadmap.md](roadmap.md) for version ownership and exit criteria.
+
+## Future V6 and SaaS boundary
+
+No current manifest, Terraform resource or application model establishes a
+multi-tenant SaaS control plane. A future V6/SaaS description must therefore be
+treated as product architecture work, not an extension already provided by the
+current AKS deployment. The following are not evidenced as implemented:
+
+- tenant-scoped identity, authorization and database isolation;
+- tenant provisioning, lifecycle, quotas or per-tenant configuration;
+- subscription billing, metering or entitlement enforcement;
+- tenant-specific encryption keys, backup/restore or data residency;
+- auditable administrative impersonation and support access;
+- per-tenant SLOs, cost attribution and noisy-neighbour controls; and
+- a migration path from the shared Flask/PostgreSQL deployment to those
+  boundaries.
+
+Future design should begin with business tenancy and data-isolation
+requirements. It should not assume microservices, multiple clusters or a
+service mesh until those requirements and measured load justify them.

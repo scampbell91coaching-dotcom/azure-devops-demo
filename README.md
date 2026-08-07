@@ -13,21 +13,18 @@ Traditional Strength is both a working coaching product and a platform-engineeri
 
 Its business purpose is to provide a dependable online home for strength-coaching workflows while creating a platform that can evolve without manual server configuration. Version 1 establishes the production foundation: repeatable infrastructure, private database connectivity, controlled secret delivery, immutable releases, and an auditable GitOps path.
 
-## Version 1 status
+## Version 1 repository status
 
-Version 1 is complete and running in production. The verified final state is:
+The repository declares the Version 1 production foundation: two Terraform
+roots, separate AKS System and User pools, private PostgreSQL networking, Key
+Vault/External Secrets delivery, Helm and raw-manifest workloads, Argo CD
+reconciliation, and path-scoped CI/CD gates. Historical screenshots and
+committed resilience output record point-in-time deployments, but are not proof
+of current live status. No live system was inspected for this documentation.
 
-- Argo CD application `flask-web-production`: **Synced** and **Healthy**.
-- `https://traditionalstrength.co.uk/health`: **healthy**.
-- Azure infrastructure is managed through two Terraform roots.
-- AKS has a dedicated system pool and an autoscaling production User pool.
-- Application and migration workloads select nodes labelled `workload=production`.
-- PostgreSQL Flexible Server has public access disabled and is reached through private DNS and bidirectional VNet peering.
-- Azure Key Vault, Workload Identity, and External Secrets supply runtime secrets.
-- Helm defines the release; Argo CD reconciles it from `main`.
-- GitHub Actions validate application, infrastructure, security, browser tests, tooling, and releases.
-
-The one deferred AKS control is host encryption on the production User pool. Azure could not create the temporary rotation node because the East US 2 regional vCPU quota was exhausted. The narrowly scoped `CKV_AZURE_227` exception and exit criteria are recorded in [the production backlog](docs/production-backlog.md).
+Production User-pool host encryption remains explicitly absent from Terraform;
+the recorded quota blocker and exit criteria are in the
+[production backlog](docs/production-backlog.md).
 
 ## Architecture
 
@@ -47,9 +44,10 @@ flowchart LR
     ESO --> App
 ```
 
-See [architecture.md](docs/architecture.md) for the complete platform, delivery, node-pool, networking, and secret-flow diagrams.
-The audited Azure network boundaries, DNS dependencies, public exposure, and
-private-access prerequisites are recorded in [networking.md](docs/networking.md).
+Use the [documentation index](docs/README.md) as the review entry point. The
+[architecture](docs/architecture.md), [security architecture](docs/security.md)
+and [operations and recovery](docs/operations.md) documents form the concise
+evidence-scoped core. Network details are in [networking.md](docs/networking.md).
 
 ## Azure infrastructure
 
@@ -70,7 +68,10 @@ The Helm chart's default `nodeSelector` sends both the Deployment and migration 
 
 The production container runs the Flask portal behind Gunicorn. The Helm release provides a rolling Deployment, `ClusterIP` Service, TLS ingress, startup/readiness/liveness probes, a Pod Disruption Budget, resource requests and limits, topology preferences, restrictive security contexts, and ingress/egress NetworkPolicies.
 
-Production is currently in database-cutover mode: one replica, HPA disabled. A reviewed `values-scale-out.yaml` overlay is available only after the database scale-out checks pass. Every install or upgrade first runs `flask db upgrade` as a no-retry Helm hook using the same immutable image as the Deployment.
+Tracked production values declare database-cutover mode: one replica and HPA
+disabled. A `values-scale-out.yaml` overlay exists but is not selected by the
+Argo CD Application. Every install or upgrade first runs `flask db upgrade` as
+a no-retry Helm hook using the same immutable image as the Deployment.
 
 ## PostgreSQL and private networking
 
@@ -121,7 +122,12 @@ helm template flask-web-prod flask-app \
 
 ## Observability and security
 
-Version 1 includes `/health` and `/metrics`, structured application logging, OpenTelemetry/Azure Monitor integration, Application Insights and Log Analytics resources, AKS Container Insights, health probes, and operational runbooks. Repository screenshots also record prior Prometheus and Grafana evidence; production ServiceMonitor, PrometheusRule, and Grafana dashboard resources are deliberately disabled until the live monitoring release and alert routing are validated.
+The production portal includes `/health`, probes and Gunicorn stdout/stderr.
+Terraform declares Application Insights and Log Analytics resources and AKS
+Container Insights wiring. The production portal does not expose `/metrics` or
+initialize OpenTelemetry/Azure Monitor instrumentation. Repository screenshots
+record historical Prometheus/Grafana evidence; ServiceMonitor, PrometheusRule
+and Grafana dashboard resources are disabled in production.
 
 Security controls include OIDC-based CI authentication, Workload Identity, Key Vault, External Secrets, Pod Security `restricted`, non-root containers, dropped Linux capabilities, no privilege escalation, RuntimeDefault seccomp, a read-only root filesystem, NetworkPolicies, immutable image tags, Trivy, Checkov, CodeQL, Dependabot, and SBOM generation. Current gaps are listed under [known limitations](docs/limitations.md).
 
@@ -229,9 +235,9 @@ Additional placeholders for a future evidence refresh: AKS node pools and labels
 
 ## Further documentation
 
-- [Version 1 summary](docs/version-1-summary.md)
+- [Documentation map](docs/README.md)
 - [Architecture](docs/architecture.md)
-- [Interview talking points](docs/interview-talking-points.md)
-- [Operational runbook](docs/runbook.md)
+- [Security architecture](docs/security.md)
+- [Operations and recovery](docs/operations.md)
 - [Engineering decisions](docs/engineering-decisions.md)
-- [Production backlog](docs/production-backlog.md)
+- [Limitations and roadmap](docs/limitations.md)

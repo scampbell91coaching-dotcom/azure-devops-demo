@@ -1,6 +1,10 @@
 # Azure PostgreSQL foundation
 
-This foundation adds an opt-in Azure Database for PostgreSQL Flexible Server for Traditional Strength. It is disabled by default and is not enabled in the tracked development environment. It creates no production resources unless a future, separately reviewed production configuration explicitly opts in.
+This Terraform foundation declares an opt-in Azure Database for PostgreSQL
+Flexible Server for Traditional Strength. The module is conditional, while the
+tracked development environment enables it and the general Terraform workflow
+also passes `postgresql_enabled=true` for `main` plans. This describes desired
+configuration only; no live server was inspected.
 
 ## Architecture and defaults
 
@@ -21,9 +25,12 @@ The password is sensitive Terraform state data because Azure requires it during 
 
 ## Network prerequisite
 
-The current AKS Terraform does not place its node pool in `vnet-devops-lab`. A private PostgreSQL server will therefore not be reachable from AKS until a separately reviewed networking change connects AKS to this VNet (for example, by using an AKS subnet in the VNet or supported peering and DNS forwarding). Do not enable PostgreSQL for an application rollout until private DNS resolution and TCP 5432 reachability have been demonstrated from a disposable pod.
-
-This foundation deliberately does not change the live AKS network because moving an existing cluster can be disruptive.
+The AKS cluster uses an AKS-managed VNet rather than the application VNet. Root
+Terraform declares bidirectional peering between them. The PostgreSQL private
+DNS zone links to the application VNet and to environment-supplied additional
+VNet IDs; the AKS VNet must be included there for pod DNS resolution. Do not
+rely on the database path until private DNS resolution and TCP 5432 reachability
+have been demonstrated from an authorized diagnostic pod.
 
 ## Provisioning safely
 
@@ -50,7 +57,13 @@ This foundation deliberately does not change the live AKS network because moving
 
 5. Review subnet delegation, DNS, server, database, and Key Vault secret changes. This repository change does not authorize `terraform apply`. Applying requires the normal change approval outside this branch.
 
-The `Azure PostgreSQL plan` GitHub Actions workflow runs formatting, validation, and a failing Checkov scan on pull requests. A manual dispatch accepts only the non-secret development server and Key Vault names, authenticates using the existing OIDC secrets, and prints a speculative plan without saving an artifact. It contains no apply job. The older general Terraform workflow can apply on `main`; keep `postgresql_enabled = false` in its tracked tfvars until that workflow is separately changed to an approved plan/apply gate.
+The `Azure PostgreSQL plan` GitHub Actions workflow runs formatting, validation,
+and a failing Checkov scan on pull requests. A manual dispatch accepts only
+non-secret development server and Key Vault names, authenticates with OIDC and
+prints a speculative plan without saving an artifact. It contains no apply job.
+The general Terraform workflow can apply on `main` through the `production`
+GitHub environment and explicitly enables PostgreSQL. The protection rules and
+reviewers for that external environment are not visible in this repository.
 
 Checkov exceptions are documented next to the affected resources. Geo-redundant backup is deliberately optional because it is region-dependent and increases cost (`CKV_AZURE_136`). Private Flexible Server networking uses Azure's delegated-subnet model rather than a Private Endpoint (`CKV2_AZURE_57`). Connection secrets do not receive arbitrary expiry dates (`CKV_AZURE_41`): expiring them without an automated rotation controller would break consumers. Password rotation must instead be scheduled, tested, and coordinated with Key Vault consumers.
 
