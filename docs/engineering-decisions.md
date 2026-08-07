@@ -24,13 +24,13 @@
 
 **Consequences:** Tokens are short-lived and rotation overhead is reduced, but federated subjects and workflow permissions must match exactly.
 
-## ADR-003: External Secrets for Runtime Secrets
+## ADR-003: External Secrets for Runtime and Migration Secrets
 
 **Status:** Accepted
 
-**Context:** The Application Insights connection string must not be stored in Git or Helm values.
+**Context:** Application and database credentials must not be stored in Git or Helm values, and schema credentials should not be attached to long-lived pods.
 
-**Decision:** Store it in Azure Key Vault. External Secrets Operator uses Workload Identity and synchronises it to `flask-runtime-secrets`.
+**Decision:** Store values in Azure Key Vault. External Secrets Operator uses Workload Identity and synchronises separate `flask-runtime-secrets` and `flask-migration-secrets` targets.
 
 **Alternatives:** Manually created Secret, CSI volume mount, direct application Key Vault lookup.
 
@@ -38,21 +38,19 @@
 
 ## ADR-004: NGINX as the Public Entry Point
 
-**Status:** Accepted, remediation required
+**Status:** Accepted
 
 **Decision:** Use NGINX Ingress with cert-manager and Let's Encrypt. The application backend Service should be `ClusterIP`.
 
-**Current deviation:** Production still uses a Flask `LoadBalancer` Service, creating an additional public path.
-
 **Consequences:** Centralised TLS and routing with lower public load-balancer use, but the ingress controller must be monitored and patched.
 
-## ADR-005: Prometheus and Application Insights
+## ADR-005: Observability Resources Remain Opt-in Until End-to-End Wiring Exists
 
 **Status:** Accepted
 
-**Decision:** Use Prometheus and Grafana for platform/application metrics, and OpenTelemetry plus Application Insights for requests, dependencies, exceptions and traces.
+**Decision:** Keep the Prometheus `ServiceMonitor`, alert rules and Grafana dashboard disabled in production until the deployed portal exposes metrics and scrape, storage, notification and ownership paths are validated. Keep Application Insights classified as a resource foundation until the production application is instrumented.
 
-**Consequences:** Stronger coverage across Kubernetes and Azure-native diagnostics, with two telemetry pipelines to maintain.
+**Consequences:** The repository avoids claiming a non-functional monitoring path, but current observability is limited to shallow health, logs and Azure resource foundations.
 
 ## ADR-006: Immutable Git SHA Tags
 
