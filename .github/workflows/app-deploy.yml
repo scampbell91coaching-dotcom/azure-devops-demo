@@ -12,6 +12,8 @@ on:
       - "pytest.ini"
       - ".dockerignore"
       - "flask-app/**"
+      - "kubernetes/external-secrets/**"
+      - "argocd-applications/external-secrets-production.yaml"
       - ".github/workflows/app-deploy.yml"
 
   pull_request:
@@ -23,6 +25,8 @@ on:
       - "pytest.ini"
       - ".dockerignore"
       - "flask-app/**"
+      - "kubernetes/external-secrets/**"
+      - "argocd-applications/external-secrets-production.yaml"
       - ".github/workflows/app-deploy.yml"
 
   workflow_dispatch:
@@ -92,7 +96,9 @@ jobs:
           test -s /tmp/flask-cutover.yaml
           test -s /tmp/flask-scale-out.yaml
           grep -q 'kind: Job' /tmp/flask-cutover.yaml
-          grep -q 'name: DATABASE_URL' /tmp/flask-cutover.yaml
+          test "$(grep -c 'name: DATABASE_URL' /tmp/flask-cutover.yaml)" -eq 2
+          grep -q 'name: "flask-runtime-secrets"' /tmp/flask-cutover.yaml
+          grep -q 'name: "flask-migration-secrets"' /tmp/flask-cutover.yaml
           grep -q 'replicas: 1' /tmp/flask-cutover.yaml
 
       - name: Confirm feature-branch validation boundary

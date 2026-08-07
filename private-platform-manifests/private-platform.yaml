@@ -16,6 +16,8 @@ metadata:
   namespace: production
   labels:
     app: platform-portal-private
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   replicas: 1
   selector:
@@ -34,39 +36,6 @@ spec:
         fsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
-      initContainers:
-        - name: prepare-database
-          image: stevedevopslab6280.azurecr.io/platform-portal-private:141e8f806a4e4bdb73e85e1574f7b8fcd0a1f526
-          command: ["/bin/sh", "-ec"]
-          args:
-            - >-
-              flask db upgrade &&
-              flask seed-exercise-catalogue &&
-              flask seed-programming &&
-              flask verify-production-db
-          env:
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: flask-runtime-secrets
-                  key: DATABASE_URL
-            - name: SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: flask-runtime-secrets
-                  key: SECRET_KEY
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: [ALL]
-          resources:
-            requests:
-              cpu: 25m
-              memory: 64Mi
-            limits:
-              cpu: 250m
-              memory: 256Mi
       containers:
         - name: portal
           image: stevedevopslab6280.azurecr.io/platform-portal-private:141e8f806a4e4bdb73e85e1574f7b8fcd0a1f526
@@ -116,6 +85,74 @@ spec:
             claimName: platform-portal-private-data
         - name: tmp
           emptyDir: {}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: platform-portal-private-migration-
+  namespace: production
+  labels:
+    app: platform-portal-private-migration
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: platform-portal-private-migration
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: stevedevopslab6280.azurecr.io/platform-portal-private:141e8f806a4e4bdb73e85e1574f7b8fcd0a1f526
+          command: ["/bin/sh", "-ec"]
+          args:
+            - >-
+              flask db upgrade &&
+              flask seed-exercise-catalogue &&
+              flask seed-programming &&
+              flask verify-production-db
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: flask-migration-secrets
+                  key: DATABASE_URL
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: flask-runtime-secrets
+                  key: SECRET_KEY
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
 ---
 apiVersion: v1
 kind: Service

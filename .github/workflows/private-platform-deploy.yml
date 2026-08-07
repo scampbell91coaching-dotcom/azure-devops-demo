@@ -7,6 +7,8 @@ on:
       - "platform-portal/**"
       - "private-platform-manifests/**"
       - "argocd-applications/platform-portal-private.yaml"
+      - "argocd-applications/external-secrets-production.yaml"
+      - "kubernetes/external-secrets/**"
       - "e2e/**"
       - "package.json"
       - "package-lock.json"
@@ -19,6 +21,8 @@ on:
       - "platform-portal/**"
       - "private-platform-manifests/**"
       - "argocd-applications/platform-portal-private.yaml"
+      - "argocd-applications/external-secrets-production.yaml"
+      - "kubernetes/external-secrets/**"
       - "e2e/**"
       - "package.json"
       - "package-lock.json"
@@ -95,7 +99,9 @@ jobs:
             grep -c               'image: stevedevopslab6280.azurecr.io/platform-portal-private:'               "$MANIFEST"
           )" -eq 2
 
-          grep -q 'name: DATABASE_URL' "$MANIFEST"
+          test "$(grep -c 'name: DATABASE_URL' "$MANIFEST")" -eq 2
+          grep -q 'name: flask-runtime-secrets' "$MANIFEST"
+          grep -q 'name: flask-migration-secrets' "$MANIFEST"
           grep -q 'name: SECRET_KEY' "$MANIFEST"
 
       - name: Run private application tests
@@ -211,7 +217,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Update both private workload image references
+      - name: Update private runtime and migration image references
         env:
           EXPECTED_IMAGE: ${{ needs.build-scan-push.outputs.image }}
         run: |
@@ -276,9 +282,7 @@ jobs:
               --resource-group "$AKS_RESOURCE_GROUP" \
               --name "$AKS_CLUSTER_NAME" \
               --command "set -eu
-                init_image=\$(kubectl get deployment '$DEPLOYMENT' -n '$NAMESPACE' -o jsonpath='{.spec.template.spec.initContainers[0].image}')
                 portal_image=\$(kubectl get deployment '$DEPLOYMENT' -n '$NAMESPACE' -o jsonpath='{.spec.template.spec.containers[?(@.name==\"portal\")].image}')
-                test \"\$init_image\" = '$EXPECTED_IMAGE'
                 test \"\$portal_image\" = '$EXPECTED_IMAGE'
                 kubectl rollout status deployment/'$DEPLOYMENT' -n '$NAMESPACE' --timeout=5m
                 pod=\$(kubectl get pod -n '$NAMESPACE' -l app='$DEPLOYMENT' -o jsonpath='{.items[0].metadata.name}')
