@@ -17,6 +17,8 @@ from ..models.exercise_library import Exercise
 VALID_MOVEMENTS = {"squat", "bench", "deadlift", "accessory", "warmup"}
 VALID_DIFFICULTIES = {"beginner", "intermediate", "advanced"}
 VALID_COMPETITION_RELEVANCE = {"direct", "high", "moderate", "low", "none"}
+VALID_LIFT_FAMILIES = {"squat", "bench", "deadlift", "none"}
+VALID_SPECIFICITY = {"competition", "close_variation", "general", "preparation"}
 DEFAULT_DATA_PATH = (
     Path(__file__).resolve().parents[2]
     / "data"
@@ -170,6 +172,22 @@ def _validated_values(
     warmup_suitable = record.get("warmup_suitable")
     accessory_suitable = record.get("accessory_suitable")
     active = record.get("active")
+    lift_family = _required_string(record.get("lift_family"), maximum_length=20)
+    movement_pattern = _required_string(
+        record.get("movement_pattern"), maximum_length=40
+    )
+    specificity = _required_string(record.get("specificity"), maximum_length=30)
+    technical_purposes = _validated_string_list(record.get("technical_purposes"))
+    equipment_options = _validated_string_list(record.get("equipment_options"))
+    constraint_tags = _validated_string_list(record.get("constraint_tags"))
+    variation_of_value = record.get("variation_of")
+    variation_of = (
+        None
+        if variation_of_value is None
+        else _required_string(variation_of_value, maximum_length=160)
+    )
+    swap_group = _required_string(record.get("swap_group"), maximum_length=80)
+    requires_v6 = catalogue_version >= 6
 
     if (
         name is None
@@ -210,6 +228,25 @@ def _validated_values(
         or (movement == "warmup" and accessory_suitable)
         or (category == "competition" and relevance != "direct")
         or (category == "competition" and accessory_suitable)
+        or (
+            requires_v6
+            and (
+                lift_family not in VALID_LIFT_FAMILIES
+                or movement_pattern is None
+                or specificity not in VALID_SPECIFICITY
+                or technical_purposes is None
+                or not technical_purposes
+                or equipment_options is None
+                or not equipment_options
+                or constraint_tags is None
+                or swap_group is None
+                or (category == "competition" and specificity != "competition")
+                or (category == "competition" and variation_of is not None)
+                or (category != "competition" and specificity == "competition")
+                or (movement in {"squat", "bench", "deadlift"} and lift_family != movement)
+                or (movement == "warmup" and specificity != "preparation")
+            )
+        )
     ):
         return None
 
@@ -239,6 +276,14 @@ def _validated_values(
         "progressions": json.dumps(progressions),
         "cautions": cautions,
         "competition_relevance": relevance,
+        "lift_family": lift_family,
+        "movement_pattern": movement_pattern,
+        "specificity": specificity,
+        "technical_purposes": json.dumps(technical_purposes) if technical_purposes is not None else None,
+        "equipment_options": json.dumps(equipment_options) if equipment_options is not None else None,
+        "constraint_tags": json.dumps(constraint_tags) if constraint_tags is not None else None,
+        "variation_of": variation_of,
+        "swap_group": swap_group,
         "prescription_styles": json.dumps(prescription_styles),
         "rep_ranges": rep_ranges,
         "warmup_suitable": warmup_suitable,

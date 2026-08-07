@@ -770,6 +770,76 @@ def _list_text(items: list[str]) -> list[str]:
     return items
 
 
+ACCESSORY_PATTERNS = {
+    "Back": "upper_pull",
+    "Upper back": "upper_pull",
+    "Lower back": "trunk_extension",
+    "Quads": "knee_dominant",
+    "Hamstrings": "knee_flexion",
+    "Glutes": "hip_extension_or_abduction",
+    "Shoulders": "shoulder_press_or_raise",
+    "Chest": "horizontal_press_or_fly",
+    "Triceps": "elbow_extension",
+    "Biceps": "elbow_flexion",
+    "Trunk": "trunk_stability",
+    "Calves and grip": "calf_or_grip",
+    "GPP and carries": "loaded_carry_or_sled",
+    "Conditioning": "conditioning",
+    "Strongman": "strongman",
+    "Rehabilitation regressions": "supported_general_strength",
+}
+
+
+def swap_metadata(name: str, movement: str, family: str, category: str, equipment: str) -> dict[str, object]:
+    """Return explicit, reviewable V6 metadata derived from catalogue facts."""
+
+    if movement == "squat":
+        pattern, lift_family, root = "squat", "squat", "Competition Squat"
+    elif movement == "bench":
+        pattern, lift_family, root = "horizontal_press", "bench", "Competition Bench Press"
+    elif movement == "deadlift":
+        pattern, lift_family, root = "hinge", "deadlift", "Competition Deadlift"
+    elif movement == "warmup":
+        pattern, lift_family, root = "movement_preparation", "none", None
+    else:
+        pattern, lift_family, root = ACCESSORY_PATTERNS[family], "none", None
+
+    specificity = (
+        "competition" if category == "competition" else
+        "close_variation" if movement in {"squat", "bench", "deadlift"} else
+        "preparation" if movement == "warmup" else "general"
+    )
+    purposes = [
+        "competition_practice" if category == "competition" else
+        "technique_variation" if specificity == "close_variation" else
+        "movement_preparation" if specificity == "preparation" else
+        "general_strength"
+    ]
+    constraints: list[str] = []
+    lowered = name.casefold()
+    if any(term in lowered for term in ("chest-supported", "supported", "machine", "seal row")):
+        constraints.append("externally_supported")
+    if "neutral-grip" in lowered or "swiss-bar" in lowered or "football-bar" in lowered:
+        constraints.append("neutral_grip_option")
+    if any(term in lowered for term in ("pin ", "block pull", "rack pull", "board press", "box squat")):
+        constraints.append("reduced_range_option")
+    if any(term in lowered for term in ("single-arm", "single-leg", "unilateral", "split squat", "lunge", "step-up", "step-down")):
+        constraints.append("unilateral")
+
+    return {
+        "lift_family": lift_family,
+        "movement_pattern": pattern,
+        "specificity": specificity,
+        "technical_purposes": purposes,
+        # Preserve the existing equipment statement as one explicit option;
+        # do not pretend broad fallback lists are simultaneously required.
+        "equipment_options": [equipment],
+        "constraint_tags": constraints,
+        "variation_of": None if category == "competition" else root,
+        "swap_group": f"{lift_family}:{pattern}" if lift_family != "none" else f"general:{pattern}",
+    }
+
+
 def make_record(
     name: str,
     movement: str,
@@ -892,6 +962,7 @@ def make_record(
         "default_rest_seconds": 30 if warmup else (180 if is_main else 90),
         "occurrences": 0,
     }
+    record.update(swap_metadata(name, movement, family, category, equipment))
     record.update(RECORD_OVERRIDES.get(name, {}))
     return record
 
@@ -1008,7 +1079,7 @@ def build() -> list[dict[str, object]]:
 
 if __name__ == "__main__":
     payload = {
-        "schema_version": 4,
+        "schema_version": 6,
         "catalogue": "Traditional Strength practical exercise library",
         "language": "en-GB",
         "exercises": build(),
