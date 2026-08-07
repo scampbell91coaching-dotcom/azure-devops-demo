@@ -50,3 +50,18 @@ def test_inventory_is_bounded_and_manual_overrides_are_editable():
     inventory[Decimal("25")] = 4
     plan = build_warmups("squat", 120, overrides_kg=[20, 70], inventory=inventory)
     assert [item.weight_kg for item in plan] == ["20", "70", "120"]
+
+def test_competition_default_inventory_prefers_25kg_plates_for_525kg():
+    from portal.services.plate_loading import calculate_load, default_inventory
+
+    inventory = default_inventory()
+    assert inventory[next(p for p in inventory if str(p) == "25")] == 20
+
+    result = calculate_load(
+        525,
+        bar_kg=20,
+        collars_kg=5,
+    )
+
+    assert result.exact
+    assert [(str(p.kg), p.count) for p in result.plates_per_side] == [("25", 10)]

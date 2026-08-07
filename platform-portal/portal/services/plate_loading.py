@@ -10,6 +10,21 @@ DEFAULT_PLATES_KG = (
     Decimal("5"), Decimal("2.5"), Decimal("1.25"), Decimal("0.5"),
     Decimal("0.25"),
 )
+
+# Competition-oriented default inventory, expressed per side of the bar.
+# Heavy loading should continue using 25 kg plates while they are available
+# rather than falling back to smaller denominations unnecessarily.
+DEFAULT_PLATE_INVENTORY = {
+    Decimal("25"): 20,
+    Decimal("20"): 8,
+    Decimal("15"): 8,
+    Decimal("10"): 8,
+    Decimal("5"): 4,
+    Decimal("2.5"): 4,
+    Decimal("1.25"): 4,
+    Decimal("0.5"): 4,
+    Decimal("0.25"): 4,
+}
 PLATE_COLOURS = {
     25000: "red", 20000: "blue", 15000: "yellow", 10000: "green",
     5000: "white", 2500: "black", 1250: "silver", 500: "silver",
@@ -70,8 +85,13 @@ class LoadResult:
         return "Per side, load " + ", then ".join(parts) + "."
 
 
-def default_inventory(count_per_side: int = 8) -> dict[Decimal, int]:
-    return {weight: count_per_side for weight in DEFAULT_PLATES_KG}
+def default_inventory(count_per_side: int | None = None) -> dict[Decimal, int]:
+    if count_per_side is not None:
+        return {weight: count_per_side for weight in DEFAULT_PLATES_KG}
+
+    return DEFAULT_PLATE_INVENTORY.copy()
+
+
 
 
 def calculate_load(

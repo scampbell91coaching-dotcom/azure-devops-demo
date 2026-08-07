@@ -10,7 +10,12 @@ from .extensions import db
 from .models.athlete import Athlete
 from .models.meet_day import LIFTS, OUTCOMES, Meet, MeetEntry, MeetLift
 from .services.meet_day import build_board
-from .services.plate_loading import DEFAULT_PLATES_KG, build_warmups, calculate_load
+from .services.plate_loading import (
+    DEFAULT_PLATES_KG,
+    DEFAULT_PLATE_INVENTORY,
+    build_warmups,
+    calculate_load,
+)
 
 meet_day_bp = Blueprint("meet_day", __name__, url_prefix="/meet-day")
 
@@ -124,6 +129,7 @@ def detail(meet_id: int):
         lifts=LIFTS,
         outcomes=OUTCOMES,
         default_plates=DEFAULT_PLATES_KG,
+        default_plate_inventory=DEFAULT_PLATE_INVENTORY,
         plate_result=None,
     )
 
@@ -131,7 +137,7 @@ def detail(meet_id: int):
 def _inventory_from_form():
     inventory = {}
     for plate in DEFAULT_PLATES_KG:
-        value = request.form.get(f"plate_{plate}", "8")
+        value = request.form.get(f"plate_{plate}", str(DEFAULT_PLATE_INVENTORY[plate]))
         try:
             count = int(value)
         except ValueError as exc:
@@ -166,6 +172,7 @@ def plate_calculator(meet_id: int):
         lifts=LIFTS,
         outcomes=OUTCOMES,
         default_plates=DEFAULT_PLATES_KG,
+        default_plate_inventory=DEFAULT_PLATE_INVENTORY,
         plate_result=result,
         calculator_error=error,
     ), 400 if error else 200
