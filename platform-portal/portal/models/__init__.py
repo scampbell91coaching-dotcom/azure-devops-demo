@@ -5,6 +5,14 @@ database CLI commands all operate on the same complete model set.
 """
 
 from .athlete import Athlete
+from .athlete_state import (
+    AthleteConstraintFlag,
+    AthleteStateFact,
+    AthleteStateOverride,
+    AthleteStateRecommendation,
+    AthleteStateSignal,
+    CoachTechnicalObservation,
+)
 from .checkins import AthleteCheckinSettings, WeeklyCheckin
 from .coaching_application import CoachingApplication
 from .exercise_library import DayTemplate, DayTemplateExercise, Exercise
@@ -25,8 +33,14 @@ from .user import User, UserRole
 
 __all__ = [
     "Athlete",
+    "AthleteConstraintFlag",
+    "AthleteStateFact",
+    "AthleteStateOverride",
+    "AthleteStateRecommendation",
+    "AthleteStateSignal",
     "AthleteCheckinSettings",
     "CoachingApplication",
+    "CoachTechnicalObservation",
     "DayTemplate",
     "DayTemplateExercise",
     "Exercise",

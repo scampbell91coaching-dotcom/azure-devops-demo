@@ -4,16 +4,22 @@ import os
 from pathlib import Path
 
 import pytest
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 
 from portal import create_app
 from portal.extensions import db
 from portal.models.exercise_library import DayTemplate, Exercise
 
 EXPECTED_TABLES = {
+    "athlete_constraint_flags",
     "athlete_checkin_settings",
+    "athlete_state_facts",
+    "athlete_state_overrides",
+    "athlete_state_recommendations",
+    "athlete_state_signals",
     "athletes",
     "coaching_applications",
+    "coach_technical_observations",
     "day_template_exercises",
     "day_templates",
     "exercise_prescriptions",
@@ -82,6 +88,27 @@ def test_upgrade_and_schema_verification_on_empty_sqlite(tmp_path: Path):
 
     with app.app_context():
         assert EXPECTED_TABLES <= set(inspect(db.engine).get_table_names())
+
+
+def test_athlete_state_upgrade_preserves_existing_athletes(tmp_path: Path):
+    app = migration_app(f"sqlite:///{tmp_path / 'existing.db'}")
+    runner = app.test_cli_runner()
+    assert runner.invoke(args=["db", "upgrade", "0008_athlete_training_logs"]).exit_code == 0
+    with app.app_context():
+        db.session.execute(text(
+            "INSERT INTO athletes "
+            "(created_at, updated_at, first_name, last_name, email, status) "
+            "VALUES ('2026-01-01', '2026-01-01', 'Existing', 'Athlete', "
+            "'existing@example.test', 'active')"
+        ))
+        db.session.commit()
+
+    upgrade = runner.invoke(args=["db", "upgrade"])
+    assert upgrade.exit_code == 0, upgrade.output
+    with app.app_context():
+        assert db.session.execute(text(
+            "SELECT email FROM athletes WHERE email = 'existing@example.test'"
+        )).scalar_one() == "existing@example.test"
 
 
 def test_programming_seed_command_is_idempotent(tmp_path: Path):
