@@ -48,6 +48,8 @@ flowchart LR
 ```
 
 See [architecture.md](docs/architecture.md) for the complete platform, delivery, node-pool, networking, and secret-flow diagrams.
+The audited Azure network boundaries, DNS dependencies, public exposure, and
+private-access prerequisites are recorded in [networking.md](docs/networking.md).
 
 ## Azure infrastructure
 

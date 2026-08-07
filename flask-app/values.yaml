@@ -113,6 +113,9 @@ networkPolicy:
   allowHttpsEgress: true
   allowDatabaseEgress: false
   databasePort: 5432
+  # Required when database egress is enabled. Use only the private database
+  # subnet(s); never use 0.0.0.0/0 for PostgreSQL.
+  databaseCidrs: []
 
 topologySpreadConstraints: []
 

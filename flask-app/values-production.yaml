@@ -105,6 +105,8 @@ networkPolicy:
   allowHttpsEgress: true
   allowDatabaseEgress: true
   databasePort: 5432
+  databaseCidrs:
+    - 10.0.2.0/24
 
 topologySpreadConstraints:
   - maxSkew: 1
