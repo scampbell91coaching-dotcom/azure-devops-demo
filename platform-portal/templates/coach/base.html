@@ -16,6 +16,7 @@
     rel="stylesheet"
     href="{{ url_for('static', filename='css/programming.css') }}"
   >
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/applications.css') }}">
 
   {% block head %}{% endblock %}
 </head>
@@ -66,11 +67,10 @@
         </a>
 
         <a
-          href="https://traditionalstrength.co.uk/apply"
-          target="_blank"
-          rel="noreferrer"
+          href="{{ url_for('coach_applications.index') }}"
+          {% if coach_section == "applications" %}aria-current="page"{% endif %}
         >
-          Applications
+          Applications{% if pending_application_count %}<span class="coach-nav-count" aria-label="{{ pending_application_count }} pending">{{ pending_application_count }}</span>{% endif %}
         </a>
 
         <a

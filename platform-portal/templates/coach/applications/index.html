@@ -1,0 +1,55 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "applications" %}
+{% block title %}Applications | Traditional Strength{% endblock %}
+
+{% block content %}
+<section class="coach-page applications-page">
+  <header class="coach-page__header coach-page__header--split">
+    <div>
+      <span class="coach-eyebrow">Coach workspace</span>
+      <h1>Applications</h1>
+      <p>Review coaching enquiries and move each applicant through the decision workflow.</p>
+    </div>
+    <div class="applications-summary" aria-label="Application summary">
+      <strong>{{ pending_application_count }}</strong>
+      <span>new or reviewing</span>
+    </div>
+  </header>
+
+  {% if applications %}
+    <div class="application-list" aria-label="Coaching applications">
+      {% for application in applications %}
+        <article class="application-card{% if application.status == 'new' %} application-card--new{% endif %}">
+          <div class="application-card__lead">
+            <div class="application-card__title">
+              {% if application.status == "new" %}<span class="application-new-marker">New</span>{% endif %}
+              <h2><a href="{{ url_for('coach_applications.detail', application_id=application.id) }}">{{ application.first_name }} {{ application.last_name }}</a></h2>
+              <span class="application-status application-status--{{ application.status }}" role="status" aria-label="Current status: {{ application.status }}">{{ application.status | title }}</span>
+            </div>
+            <p><time datetime="{{ application.submitted_at.isoformat() }}">{{ application.submitted_at.strftime('%d %b %Y · %H:%M') }}</time></p>
+            <div class="application-contact">
+              <a href="mailto:{{ application.email }}">{{ application.email }}</a>
+              {% if application.instagram %}<span>Instagram: {{ application.instagram }}</span>{% endif %}
+              <span>{{ application.country }}</span>
+            </div>
+          </div>
+
+          <dl class="application-triage">
+            <div><dt>Training age</dt><dd>{{ application.years_training | string + ' years' if application.years_training is not none else 'Not provided' }}</dd></div>
+            <div><dt>S / B / D</dt><dd>{{ application.squat_kg | round(1) | string if application.squat_kg is not none else '—' }} / {{ application.bench_kg | round(1) | string if application.bench_kg is not none else '—' }} / {{ application.deadlift_kg | round(1) | string if application.deadlift_kg is not none else '—' }} kg</dd></div>
+            <div><dt>Primary goal</dt><dd>{{ application.primary_goal }}</dd></div>
+            <div><dt>Next competition</dt><dd>{{ application.next_competition or 'Not provided' }}</dd></div>
+          </dl>
+
+          <a class="coach-link-button application-card__action" href="{{ url_for('coach_applications.detail', application_id=application.id) }}">Review application<span class="sr-only"> from {{ application.first_name }} {{ application.last_name }}</span></a>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="coach-empty-state">
+      <h2>No applications yet</h2>
+      <p>New coaching applications will appear here as soon as they are submitted.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

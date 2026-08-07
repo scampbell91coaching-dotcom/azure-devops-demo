@@ -18,6 +18,7 @@ if (!Number.isInteger(port) || port < 1024 || port > 65535) {
 const runToken =
   process.env.E2E_RUN_TOKEN ?? randomBytes(32).toString('hex');
 process.env.E2E_RUN_TOKEN = runToken;
+process.env.E2E_DATABASE_PATH = `${process.cwd()}/.tmp/applications-${runToken}.sqlite`;
 if (!/^[A-Za-z0-9_./-]+$/.test(pythonExecutable)) {
   throw new Error('E2E_PYTHON contains unsupported characters.');
 }

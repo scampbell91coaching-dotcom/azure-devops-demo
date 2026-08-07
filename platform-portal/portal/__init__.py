@@ -18,6 +18,7 @@ from .auth import init_auth
 from .block_factory import block_factory_bp
 from .checkins import checkins_bp
 from .coach_dashboard import coach_dashboard_bp
+from .coach_applications import coach_applications_bp
 from .database_cli import register_database_commands
 from .database_config import resolve_database_uri
 from .exercise_library import exercise_library_bp
@@ -124,6 +125,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(attempt_selection_bp)
     app.register_blueprint(checkins_bp)
     app.register_blueprint(coach_dashboard_bp)
+    app.register_blueprint(coach_applications_bp)
     app.register_blueprint(meet_day_bp)
     app.register_blueprint(nutrition_imports_bp)
 
