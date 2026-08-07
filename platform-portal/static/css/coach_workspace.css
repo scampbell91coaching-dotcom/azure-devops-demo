@@ -697,3 +697,17 @@ select {
   .coach-inbox-item > .coach-link-button,
   .coach-inbox-item > .coach-primary-button { width: 100%; }
 }
+
+/* Allow coach workspace content to shrink within narrow mobile viewports. */
+.coach-main,
+.coach-shell,
+.coach-page,
+.coach-page__header,
+.coach-dashboard__summary,
+.coach-dashboard__grid,
+.coach-panel,
+.coach-panel__heading,
+.coach-empty-state {
+  min-width: 0;
+  max-width: 100%;
+}
