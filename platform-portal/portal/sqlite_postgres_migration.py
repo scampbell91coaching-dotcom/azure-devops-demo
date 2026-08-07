@@ -125,16 +125,32 @@ def verify_constraints(connection: Any, tables: list[Table]) -> dict[str, Any]:
         for fk in table.foreign_key_constraints:
             pairs = list(fk.elements)
             parent = pairs[0].column.table
+            parent_source = (
+                parent.alias(f"{parent.name}_parent")
+                if parent is table
+                else parent
+            )
+            parent_columns = [
+                parent_source.c[pair.column.name]
+                for pair in pairs
+            ]
             join = table.join(
-                parent,
-                and_(*(pair.parent == pair.column for pair in pairs)),
+                parent_source,
+                and_(
+                    *(
+                        pair.parent == parent_column
+                        for pair, parent_column in zip(
+                            pairs, parent_columns, strict=True
+                        )
+                    )
+                ),
                 isouter=True,
             )
             populated = [pair.parent.is_not(None) for pair in pairs]
             query = (
                 select(func.count())
                 .select_from(join)
-                .where(*populated, pairs[0].column.is_(None))
+                .where(*populated, parent_columns[0].is_(None))
             )
             key = f"{table.name}->{parent.name}"
             orphan_checks[key] = int(connection.execute(query).scalar_one())

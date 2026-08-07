@@ -282,3 +282,19 @@ def test_full_migration_dry_run_refusal_replace_rollback_and_sequence(
         with base_engine.connect() as connection:
             connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
         base_engine.dispose()
+
+
+
+def test_verify_constraints_supports_self_referencing_foreign_keys(tmp_path: Path):
+    source = tmp_path / "self-reference.db"
+    app = migration_app(f"sqlite:///{source}")
+
+    with app.app_context():
+        db.create_all()
+
+        tables = table_order(db.metadata)
+
+        with source_engine(source).connect() as connection:
+            checks = verify_constraints(connection, tables)
+
+        assert checks["foreign_keys_valid"]
