@@ -1,4 +1,7 @@
 {{- if .Values.networkPolicy.enabled }}
+{{- if and .Values.networkPolicy.allowDatabaseEgress (not .Values.networkPolicy.databaseCidrs) }}
+{{- fail "networkPolicy.databaseCidrs must contain at least one private CIDR when database egress is enabled" }}
+{{- end }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -48,7 +51,12 @@ spec:
         - { protocol: TCP, port: 443 }
     {{- end }}
     {{- if .Values.networkPolicy.allowDatabaseEgress }}
-    - ports:
+    - to:
+        {{- range .Values.networkPolicy.databaseCidrs }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+      ports:
         - protocol: TCP
           port: {{ .Values.networkPolicy.databasePort }}
     {{- end }}

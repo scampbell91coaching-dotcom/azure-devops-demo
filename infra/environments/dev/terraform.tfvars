@@ -3,6 +3,11 @@ resource_group_name = "rg-devops-assessment-lab"
 location            = "eastus2"
 acr_name            = "stevedevopslab6280"
 
+# AKS currently uses an Azure-managed VNet. These discovery inputs avoid
+# embedding a subscription-specific resource ID in reusable Terraform code.
+aks_node_resource_group_name = "MC_rg-devops-assessment-lab_aks-devops-lab_eastus2"
+aks_virtual_network_name     = "aks-vnet-38128856"
+
 # PostgreSQL is live in this environment. Keep these values in the canonical
 # CI var file so a normal root plan can never disable the managed foundation.
 postgresql_enabled                      = true

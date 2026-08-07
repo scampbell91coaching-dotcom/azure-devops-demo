@@ -5,6 +5,7 @@ on:
     paths:
       - "flask-app/**"
       - "kubernetes/**"
+      - "argocd-applications/external-secrets-production.yaml"
       - "infra/**"
       - "Dockerfile"
       - "requirements*.txt"
@@ -17,6 +18,7 @@ on:
     paths:
       - "flask-app/**"
       - "kubernetes/**"
+      - "argocd-applications/external-secrets-production.yaml"
       - "infra/**"
       - "Dockerfile"
       - "requirements*.txt"

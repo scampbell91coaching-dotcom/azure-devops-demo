@@ -6,6 +6,7 @@ metadata:
   annotations:
     azure.workload.identity/client-id: "f7877367-3d28-42a6-9af3-f3aafea95aee"
     azure.workload.identity/tenant-id: "74d2fd2d-dd77-4db5-949c-232b3f50d865"
+automountServiceAccountToken: false
 ---
 apiVersion: external-secrets.io/v1
 kind: SecretStore
@@ -39,7 +40,25 @@ spec:
         key: flask-secret-key
     - secretKey: DATABASE_URL
       remoteRef:
-        key: database-url
+        key: database-runtime-url
     - secretKey: APPLICATIONINSIGHTS_CONNECTION_STRING
       remoteRef:
         key: applicationinsights-connection-string
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: flask-migration-secrets
+  namespace: production
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: azure-key-vault
+    kind: SecretStore
+  target:
+    name: flask-migration-secrets
+    creationPolicy: Owner
+  data:
+    - secretKey: DATABASE_URL
+      remoteRef:
+        key: database-url

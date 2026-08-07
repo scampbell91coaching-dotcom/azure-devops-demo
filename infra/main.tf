@@ -28,6 +28,11 @@ data "azurerm_key_vault" "application" {
   resource_group_name = coalesce(var.key_vault_resource_group_name, module.resource_group.name)
 }
 
+data "azurerm_virtual_network" "aks" {
+  name                = var.aks_virtual_network_name
+  resource_group_name = var.aks_node_resource_group_name
+}
+
 module "postgresql" {
   count  = var.postgresql_enabled ? 1 : 0
   source = "./modules/postgresql"
@@ -64,7 +69,7 @@ resource "azurerm_virtual_network_peering" "app_to_aks" {
   name                      = "app-to-aks"
   resource_group_name       = module.resource_group.name
   virtual_network_name      = module.network.virtual_network_name
-  remote_virtual_network_id = var.aks_virtual_network_id
+  remote_virtual_network_id = data.azurerm_virtual_network.aks.id
 
   lifecycle {
     prevent_destroy = true

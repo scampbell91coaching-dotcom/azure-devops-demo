@@ -196,17 +196,19 @@ variable "terraform_key_vault_reader_principal_id" {
 variable "aks_node_resource_group_name" {
   description = "AKS-managed node resource group containing the cluster VNet."
   type        = string
-  default     = "MC_rg-devops-assessment-lab_aks-devops-lab_eastus2"
+
+  validation {
+    condition     = length(trimspace(var.aks_node_resource_group_name)) > 0
+    error_message = "aks_node_resource_group_name must not be empty."
+  }
 }
 
 variable "aks_virtual_network_name" {
   description = "Name of the AKS-managed virtual network."
   type        = string
-  default     = "aks-vnet-38128856"
-}
 
-variable "aks_virtual_network_id" {
-  description = "Resource ID of the AKS-managed virtual network."
-  type        = string
-  default     = "/subscriptions/abac1d73-0524-4172-a292-64f8a7595728/resourceGroups/MC_rg-devops-assessment-lab_aks-devops-lab_eastus2/providers/Microsoft.Network/virtualNetworks/aks-vnet-38128856"
+  validation {
+    condition     = length(trimspace(var.aks_virtual_network_name)) > 0
+    error_message = "aks_virtual_network_name must not be empty."
+  }
 }

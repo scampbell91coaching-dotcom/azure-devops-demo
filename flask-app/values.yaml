@@ -26,6 +26,10 @@ database:
 
 migration:
   enabled: false
+  # Migration credentials are deliberately held in a different Secret from
+  # the long-lived web workload. Never put the connection string in values.
+  secretName: flask-migration-secrets
+  secretKey: DATABASE_URL
   command:
     - flask
     - db
@@ -113,6 +117,9 @@ networkPolicy:
   allowHttpsEgress: true
   allowDatabaseEgress: false
   databasePort: 5432
+  # Required when database egress is enabled. Use only the private database
+  # subnet(s); never use 0.0.0.0/0 for PostgreSQL.
+  databaseCidrs: []
 
 topologySpreadConstraints: []
 

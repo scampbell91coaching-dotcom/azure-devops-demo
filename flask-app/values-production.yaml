@@ -23,6 +23,10 @@ database:
 
 migration:
   enabled: true
+  # Key Vault database-url is reserved for schema migrations. The Deployment
+  # never references this Secret.
+  secretName: flask-migration-secrets
+  secretKey: DATABASE_URL
   command:
     - flask
     - db
@@ -105,6 +109,8 @@ networkPolicy:
   allowHttpsEgress: true
   allowDatabaseEgress: true
   databasePort: 5432
+  databaseCidrs:
+    - 10.0.2.0/24
 
 topologySpreadConstraints:
   - maxSkew: 1

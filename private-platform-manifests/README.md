@@ -4,10 +4,16 @@ These files preserve the working private portal, oauth2-proxy, ingress buffer se
 
 `platform-portal-private` is the authenticated Flask coaching application behind
 OAuth2 Proxy. Its image is promoted independently from the public `flask-web`
-Helm release. Before each private rollout, an init container applies additive
+Helm release. Before each private rollout, an Argo CD PreSync Job applies additive
 Alembic migrations, imports the bundled 276-exercise catalogue idempotently,
 and verifies PostgreSQL without logging the connection string. Existing rows
 without a catalogue version are coach-maintained and are never overwritten.
+
+The portal container reads `DATABASE_URL` only from `flask-runtime-secrets`
+(Key Vault `database-runtime-url`). The PreSync Job reads it only from
+`flask-migration-secrets` (Key Vault `database-url`). Keeping migration work in
+a separate Pod prevents the privileged database credential from being attached
+to the long-lived portal Pod.
 
 The Secret `platform-oauth2-proxy` is intentionally excluded from Git. It must contain:
 

@@ -177,6 +177,7 @@ Observability includes application health and metrics endpoints, Application Ins
 
 ## Related documents
 
+- [Azure networking architecture](networking.md)
 - [Version 1 summary](version-1-summary.md)
 - [Engineering decisions](engineering-decisions.md)
 - [Azure PostgreSQL](azure-postgresql.md)
