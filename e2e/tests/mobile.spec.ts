@@ -1,5 +1,13 @@
 import { test, expect } from '../fixtures/test';
 
+async function expectNoHorizontalOverflow(page: import('@playwright/test').Page) {
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBeTruthy();
+}
+
 test('public and coach pages render and navigation toggles at a mobile viewport', async ({ page, authenticatedState }) => {
   await page.goto('/guides/shoulder-pain');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -55,3 +63,38 @@ test('athlete check-in controls remain usable at 430px', async ({ page, athleteS
   await expect(page.locator('input[name="recovery"]')).toHaveCSS('min-height', '48px');
   await expect(page.locator('html')).toHaveJSProperty('scrollWidth', 430);
 });
+
+for (const width of [320, 390, 430]) {
+  test(`core athlete surfaces remain readable at ${width}px`, async ({ page, athleteSession, athleteIds }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await athleteSession(page.request, athleteIds.primary);
+
+    for (const route of ['/athlete/dashboard', '/athlete/programme', '/athlete/programme/sessions/501']) {
+      await page.goto(route);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.getByRole('navigation', { name: 'Athlete navigation' }).last()).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+    }
+
+    const firstSet = page.locator('[data-set-row]').first();
+    await expect(firstSet.getByLabel('Complete')).toBeVisible();
+    await expect(firstSet.locator('input[name$="-load"]')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Finish session' })).toBeVisible();
+  });
+
+  test(`coach action surfaces remain usable at ${width}px`, async ({ page, authenticatedState }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await authenticatedState(page);
+
+    for (const route of ['/coach', '/check-ins', '/nutrition', '/applications', '/meet-day']) {
+      await page.goto(route);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+    }
+
+    const menu = page.getByRole('button', { name: 'Menu' });
+    await menu.click();
+    await expect(page.getByRole('link', { name: 'Nutrition', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Meet Prep: Meet Day/ })).toBeVisible();
+  });
+}
