@@ -14,6 +14,7 @@ on:
       - "flask-app/**"
       - "kubernetes/external-secrets/**"
       - "argocd-applications/external-secrets-production.yaml"
+      - "scripts/gitops/**"
       - ".github/workflows/app-deploy.yml"
 
   pull_request:
@@ -27,6 +28,7 @@ on:
       - "flask-app/**"
       - "kubernetes/external-secrets/**"
       - "argocd-applications/external-secrets-production.yaml"
+      - "scripts/gitops/**"
       - ".github/workflows/app-deploy.yml"
 
   workflow_dispatch:
@@ -304,72 +306,15 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Update production image tag
+      - name: Commit GitOps promotion safely
         env:
           IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
         run: |
           set -euo pipefail
 
-          python - <<'PY'
-          import os
-          from pathlib import Path
-
-          values_file = Path("flask-app/values-production.yaml")
-          image_tag = os.environ["IMAGE_TAG"]
-
-          lines = values_file.read_text().splitlines()
-          updated = []
-          inside_image = False
-          tag_updated = False
-
-          for line in lines:
-              if line == "image:":
-                  inside_image = True
-                  updated.append(line)
-                  continue
-
-              if inside_image and line and not line.startswith((" ", "\t")):
-                  inside_image = False
-
-              if inside_image and line.lstrip().startswith("tag:"):
-                  indentation = line[:len(line) - len(line.lstrip())]
-                  updated.append(f"{indentation}tag: {image_tag}")
-                  tag_updated = True
-              else:
-                  updated.append(line)
-
-          if not tag_updated:
-              raise RuntimeError(
-                  f"Unable to locate image.tag in {values_file}"
-              )
-
-          values_file.write_text("\n".join(updated) + "\n")
-          PY
-
-          echo "Updated production image configuration:"
-          grep -A3 '^image:' "$VALUES_FILE"
-
-      - name: Commit GitOps promotion
-        env:
-          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
-        run: |
-          set -euo pipefail
-
-          if git diff --quiet -- "$VALUES_FILE"; then
-            echo "Production values already reference ${IMAGE_TAG}"
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email \
-            "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add "$VALUES_FILE"
-
-          git commit \
-            -m "chore(gitops): promote flask-web ${IMAGE_TAG::7} [skip ci]"
-
-          git push origin HEAD:main
+          python scripts/gitops/promote_image.py \
+            flask "$IMAGE_TAG" \
+            "chore(gitops): promote flask-web ${IMAGE_TAG::7} [skip ci]"
 
       - name: Show promoted image
         run: |

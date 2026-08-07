@@ -14,6 +14,7 @@ on:
       - "package-lock.json"
       - "playwright.config.ts"
       - "pytest.ini"
+      - "scripts/gitops/**"
       - ".github/workflows/private-platform-deploy.yml"
   pull_request:
     branches: [main]
@@ -28,6 +29,7 @@ on:
       - "package-lock.json"
       - "playwright.config.ts"
       - "pytest.ini"
+      - "scripts/gitops/**"
       - ".github/workflows/private-platform-deploy.yml"
   workflow_dispatch:
 
@@ -217,37 +219,14 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Update private runtime and migration image references
+      - name: Commit private GitOps promotion safely
         env:
           EXPECTED_IMAGE: ${{ needs.build-scan-push.outputs.image }}
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import os
-          import re
-          from pathlib import Path
-
-          path = Path("private-platform-manifests/private-platform.yaml")
-          text = path.read_text()
-          updated, count = re.subn(
-              r"stevedevopslab6280\.azurecr\.io/platform-portal-private:[a-f0-9]{7,64}",
-              os.environ["EXPECTED_IMAGE"],
-              text,
-          )
-          if count != 2:
-              raise RuntimeError(f"Expected two private image references, found {count}")
-          path.write_text(updated)
-          PY
-
-      - name: Commit private GitOps promotion
-        run: |
-          set -euo pipefail
-          if git diff --quiet -- "$MANIFEST"; then exit 0; fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$MANIFEST"
-          git commit -m "chore(gitops): promote private platform ${GITHUB_SHA::7} [skip ci]"
-          git push origin HEAD:main
+          python scripts/gitops/promote_image.py \
+            private-platform "$EXPECTED_IMAGE" \
+            "chore(gitops): promote private platform ${GITHUB_SHA::7} [skip ci]"
 
   verify:
     name: Verify Argo CD reconciled private image
