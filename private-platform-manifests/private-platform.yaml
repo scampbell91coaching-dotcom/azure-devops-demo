@@ -36,7 +36,7 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: prepare-database
-          image: stevedevopslab6280.azurecr.io/platform-portal-private:acdc6757552b780b519752447ab7fbb054fcb9e1
+          image: stevedevopslab6280.azurecr.io/platform-portal-private:2111550fda301ba5edd386fb7e52fca3ff211345
           command: ["/bin/sh", "-ec"]
           args:
             - >-
@@ -69,7 +69,7 @@ spec:
               memory: 256Mi
       containers:
         - name: portal
-          image: stevedevopslab6280.azurecr.io/platform-portal-private:acdc6757552b780b519752447ab7fbb054fcb9e1
+          image: stevedevopslab6280.azurecr.io/platform-portal-private:2111550fda301ba5edd386fb7e52fca3ff211345
           ports:
             - name: http
               containerPort: 8080
