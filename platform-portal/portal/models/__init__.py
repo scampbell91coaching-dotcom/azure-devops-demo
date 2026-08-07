@@ -17,6 +17,8 @@ from .programming import (
     ExercisePrescription,
     TrainingBlock,
     TrainingSession,
+    TrainingSessionLog,
+    TrainingSetResult,
     TrainingWeek,
 )
 from .user import User, UserRole
@@ -40,6 +42,8 @@ __all__ = [
     "PlatformSnapshot",
     "TrainingBlock",
     "TrainingSession",
+    "TrainingSessionLog",
+    "TrainingSetResult",
     "TrainingWeek",
     "User",
     "UserRole",

@@ -41,7 +41,7 @@ test('athlete core workflow fits a 320px phone viewport', async ({ page, athlete
     'xpath=ancestor::*[self::article or contains(@class, "exercise") or contains(@class, "session")][1]',
   );
 
-  await expect(squatCard).toContainText('3 × 5');
+  await expect(squatCard).toContainText(/3\s*[x×]\s*5/i);
   await expect(squatCard).toContainText(/(?:RPE|@)\s*7(?:\.0)?/i);
   await expect(page.locator('html')).toHaveJSProperty('scrollWidth', 320);
 });

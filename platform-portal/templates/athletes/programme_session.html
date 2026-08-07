@@ -2,30 +2,86 @@
 {% block title %}{{ session.name }} | Traditional Strength{% endblock %}
 {% block athlete_page %}programme{% endblock %}
 {% block content %}
-<section class="athlete-session">
-  <header class="athlete-page-header">
+{% set state = log.status if log else 'not_started' %}
+<section class="athlete-session" data-training-session>
+  <header class="athlete-page-header session-heading">
     <a class="back-link" href="{{ url_for('athletes.programme') }}">← Programme</a>
     <span class="eyebrow">{{ block.name }} · Week {{ week.position }}</span>
     <h1>{{ session.name }}</h1>
-    <p>{{ session.day_label or week.name }}</p>
+    <div class="session-state">
+      <span class="status status--{{ state }}">{{ state | replace('_', ' ') | title }}</span>
+      {% if log and log.completed_at %}<span>Finished {{ log.completed_at.strftime('%d %b %Y, %H:%M') }}</span>{% endif %}
+    </div>
   </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}<div class="form-notice form-notice--{{ category }}" role="status">{{ message }}</div>{% endfor %}
+  {% endwith %}
+  {% if errors %}<div class="form-notice form-notice--error" role="alert"><strong>Nothing was saved yet.</strong><ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
   {% if session.notes %}<aside class="session-note"><strong>Session notes</strong><p>{{ session.notes }}</p></aside>{% endif %}
-  <ol class="exercise-list">
-    {% for item in session.prescriptions %}
-      <li class="exercise-card">
-        <header><span class="exercise-number">{{ loop.index }}</span><h2>{{ item.exercise_name }}</h2></header>
-        <div class="prescription-grid">
-          <div><span>Sets × reps</span><strong>{{ item.sets or '—' }} × {{ item.reps or (item.reps_min ~ '–' ~ item.reps_max if item.reps_min and item.reps_max else '—') }}</strong></div>
-          <div><span>RPE</span><strong>{{ item.rpe or item.target_rpe or ('≤ ' ~ item.rpe_cap if item.rpe_cap else '—') }}</strong></div>
-          {% if item.load_kg or item.target_load_kg or item.load_cap_kg %}<div><span>Load</span><strong>{{ item.load_kg or item.target_load_kg or item.load_cap_kg }} kg</strong></div>{% endif %}
-          {% if item.percentage %}<div><span>Percentage</span><strong>{{ item.percentage }}%</strong></div>{% endif %}
-          {% if item.rest_seconds %}<div><span>Rest</span><strong>{{ item.rest_seconds }} sec</strong></div>{% endif %}
-          {% if item.tempo %}<div><span>Tempo</span><strong>{{ item.tempo }}</strong></div>{% endif %}
-        </div>
-        {% if item.notes %}<p class="exercise-notes"><strong>Coach note:</strong> {{ item.notes }}</p>{% endif %}
-      </li>
-    {% else %}<li class="empty-state"><strong>No exercises added</strong><p>Your coach has not added the session exercises yet.</p></li>{% endfor %}
-  </ol>
-  <div class="session-sticky-action"><a class="button" href="{{ url_for('athletes.programme') }}">Back to programme</a></div>
+
+  {% if state == 'completed' %}
+    <div class="completed-banner"><strong>Session complete</strong><span>Your submitted results are locked to protect your training history. Ask your coach if a correction is needed.</span></div>
+  {% endif %}
+
+  <form method="post" class="training-form" data-training-form>
+    <ol class="exercise-list">
+      {% for item in session.prescriptions %}
+        {% set prescribed_sets = item.sets or 1 %}
+        {% set exercise_results = (log.results | selectattr('exercise_position', 'equalto', item.position) | list) if log else [] %}
+        {% set extra_results = exercise_results | selectattr('is_extra', 'equalto', true) | list %}
+        <li class="exercise-card" data-exercise data-prescription-id="{{ item.id }}" data-next-set="{{ prescribed_sets + extra_results|length + 1 }}">
+          <header class="exercise-card__heading">
+            <span class="exercise-number">{{ loop.index }}</span>
+            <div><h2>{{ item.exercise_name }}</h2><strong class="prescription-summary">{{ item.summary }}</strong></div>
+          </header>
+          <div class="prescription-grid">
+            <div><span>Sets × reps</span><strong>{{ prescribed_sets }} × {{ item.reps or (item.reps_min ~ '–' ~ item.reps_max if item.reps_min and item.reps_max else item.target_reps or '—') }}</strong></div>
+            <div><span>Target RPE / cap</span><strong>{{ item.rpe or item.target_rpe or ('≤ ' ~ item.rpe_cap if item.rpe_cap else '—') }}</strong></div>
+            {% if item.load_kg is not none or item.target_load_kg is not none or item.load_cap_kg is not none %}<div><span>Target load</span><strong>{% if item.load_cap_kg is not none %}≤ {% endif %}{{ item.load_kg if item.load_kg is not none else item.target_load_kg if item.target_load_kg is not none else item.load_cap_kg }} kg</strong></div>{% endif %}
+          </div>
+          {% if item.notes %}<p class="exercise-notes"><strong>Coach note:</strong> {{ item.notes }}</p>{% endif %}
+
+          <div class="set-list" data-set-list>
+            {% for set_order in range(1, prescribed_sets + 1) %}
+              {% set result = results_by_set.get((item.position, set_order)) %}
+              {% include "athletes/_training_set.html" %}
+            {% endfor %}
+            {% for result in extra_results %}
+              {% set set_order = result.set_order %}
+              {% include "athletes/_training_set.html" %}
+            {% endfor %}
+          </div>
+          {% if state != 'completed' %}<button class="add-set-button" type="button" data-add-set>Add set</button>{% endif %}
+        </li>
+      {% else %}<li class="empty-state"><strong>No exercises added</strong><p>Your coach has not added the session exercises yet.</p></li>{% endfor %}
+    </ol>
+
+    {% if session.prescriptions and state != 'completed' %}
+      <div class="session-sticky-action">
+        <button class="button button--secondary" type="submit" name="intent" value="save">Save progress</button>
+        <button class="button" type="submit" name="intent" value="finish" data-finish-session>Finish session</button>
+      </div>
+    {% else %}
+      <div class="session-sticky-action"><a class="button" href="{{ url_for('athletes.programme') }}">Back to programme</a></div>
+    {% endif %}
+  </form>
+
+  <template id="extra-set-template">
+    <section class="working-set" data-set-row>
+      <input type="hidden" data-field="row" value="1">
+      <header><strong data-set-label>Extra set</strong><span class="set-target">Extra</span></header>
+      <div class="set-state-controls">
+        <label><input type="checkbox" value="1" data-field="completed"> Complete</label>
+        <label><input type="checkbox" value="1" data-field="skipped"> Skip</label>
+      </div>
+      <div class="actual-grid">
+        <label>Load <span>kg</span><input type="number" min="0" max="1000" step="0.25" inputmode="decimal" data-field="load"></label>
+        <label>Reps<input type="number" min="0" max="1000" step="1" inputmode="numeric" data-field="reps"></label>
+        <label>RPE<input type="number" min="1" max="10" step="0.5" inputmode="decimal" data-field="rpe"></label>
+      </div>
+      <details class="set-note"><summary>Add note</summary><label><span class="sr-only">Athlete note</span><textarea maxlength="500" rows="2" data-field="note"></textarea></label></details>
+    </section>
+  </template>
 </section>
 {% endblock %}

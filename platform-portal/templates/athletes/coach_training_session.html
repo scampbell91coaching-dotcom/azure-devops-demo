@@ -1,0 +1,46 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "athletes" %}
+{% block title %}{{ athlete.full_name }} · {{ log.session_name }} | Traditional Strength{% endblock %}
+{% block content %}
+<section class="coach-page">
+  <header class="coach-page__header coach-page__header--split">
+    <div>
+      <a class="coach-back-link" href="{{ url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}">← {{ athlete.full_name }}</a>
+      <span class="coach-eyebrow">Training performance</span>
+      <h1>{{ log.session_name }}</h1>
+      <p>{{ log.block_name }} · {{ log.week_name }}</p>
+    </div>
+    <span class="coach-status coach-status--active">{{ log.status | replace('_', ' ') | title }}</span>
+  </header>
+
+  <section class="coach-metric-grid">
+    <article class="coach-metric"><span>Athlete</span><strong>{{ athlete.full_name }}</strong></article>
+    <article class="coach-metric"><span>Started</span><strong>{{ log.started_at.strftime('%d %b %Y, %H:%M') }}</strong></article>
+    <article class="coach-metric"><span>Completed</span><strong>{{ log.completed_at.strftime('%d %b %Y, %H:%M') if log.completed_at else 'In progress' }}</strong></article>
+  </section>
+
+  {% for exercise_position, results in log.results | groupby('exercise_position') %}
+    <section class="coach-panel">
+      <div class="coach-panel__heading"><span class="coach-eyebrow">Exercise {{ exercise_position }}</span><h2>{{ results[0].exercise_name }}</h2></div>
+      <div class="coach-checkin-list">
+        {% for result in results %}
+          <article class="coach-checkin-card">
+            <header class="coach-checkin-card__header">
+              <strong>{{ 'Extra set' if result.is_extra else 'Set ' ~ result.set_order }}</strong>
+              <span class="coach-status {% if result.skipped %}coach-status--pending{% else %}coach-status--active{% endif %}">{{ 'Skipped' if result.skipped else 'Complete' }}</span>
+            </header>
+            <div class="coach-checkin-card__summary">
+              <span>Load: {{ result.actual_load_kg ~ ' kg' if result.actual_load_kg is not none else '—' }} <small>(target {{ result.prescribed_load_kg ~ ' kg' if result.prescribed_load_kg is not none else '—' }})</small></span>
+              <span>Reps: {{ result.actual_reps if result.actual_reps is not none else '—' }} <small>(target {{ result.prescribed_reps or '—' }})</small></span>
+              <span>RPE: {{ result.actual_rpe if result.actual_rpe is not none else '—' }} <small>(target/cap {{ result.prescribed_rpe if result.prescribed_rpe is not none else '—' }})</small></span>
+            </div>
+            {% if result.athlete_note %}<div class="coach-checkin-card__copy"><div><h3>Athlete note</h3><p>{{ result.athlete_note }}</p></div></div>{% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% else %}
+    <section class="coach-panel"><div class="coach-empty-state"><h2>No sets recorded</h2><p>This athlete has not submitted set results yet.</p></div></section>
+  {% endfor %}
+</section>
+{% endblock %}

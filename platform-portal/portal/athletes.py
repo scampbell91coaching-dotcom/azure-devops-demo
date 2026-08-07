@@ -5,6 +5,7 @@ from datetime import UTC, date, datetime, timedelta
 from flask import (
     Blueprint,
     abort,
+    flash,
     g,
     redirect,
     render_template,
@@ -18,10 +19,11 @@ from .extensions import db
 from .models.athlete import Athlete
 from .models.checkins import AthleteCheckinSettings
 from .models.nutrition_checkin import NutritionCheckIn
-from .models.programming import TrainingBlock, TrainingSession
+from .models.programming import TrainingBlock, TrainingSession, TrainingSessionLog
 from .services.athlete_dashboard import get_athlete_dashboard
 from .services.nutrition_dashboard import get_nutrition_dashboard
 from .nutrition_imports import _summary
+from .services.training_log import assigned_log, save_training_session
 
 athletes_bp = Blueprint("athletes", __name__)
 
@@ -73,10 +75,22 @@ def programme():
         .order_by(TrainingBlock.created_at.desc(), TrainingBlock.id.desc())
         .first()
     )
-    return render_template("athletes/programme.html", athlete=athlete, block=block)
+    logs = (
+        TrainingSessionLog.query.filter_by(athlete_id=athlete_id)
+        .filter(TrainingSessionLog.session_id.is_not(None))
+        .all()
+    )
+    return render_template(
+        "athletes/programme.html",
+        athlete=athlete,
+        block=block,
+        logs_by_session={item.session_id: item for item in logs},
+    )
 
 
-@athletes_bp.get("/athlete/programme/sessions/<int:session_id>")
+@athletes_bp.route(
+    "/athlete/programme/sessions/<int:session_id>", methods=["GET", "POST"]
+)
 def programme_session(session_id: int):
     athlete_id = _signed_in_athlete_id()
     training_session = db.session.get(TrainingSession, session_id)
@@ -84,11 +98,48 @@ def programme_session(session_id: int):
         abort(404)
     if training_session.week.block.status != "active":
         abort(404)
+    log = assigned_log(athlete_id, training_session.id)
+    errors: tuple[str, ...] = ()
+    if request.method == "POST":
+        result = save_training_session(training_session, athlete_id, request.form)
+        log, errors = result.log, result.errors
+        if not errors:
+            message = (
+                "Session finished. Your training is saved."
+                if log is not None and log.status == "completed"
+                else "Progress saved."
+            )
+            flash(message, "success")
+            return redirect(
+                url_for("athletes.programme_session", session_id=training_session.id)
+            )
+    results_by_set = (
+        {(item.exercise_position, item.set_order): item for item in log.results}
+        if log is not None
+        else {}
+    )
     return render_template(
         "athletes/programme_session.html",
         session=training_session,
         week=training_session.week,
         block=training_session.week.block,
+        log=log,
+        results_by_set=results_by_set,
+        errors=errors,
+    ), (400 if errors else 200)
+
+
+@athletes_bp.get("/athletes/<int:athlete_id>/training-sessions/<int:log_id>")
+def coach_training_session(athlete_id: int, log_id: int):
+    user = g.get("current_user")
+    if user is not None and getattr(user, "role", None) == "athlete":
+        abort(403)
+    athlete = db.session.get(Athlete, athlete_id)
+    log = db.session.get(TrainingSessionLog, log_id)
+    if athlete is None or log is None or log.athlete_id != athlete.id:
+        abort(404)
+    return render_template(
+        "athletes/coach_training_session.html", athlete=athlete, log=log
     )
 
 
@@ -286,7 +337,19 @@ def athlete_dashboard(athlete_id: int):
         latest_checkin=latest_checkin,
         checkin_settings=settings,
         weekly_checkin_due=settings.is_due_on(datetime.now(UTC).date()),
-        imported_nutrition=_summary(athlete.id, datetime.now(UTC).date() - timedelta(days=6), datetime.now(UTC).date()),
+        imported_nutrition=_summary(
+            athlete.id,
+            datetime.now(UTC).date() - timedelta(days=6),
+            datetime.now(UTC).date(),
+        ),
+        training_logs=(
+            TrainingSessionLog.query.filter_by(
+                athlete_id=athlete.id,
+                status="completed",
+            )
+            .order_by(TrainingSessionLog.completed_at.desc())
+            .all()
+        ),
     )
 
 
