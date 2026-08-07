@@ -266,6 +266,28 @@ def test_roles_and_athlete_isolation(secured_app):
     assert client.get(f"/athletes/{ids['first']}/nutrition-checkins/new").status_code == 200
 
 
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/coach",
+        "/athletes",
+        "/programming",
+        "/check-ins",
+        "/nutrition",
+        "/applications",
+        "/meet-day",
+    ],
+)
+def test_athlete_cannot_access_release_critical_coach_surfaces(secured_app, path):
+    client = secured_app.test_client()
+    assert _login(client, "ada@example.test", "athlete secure password").status_code == 302
+
+    response = client.get(path)
+
+    assert response.status_code == 403
+    assert b"Access denied" in response.data
+
+
 def test_coach_can_create_and_update_nutrition_response(secured_app):
     client = secured_app.test_client()
     assert _login(client, "coach@example.test", "correct horse battery staple").status_code == 302
