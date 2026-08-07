@@ -1,14 +1,14 @@
 """Add nullable Exercise Library V6 swap metadata.
 
 Revision ID: 0009
-Revises: 0008_athlete_training_logs
+Revises: 0009_athlete_state
 """
 
 import sqlalchemy as sa
 from alembic import op
 
 revision = "0009"
-down_revision = "0008_athlete_training_logs"
+down_revision = "0009_athlete_state"
 branch_labels = None
 depends_on = None
 
