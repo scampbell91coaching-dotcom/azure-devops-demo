@@ -72,6 +72,19 @@ def test_required_fields_are_validated():
     assert b"Tell me what you want to achieve" in response.data
 
 
+def test_validation_response_preserves_entered_values():
+    app = create_test_app()
+    response = app.test_client().post(
+        "/apply",
+        data={"first_name": "Alex", "email": "not-an-email"},
+    )
+
+    assert response.status_code == 400
+    assert b'value="Alex"' in response.data
+    assert b'value="not-an-email"' in response.data
+    assert b'data-has-server-errors="true"' in response.data
+
+
 def test_honeypot_submission_is_not_saved():
     app = create_test_app()
     payload = valid_application()

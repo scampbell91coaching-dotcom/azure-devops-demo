@@ -51,3 +51,25 @@ def test_application_has_no_photo_placeholders():
 
     assert "photo placeholder" not in text
     assert "<img" not in text
+
+
+def test_application_explains_service_fit_timing_and_next_steps():
+    text = (ROOT / "templates" / "public" / "coaching_application.html").read_text()
+
+    for phrase in (
+        "Individualised programming",
+        "Technique feedback",
+        "Fatigue management",
+        "Nutrition support",
+        "Meet-day support",
+        "8–10 min",
+        "What happens next",
+    ):
+        assert phrase in text
+
+
+def test_server_errors_take_priority_over_saved_browser_draft():
+    javascript = (ROOT / "static" / "js" / "coaching_application.js").read_text()
+
+    assert 'form.dataset.hasServerErrors === "true"' in javascript
+    assert "hasServerErrors ? false : restoreProgress()" in javascript

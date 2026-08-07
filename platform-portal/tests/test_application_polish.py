@@ -19,18 +19,18 @@ def test_save_message_only_becomes_visible_after_activity():
     assert 'classList.remove("is-visible")' in javascript
 
 
-def test_application_layout_is_centred():
+def test_application_layout_integrates_context_and_form_card():
     css = (ROOT / "static" / "css" / "coaching_application.css").read_text()
 
-    assert ".wizard-shell" in css
-    assert "margin-inline: auto" in css
-    assert ".wizard-step__heading" in css
-    assert "text-align: center" in css
+    assert ".application-layout" in css
+    assert ".application-aside" in css
+    assert ".wizard-card" in css
+    assert "grid-template-columns: minmax(15rem, .48fr) minmax(0, 1fr)" in css
 
 
 def test_mobile_layout_stacks_fields_and_buttons():
     css = (ROOT / "static" / "css" / "coaching_application.css").read_text()
 
-    assert "@media (max-width: 760px)" in css
+    assert "@media (max-width: 640px)" in css
     assert ".editorial-grid--three" in css
     assert "grid-template-columns: 1fr" in css

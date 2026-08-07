@@ -11,6 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("[data-progress-step]")
   );
   const progressBar = document.querySelector("[data-progress-bar]");
+  const progressLabel = document.querySelector("[data-progress-label]");
+  const progressPercent = document.querySelector("[data-progress-percent]");
   const progressClasses = [
     "progress-0",
     "progress-25",
@@ -186,6 +188,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const updateProgress = () => {
     const progress = ((currentStep - 1) / 4) * 100;
 
+    if (progressLabel) progressLabel.textContent = `Step ${currentStep} of 5`;
+    if (progressPercent) progressPercent.textContent = `${progress}% complete`;
+
     if (progressBar) {
       progressBar.classList.remove(...progressClasses);
       progressBar.classList.add(`progress-${progress}`);
@@ -215,11 +220,10 @@ document.addEventListener("DOMContentLoaded", () => {
       (step) => Number(step.dataset.step) === currentStep
     );
 
-    activeStep?.querySelector("input, textarea, select")?.focus({
-      preventScroll: true,
-    });
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const target = document.querySelector(".wizard-card");
+    if (target && window.scrollY > target.offsetTop) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 
   const validateStep = (stepNumber) => {
@@ -235,8 +239,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let isValid = true;
 
     requiredFields.forEach((field) => {
-      const valid =
-        field.type === "checkbox" ? field.checked : field.value.trim();
+      const valid = field.type === "checkbox"
+        ? field.checked
+        : field.value.trim() && field.checkValidity();
 
       field.setAttribute("aria-invalid", valid ? "false" : "true");
 
@@ -248,7 +253,9 @@ document.addEventListener("DOMContentLoaded", () => {
         isValid = false;
 
         if (error && !error.textContent.trim()) {
-          error.textContent = "Complete this before continuing.";
+          error.textContent = field.validity.typeMismatch
+            ? "Enter a valid email address."
+            : "Complete this before continuing.";
         }
       } else if (error) {
         error.textContent = "";
@@ -303,7 +310,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  const restored = restoreProgress();
+  const hasServerErrors = form.dataset.hasServerErrors === "true";
+  const restored = hasServerErrors ? false : restoreProgress();
+
+  if (hasServerErrors) {
+    const firstError = Array.from(form.querySelectorAll(".field-error"))
+      .find((error) => error.textContent.trim());
+    const errorStep = firstError?.closest("[data-step]");
+    currentStep = Number(errorStep?.dataset.step) || 1;
+    window.requestAnimationFrame(() => {
+      document.querySelector("[data-error-summary]")?.focus();
+    });
+  }
 
   if (restored) {
     showSaveMessage("Saved application restored.");
