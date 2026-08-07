@@ -95,6 +95,122 @@ class TrainingSession(db.Model):  # type: ignore[name-defined]
     )
 
 
+class TrainingSessionLog(db.Model):  # type: ignore[name-defined]
+    """An athlete's immutable-after-completion record of an assigned session."""
+
+    __tablename__ = "training_session_logs"
+    __table_args__ = (
+        db.CheckConstraint(
+            "status IN ('in_progress', 'completed')",
+            name="ck_training_session_logs_status",
+        ),
+        db.UniqueConstraint(
+            "athlete_id", "session_id", name="uq_training_session_logs_assignment"
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    athlete_id = db.Column(
+        db.Integer,
+        db.ForeignKey("athletes.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    session_id = db.Column(
+        db.Integer,
+        db.ForeignKey("training_sessions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    session_name = db.Column(db.String(120), nullable=False)
+    block_name = db.Column(db.String(160), nullable=False)
+    week_name = db.Column(db.String(120), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="in_progress", index=True)
+    started_at = db.Column(
+        db.DateTime, nullable=False, default=lambda: datetime.now(UTC)
+    )
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+    completed_at = db.Column(db.DateTime, nullable=True, index=True)
+
+    athlete = db.relationship("Athlete", backref="training_session_logs")
+    session = db.relationship("TrainingSession")
+    results = db.relationship(
+        "TrainingSetResult",
+        back_populates="session_log",
+        cascade="all, delete-orphan",
+        order_by="(TrainingSetResult.exercise_position, TrainingSetResult.set_order)",
+    )
+
+
+class TrainingSetResult(db.Model):  # type: ignore[name-defined]
+    """One stable working-set result with a snapshot of its prescription."""
+
+    __tablename__ = "training_set_results"
+    __table_args__ = (
+        db.CheckConstraint("set_order > 0", name="ck_training_set_results_order"),
+        db.CheckConstraint("actual_load_kg >= 0", name="ck_training_set_results_load"),
+        db.CheckConstraint("actual_reps >= 0", name="ck_training_set_results_reps"),
+        db.CheckConstraint(
+            "actual_rpe >= 1 AND actual_rpe <= 10",
+            name="ck_training_set_results_rpe",
+        ),
+        db.CheckConstraint(
+            "NOT (completed AND skipped)",
+            name="ck_training_set_results_single_state",
+        ),
+        db.UniqueConstraint(
+            "session_log_id",
+            "exercise_position",
+            "set_order",
+            name="uq_training_set_results_order",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_log_id = db.Column(
+        db.Integer,
+        db.ForeignKey("training_session_logs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    prescription_id = db.Column(
+        db.Integer,
+        db.ForeignKey("exercise_prescriptions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    exercise_name = db.Column(db.String(160), nullable=False)
+    exercise_position = db.Column(db.Integer, nullable=False)
+    set_order = db.Column(db.Integer, nullable=False)
+    is_extra = db.Column(db.Boolean, nullable=False, default=False)
+    prescribed_reps = db.Column(db.String(40), nullable=True)
+    prescribed_load_kg = db.Column(db.Float, nullable=True)
+    prescribed_rpe = db.Column(db.Float, nullable=True)
+    completed = db.Column(db.Boolean, nullable=False, default=False)
+    skipped = db.Column(db.Boolean, nullable=False, default=False)
+    actual_load_kg = db.Column(db.Float, nullable=True)
+    actual_reps = db.Column(db.Integer, nullable=True)
+    actual_rpe = db.Column(db.Float, nullable=True)
+    athlete_note = db.Column(db.String(500), nullable=True)
+    created_at = db.Column(
+        db.DateTime, nullable=False, default=lambda: datetime.now(UTC)
+    )
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    session_log = db.relationship("TrainingSessionLog", back_populates="results")
+    prescription = db.relationship("ExercisePrescription")
+
+
 class ExercisePrescription(db.Model):  # type: ignore[name-defined]
     __tablename__ = "exercise_prescriptions"
 

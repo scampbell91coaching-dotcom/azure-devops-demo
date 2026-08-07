@@ -29,6 +29,8 @@ EXPECTED_TABLES = {
     "platform_snapshots",
     "training_blocks",
     "training_sessions",
+    "training_session_logs",
+    "training_set_results",
     "training_weeks",
     "users",
     "weekly_checkins",

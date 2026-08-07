@@ -1,0 +1,27 @@
+<section class="working-set{% if result and result.skipped %} is-skipped{% endif %}" data-set-row>
+  <input type="hidden" name="row-{{ item.id }}-{{ set_order }}" value="1">
+  <header>
+    <strong>{% if set_order > prescribed_sets %}Extra set {{ set_order - prescribed_sets }}{% else %}Set {{ set_order }}{% endif %}</strong>
+    <span class="set-target">{% if set_order > prescribed_sets %}Extra{% else %}{{ item.reps or (item.reps_min ~ '–' ~ item.reps_max if item.reps_min and item.reps_max else item.target_reps or '—') }} reps{% endif %}</span>
+  </header>
+  {% if state == 'completed' %}
+    <dl class="set-result-summary">
+      <div><dt>Status</dt><dd>{{ 'Skipped' if result and result.skipped else 'Complete' }}</dd></div>
+      <div><dt>Load</dt><dd>{{ (result.actual_load_kg | string) ~ ' kg' if result and result.actual_load_kg is not none else '—' }}</dd></div>
+      <div><dt>Reps</dt><dd>{{ result.actual_reps if result and result.actual_reps is not none else '—' }}</dd></div>
+      <div><dt>RPE</dt><dd>{{ result.actual_rpe if result and result.actual_rpe is not none else '—' }}</dd></div>
+    </dl>
+    {% if result and result.athlete_note %}<p class="athlete-set-note"><strong>Your note:</strong> {{ result.athlete_note }}</p>{% endif %}
+  {% else %}
+    <div class="set-state-controls">
+      <label><input type="checkbox" name="set-{{ item.id }}-{{ set_order }}-completed" value="1" {% if result and result.completed %}checked{% endif %}> Complete</label>
+      <label><input type="checkbox" name="set-{{ item.id }}-{{ set_order }}-skipped" value="1" {% if result and result.skipped %}checked{% endif %}> Skip</label>
+    </div>
+    <div class="actual-grid">
+      <label>Load <span>kg</span><input type="number" name="set-{{ item.id }}-{{ set_order }}-load" min="0" max="1000" step="0.25" inputmode="decimal" value="{{ result.actual_load_kg if result and result.actual_load_kg is not none else '' }}"></label>
+      <label>Reps<input type="number" name="set-{{ item.id }}-{{ set_order }}-reps" min="0" max="1000" step="1" inputmode="numeric" value="{{ result.actual_reps if result and result.actual_reps is not none else '' }}"></label>
+      <label>RPE<input type="number" name="set-{{ item.id }}-{{ set_order }}-rpe" min="1" max="10" step="0.5" inputmode="decimal" value="{{ result.actual_rpe if result and result.actual_rpe is not none else '' }}"></label>
+    </div>
+    <details class="set-note" {% if result and result.athlete_note %}open{% endif %}><summary>{{ 'Edit note' if result and result.athlete_note else 'Add note' }}</summary><label><span class="sr-only">Athlete note for {{ item.exercise_name }} set {{ set_order }}</span><textarea name="set-{{ item.id }}-{{ set_order }}-note" maxlength="500" rows="2">{{ result.athlete_note if result and result.athlete_note else '' }}</textarea></label></details>
+  {% endif %}
+</section>
