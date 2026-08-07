@@ -9,15 +9,8 @@
     <div class="steps-grid">
       {% for step in content.steps %}
         <article class="step-card">
-          <div class="step-card__media">
-            <div class="step-photo-placeholder">
-              <span>Step {{ loop.index }}</span>
-              <small>{{ step.image_label }}</small>
-            </div>
-          </div>
-
+          <span class="step-number">{{ "%02d" | format(loop.index) }}</span>
           <div class="step-card__body">
-            <span class="step-number">{{ "%02d" | format(loop.index) }}</span>
             <h3>{{ step.title }}</h3>
             <p>{{ step.copy }}</p>
 
@@ -25,10 +18,6 @@
               <a class="text-link" href="{{ step.video_url }}">
                 Watch Step
               </a>
-            {% else %}
-              <span class="text-link text-link--muted">
-                Video placeholder
-              </span>
             {% endif %}
           </div>
         </article>

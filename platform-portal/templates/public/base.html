@@ -3,55 +3,42 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#070707">
-  <meta
-    name="description"
-    content="{{ content.meta_description | default(content.subtitle) }}"
-  >
-
+  <meta name="theme-color" content="#0b0a09">
+  <meta name="description" content="{{ content.meta_description | default(content.subtitle) }}">
   <title>{{ content.title }} | Traditional Strength</title>
-
-  <link
-    rel="stylesheet"
-    href="{{ url_for('static', filename='css/public_guides.css') }}"
-  >
-  <link
-    rel="stylesheet"
-    href="{{ url_for('static', filename='css/coaching_application.css') }}?v=2"
-  >
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public_guides.css') }}?v=3">
+  {% if content.slug == "apply" %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/coaching_application.css') }}?v=3">
+  {% endif %}
 </head>
 
-<body class="guide-site">
+<body class="guide-site ts-theme-dark">
   <a class="skip-link" href="#main-content">Skip to content</a>
 
-  <header class="guide-header">
-    <div class="page-shell guide-header__inner">
-      <a class="brand" href="/guides/hip-pain">
-        <img
-          src="{{ url_for('static', filename='img/traditional-strength-logo.png') }}"
-          alt="Traditional Strength"
-        >
+  <header class="public-header" data-public-header>
+    <div class="page-shell public-header__inner">
+      <a class="brand-lockup" href="/guides/hip-pain" aria-label="Traditional Strength home">
+        <img src="{{ url_for('static', filename='img/traditional-strength-logo.png') }}" alt="" width="1170" height="1675">
+        <span class="brand-lockup__type">
+          <strong>Traditional</strong>
+          <span>Strength</span>
+        </span>
       </a>
 
-      <nav class="guide-nav" aria-label="Guide navigation">
-        <a
-          href="/guides/hip-pain"
-          {% if content.slug == "hip-pain" %}aria-current="page"{% endif %}
-        >
-          Hip Pain Guide
-        </a>
+      <button class="public-menu-button" type="button" aria-expanded="false" aria-controls="public-navigation" data-public-menu>
+        <span class="public-menu-button__label">Menu</span>
+        <span class="public-menu-button__icon" aria-hidden="true"><i></i><i></i></span>
+      </button>
 
-        <a
-          href="/guides/shoulder-pain"
-          {% if content.slug == "shoulder-pain" %}aria-current="page"{% endif %}
-        >
-          Shoulder Pain Guide
-        </a>
+      <nav class="public-navigation" id="public-navigation" aria-label="Public navigation" data-public-navigation>
+        <div class="public-navigation__guides">
+          <span class="public-navigation__label">Guides</span>
+          <a href="/guides/hip-pain" {% if content.slug == "hip-pain" %}aria-current="page"{% endif %}>Hip pain</a>
+          <a href="/guides/shoulder-pain" {% if content.slug == "shoulder-pain" %}aria-current="page"{% endif %}>Shoulder pain</a>
+        </div>
+        <a class="header-cta" href="/apply" {% if content.slug == "apply" %}aria-current="page"{% endif %}>Apply for coaching <span aria-hidden="true">→</span></a>
       </nav>
-
-      <a class="header-cta" href="{{ content.coaching_url }}">
-        Apply for Coaching
-      </a>
     </div>
   </header>
 
@@ -60,34 +47,23 @@
   <footer class="guide-footer">
     <div class="page-shell guide-footer__inner">
       <div class="footer-brand">
-        <img
-          src="{{ url_for('static', filename='img/traditional-strength-logo.png') }}"
-          alt=""
-        >
-
+        <span class="footer-brand__mark" aria-hidden="true">TS</span>
         <div>
           <strong>Traditional Strength</strong>
-          <p>Powerlifting coaching without the generic bullshit.</p>
+          <p>Individual powerlifting coaching, built around the lifter.</p>
         </div>
       </div>
-
-      <div class="footer-links">
-        <a href="/guides/hip-pain">Hip Pain Guide</a>
-        <a href="/guides/shoulder-pain">Shoulder Pain Guide</a>
-        <a href="{{ content.coaching_url }}">Apply for Coaching</a>
-      </div>
+      <nav class="footer-links" aria-label="Footer navigation">
+        <a href="/guides/hip-pain">Hip pain guide</a>
+        <a href="/guides/shoulder-pain">Shoulder pain guide</a>
+        <a href="/apply">Apply for coaching</a>
+      </nav>
     </div>
   </footer>
 
-  <script
-    src="{{ url_for('static', filename='js/public_guides.js') }}"
-    defer
-  ></script>
+  <script src="{{ url_for('static', filename='js/public_guides.js') }}?v=3" defer></script>
   {% if content.slug == "apply" %}
-    <script
-      src="{{ url_for('static', filename='js/coaching_application.js') }}"
-      defer
-    ></script>
+    <script src="{{ url_for('static', filename='js/coaching_application.js') }}?v=3" defer></script>
   {% endif %}
 </body>
 </html>

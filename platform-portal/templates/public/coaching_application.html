@@ -3,19 +3,27 @@
 {% block content %}
 <main id="main-content" class="application-page">
   <section class="application-intro">
-    <div class="page-shell application-intro__inner">
-      <span class="eyebrow">Online Powerlifting Coaching</span>
-
-      <h1>Apply for Coaching</h1>
-
-      <p>
-        Powerlifting coaching built around your training, your recovery and
-        your goals.
-      </p>
-
-      <p class="application-intro__note">
-        Applications take around 10 minutes.
-      </p>
+    <div class="page-shell application-intro__grid">
+      <div class="application-intro__copy">
+        <span class="eyebrow">Individual powerlifting coaching</span>
+        <h1>Coaching built around the lifter.</h1>
+        <p>For powerlifters who want considered programming, direct feedback and honest communication—not a template with their name on it.</p>
+        <div class="application-meta" aria-label="Application details">
+          <span><strong>8–10 min</strong> to apply</span>
+          <span><strong>Personally reviewed</strong> within 48 hours</span>
+        </div>
+      </div>
+      <div class="service-summary" aria-labelledby="service-summary-title">
+        <span class="eyebrow">What coaching covers</span>
+        <h2 id="service-summary-title">The whole training process.</h2>
+        <ul>
+          <li>Individualised programming</li>
+          <li>Technique feedback</li>
+          <li>Fatigue management</li>
+          <li>Nutrition support</li>
+          <li>Meet-day support</li>
+        </ul>
+      </div>
     </div>
   </section>
 
@@ -46,9 +54,29 @@
       </div>
     </section>
   {% else %}
-    <section class="application-wizard-section">
-      <div class="page-shell wizard-shell">
-        <div class="wizard-progress" aria-label="Application progress">
+    <section class="application-wizard-section" aria-labelledby="application-form-heading">
+      <div class="page-shell application-layout">
+        <aside class="application-aside">
+          <span class="eyebrow">Before you begin</span>
+          <h2 id="application-form-heading">A good fit matters both ways.</h2>
+          <p>This application gives enough context to decide whether the coaching approach matches what you need.</p>
+          <div class="fit-list">
+            <div><span>01</span><p><strong>You train consistently.</strong> You are prepared to communicate and share training footage.</p></div>
+            <div><span>02</span><p><strong>You want an individual process.</strong> Your programme should respond to performance and recovery.</p></div>
+            <div><span>03</span><p><strong>You value honest feedback.</strong> Progress takes collaboration, patience and clear decisions.</p></div>
+          </div>
+          <div class="application-process">
+            <strong>What happens next</strong>
+            <p>Your application is read personally. If the fit looks right, you’ll receive a reply within 48 hours to discuss goals, expectations and next steps. Applying does not commit you to coaching.</p>
+          </div>
+        </aside>
+
+        <div class="wizard-card">
+          <div class="wizard-progress" aria-label="Application progress" aria-live="polite">
+            <div class="wizard-progress__summary">
+              <span data-progress-label>Step 1 of 5</span>
+              <span data-progress-percent>0% complete</span>
+            </div>
           <div class="wizard-progress__bar">
             <span data-progress-bar></span>
           </div>
@@ -71,7 +99,7 @@
 
             <li data-progress-step="4">
               <span>4</span>
-              <small>Working together</small>
+              <small>Together</small>
             </li>
 
             <li data-progress-step="5">
@@ -81,13 +109,20 @@
           </ol>
         </div>
 
-        <form
+          <form
           class="application-wizard"
           method="post"
           action="/apply"
           novalidate
           data-application-form
+          data-has-server-errors="{{ 'true' if errors else 'false' }}"
         >
+          {% if errors %}
+            <div class="application-error-summary" role="alert" tabindex="-1" data-error-summary>
+              <strong>There are a few details to check.</strong>
+              <p>Your answers are still here. Review the highlighted field and continue when you’re ready.</p>
+            </div>
+          {% endif %}
           <div class="honeypot" aria-hidden="true">
             <label>
               Website
@@ -106,7 +141,7 @@
             aria-labelledby="step-one-title"
           >
             <div class="wizard-step__heading">
-              <span class="eyebrow">Step 1 of 4</span>
+              <span class="eyebrow">Step 1 of 5</span>
               <h2 id="step-one-title">Tell me about yourself</h2>
               <p>Just the basics to start with.</p>
             </div>
@@ -119,8 +154,10 @@
                 value="{{ form.get('first_name', '') }}"
                 autocomplete="given-name"
                 required
+                aria-describedby="first-name-error"
+                {% if errors.get("first_name") %}aria-invalid="true"{% endif %}
               >
-              <small class="field-error" data-error-for="first_name">
+              <small class="field-error" id="first-name-error" data-error-for="first_name">
                 {{ errors.get("first_name", "") }}
               </small>
             </div>
@@ -133,8 +170,10 @@
                 value="{{ form.get('last_name', '') }}"
                 autocomplete="family-name"
                 required
+                aria-describedby="last-name-error"
+                {% if errors.get("last_name") %}aria-invalid="true"{% endif %}
               >
-              <small class="field-error" data-error-for="last_name">
+              <small class="field-error" id="last-name-error" data-error-for="last_name">
                 {{ errors.get("last_name", "") }}
               </small>
             </div>
@@ -148,8 +187,10 @@
                 value="{{ form.get('email', '') }}"
                 autocomplete="email"
                 required
+                aria-describedby="email-error"
+                {% if errors.get("email") %}aria-invalid="true"{% endif %}
               >
-              <small class="field-error" data-error-for="email">
+              <small class="field-error" id="email-error" data-error-for="email">
                 {{ errors.get("email", "") }}
               </small>
             </div>
@@ -172,8 +213,10 @@
                 value="{{ form.get('country', '') }}"
                 autocomplete="country-name"
                 required
+                aria-describedby="country-error"
+                {% if errors.get("country") %}aria-invalid="true"{% endif %}
               >
-              <small class="field-error" data-error-for="country">
+              <small class="field-error" id="country-error" data-error-for="country">
                 {{ errors.get("country", "") }}
               </small>
             </div>
@@ -204,7 +247,7 @@
             hidden
           >
             <div class="wizard-step__heading">
-              <span class="eyebrow">Step 2 of 4</span>
+              <span class="eyebrow">Step 2 of 5</span>
               <h2 id="step-two-title">Your lifting</h2>
               <p>Give me a quick picture of where you are now.</p>
             </div>
@@ -310,7 +353,7 @@
             hidden
           >
             <div class="wizard-step__heading">
-              <span class="eyebrow">Step 3 of 4</span>
+              <span class="eyebrow">Step 3 of 5</span>
               <h2 id="step-three-title">Your training</h2>
               <p>This is the part I care about most.</p>
             </div>
@@ -322,8 +365,10 @@
                 name="primary_goal"
                 rows="6"
                 required
+                aria-describedby="primary-goal-error"
+                {% if errors.get("primary_goal") %}aria-invalid="true"{% endif %}
               >{{ form.get('primary_goal', '') }}</textarea>
-              <small class="field-error" data-error-for="primary_goal">
+              <small class="field-error" id="primary-goal-error" data-error-for="primary_goal">
                 {{ errors.get("primary_goal", "") }}
               </small>
             </div>
@@ -335,8 +380,10 @@
                 name="biggest_problem"
                 rows="6"
                 required
+                aria-describedby="biggest-problem-error"
+                {% if errors.get("biggest_problem") %}aria-invalid="true"{% endif %}
               >{{ form.get('biggest_problem', '') }}</textarea>
-              <small class="field-error" data-error-for="biggest_problem">
+              <small class="field-error" id="biggest-problem-error" data-error-for="biggest_problem">
                 {{ errors.get("biggest_problem", "") }}
               </small>
             </div>
@@ -381,7 +428,7 @@
             hidden
           >
             <div class="wizard-step__heading">
-              <span class="eyebrow">Step 4 of 4</span>
+              <span class="eyebrow">Step 4 of 5</span>
               <h2 id="step-four-title">Working together</h2>
               <p>Good coaching needs input from both sides.</p>
             </div>
@@ -406,8 +453,10 @@
                 name="coaching_expectations"
                 rows="6"
                 required
+                aria-describedby="coaching-expectations-error"
+                {% if errors.get("coaching_expectations") %}aria-invalid="true"{% endif %}
               >{{ form.get('coaching_expectations', '') }}</textarea>
-              <small class="field-error" data-error-for="coaching_expectations">
+              <small class="field-error" id="coaching-expectations-error" data-error-for="coaching_expectations">
                 {{ errors.get("coaching_expectations", "") }}
               </small>
             </div>
@@ -514,6 +563,8 @@
                 value="yes"
                 {% if form.get("privacy_consent") == "yes" %}checked{% endif %}
                 required
+                aria-describedby="privacy-consent-error"
+                {% if errors.get("privacy_consent") %}aria-invalid="true"{% endif %}
               >
               <span>
                 I agree that Traditional Strength can store and use these
@@ -521,7 +572,7 @@
               </span>
             </label>
 
-            <small class="field-error" data-error-for="privacy_consent">
+            <small class="field-error" id="privacy-consent-error" data-error-for="privacy_consent">
               {{ errors.get("privacy_consent", "") }}
             </small>
 
@@ -544,11 +595,10 @@
               </button>
             </div>
           </section>
-        </form>
+          </form>
 
-        <p class="save-note" data-save-status aria-live="polite">
-          Your progress is saved in this browser.
-        </p>
+          <p class="save-note" data-save-status aria-live="polite">Your progress is saved in this browser.</p>
+        </div>
       </div>
     </section>
   {% endif %}
