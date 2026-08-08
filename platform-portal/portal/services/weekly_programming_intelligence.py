@@ -1,0 +1,271 @@
+from __future__ import annotations
+
+from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import Any, Protocol
+
+from ..models.athlete_state import (
+    AthleteConstraintFlag,
+    AthleteStateOverride,
+    CoachTechnicalObservation,
+)
+from ..models.exercise_library import Exercise
+from ..models.programming import TrainingBlock
+from .athlete_state import calculate_signals, latest_facts
+
+
+class FactoryInputs(Protocol):
+    athlete_id: int
+    training_days: int
+    squat_frequency: int
+    bench_frequency: int
+    deadlift_frequency: int
+    goal: str
+
+
+@dataclass(frozen=True)
+class AthleteProgrammingContext:
+    athlete_id: int
+    bodyweight_kg: float | None
+    weight_class: str | None
+    next_competition: str | None
+    existing_blocks: int
+    state_facts: dict[str, Any]
+    state_signals: dict[str, Any]
+    active_constraints: tuple[str, ...]
+    technical_observations: tuple[str, ...]
+    active_overrides: tuple[dict[str, Any], ...]
+    missing: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class WeeklyIntelligencePreview:
+    weekly_structure: tuple[dict[str, Any], ...]
+    exposures: dict[str, int]
+    reasoning: tuple[str, ...]
+    fatigue: dict[str, Any]
+    constraints: tuple[str, ...]
+    data: AthleteProgrammingContext
+
+
+def map_athlete_programming_context(athlete: Any) -> AthleteProgrammingContext:
+    """Consume Athlete State V6 without persisting or inventing athlete data."""
+    blocks = TrainingBlock.query.filter_by(athlete_id=athlete.id).count()
+    facts = {name: fact.value_json for name, fact in latest_facts(athlete.id).items()}
+    signals = {
+        signal.signal_type: signal.value for signal in calculate_signals(athlete)
+    }
+    active_constraints = tuple(
+        flag.label
+        for flag in AthleteConstraintFlag.query.filter_by(
+            athlete_id=athlete.id, resolved_on=None
+        ).order_by(
+            AthleteConstraintFlag.starts_on.asc(), AthleteConstraintFlag.id.asc()
+        )
+    )
+    technical_observations = tuple(
+        f"{item.lift}: {item.observation}"
+        for item in CoachTechnicalObservation.query.filter_by(
+            athlete_id=athlete.id, superseded_by_id=None
+        ).order_by(
+            CoachTechnicalObservation.observed_on.asc(),
+            CoachTechnicalObservation.id.asc(),
+        )
+    )
+    now = datetime.now(UTC).replace(tzinfo=None)
+    active_overrides = tuple(
+        {
+            "target_type": item.target_type,
+            "target_ref": item.target_ref,
+            "override": item.override_json,
+            "reason": item.reason,
+            "recorded_by": item.recorded_by,
+        }
+        for item in AthleteStateOverride.query.filter(
+            AthleteStateOverride.athlete_id == athlete.id,
+            AthleteStateOverride.target_type != "programming_proposal",
+            AthleteStateOverride.revoked_at.is_(None),
+            (
+                AthleteStateOverride.expires_at.is_(None)
+                | (AthleteStateOverride.expires_at > now)
+            ),
+        ).order_by(
+            AthleteStateOverride.recorded_at.asc(), AthleteStateOverride.id.asc()
+        )
+    )
+    missing = []
+    if athlete.bodyweight_kg is None:
+        missing.append("bodyweight")
+    if not athlete.weight_class:
+        missing.append("weight class")
+    if "competition_date" not in facts and not athlete.next_competition:
+        missing.append("competition date")
+    if "rpe_adherence_rate" not in signals:
+        missing.append("RPE adherence signal")
+    return AthleteProgrammingContext(
+        athlete_id=athlete.id,
+        bodyweight_kg=athlete.bodyweight_kg,
+        weight_class=athlete.weight_class,
+        next_competition=athlete.next_competition,
+        existing_blocks=blocks,
+        state_facts=facts,
+        state_signals=signals,
+        active_constraints=active_constraints,
+        technical_observations=technical_observations,
+        active_overrides=active_overrides,
+        missing=tuple(missing),
+    )
+
+
+def _exercise_taxonomy(days: Sequence[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    names = {name for day in days for name in day["exercises"][: day["main_count"]]}
+    rows = Exercise.query.filter(
+        Exercise.name.in_(names), Exercise.active.is_(True)
+    ).all()
+    return {
+        row.name: {
+            "lift_family": row.lift_family,
+            "movement_pattern": row.movement_pattern,
+            "specificity": row.specificity,
+            "technical_purposes": row.technical_purposes,
+            "equipment_options": row.equipment_options,
+            "constraint_tags": row.constraint_tags,
+            "variation_of": row.variation_of,
+            "swap_group": row.swap_group,
+        }
+        for row in rows
+    }
+
+
+class WeeklyProgrammingIntelligence:
+    """Read-only boundary between Block Factory and programming intelligence."""
+
+    def preview(
+        self,
+        factory: FactoryInputs,
+        athlete: Any,
+        days: Sequence[dict[str, Any]],
+    ) -> WeeklyIntelligencePreview:
+        context = map_athlete_programming_context(athlete)
+        taxonomy = _exercise_taxonomy(days)
+        structure = tuple(
+            {
+                "day": day["day"],
+                "day_type": day["day_type"],
+                "exposures": tuple(day["exercises"][: day["main_count"]]),
+                "exposure_taxonomy": tuple(
+                    taxonomy.get(name) for name in day["exercises"][: day["main_count"]]
+                ),
+                "assistance": tuple(item["name"] for item in day["accessories"]),
+            }
+            for day in days
+        )
+        if any(not day["exposures"] for day in structure):
+            raise ValueError("Every training day must contain a powerlifting exposure.")
+
+        constraints = [
+            "Every day is organised around squat, bench, or deadlift exposure.",
+            "Assistance is optional, subordinate, and never creates another day.",
+            "Coach edits override this proposal; accepting is the only write action.",
+            "Use target RPE to adjust load rather than forcing a predetermined load.",
+        ]
+        if context.missing:
+            constraints.append(
+                "Incomplete data: "
+                + ", ".join(context.missing)
+                + ". No assumptions were substituted."
+            )
+        if context.active_constraints:
+            constraints.append(
+                "Reported training constraints for coach review: "
+                + ", ".join(context.active_constraints)
+                + ". No diagnosis or exercise-suitability inference was made."
+            )
+        if context.technical_observations:
+            constraints.append(
+                "Active coach technical observations for review: "
+                + "; ".join(context.technical_observations)
+                + ". No diagnosis or automatic exercise change was made."
+            )
+        if context.active_overrides:
+            constraints.append(
+                "Active coach overrides are authoritative: "
+                + "; ".join(
+                    f"{item['target_type']} {item['target_ref']} — {item['reason']}"
+                    for item in context.active_overrides
+                )
+                + ". The generator did not replace them."
+            )
+        uncatalogued = sorted(
+            {
+                name
+                for day in structure
+                for name, metadata in zip(day["exposures"], day["exposure_taxonomy"])
+                if metadata is None
+            }
+        )
+        if uncatalogued:
+            constraints.append(
+                "Exercise Library metadata is incomplete for: "
+                + ", ".join(uncatalogued)
+                + ". The proposal kept the established exposure names."
+            )
+
+        raw_adherence = context.state_signals.get("rpe_adherence_rate")
+        adherence = (
+            max(0.0, min(1.0, float(raw_adherence)))
+            if isinstance(raw_adherence, (int, float))
+            and not isinstance(raw_adherence, bool)
+            else None
+        )
+        reported_fatigue = context.state_signals.get("reported_fatigue")
+        fatigue = {
+            "status": "reported" if reported_fatigue is not None else "not reported",
+            "detail": (
+                f"Latest reported fatigue is {reported_fatigue}."
+                if reported_fatigue is not None
+                else "No reported fatigue data exists; none was inferred."
+            ),
+            "rpe_adherence": (
+                f"{adherence:.0%} of comparable sets were within ±0.5 RPE."
+                if adherence is not None
+                else "No RPE-adherence signal exists for the current window."
+            ),
+        }
+
+        reasoning = [
+            "Squat, bench, and deadlift exposures were established before assistance.",
+            f"The requested {factory.goal} structure uses {factory.training_days} exposure-led days.",
+        ]
+        catalogued = sum(
+            metadata is not None
+            for day in structure
+            for metadata in day["exposure_taxonomy"]
+        )
+        if catalogued:
+            reasoning.append(
+                f"Exercise Library V6 taxonomy was available for {catalogued} exposure selections; "
+                "swap groups remain read-only metadata."
+            )
+        if not any(day["assistance"] for day in structure):
+            reasoning.append(
+                "No assistance was added because none was pinned by the coach."
+            )
+        else:
+            reasoning.append(
+                "Only coach-pinned assistance was retained, without a quota."
+            )
+
+        return WeeklyIntelligencePreview(
+            weekly_structure=structure,
+            exposures={
+                "squat": factory.squat_frequency,
+                "bench": factory.bench_frequency,
+                "deadlift": factory.deadlift_frequency,
+            },
+            reasoning=tuple(reasoning),
+            fatigue=fatigue,
+            constraints=tuple(constraints),
+            data=context,
+        )

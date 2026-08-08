@@ -1,3 +1,5 @@
+import re
+
 from portal import create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
@@ -45,14 +47,27 @@ def test_factory_generates_complete_block():
         db.session.commit()
         athlete_id = athlete.id
 
-    response = app.test_client().post(
-        "/programming/factory",
+    client = app.test_client()
+    preview = client.post(
+        "/programming/factory/preview",
         data={
             "athlete_id": athlete_id,
             "name": "Generated Prep",
             "week_count": 3,
             "training_days": 4,
             "template_type": "SBD",
+        },
+    )
+    proposal_id = re.search(rb'name="proposal_id" value="(\d+)"', preview.data)
+    integrity = re.search(
+        rb'name="proposal_integrity" value="([0-9a-f]+)"', preview.data
+    )
+    assert proposal_id and integrity
+    response = client.post(
+        "/programming/factory",
+        data={
+            "proposal_id": proposal_id.group(1).decode(),
+            "proposal_integrity": integrity.group(1).decode(),
         },
     )
 

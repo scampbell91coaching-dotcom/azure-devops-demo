@@ -1,13 +1,17 @@
 import re
 
 import pytest
-
 from portal import create_app
-from portal.block_factory import FactoryRequest, _accessory_target, _day_sequence, _preview
+from portal.block_factory import FactoryRequest, _day_sequence, _preview
 from portal.extensions import db
 from portal.models.athlete import Athlete
+from portal.models.athlete_state import AthleteStateOverride, AthleteStateRecommendation
 from portal.models.exercise_library import Exercise
 from portal.models.programming import TrainingBlock
+from portal.services.athlete_state import SignalDraft
+from portal.services.weekly_programming_intelligence import (
+    WeeklyProgrammingIntelligence,
+)
 
 
 def create_test_app():
@@ -47,23 +51,46 @@ def factory_request(training_days: int, squat: int, bench: int, deadlift: int):
     )
 
 
+def preview_fields(response):
+    proposal_id = re.search(rb'name="proposal_id" value="(\d+)"', response.data)
+    integrity = re.search(
+        rb'name="proposal_integrity" value="([0-9a-f]+)"', response.data
+    )
+    assert proposal_id and integrity
+    return {
+        "proposal_id": proposal_id.group(1).decode(),
+        "proposal_integrity": integrity.group(1).decode(),
+    }
+
+
+def preview_and_accept(client, data):
+    preview_response = client.post("/programming/factory/preview", data=data)
+    assert preview_response.status_code == 200
+    return preview_response, client.post(
+        "/programming/factory", data=preview_fields(preview_response)
+    )
+
+
 @pytest.mark.parametrize(
-    ("training_days", "squat", "bench", "deadlift", "expected"),
+    ("training_days", "squat", "bench", "deadlift"),
     [
-        (3, 2, 3, 1, ["SB", "SBD", "B"]),
-        (4, 2, 3, 1, ["SB", "BD", "SB", "ACCESSORY"]),
-        (5, 2, 3, 1, ["SB", "BD", "S", "B", "ACCESSORY"]),
+        (3, 2, 3, 1),
+        (4, 2, 3, 1),
+        (5, 2, 3, 1),
     ],
 )
 def test_frequency_scheduler_is_deterministic_and_exact(
-    training_days, squat, bench, deadlift, expected
+    training_days, squat, bench, deadlift
 ):
     schedule = _day_sequence(factory_request(training_days, squat, bench, deadlift))
 
-    assert schedule == expected
-    assert sum(day != "ACCESSORY" and "S" in day for day in schedule) == squat
-    assert sum(day != "ACCESSORY" and "B" in day for day in schedule) == bench
-    assert sum(day != "ACCESSORY" and "D" in day for day in schedule) == deadlift
+    assert schedule == _day_sequence(
+        factory_request(training_days, squat, bench, deadlift)
+    )
+    assert all(day and set(day) <= {"S", "B", "D"} for day in schedule)
+    assert sum("S" in day for day in schedule) == squat
+    assert sum("B" in day for day in schedule) == bench
+    assert sum("D" in day for day in schedule) == deadlift
 
 
 @pytest.mark.parametrize(
@@ -137,7 +164,9 @@ def test_preview_and_generation_use_the_same_frequency_schedule():
         "/programming/factory/preview",
         data=data,
     )
-    generate_response = app.test_client().post("/programming/factory", data=data)
+    generate_response = app.test_client().post(
+        "/programming/factory", data=preview_fields(preview_response)
+    )
 
     assert preview_response.status_code == 200
     assert generate_response.status_code == 302
@@ -176,9 +205,9 @@ def test_factory_v3_generates_complete_block():
     app = create_test_app()
     athlete_id = create_athlete(app)
 
-    response = app.test_client().post(
-        "/programming/factory",
-        data={
+    _preview_response, response = preview_and_accept(
+        app.test_client(),
+        {
             "athlete_id": athlete_id,
             "name": "Generated Prep",
             "goal": "strength",
@@ -217,107 +246,253 @@ def test_factory_uses_multiple_ordered_catalogue_accessories():
     app = create_test_app()
     athlete_id = create_athlete(app)
     with app.app_context():
-        upper = Exercise(name="Chest Supported Row", movement="accessory", category="upper body", accessory_suitable=True)
-        lower = Exercise(name="Reverse Lunge", movement="accessory", category="lower body", accessory_suitable=True)
+        upper = Exercise(
+            name="Chest Supported Row",
+            movement="accessory",
+            category="upper body",
+            accessory_suitable=True,
+        )
+        lower = Exercise(
+            name="Reverse Lunge",
+            movement="accessory",
+            category="lower body",
+            accessory_suitable=True,
+        )
         db.session.add_all([upper, lower])
         db.session.commit()
         accessory_ids = [str(upper.id), str(lower.id)]
-    response = app.test_client().post("/programming/factory", data={
-        "athlete_id": athlete_id, "name": "Accessory catalogue", "week_count": 1,
-        "training_days": 3, "squat_frequency": 1, "bench_frequency": 1,
-        "deadlift_frequency": 1, "accessory_exercise_id": accessory_ids,
-    })
+    _preview_response, response = preview_and_accept(
+        app.test_client(),
+        {
+            "athlete_id": athlete_id,
+            "name": "Accessory catalogue",
+            "week_count": 1,
+            "training_days": 3,
+            "squat_frequency": 1,
+            "bench_frequency": 1,
+            "deadlift_frequency": 1,
+            "accessory_exercise_id": accessory_ids,
+        },
+    )
     assert response.status_code == 302
     with app.app_context():
         block = TrainingBlock.query.one()
-        for session in block.weeks[0].sessions:
-            names = [item.exercise_name for item in session.prescriptions]
-            assert names[-2:] == ["Chest Supported Row", "Reverse Lunge"]
+        names = [
+            item.exercise_name
+            for session in block.weeks[0].sessions
+            for item in session.prescriptions
+        ]
+        assert [
+            name for name in names if name in {"Chest Supported Row", "Reverse Lunge"}
+        ] == ["Chest Supported Row", "Reverse Lunge"]
 
 
-@pytest.mark.parametrize(
-    ("mode", "minimum", "maximum"),
-    [("minimal", 1, 2), ("standard", 3, 4), ("high", 5, 6)],
-)
-def test_accessory_volume_modes_generate_within_range(mode, minimum, maximum):
+def test_zero_assistance_is_preserved_without_a_quota():
     app = create_test_app()
     with app.app_context():
         request = factory_request(3, 1, 1, 1)
-        request = FactoryRequest(**{**request.__dict__, "accessory_volume": mode})
         days = _preview(request)
-        assert all(
-            _accessory_target(request, day["day_type"])[0]
-            <= day["accessory_count"]
-            <= _accessory_target(request, day["day_type"])[1]
-            for day in days
-        )
-        assert all(len(day["accessories"]) == len({item["name"] for item in day["accessories"]}) for day in days)
+        assert all(day["accessory_count"] == 0 for day in days)
 
 
-@pytest.mark.parametrize(
-    ("day_type", "expected"),
-    [("S", (3, 4)), ("B", (4, 5)), ("D", (3, 4)), ("SBD", (2, 4))],
-)
-def test_standard_lift_aware_accessory_defaults(day_type, expected):
-    assert _accessory_target(factory_request(3, 1, 1, 1), day_type) == expected
-
-
-def test_custom_exact_accessory_count_and_stable_balanced_output():
-    app = create_test_app()
-    with app.app_context():
-        base = factory_request(3, 1, 1, 1)
-        request = FactoryRequest(**{
-            **base.__dict__, "accessory_volume": "custom",
-            "accessory_count_min": 6, "accessory_count_max": 6,
-            "accessory_emphasis": ("trunk",),
-        })
-        first = _preview(request)
-        second = _preview(request)
-        assert first == second
-        assert all(day["accessory_count"] == 6 for day in first)
-        assert all(len({item["role"] for item in day["accessories"]}) >= 4 for day in first)
-
-
-def test_deadlift_day_guards_lower_back_fatigue():
-    app = create_test_app()
-    with app.app_context():
-        request = factory_request(3, 0, 0, 1)
-        request = FactoryRequest(**{**request.__dict__, "accessory_volume": "high"})
-        deadlift_day = next(day for day in _preview(request) if day["day_type"] == "D")
-        risky = ("good morning", "barbell row", "pendlay", "back extension", "romanian deadlift")
-        assert not any(term in item["name"].casefold() for item in deadlift_day["accessories"] for term in risky)
-
-
-def test_automatic_accessories_do_not_repeat_across_a_week():
-    app = create_test_app()
-    with app.app_context():
-        days = _preview(factory_request(5, 2, 3, 1))
-        generated = [
-            item["name"]
-            for day in days
-            for item in day["accessories"]
-            if item["source"] == "Generated"
-        ]
-        assert len(generated) == len(set(generated))
-
-
-def test_custom_count_http_generation_persists_after_reload():
+def test_zero_assistance_generation_persists_after_reload():
     app = create_test_app()
     athlete_id = create_athlete(app)
     data = {
-        "athlete_id": athlete_id, "name": "Exact accessories", "week_count": 1,
-        "training_days": 3, "squat_frequency": 1, "bench_frequency": 1,
-        "deadlift_frequency": 1, "accessory_volume": "custom",
-        "accessory_count_min": 4, "accessory_count_max": 4,
+        "athlete_id": athlete_id,
+        "name": "No assistance",
+        "week_count": 1,
+        "training_days": 3,
+        "squat_frequency": 1,
+        "bench_frequency": 1,
+        "deadlift_frequency": 1,
     }
-    assert app.test_client().post("/programming/factory/preview", data=data).status_code == 200
-    assert app.test_client().post("/programming/factory", data=data).status_code == 302
+    _preview_response, accepted = preview_and_accept(app.test_client(), data)
+    assert accepted.status_code == 302
     with app.app_context():
         block_id = TrainingBlock.query.one().id
         db.session.expire_all()
         reloaded = db.session.get(TrainingBlock, block_id)
         for session in reloaded.weeks[0].sessions:
             day_type = session.name.rsplit("·", 1)[1].strip()
-            main_count = 0 if day_type == "ACCESSORY" else len(day_type)
-            assert len(session.prescriptions) - main_count == 4
-            assert [item.position for item in session.prescriptions] == list(range(1, len(session.prescriptions) + 1))
+            assert len(session.prescriptions) == len(day_type)
+            assert [item.position for item in session.prescriptions] == list(
+                range(1, len(session.prescriptions) + 1)
+            )
+
+
+def base_form(athlete_id):
+    return {
+        "athlete_id": athlete_id,
+        "name": "Safe proposal",
+        "week_count": 1,
+        "training_days": 3,
+        "squat_frequency": 1,
+        "bench_frequency": 1,
+        "deadlift_frequency": 1,
+        "goal": "development",
+        "deadlift_style": "conventional",
+    }
+
+
+def test_non_assistance_main_lift_post_is_rejected_even_when_active():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    with app.app_context():
+        lift = Exercise(
+            name="Crafted Main Lift",
+            movement="squat",
+            category="main",
+            lift_family="squat",
+            accessory_suitable=False,
+            active=True,
+        )
+        db.session.add(lift)
+        db.session.commit()
+        lift_id = lift.id
+    response = app.test_client().post(
+        "/programming/factory/preview",
+        data={**base_form(athlete_id), "accessory_exercise_id": str(lift_id)},
+    )
+    assert response.status_code == 400
+    assert b"selected accessories are unavailable" in response.data
+
+
+def test_incomplete_state_and_rpe_adherence_do_not_infer_fatigue(monkeypatch):
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    monkeypatch.setattr(
+        "portal.services.weekly_programming_intelligence.calculate_signals",
+        lambda athlete: [SignalDraft("rpe_adherence_rate", 0.5, (), "bounded")],
+    )
+    response = app.test_client().post(
+        "/programming/factory/preview", data=base_form(athlete_id)
+    )
+    assert response.status_code == 200
+    assert b"50% of comparable sets" in response.data
+    assert b"No reported fatigue data exists; none was inferred" in response.data
+    assert b"Incomplete data:" in response.data
+
+
+def test_active_coach_override_is_surfaced_as_authoritative():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    with app.app_context():
+        db.session.add(
+            AthleteStateOverride(
+                athlete_id=athlete_id,
+                target_type="programming",
+                target_ref="weekly",
+                override_json={"bench_frequency": 2},
+                reason="Coach-selected recovery week",
+                recorded_by="coach@example.com",
+            )
+        )
+        db.session.commit()
+    response = app.test_client().post(
+        "/programming/factory/preview", data=base_form(athlete_id)
+    )
+    assert response.status_code == 200
+    assert b"Active coach overrides are authoritative" in response.data
+    assert b"Coach-selected recovery week" in response.data
+    assert b"2 bench" in response.data
+
+
+def test_exposure_metadata_uses_exact_taxonomy_not_name_substrings():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    with app.app_context():
+        exercise = Exercise.query.filter_by(name="Competition Squat").one()
+        exercise.lift_family = "bench"
+        exercise.movement_pattern = "horizontal_press"
+        db.session.commit()
+        athlete = db.session.get(Athlete, athlete_id)
+        factory = factory_request(3, 1, 1, 1)
+        preview = _preview(factory)
+        result = WeeklyProgrammingIntelligence().preview(factory, athlete, preview)
+        squat_metadata = next(
+            metadata
+            for day in result.weekly_structure
+            for name, metadata in zip(day["exposures"], day["exposure_taxonomy"])
+            if name == "Competition Squat"
+        )
+        assert squat_metadata["lift_family"] == "bench"
+        assert squat_metadata["movement_pattern"] == "horizontal_press"
+
+
+def test_proposal_integrity_staleness_replay_and_provenance():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    client = app.test_client()
+    preview_response = client.post(
+        "/programming/factory/preview", data=base_form(athlete_id)
+    )
+    fields = preview_fields(preview_response)
+
+    tampered = client.post(
+        "/programming/factory",
+        data={**fields, "proposal_integrity": "0" * 64},
+    )
+    assert tampered.status_code == 409
+
+    accepted = client.post("/programming/factory", data=fields)
+    assert accepted.status_code == 302
+    replayed = client.post("/programming/factory", data=fields)
+    assert replayed.status_code == 409
+    with app.app_context():
+        proposal = db.session.get(
+            AthleteStateRecommendation, int(fields["proposal_id"])
+        )
+        assert proposal.status == "accepted"
+        assert proposal.decided_by == "test-coach"
+        assert proposal.decided_at is not None
+        assert TrainingBlock.query.count() == 1
+
+
+def test_stale_proposal_is_rejected_when_athlete_state_changes():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    client = app.test_client()
+    response = client.post("/programming/factory/preview", data=base_form(athlete_id))
+    fields = preview_fields(response)
+    with app.app_context():
+        db.session.add(
+            AthleteStateOverride(
+                athlete_id=athlete_id,
+                target_type="programming",
+                target_ref="weekly",
+                override_json={"training_days": 3},
+                reason="New coach decision",
+                recorded_by="coach@example.com",
+            )
+        )
+        db.session.commit()
+    stale = client.post("/programming/factory", data=fields)
+    assert stale.status_code == 409
+    with app.app_context():
+        assert TrainingBlock.query.count() == 0
+
+
+def test_edit_requires_reason_and_records_override_provenance():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    client = app.test_client()
+    original = client.post("/programming/factory/preview", data=base_form(athlete_id))
+    fields = preview_fields(original)
+    edited_data = {**base_form(athlete_id), **fields, "name": "Coach edit"}
+    missing_reason = client.post("/programming/factory/preview", data=edited_data)
+    assert missing_reason.status_code == 400
+    edited = client.post(
+        "/programming/factory/preview",
+        data={**edited_data, "override_reason": "Match the coach-authored block label"},
+    )
+    assert edited.status_code == 200
+    with app.app_context():
+        original_proposal = db.session.get(
+            AthleteStateRecommendation, int(fields["proposal_id"])
+        )
+        override = AthleteStateOverride.query.one()
+        assert original_proposal.status == "superseded"
+        assert original_proposal.decided_by == "test-coach"
+        assert override.reason == "Match the coach-authored block label"
+        assert override.recorded_by == "test-coach"

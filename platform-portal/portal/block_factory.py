@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
+import itertools
 import json
-from dataclasses import dataclass
-from datetime import date
+from dataclasses import asdict, dataclass, replace
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
-from sqlalchemy import or_
 
 from flask import (
     Blueprint,
     abort,
     current_app,
+    g,
     redirect,
     render_template,
     request,
@@ -19,6 +22,7 @@ from flask import (
 
 from .extensions import db
 from .models.athlete import Athlete
+from .models.athlete_state import AthleteStateOverride, AthleteStateRecommendation
 from .models.exercise_library import Exercise
 from .models.programming import (
     ExercisePrescription,
@@ -26,6 +30,7 @@ from .models.programming import (
     TrainingSession,
     TrainingWeek,
 )
+from .services.weekly_programming_intelligence import WeeklyProgrammingIntelligence
 
 block_factory_bp = Blueprint("block_factory", __name__)
 
@@ -44,10 +49,6 @@ class FactoryRequest:
     deadlift_style: str
     meet_date: date | None
     accessory_exercise_ids: tuple[int, ...] = ()
-    accessory_volume: str = "standard"
-    accessory_count_min: int | None = None
-    accessory_count_max: int | None = None
-    accessory_emphasis: tuple[str, ...] = ()
 
 
 GOAL_RPE = {
@@ -77,28 +78,6 @@ DEFAULT_SPLITS = {
     "POWERLIFTING_3": ["SBD", "B", "D"],
     "POWERLIFTING_4": ["SB", "BD", "B", "SBD"],
     "POWERLIFTING_5": ["SB", "BD", "B", "S", "D"],
-}
-
-ACCESSORY_DAY = "ACCESSORY"
-
-ACCESSORY_VOLUME_RANGES = {
-    "minimal": (1, 2),
-    "standard": (3, 4),
-    "high": (5, 6),
-}
-ACCESSORY_EMPHASES = {
-    "quads", "posterior_chain", "chest", "shoulders", "triceps",
-    "lats_upper_back", "trunk", "gpp",
-}
-
-# Roles are deliberately ordered.  The selector cycles through this plan before
-# adding a second exercise from the same role or movement pattern.
-DAY_ROLE_PLANS = {
-    "S": ("secondary strength", "hypertrophy", "unilateral", "trunk/bracing", "balancing", "GPP / mobility"),
-    "B": ("secondary strength", "balancing", "hypertrophy", "trunk/bracing", "unilateral", "GPP / mobility"),
-    "D": ("secondary strength", "hypertrophy", "balancing", "trunk/bracing", "unilateral", "GPP / mobility"),
-    "COMBINED": ("balancing", "hypertrophy", "trunk/bracing", "unilateral", "GPP / mobility", "secondary strength"),
-    ACCESSORY_DAY: ("hypertrophy", "balancing", "unilateral", "trunk/bracing", "GPP / mobility", "secondary strength"),
 }
 
 
@@ -183,12 +162,6 @@ def _fallback_templates() -> dict[str, list[dict[str, Any]]]:
                 ],
             }
         ],
-        ACCESSORY_DAY: [
-            {
-                "signature": "Cable Row > Leg Curl",
-                "exercises": ["Cable Row", "Leg Curl"],
-            }
-        ],
     }
 
 
@@ -229,17 +202,9 @@ def _parse_factory_request() -> FactoryRequest:
     training_days = _form_int_or_default("training_days", 4)
 
     accessory_ids = tuple(
-        value for value in request.form.getlist("accessory_exercise_id", type=int)
+        value
+        for value in request.form.getlist("accessory_exercise_id", type=int)
         if value is not None
-    )
-    accessory_volume = request.form.get("accessory_volume", "standard").strip().lower()
-    if accessory_volume not in {*ACCESSORY_VOLUME_RANGES, "custom"}:
-        accessory_volume = "standard"
-    count_min = request.form.get("accessory_count_min", type=int)
-    count_max = request.form.get("accessory_count_max", type=int)
-    emphasis = tuple(
-        item for item in request.form.getlist("accessory_emphasis")
-        if item in ACCESSORY_EMPHASES
     )
     return FactoryRequest(
         athlete_id=athlete_id,
@@ -257,10 +222,6 @@ def _parse_factory_request() -> FactoryRequest:
         ).strip(),
         meet_date=_parse_date(request.form.get("meet_date", "")),
         accessory_exercise_ids=accessory_ids,
-        accessory_volume=accessory_volume,
-        accessory_count_min=count_min,
-        accessory_count_max=count_max,
-        accessory_emphasis=emphasis,
     )
 
 
@@ -290,52 +251,45 @@ def _validate_frequency_request(factory: FactoryRequest) -> None:
         raise _frequency_error(
             "select at least one squat, bench, or deadlift exposure."
         )
-
-
-def _evenly_spaced_days(
-    frequency: int,
-    training_days: int,
-    offset: int = 0,
-) -> set[int]:
-    """Return deterministic, evenly distributed zero-based training-day indexes."""
-    if frequency == 0:
-        return set()
-
-    return {
-        ((position * training_days) // frequency + offset) % training_days
-        for position in range(frequency)
-    }
+    if sum(frequencies.values()) < factory.training_days:
+        raise _frequency_error(
+            "there are not enough squat, bench, and deadlift exposures to anchor "
+            "every training day; reduce training days or add an exposure."
+        )
 
 
 def _day_sequence(factory: FactoryRequest) -> list[str]:
     """Build one weekly schedule whose primary lift counts match the request."""
     _validate_frequency_request(factory)
 
-    exposures = {
-        "S": _evenly_spaced_days(
-            factory.squat_frequency,
-            factory.training_days,
-        ),
-        "B": _evenly_spaced_days(
-            factory.bench_frequency,
-            factory.training_days,
-        ),
-        # A single deadlift exposure is placed away from the first session.
-        "D": _evenly_spaced_days(
-            factory.deadlift_frequency,
-            factory.training_days,
-            offset=1,
-        ),
-    }
-
-    sequence = []
-    for day_index in range(factory.training_days):
-        day_type = "".join(
-            lift for lift in ("S", "B", "D") if day_index in exposures[lift]
+    indexes = range(factory.training_days)
+    choices = (
+        itertools.combinations(indexes, factory.squat_frequency),
+        itertools.combinations(indexes, factory.bench_frequency),
+        itertools.combinations(indexes, factory.deadlift_frequency),
+    )
+    candidates = []
+    for squat_days, bench_days, deadlift_days in itertools.product(*choices):
+        exposure_sets = {
+            "S": set(squat_days),
+            "B": set(bench_days),
+            "D": set(deadlift_days),
+        }
+        loads = [
+            sum(day in values for values in exposure_sets.values()) for day in indexes
+        ]
+        if 0 in loads:
+            continue
+        sequence = tuple(
+            "".join(lift for lift in ("S", "B", "D") if day in exposure_sets[lift])
+            for day in indexes
         )
-        sequence.append(day_type or ACCESSORY_DAY)
-
-    return sequence
+        candidates.append((max(loads), sum(value * value for value in loads), sequence))
+    if not candidates:
+        raise _frequency_error(
+            "the requested exposures cannot anchor every training day."
+        )
+    return list(min(candidates)[2])
 
 
 def _candidate_exercises(
@@ -389,11 +343,7 @@ def _ensure_main_lifts(
     deadlift_style: str,
 ) -> list[str]:
     """Return exactly the main lifts scheduled for this day."""
-    scheduled_lifts = (
-        set()
-        if day_type == ACCESSORY_DAY
-        else {code for code in day_type if code in {"S", "B", "D"}}
-    )
+    scheduled_lifts = {code for code in day_type if code in {"S", "B", "D"}}
 
     canonical: list[str] = []
 
@@ -408,24 +358,9 @@ def _ensure_main_lifts(
             "Sumo Deadlift" if deadlift_style == "sumo" else "Conventional Deadlift"
         )
 
-    def movement_code(name: str) -> str | None:
-        lowered = name.casefold().strip()
-
-        if "squat" in lowered:
-            return "S"
-
-        if "bench" in lowered:
-            return "B"
-
-        if "deadlift" in lowered or "romanian" in lowered or lowered == "rdl":
-            return "D"
-
-        return None
-
-    # Strip mined S/B/D variants, then add back only scheduled main lifts.
-    accessories = [name for name in exercises if movement_code(name) is None]
-
-    return canonical + accessories
+    # Day codes are the exposure source of truth. Template tail entries are not
+    # silently promoted to assistance.
+    return canonical
 
 
 def _week_rpe(
@@ -465,28 +400,6 @@ def _sets_and_reps(
     return 2, accessory_reps
 
 
-def _accessory_target(factory: FactoryRequest, day_type: str) -> tuple[int, int]:
-    """Return the explicit, bounded accessory range shown in the preview."""
-    if factory.accessory_volume == "custom":
-        minimum = factory.accessory_count_min
-        maximum = factory.accessory_count_max
-        if minimum is None:
-            raise ValueError("Custom accessory volume requires a count.")
-        maximum = minimum if maximum is None else maximum
-        if not 0 <= minimum <= maximum <= 10:
-            raise ValueError("Custom accessory count must be between 0 and 10.")
-        return minimum, maximum
-
-    minimum, maximum = ACCESSORY_VOLUME_RANGES[factory.accessory_volume]
-    if factory.accessory_volume == "standard":
-        # Explicit lift-aware defaults take precedence over the general 3–4.
-        if day_type == "B":
-            return 4, 5
-        if day_type not in {"S", "D", ACCESSORY_DAY}:
-            return 2, 4
-    return minimum, maximum
-
-
 def _text_values(value: Any) -> str:
     if isinstance(value, list):
         return " ".join(str(item) for item in value)
@@ -494,67 +407,76 @@ def _text_values(value: Any) -> str:
 
 
 def _accessory_role(item: dict[str, Any]) -> str:
+    technical_purposes = _text_values(item.get("technical_purposes")).casefold()
+    if "trunk" in technical_purposes or "bracing" in technical_purposes:
+        return "trunk/bracing"
+    if "hypertrophy" in technical_purposes:
+        return "hypertrophy"
+    if "technique" in technical_purposes or "strength" in technical_purposes:
+        return "secondary strength"
     text = " ".join(
         _text_values(item.get(key))
         for key in ("name", "family", "category", "primary_muscles")
     ).casefold()
-    if any(word in text for word in ("plank", "core", "ab ", "abdominal", "pallof", "carry", "trunk")):
+    if any(
+        word in text
+        for word in ("plank", "core", "ab ", "abdominal", "pallof", "carry", "trunk")
+    ):
         return "trunk/bracing"
-    if any(word in text for word in ("single-arm", "single-leg", "unilateral", "split squat", "lunge", "step-up", "b-stance")):
+    if any(
+        word in text
+        for word in (
+            "single-arm",
+            "single-leg",
+            "unilateral",
+            "split squat",
+            "lunge",
+            "step-up",
+            "b-stance",
+        )
+    ):
         return "unilateral"
-    if any(word in text for word in ("sled", "prowler", "bike", "rower", "mobility", "rehab", "prehab", "walk")):
+    if any(
+        word in text
+        for word in (
+            "sled",
+            "prowler",
+            "bike",
+            "rower",
+            "mobility",
+            "rehab",
+            "prehab",
+            "walk",
+        )
+    ):
         return "GPP / mobility"
-    if any(word in text for word in ("row", "pulldown", "pull-up", "chin-up", "face pull", "rear delt", "back")):
+    if any(
+        word in text
+        for word in (
+            "row",
+            "pulldown",
+            "pull-up",
+            "chin-up",
+            "face pull",
+            "rear delt",
+            "back",
+        )
+    ):
         return "balancing"
-    if any(word in text for word in ("close-grip", "pause", "tempo", "pin ", "press", "leg press", "hack squat")):
+    if any(
+        word in text
+        for word in (
+            "close-grip",
+            "pause",
+            "tempo",
+            "pin ",
+            "press",
+            "leg press",
+            "hack squat",
+        )
+    ):
         return "secondary strength"
     return "hypertrophy"
-
-
-def _movement_pattern(item: dict[str, Any]) -> str:
-    text = " ".join(
-        _text_values(item.get(key))
-        for key in ("name", "family", "category", "primary_muscles")
-    ).casefold()
-    patterns = (
-        ("row", ("row",)), ("vertical pull", ("pulldown", "pull-up", "chin-up")),
-        ("quad", ("quad", "leg extension", "leg press", "hack squat")),
-        ("hinge", ("deadlift", "rdl", "romanian", "good morning", "back extension")),
-        ("hamstring", ("leg curl", "hamstring")), ("press", ("press", "chest", "triceps")),
-        ("shoulder", ("delt", "lateral raise", "shoulder")),
-        ("trunk", ("plank", "core", "abdominal", "pallof", "carry", "trunk")),
-        ("unilateral leg", ("lunge", "split squat", "step-up")),
-        ("gpp", ("sled", "prowler", "bike", "rower", "mobility", "walk")),
-    )
-    for pattern, words in patterns:
-        if any(word in text for word in words):
-            return pattern
-    return str(item.get("family") or item.get("category") or item.get("name")).casefold()
-
-
-def _lower_back_heavy(item: dict[str, Any]) -> bool:
-    text = f"{item.get('name', '')} {item.get('family', '')}".casefold()
-    return int(item.get("fatigue_rating") or 3) >= 4 or any(
-        word in text for word in ("good morning", "barbell row", "pendlay", "back extension", "romanian deadlift")
-    )
-
-
-def _emphasis_score(item: dict[str, Any], emphases: tuple[str, ...]) -> int:
-    if not emphases:
-        return 0
-    text = " ".join(_text_values(item.get(key)) for key in (
-        "name", "family", "category", "primary_muscles", "secondary_muscles"
-    )).casefold()
-    terms = {
-        "quads": ("quad", "leg extension", "leg press", "hack squat"),
-        "posterior_chain": ("hamstring", "glute", "leg curl", "hip thrust"),
-        "chest": ("chest", "pec"), "shoulders": ("shoulder", "delt"),
-        "triceps": ("triceps", "close-grip"),
-        "lats_upper_back": ("lat", "back", "row", "pulldown", "pull-up"),
-        "trunk": ("trunk", "core", "plank", "pallof", "carry", "abdominal"),
-        "gpp": ("sled", "prowler", "bike", "rower", "carry", "walk"),
-    }
-    return sum(1 for emphasis in emphases if any(term in text for term in terms[emphasis]))
 
 
 def _accessory_pool() -> list[dict[str, Any]]:
@@ -566,108 +488,30 @@ def _accessory_pool() -> list[dict[str, Any]]:
             by_name[str(item.get("name", "")).casefold()] = item
     rows = Exercise.query.filter(
         Exercise.active.is_(True),
-        or_(Exercise.accessory_suitable.is_(True), Exercise.movement == "accessory"),
+        Exercise.accessory_suitable.is_(True),
     ).all()
     for row in rows:
         by_name[row.name.casefold()] = {
-            "name": row.name, "family": row.family, "category": row.category,
-            "movement": row.movement, "primary_muscles": row.primary_muscles,
-            "secondary_muscles": row.secondary_muscles, "fatigue_rating": row.fatigue_rating,
-            "aliases": row.aliases, "accessory_suitable": True,
+            "name": row.name,
+            "family": row.family,
+            "category": row.category,
+            "movement": row.movement,
+            "primary_muscles": row.primary_muscles,
+            "secondary_muscles": row.secondary_muscles,
+            "fatigue_rating": row.fatigue_rating,
+            "aliases": row.aliases,
+            "accessory_suitable": True,
+            "lift_family": row.lift_family,
+            "movement_pattern": row.movement_pattern,
+            "specificity": row.specificity,
+            "technical_purposes": row.technical_purposes,
+            "equipment_options": row.equipment_options,
+            "constraint_tags": row.constraint_tags,
+            "variation_of": row.variation_of,
+            "swap_group": row.swap_group,
         }
-    return sorted(by_name.values(), key=lambda item: str(item.get("name", "")).casefold())
-
-
-def _select_accessories(
-    factory: FactoryRequest,
-    day_type: str,
-    template_accessories: list[str],
-    manual_accessories: list[str],
-    pool: list[dict[str, Any]],
-    weekly_usage: dict[str, int],
-) -> list[dict[str, str]]:
-    minimum, maximum = _accessory_target(factory, day_type)
-    # Manual ordering is inviolate. A coach may intentionally exceed the target.
-    selected_names: list[str] = []
-    for name in manual_accessories:
-        if name.casefold() not in {item.casefold() for item in selected_names}:
-            selected_names.append(name)
-    target = max(minimum, len(selected_names))
-    target = min(maximum, target) if len(selected_names) <= maximum else len(selected_names)
-
-    pool_by_name = {str(item.get("name", "")).casefold(): item for item in pool}
-    # Mined template choices remain the first automatic candidates, but never
-    # displace a coach choice and still pass duplicate/fatigue guards.
-    ranked = []
-    for index, item in enumerate(pool):
-        key = str(item.get("name", "")).casefold()
-        template_rank = next((i for i, name in enumerate(template_accessories) if name.casefold() == key), 999)
-        ranked.append((
-            weekly_usage.get(key, 0),
-            -_emphasis_score(item, factory.accessory_emphasis),
-            template_rank,
-            index,
-            item,
-        ))
-    ranked.sort(key=lambda row: row[:-1])
-
-    plan_key = day_type if day_type in {"S", "B", "D", ACCESSORY_DAY} else "COMBINED"
-    roles = DAY_ROLE_PLANS[plan_key]
-    used_patterns: set[str] = set()
-    lower_back_count = 0
-    selected: list[dict[str, str]] = []
-    for name in selected_names:
-        item = pool_by_name.get(name.casefold(), {"name": name})
-        selected.append({"name": name, "role": _accessory_role(item), "source": "Coach selected"})
-        used_patterns.add(_movement_pattern(item))
-        lower_back_count += int(_lower_back_heavy(item))
-
-    for desired_role in roles:
-        if len(selected) >= target:
-            break
-        for row in ranked:
-            item = row[-1]
-            name = str(item.get("name", "")).strip()
-            key = name.casefold()
-            pattern = _movement_pattern(item)
-            if not name or key in {choice["name"].casefold() for choice in selected}:
-                continue
-            if _accessory_role(item) != desired_role or pattern in used_patterns:
-                continue
-            if _lower_back_heavy(item) and (lower_back_count or "D" in day_type):
-                continue
-            selected.append({"name": name, "role": desired_role, "source": "Generated"})
-            used_patterns.add(pattern)
-            lower_back_count += int(_lower_back_heavy(item))
-            break
-
-    # Sparse catalogues can lack a role. Fill deterministically while retaining
-    # duplicate and lumbar-fatigue safeguards.
-    for row in ranked:
-        if len(selected) >= target:
-            break
-        item = row[-1]
-        name = str(item.get("name", "")).strip()
-        key = name.casefold()
-        pattern = _movement_pattern(item)
-        if not name or key in {choice["name"].casefold() for choice in selected}:
-            continue
-        if pattern in used_patterns:
-            continue
-        if _lower_back_heavy(item) and (lower_back_count or "D" in day_type):
-            continue
-        selected.append({"name": name, "role": _accessory_role(item), "source": "Generated"})
-        used_patterns.add(pattern)
-        lower_back_count += int(_lower_back_heavy(item))
-
-    for choice in selected:
-        key = choice["name"].casefold()
-        weekly_usage[key] = weekly_usage.get(key, 0) + 1
-    # Retain the established contract that pinned choices form the final,
-    # contiguous ordered section of each session.
-    return (
-        [choice for choice in selected if choice["source"] == "Generated"]
-        + [choice for choice in selected if choice["source"] == "Coach selected"]
+    return sorted(
+        by_name.values(), key=lambda item: str(item.get("name", "")).casefold()
     )
 
 
@@ -678,19 +522,23 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
     preview = []
     selected_accessories = []
     if factory.accessory_exercise_ids:
-        if len(factory.accessory_exercise_ids) != len(set(factory.accessory_exercise_ids)):
+        if len(factory.accessory_exercise_ids) != len(
+            set(factory.accessory_exercise_ids)
+        ):
             raise ValueError("The same coach-selected accessory cannot be added twice.")
         rows = Exercise.query.filter(
             Exercise.id.in_(factory.accessory_exercise_ids),
             Exercise.active.is_(True),
+            Exercise.accessory_suitable.is_(True),
         ).all()
         by_id = {item.id: item.name for item in rows}
         if len(by_id) != len(set(factory.accessory_exercise_ids)):
             raise ValueError("One or more selected accessories are unavailable.")
-        selected_accessories = [by_id[item_id] for item_id in factory.accessory_exercise_ids]
+        selected_accessories = [
+            by_id[item_id] for item_id in factory.accessory_exercise_ids
+        ]
 
     pool = _accessory_pool()
-    weekly_usage: dict[str, int] = {}
     for day_index, day_type in enumerate(days):
         exercises = _candidate_exercises(
             templates,
@@ -706,31 +554,164 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
             day_type,
             factory.deadlift_style,
         )
-        main_count = 0 if day_type == ACCESSORY_DAY else len(day_type)
+        main_count = len(day_type)
         main_exercises = exercises[:main_count]
-        generated_accessories = _select_accessories(
-            factory,
-            day_type,
-            exercises[main_count:],
-            selected_accessories,
-            pool,
-            weekly_usage,
-        )
-        minimum, maximum = _accessory_target(factory, day_type)
+        # Intelligence never fills an accessory quota. Pinned coach selections
+        # are distributed once across exposure-led days and remain in coach order.
+        manual_for_day = selected_accessories[day_index :: len(days)]
+        generated_accessories = []
+        for name in manual_for_day:
+            item = next(
+                (
+                    item
+                    for item in pool
+                    if str(item.get("name", "")).casefold() == name.casefold()
+                ),
+                {"name": name},
+            )
+            generated_accessories.append(
+                {
+                    "name": name,
+                    "role": _accessory_role(item),
+                    "source": "Coach selected",
+                }
+            )
 
         preview.append(
             {
                 "day": day_index + 1,
                 "day_type": day_type,
-                "exercises": main_exercises + [item["name"] for item in generated_accessories],
+                "exercises": main_exercises
+                + [item["name"] for item in generated_accessories],
                 "main_count": main_count,
                 "accessories": generated_accessories,
                 "accessory_count": len(generated_accessories),
-                "accessory_range": f"{minimum}–{maximum}" if minimum != maximum else str(minimum),
+                "accessory_range": "coach selected only",
             }
         )
 
     return preview
+
+
+def _apply_active_coach_overrides(factory: FactoryRequest) -> FactoryRequest:
+    now = datetime.now(UTC).replace(tzinfo=None)
+    rows = AthleteStateOverride.query.filter(
+        AthleteStateOverride.athlete_id == factory.athlete_id,
+        AthleteStateOverride.target_type == "programming",
+        AthleteStateOverride.revoked_at.is_(None),
+        (
+            AthleteStateOverride.expires_at.is_(None)
+            | (AthleteStateOverride.expires_at > now)
+        ),
+    ).order_by(AthleteStateOverride.recorded_at.asc(), AthleteStateOverride.id.asc())
+    supported = {
+        "training_days",
+        "squat_frequency",
+        "bench_frequency",
+        "deadlift_frequency",
+        "goal",
+        "deadlift_style",
+    }
+    values: dict[str, Any] = {}
+    for row in rows:
+        if isinstance(row.override_json, dict):
+            for key, value in row.override_json.items():
+                if key not in supported:
+                    continue
+                if key in {
+                    "training_days",
+                    "squat_frequency",
+                    "bench_frequency",
+                    "deadlift_frequency",
+                } and (isinstance(value, bool) or not isinstance(value, int)):
+                    continue
+                if key == "goal" and value not in GOAL_RPE:
+                    continue
+                if key == "deadlift_style" and value not in {"sumo", "conventional"}:
+                    continue
+                values[key] = value
+    return replace(factory, **values) if values else factory
+
+
+PROPOSAL_TYPE = "weekly_programming_v6"
+PROPOSAL_VERSION = "programming-v6-1"
+
+
+def _actor() -> str:
+    user = g.get("current_user")
+    if user is not None:
+        return str(user.email)
+    if current_app.testing and current_app.config["AUTHENTICATION_DISABLED"]:
+        return "test-coach"
+    abort(401)
+
+
+def _json_value(value: Any) -> Any:
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, tuple):
+        return [_json_value(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _json_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_value(item) for item in value]
+    return value
+
+
+def _proposal_integrity(payload: dict[str, Any]) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    secret = str(current_app.secret_key).encode()
+    return hmac.new(secret, encoded, hashlib.sha256).hexdigest()
+
+
+def _proposal_payload(
+    factory: FactoryRequest,
+    scheduled_preview: list[dict[str, Any]],
+    intelligence: Any,
+) -> dict[str, Any]:
+    return {
+        "factory": _json_value(asdict(factory)),
+        "preview": _json_value(scheduled_preview),
+        "source_context": _json_value(asdict(intelligence.data)),
+        "generator_version": PROPOSAL_VERSION,
+    }
+
+
+def _factory_from_payload(payload: dict[str, Any]) -> FactoryRequest:
+    values = dict(payload["factory"])
+    values["meet_date"] = (
+        date.fromisoformat(values["meet_date"]) if values.get("meet_date") else None
+    )
+    values["accessory_exercise_ids"] = tuple(values.get("accessory_exercise_ids") or ())
+    return FactoryRequest(**values)
+
+
+def _load_proposal() -> tuple[AthleteStateRecommendation, dict[str, Any]]:
+    proposal_id = request.form.get("proposal_id", type=int)
+    supplied_integrity = request.form.get("proposal_integrity", "")
+    if proposal_id is None:
+        abort(400, description="A previewed proposal is required before acceptance.")
+    proposal = db.session.get(AthleteStateRecommendation, proposal_id)
+    if proposal is None or proposal.recommendation_type != PROPOSAL_TYPE:
+        abort(404)
+    payload = proposal.recommendation_json
+    expected = _proposal_integrity(payload)
+    if not hmac.compare_digest(expected, supplied_integrity):
+        abort(409, description="Proposal integrity check failed; preview again.")
+    return proposal, payload
+
+
+def _mark_decided(proposal: AthleteStateRecommendation, status: str) -> bool:
+    updated = AthleteStateRecommendation.query.filter_by(
+        id=proposal.id, status="proposed"
+    ).update(
+        {"status": status, "decided_at": datetime.now(UTC), "decided_by": _actor()},
+        synchronize_session=False,
+    )
+    if updated != 1:
+        db.session.rollback()
+        return False
+    return True
 
 
 @block_factory_bp.get("/programming/factory")
@@ -745,10 +726,14 @@ def wizard():
         Athlete.first_name.asc(),
         Athlete.last_name.asc(),
     ).all()
-    accessory_exercises = Exercise.query.filter(
-        Exercise.active.is_(True),
-        or_(Exercise.accessory_suitable.is_(True), Exercise.movement == "accessory"),
-    ).order_by(Exercise.category.asc(), Exercise.name.asc()).all()
+    accessory_exercises = (
+        Exercise.query.filter(
+            Exercise.active.is_(True),
+            Exercise.accessory_suitable.is_(True),
+        )
+        .order_by(Exercise.category.asc(), Exercise.name.asc())
+        .all()
+    )
 
     return render_template(
         "programming/factory.html",
@@ -767,43 +752,119 @@ def preview():
 
     if athlete is None:
         abort(404)
+    factory = _apply_active_coach_overrides(factory)
 
     athletes = Athlete.query.order_by(
         Athlete.first_name.asc(),
         Athlete.last_name.asc(),
     ).all()
-    accessory_exercises = Exercise.query.filter(
-        Exercise.active.is_(True),
-        or_(Exercise.accessory_suitable.is_(True), Exercise.movement == "accessory"),
-    ).order_by(Exercise.category.asc(), Exercise.name.asc()).all()
+    accessory_exercises = (
+        Exercise.query.filter(
+            Exercise.active.is_(True),
+            Exercise.accessory_suitable.is_(True),
+        )
+        .order_by(Exercise.category.asc(), Exercise.name.asc())
+        .all()
+    )
 
     try:
         scheduled_preview = _preview(factory)
+        intelligence_preview = WeeklyProgrammingIntelligence().preview(
+            factory, athlete, scheduled_preview
+        )
     except ValueError as error:
         abort(400, description=str(error))
+
+    payload = _proposal_payload(factory, scheduled_preview, intelligence_preview)
+    previous_id = request.form.get("proposal_id", type=int)
+    if previous_id is not None:
+        previous = db.session.get(AthleteStateRecommendation, previous_id)
+        if (
+            previous is None
+            or previous.status != "proposed"
+            or previous.athlete_id != athlete.id
+        ):
+            abort(
+                409,
+                description="The proposal is stale or already decided; start a new preview.",
+            )
+        supplied = request.form.get("proposal_integrity", "")
+        if not hmac.compare_digest(
+            _proposal_integrity(previous.recommendation_json), supplied
+        ):
+            abort(409, description="Proposal integrity check failed; preview again.")
+        reason = request.form.get("override_reason", "").strip()
+        if previous.recommendation_json != payload and not reason:
+            abort(
+                400,
+                description="Editing a generated proposal requires a coach override reason.",
+            )
+        if previous.recommendation_json != payload:
+            db.session.add(
+                AthleteStateOverride(
+                    athlete_id=athlete.id,
+                    target_type="programming_proposal",
+                    target_ref=str(previous.id),
+                    override_json={"replacement": payload},
+                    reason=reason,
+                    recorded_by=_actor(),
+                )
+            )
+        previous.status = "superseded"
+        previous.decided_at = datetime.now(UTC)
+        previous.decided_by = _actor()
+    proposal = AthleteStateRecommendation(
+        athlete_id=athlete.id,
+        recommendation_type=PROPOSAL_TYPE,
+        recommendation_json=payload,
+        rationale="WeeklyProgrammingIntelligence preview; no athlete data was inferred.",
+        signal_ids_json=[],
+        generator_version=PROPOSAL_VERSION,
+        status="proposed",
+    )
+    db.session.add(proposal)
+    db.session.commit()
+    integrity = _proposal_integrity(payload)
 
     return render_template(
         "programming/factory.html",
         athletes=athletes,
         preview=scheduled_preview,
+        intelligence=intelligence_preview,
         form=request.form,
         selected_athlete=athlete,
         accessory_exercises=accessory_exercises,
+        proposal=proposal,
+        proposal_integrity=integrity,
     )
 
 
 @block_factory_bp.post("/programming/factory")
 def generate():
-    factory = _parse_factory_request()
-    athlete = db.session.get(Athlete, factory.athlete_id)
+    proposal, payload = _load_proposal()
+    if proposal.status != "proposed":
+        abort(409, description="Proposal was already decided and cannot be replayed.")
+    factory = _factory_from_payload(payload)
+    athlete = db.session.get(Athlete, proposal.athlete_id)
 
     if athlete is None:
         abort(404)
 
     try:
         scheduled_preview = _preview(factory)
+        intelligence = WeeklyProgrammingIntelligence().preview(
+            factory, athlete, scheduled_preview
+        )
     except ValueError as error:
-        abort(400, description=str(error))
+        abort(409, description=f"Proposal is stale: {error}")
+    current_payload = _proposal_payload(factory, scheduled_preview, intelligence)
+    if current_payload != payload:
+        abort(
+            409,
+            description="Proposal is stale because its source data changed; preview again.",
+        )
+    if not _mark_decided(proposal, "accepted"):
+        abort(409, description="Proposal was already decided and cannot be replayed.")
 
     block = TrainingBlock(
         athlete=athlete,
@@ -862,3 +923,14 @@ def generate():
     db.session.commit()
 
     return redirect(url_for("programming.block", block_id=block.id))
+
+
+@block_factory_bp.post("/programming/factory/proposal/dismiss")
+def dismiss_proposal():
+    proposal, _payload = _load_proposal()
+    if proposal.status != "proposed":
+        abort(409, description="Proposal was already decided and cannot be replayed.")
+    if not _mark_decided(proposal, "dismissed"):
+        abort(409, description="Proposal was already decided and cannot be replayed.")
+    db.session.commit()
+    return redirect(url_for("block_factory.wizard", athlete_id=proposal.athlete_id))

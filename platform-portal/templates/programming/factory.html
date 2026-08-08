@@ -22,9 +22,14 @@
   </header>
 
   <form
+    id="block-factory-form"
     class="coach-panel coach-form block-factory-form"
     method="post"
   >
+    {% if proposal %}
+      <input type="hidden" name="proposal_id" value="{{ proposal.id }}">
+      <input type="hidden" name="proposal_integrity" value="{{ proposal_integrity }}">
+    {% endif %}
     <label>
       <span>Athlete</span>
       <select name="athlete_id" required>
@@ -172,25 +177,7 @@
 
     <fieldset class="factory-accessories" data-factory-accessories>
       <legend>Accessories</legend>
-      <p>Set deliberate session volume, then optionally pin exercises. Coach-selected exercises are never replaced and their order is preserved.</p>
-      <div class="factory-accessory-controls">
-        <label><span>Accessory volume</span><select name="accessory_volume" data-accessory-volume>
-          {% for value, label in (("minimal", "Minimal · 1–2"), ("standard", "Standard · 3–4"), ("high", "High volume · 5–6"), ("custom", "Custom")) %}
-            <option value="{{ value }}" {% if form.get('accessory_volume', 'standard') == value %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select></label>
-        <div class="factory-custom-count" data-custom-count>
-          <label><span>Custom minimum</span><input name="accessory_count_min" type="number" min="0" max="10" value="{{ form.get('accessory_count_min', 3) }}"></label>
-          <label><span>Custom maximum (optional)</span><input name="accessory_count_max" type="number" min="0" max="10" value="{{ form.get('accessory_count_max', '') }}"></label>
-        </div>
-      </div>
-      <fieldset class="factory-emphasis">
-        <legend>Optional emphasis</legend>
-        {% set selected_emphases = form.getlist('accessory_emphasis') if form.getlist is defined else [] %}
-        {% for value, label in (("quads", "Quads"), ("posterior_chain", "Posterior chain"), ("chest", "Chest"), ("shoulders", "Shoulders"), ("triceps", "Triceps"), ("lats_upper_back", "Lats / upper back"), ("trunk", "Trunk"), ("gpp", "GPP")) %}
-          <label><input type="checkbox" name="accessory_emphasis" value="{{ value }}" {% if value in selected_emphases %}checked{% endif %}> <span>{{ label }}</span></label>
-        {% endfor %}
-      </fieldset>
+      <p>Assistance is optional and never drives the weekly structure. Pinned coach choices are retained once, in order, after powerlifting exposures.</p>
       <p class="factory-accessory-summary" data-accessory-summary aria-live="polite"></p>
       <label><span>Filter catalogue</span><input type="search" data-accessory-filter placeholder="Search by exercise, category or movement"></label>
       <div data-accessory-rows>
@@ -240,7 +227,7 @@
         {% for day in preview %}
           <article class="factory-preview__day">
             <span>Day {{ day.day }} · {{ day.day_type }}</span>
-            <strong class="factory-preview__count">{{ day.accessory_count }} accessories · target {{ day.accessory_range }}</strong>
+            <strong class="factory-preview__count">{{ day.accessory_count }} coach-selected assistance</strong>
 
             <ol>
               {% for exercise in day.exercises[:day.main_count] %}
@@ -253,6 +240,24 @@
           </article>
         {% endfor %}
       </div>
+      {% if intelligence %}
+        <div class="factory-preview__intelligence">
+          <h3>Weekly programming intelligence</h3>
+          <p><strong>Exposures:</strong> {{ intelligence.exposures.squat }} squat · {{ intelligence.exposures.bench }} bench · {{ intelligence.exposures.deadlift }} deadlift</p>
+          <p><strong>Reported fatigue:</strong> {{ intelligence.fatigue.status }} — {{ intelligence.fatigue.detail }}</p>
+          <p><strong>RPE adherence:</strong> {{ intelligence.fatigue.rpe_adherence }}</p>
+          <h4>Reasoning</h4>
+          <ul>{% for item in intelligence.reasoning %}<li>{{ item }}</li>{% endfor %}</ul>
+          <h4>Constraints and data safety</h4>
+          <ul>{% for item in intelligence.constraints %}<li>{{ item }}</li>{% endfor %}</ul>
+          <label><span>Coach override reason (required after editing)</span><textarea name="override_reason"></textarea></label>
+          <div class="coach-form__actions">
+            <button class="coach-link-button" type="submit" form="block-factory-form" formmethod="post" formaction="{{ url_for('block_factory.dismiss_proposal') }}">Dismiss proposal</button>
+            <button class="coach-primary-button" type="submit" form="block-factory-form" formmethod="post" formaction="{{ url_for('block_factory.generate') }}">Accept proposal</button>
+          </div>
+          <p>To edit, change fields above, give a reason, and preview again. Acceptance writes the stored preview, not mutable form fields.</p>
+        </div>
+      {% endif %}
     </section>
   {% endif %}
 </section>
