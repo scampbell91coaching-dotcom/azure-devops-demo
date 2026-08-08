@@ -66,13 +66,15 @@ def test_fresh_e2e_database_seeds_once_and_safe_repeat_is_idempotent(
         exercises = Exercise.query.order_by(Exercise.id).all()
         assert {exercise.name for exercise in exercises} == {
             "Competition Squat",
-            "Competition Bench",
+            "Competition Bench Press",
             "Competition Deadlift",
+            "Conventional Deadlift",
+            "Sumo Deadlift",
             "Squat Named Row",
             "Lat Pulldown",
             "Cable Row",
             "Bulgarian Split Squat",
             "Weighted Plank",
         }
-        assert len(exercises) == 8
+        assert len(exercises) == 10
         assert Athlete.query.count() == 2

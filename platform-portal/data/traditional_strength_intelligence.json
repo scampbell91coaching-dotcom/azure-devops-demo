@@ -1,5 +1,5 @@
 {
-  "schema_version": 6,
+  "schema_version": 7,
   "catalogue": "Traditional Strength practical exercise library",
   "language": "en-GB",
   "exercises": [
@@ -3526,7 +3526,7 @@
       ],
       "rep_ranges": "5-15 reps",
       "warmup_suitable": false,
-      "accessory_suitable": false,
+      "accessory_suitable": true,
       "active": true,
       "fatigue_rating": 4,
       "default_sets": 3,
@@ -3534,11 +3534,11 @@
       "default_rpe": 7.0,
       "default_rest_seconds": 180,
       "occurrences": 0,
-      "lift_family": "bench",
+      "lift_family": "none",
       "movement_pattern": "horizontal_press",
-      "specificity": "close_variation",
+      "specificity": "general",
       "technical_purposes": [
-        "technique_variation"
+        "general_strength"
       ],
       "equipment_options": [
         "chest press machine"
@@ -3546,8 +3546,8 @@
       "constraint_tags": [
         "externally_supported"
       ],
-      "variation_of": "Competition Bench Press",
-      "swap_group": "bench:horizontal_press"
+      "variation_of": null,
+      "swap_group": "general:horizontal_press"
     },
     {
       "name": "Smith Machine Bench Press",
@@ -3660,7 +3660,7 @@
       ],
       "rep_ranges": "5-15 reps",
       "warmup_suitable": false,
-      "accessory_suitable": false,
+      "accessory_suitable": true,
       "active": true,
       "fatigue_rating": 4,
       "default_sets": 3,
@@ -3668,18 +3668,18 @@
       "default_rpe": 7.0,
       "default_rest_seconds": 180,
       "occurrences": 0,
-      "lift_family": "bench",
+      "lift_family": "none",
       "movement_pattern": "horizontal_press",
-      "specificity": "close_variation",
+      "specificity": "general",
       "technical_purposes": [
-        "technique_variation"
+        "general_strength"
       ],
       "equipment_options": [
         "bodyweight"
       ],
       "constraint_tags": [],
-      "variation_of": "Competition Bench Press",
-      "swap_group": "bench:horizontal_press"
+      "variation_of": null,
+      "swap_group": "general:horizontal_press"
     },
     {
       "name": "Band-Resisted Bench Press",
@@ -4990,7 +4990,7 @@
       ],
       "rep_ranges": "5-15 reps",
       "warmup_suitable": false,
-      "accessory_suitable": false,
+      "accessory_suitable": true,
       "active": true,
       "fatigue_rating": 4,
       "default_sets": 3,
@@ -4998,18 +4998,18 @@
       "default_rpe": 7.0,
       "default_rest_seconds": 180,
       "occurrences": 0,
-      "lift_family": "deadlift",
+      "lift_family": "none",
       "movement_pattern": "hinge",
-      "specificity": "close_variation",
+      "specificity": "general",
       "technical_purposes": [
-        "technique_variation"
+        "general_strength"
       ],
       "equipment_options": [
         "barbell"
       ],
       "constraint_tags": [],
-      "variation_of": "Competition Deadlift",
-      "swap_group": "deadlift:hinge"
+      "variation_of": null,
+      "swap_group": "general:hinge"
     },
     {
       "name": "Safety-Bar Good Morning",
@@ -5056,7 +5056,7 @@
       ],
       "rep_ranges": "5-15 reps",
       "warmup_suitable": false,
-      "accessory_suitable": false,
+      "accessory_suitable": true,
       "active": true,
       "fatigue_rating": 4,
       "default_sets": 3,
@@ -5064,18 +5064,18 @@
       "default_rpe": 7.0,
       "default_rest_seconds": 180,
       "occurrences": 0,
-      "lift_family": "deadlift",
+      "lift_family": "none",
       "movement_pattern": "hinge",
-      "specificity": "close_variation",
+      "specificity": "general",
       "technical_purposes": [
-        "technique_variation"
+        "general_strength"
       ],
       "equipment_options": [
         "safety squat bar"
       ],
       "constraint_tags": [],
-      "variation_of": "Competition Deadlift",
-      "swap_group": "deadlift:hinge"
+      "variation_of": null,
+      "swap_group": "general:hinge"
     },
     {
       "name": "Seated Good Morning",
@@ -5122,7 +5122,7 @@
       ],
       "rep_ranges": "5-15 reps",
       "warmup_suitable": false,
-      "accessory_suitable": false,
+      "accessory_suitable": true,
       "active": true,
       "fatigue_rating": 4,
       "default_sets": 3,
@@ -5130,18 +5130,18 @@
       "default_rpe": 7.0,
       "default_rest_seconds": 180,
       "occurrences": 0,
-      "lift_family": "deadlift",
+      "lift_family": "none",
       "movement_pattern": "hinge",
-      "specificity": "close_variation",
+      "specificity": "general",
       "technical_purposes": [
-        "technique_variation"
+        "general_strength"
       ],
       "equipment_options": [
         "barbell and bench"
       ],
       "constraint_tags": [],
-      "variation_of": "Competition Deadlift",
-      "swap_group": "deadlift:hinge"
+      "variation_of": null,
+      "swap_group": "general:hinge"
     },
     {
       "name": "Cable Pull-Through",
@@ -5188,7 +5188,7 @@
       ],
       "rep_ranges": "5-15 reps",
       "warmup_suitable": false,
-      "accessory_suitable": false,
+      "accessory_suitable": true,
       "active": true,
       "fatigue_rating": 4,
       "default_sets": 3,
@@ -5196,18 +5196,18 @@
       "default_rpe": 7.0,
       "default_rest_seconds": 180,
       "occurrences": 0,
-      "lift_family": "deadlift",
+      "lift_family": "none",
       "movement_pattern": "hinge",
-      "specificity": "close_variation",
+      "specificity": "general",
       "technical_purposes": [
-        "technique_variation"
+        "general_strength"
       ],
       "equipment_options": [
         "cable"
       ],
       "constraint_tags": [],
-      "variation_of": "Competition Deadlift",
-      "swap_group": "deadlift:hinge"
+      "variation_of": null,
+      "swap_group": "general:hinge"
     },
     {
       "name": "Kettlebell Swing",
@@ -5254,7 +5254,7 @@
       ],
       "rep_ranges": "5-15 reps",
       "warmup_suitable": false,
-      "accessory_suitable": false,
+      "accessory_suitable": true,
       "active": true,
       "fatigue_rating": 4,
       "default_sets": 3,
@@ -5262,18 +5262,18 @@
       "default_rpe": 7.0,
       "default_rest_seconds": 180,
       "occurrences": 0,
-      "lift_family": "deadlift",
+      "lift_family": "none",
       "movement_pattern": "hinge",
-      "specificity": "close_variation",
+      "specificity": "general",
       "technical_purposes": [
-        "technique_variation"
+        "general_strength"
       ],
       "equipment_options": [
         "kettlebell"
       ],
       "constraint_tags": [],
-      "variation_of": "Competition Deadlift",
-      "swap_group": "deadlift:hinge"
+      "variation_of": null,
+      "swap_group": "general:hinge"
     },
     {
       "name": "Barbell Hip Thrust",
@@ -5322,7 +5322,7 @@
       ],
       "rep_ranges": "5-15 reps",
       "warmup_suitable": false,
-      "accessory_suitable": false,
+      "accessory_suitable": true,
       "active": true,
       "fatigue_rating": 4,
       "default_sets": 3,
@@ -5330,18 +5330,18 @@
       "default_rpe": 7.0,
       "default_rest_seconds": 180,
       "occurrences": 0,
-      "lift_family": "deadlift",
+      "lift_family": "none",
       "movement_pattern": "hinge",
-      "specificity": "close_variation",
+      "specificity": "general",
       "technical_purposes": [
-        "technique_variation"
+        "general_strength"
       ],
       "equipment_options": [
         "barbell and bench"
       ],
       "constraint_tags": [],
-      "variation_of": "Competition Deadlift",
-      "swap_group": "deadlift:hinge"
+      "variation_of": null,
+      "swap_group": "general:hinge"
     },
     {
       "name": "Machine Hip Thrust",
@@ -5388,7 +5388,7 @@
       ],
       "rep_ranges": "5-15 reps",
       "warmup_suitable": false,
-      "accessory_suitable": false,
+      "accessory_suitable": true,
       "active": true,
       "fatigue_rating": 4,
       "default_sets": 3,
@@ -5396,11 +5396,11 @@
       "default_rpe": 7.0,
       "default_rest_seconds": 180,
       "occurrences": 0,
-      "lift_family": "deadlift",
+      "lift_family": "none",
       "movement_pattern": "hinge",
-      "specificity": "close_variation",
+      "specificity": "general",
       "technical_purposes": [
-        "technique_variation"
+        "general_strength"
       ],
       "equipment_options": [
         "hip thrust machine"
@@ -5408,8 +5408,8 @@
       "constraint_tags": [
         "externally_supported"
       ],
-      "variation_of": "Competition Deadlift",
-      "swap_group": "deadlift:hinge"
+      "variation_of": null,
+      "swap_group": "general:hinge"
     },
     {
       "name": "Glute Bridge",
@@ -5456,7 +5456,7 @@
       ],
       "rep_ranges": "5-15 reps",
       "warmup_suitable": false,
-      "accessory_suitable": false,
+      "accessory_suitable": true,
       "active": true,
       "fatigue_rating": 4,
       "default_sets": 3,
@@ -5464,18 +5464,18 @@
       "default_rpe": 7.0,
       "default_rest_seconds": 180,
       "occurrences": 0,
-      "lift_family": "deadlift",
+      "lift_family": "none",
       "movement_pattern": "hinge",
-      "specificity": "close_variation",
+      "specificity": "general",
       "technical_purposes": [
-        "technique_variation"
+        "general_strength"
       ],
       "equipment_options": [
         "bodyweight"
       ],
       "constraint_tags": [],
-      "variation_of": "Competition Deadlift",
-      "swap_group": "deadlift:hinge"
+      "variation_of": null,
+      "swap_group": "general:hinge"
     },
     {
       "name": "45-Degree Back Extension",
@@ -5522,7 +5522,7 @@
       ],
       "rep_ranges": "5-15 reps",
       "warmup_suitable": false,
-      "accessory_suitable": false,
+      "accessory_suitable": true,
       "active": true,
       "fatigue_rating": 4,
       "default_sets": 3,
@@ -5530,18 +5530,18 @@
       "default_rpe": 7.0,
       "default_rest_seconds": 180,
       "occurrences": 0,
-      "lift_family": "deadlift",
+      "lift_family": "none",
       "movement_pattern": "hinge",
-      "specificity": "close_variation",
+      "specificity": "general",
       "technical_purposes": [
-        "technique_variation"
+        "general_strength"
       ],
       "equipment_options": [
         "back extension bench"
       ],
       "constraint_tags": [],
-      "variation_of": "Competition Deadlift",
-      "swap_group": "deadlift:hinge"
+      "variation_of": null,
+      "swap_group": "general:hinge"
     },
     {
       "name": "Reverse Hyperextension",
@@ -5588,7 +5588,7 @@
       ],
       "rep_ranges": "5-15 reps",
       "warmup_suitable": false,
-      "accessory_suitable": false,
+      "accessory_suitable": true,
       "active": true,
       "fatigue_rating": 4,
       "default_sets": 3,
@@ -5596,18 +5596,18 @@
       "default_rpe": 7.0,
       "default_rest_seconds": 180,
       "occurrences": 0,
-      "lift_family": "deadlift",
+      "lift_family": "none",
       "movement_pattern": "hinge",
-      "specificity": "close_variation",
+      "specificity": "general",
       "technical_purposes": [
-        "technique_variation"
+        "general_strength"
       ],
       "equipment_options": [
         "reverse hyper machine"
       ],
       "constraint_tags": [],
-      "variation_of": "Competition Deadlift",
-      "swap_group": "deadlift:hinge"
+      "variation_of": null,
+      "swap_group": "general:hinge"
     },
     {
       "name": "Cable Romanian Deadlift",
@@ -5720,7 +5720,7 @@
       ],
       "rep_ranges": "5-15 reps",
       "warmup_suitable": false,
-      "accessory_suitable": false,
+      "accessory_suitable": true,
       "active": true,
       "fatigue_rating": 4,
       "default_sets": 3,
@@ -5728,18 +5728,18 @@
       "default_rpe": 7.0,
       "default_rest_seconds": 180,
       "occurrences": 0,
-      "lift_family": "deadlift",
+      "lift_family": "none",
       "movement_pattern": "hinge",
-      "specificity": "close_variation",
+      "specificity": "general",
       "technical_purposes": [
-        "technique_variation"
+        "general_strength"
       ],
       "equipment_options": [
         "resistance band"
       ],
       "constraint_tags": [],
-      "variation_of": "Competition Deadlift",
-      "swap_group": "deadlift:hinge"
+      "variation_of": null,
+      "swap_group": "general:hinge"
     },
     {
       "name": "Suitcase Deadlift",

@@ -790,6 +790,26 @@ ACCESSORY_PATTERNS = {
 }
 
 
+# These records are useful assistance exercises, but they are not variations of
+# a competition lift.  They remain in the legacy movement buckets for backwards
+# compatibility; the V6+ taxonomy is the source of truth for new consumers.
+GENERAL_ASSISTANCE_IN_MAIN_MOVEMENTS = {
+    "Machine Chest Press",
+    "Push-Up",
+    "Good Morning",
+    "Safety-Bar Good Morning",
+    "Seated Good Morning",
+    "Cable Pull-Through",
+    "Kettlebell Swing",
+    "Barbell Hip Thrust",
+    "Machine Hip Thrust",
+    "Glute Bridge",
+    "45-Degree Back Extension",
+    "Reverse Hyperextension",
+    "Band Good Morning",
+}
+
+
 def swap_metadata(name: str, movement: str, family: str, category: str, equipment: str) -> dict[str, object]:
     """Return explicit, reviewable V6 metadata derived from catalogue facts."""
 
@@ -825,6 +845,12 @@ def swap_metadata(name: str, movement: str, family: str, category: str, equipmen
         constraints.append("reduced_range_option")
     if any(term in lowered for term in ("single-arm", "single-leg", "unilateral", "split squat", "lunge", "step-up", "step-down")):
         constraints.append("unilateral")
+
+    if name in GENERAL_ASSISTANCE_IN_MAIN_MOVEMENTS:
+        lift_family = "none"
+        root = None
+        specificity = "general"
+        purposes = ["general_strength"]
 
     return {
         "lift_family": lift_family,
@@ -949,7 +975,10 @@ def make_record(
             else ("5-10 controlled reps or 20-40 seconds" if warmup else "6-20 reps")
         ),
         "warmup_suitable": warmup,
-        "accessory_suitable": not is_main and not warmup,
+        "accessory_suitable": (
+            (not is_main and not warmup)
+            or name in GENERAL_ASSISTANCE_IN_MAIN_MOVEMENTS
+        ),
         "active": True,
         "fatigue_rating": 1
         if warmup
@@ -1079,7 +1108,7 @@ def build() -> list[dict[str, object]]:
 
 if __name__ == "__main__":
     payload = {
-        "schema_version": 6,
+        "schema_version": 7,
         "catalogue": "Traditional Strength practical exercise library",
         "language": "en-GB",
         "exercises": build(),

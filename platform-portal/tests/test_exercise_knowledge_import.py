@@ -97,7 +97,7 @@ def test_bundled_production_dataset_imports_cleanly():
             "invalid": 0,
         }
         assert Exercise.query.count() == 342
-        assert exercise.catalogue_version == 6
+        assert exercise.catalogue_version == 7
         assert exercise.lift_family == "bench"
         assert exercise.movement_pattern == "horizontal_press"
         assert exercise.specificity == "competition"
@@ -309,7 +309,7 @@ def test_catalogue_meets_starter_coverage_targets():
     payload = json.loads(DEFAULT_DATA_PATH.read_text(encoding="utf-8"))
     records = payload["exercises"]
 
-    assert payload["schema_version"] == 6
+    assert payload["schema_version"] == 7
     assert 300 <= len(records) <= 400
     assert sum(item["movement"] == "squat" for item in records) >= 20
     assert sum(item["movement"] == "bench" for item in records) >= 20
@@ -321,11 +321,54 @@ def test_catalogue_meets_starter_coverage_targets():
     assert all(item["swap_group"] for item in records)
     assert all(item["equipment_options"] for item in records)
     assert all(item["technical_purposes"] for item in records)
-    assert all(
-        item["lift_family"] == item["movement"]
-        for item in records
-        if item["movement"] in {"squat", "bench", "deadlift"}
-    )
+    competition = [item for item in records if item["category"] == "competition"]
+    assert {item["name"] for item in competition} == {
+        "Competition Squat",
+        "Competition Bench Press",
+        "Competition Deadlift",
+    }
+    assert all(item["lift_family"] == item["movement"] for item in competition)
+
+
+def test_catalogue_taxonomy_has_resolved_roots_and_no_false_lift_family_matches():
+    payload = json.loads(DEFAULT_DATA_PATH.read_text(encoding="utf-8"))
+    records = payload["exercises"]
+    by_name = {item["name"]: item for item in records}
+
+    for item in records:
+        root_name = item["variation_of"]
+        if root_name is not None:
+            assert root_name in by_name
+            assert root_name != item["name"]
+            assert by_name[root_name]["specificity"] == "competition"
+            assert by_name[root_name]["lift_family"] == item["lift_family"]
+        if item["lift_family"] == "none":
+            assert root_name is None
+
+    for name in {
+        "Machine Chest Press",
+        "Push-Up",
+        "Good Morning",
+        "Barbell Hip Thrust",
+        "Glute Bridge",
+        "45-Degree Back Extension",
+        "Reverse Hyperextension",
+    }:
+        item = by_name[name]
+        assert item["lift_family"] == "none"
+        assert item["specificity"] == "general"
+        assert item["accessory_suitable"]
+
+
+def test_catalogue_canonical_names_aliases_and_deadlift_styles_are_consistent():
+    payload = json.loads(DEFAULT_DATA_PATH.read_text(encoding="utf-8"))
+    records = payload["exercises"]
+    by_name = {item["name"]: item for item in records}
+
+    assert "Competition Bench" not in by_name
+    assert "Competition Bench" in by_name["Competition Bench Press"]["aliases"]
+    assert by_name["Conventional Deadlift"]["variation_of"] == "Competition Deadlift"
+    assert by_name["Sumo Deadlift"]["variation_of"] == "Competition Deadlift"
 
     families = {item["family"] for item in records}
     categories = {item["category"] for item in records}

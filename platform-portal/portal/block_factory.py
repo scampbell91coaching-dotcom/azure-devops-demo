@@ -117,7 +117,7 @@ def _fallback_templates() -> dict[str, list[dict[str, Any]]]:
         "B": [
             {
                 "signature": "Competition Bench Press > Cable Row",
-                "exercises": ["Competition Bench", "Cable Row"],
+                "exercises": ["Competition Bench Press", "Cable Row"],
             }
         ],
         "D": [
@@ -133,7 +133,7 @@ def _fallback_templates() -> dict[str, list[dict[str, Any]]]:
                 ),
                 "exercises": [
                     "Competition Squat",
-                    "Competition Bench",
+                    "Competition Bench Press",
                     "Cable Row",
                 ],
             }
@@ -144,7 +144,7 @@ def _fallback_templates() -> dict[str, list[dict[str, Any]]]:
                     "Competition Bench Press > Competition Deadlift > Leg Curl"
                 ),
                 "exercises": [
-                    "Competition Bench",
+                    "Competition Bench Press",
                     "Competition Deadlift",
                     "Leg Curl",
                 ],
@@ -157,7 +157,7 @@ def _fallback_templates() -> dict[str, list[dict[str, Any]]]:
                 ),
                 "exercises": [
                     "Competition Squat",
-                    "Competition Bench",
+                    "Competition Bench Press",
                     "Competition Deadlift",
                 ],
             }
@@ -351,7 +351,7 @@ def _ensure_main_lifts(
         canonical.append("Competition Squat")
 
     if "B" in scheduled_lifts:
-        canonical.append("Competition Bench")
+        canonical.append("Competition Bench Press")
 
     if "D" in scheduled_lifts:
         canonical.append(

@@ -98,9 +98,9 @@ def seed_database(app: Flask) -> None:
             lift_family="squat",
         )
         bench = Exercise.query.filter_by(
-            name="Competition Bench"
+            name="Competition Bench Press"
         ).one_or_none() or Exercise(
-            name="Competition Bench",
+            name="Competition Bench Press",
             movement="bench",
             category="main",
             fatigue_rating=3,
@@ -173,7 +173,7 @@ def seed_database(app: Flask) -> None:
 
         extra_prescriptions = []
         for name, position in (
-            ("Competition Bench", 2),
+            ("Competition Bench Press", 2),
             ("Competition Deadlift", 3),
             ("Squat Named Row", 4),
         ):
