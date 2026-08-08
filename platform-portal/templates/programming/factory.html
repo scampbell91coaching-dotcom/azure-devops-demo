@@ -178,7 +178,7 @@
     <fieldset class="factory-accessories" data-factory-accessories>
       <legend>Accessories</legend>
       <p>Assistance is optional and never drives the weekly structure. Pinned coach choices are retained once, in order, after powerlifting exposures.</p>
-      <p class="factory-accessory-summary" data-accessory-summary aria-live="polite"></p>
+      <p class="factory-accessory-summary" data-accessory-summary aria-live="polite">No assistance selected. Zero assistance is valid.</p>
       <label><span>Filter catalogue</span><input type="search" data-accessory-filter placeholder="Search by exercise, category or movement"></label>
       <div data-accessory-rows>
         {% set selected_ids = form.getlist('accessory_exercise_id') if form.getlist is defined else [] %}
@@ -206,13 +206,6 @@
         Preview
       </button>
 
-      <button
-        class="coach-primary-button"
-        type="submit"
-        formaction="{{ url_for('block_factory.generate') }}"
-      >
-        Generate block
-      </button>
     </div>
   </form>
 
@@ -244,14 +237,15 @@
         <div class="factory-preview__intelligence">
           <h3>Weekly programming intelligence</h3>
           <p><strong>Exposures:</strong> {{ intelligence.exposures.squat }} squat · {{ intelligence.exposures.bench }} bench · {{ intelligence.exposures.deadlift }} deadlift</p>
-          <p><strong>Reported fatigue:</strong> {{ intelligence.fatigue.status }} — {{ intelligence.fatigue.detail }}</p>
+          {% if intelligence.fatigue.status == 'reported' %}<p><strong>Reported fatigue:</strong> {{ intelligence.fatigue.detail }}</p>{% endif %}
           <p><strong>RPE adherence:</strong> {{ intelligence.fatigue.rpe_adherence }}</p>
           <h4>Reasoning</h4>
           <ul>{% for item in intelligence.reasoning %}<li>{{ item }}</li>{% endfor %}</ul>
           <h4>Constraints and data safety</h4>
           <ul>{% for item in intelligence.constraints %}<li>{{ item }}</li>{% endfor %}</ul>
-          <label><span>Coach override reason (required after editing)</span><textarea name="override_reason"></textarea></label>
-          <div class="coach-form__actions">
+          {% if proposal_override %}<p class="proposal-provenance" data-testid="coach-override-provenance"><strong>Coach override:</strong> {{ proposal_override.reason }} · {{ proposal_override.recorded_by }}</p>{% endif %}
+          <label><span>Coach override reason (required after editing)</span><textarea name="override_reason" form="block-factory-form"></textarea></label>
+          <div class="proposal-actions">
             <button class="coach-link-button" type="submit" form="block-factory-form" formmethod="post" formaction="{{ url_for('block_factory.dismiss_proposal') }}">Dismiss proposal</button>
             <button class="coach-primary-button" type="submit" form="block-factory-form" formmethod="post" formaction="{{ url_for('block_factory.generate') }}">Accept proposal</button>
           </div>

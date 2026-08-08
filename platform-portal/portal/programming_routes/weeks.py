@@ -3,6 +3,7 @@ from flask import Blueprint, abort, redirect, render_template, request, url_for
 from ..extensions import db
 from ..models.programming import TrainingBlock, TrainingWeek
 from ..programming_services.prescriptions import PRESCRIPTION_MODE_LABELS
+from ..programming_services.presentation import week_exposure_summary
 from ..programming_services.weeks import (
     FinalWeekDeletionError,
     create,
@@ -10,6 +11,7 @@ from ..programming_services.weeks import (
     duplicate,
     extend,
 )
+from ..services.weekly_programming_intelligence import map_athlete_programming_context
 
 
 def register_week_routes(blueprint: Blueprint) -> None:
@@ -34,6 +36,8 @@ def register_week_routes(blueprint: Blueprint) -> None:
             "programming/week.html",
             week=item,
             prescription_modes=PRESCRIPTION_MODE_LABELS,
+            exposure_summary=week_exposure_summary(item),
+            athlete_context=map_athlete_programming_context(item.block.athlete),
         )
 
     @blueprint.post("/programming/weeks/<int:week_id>/duplicate")

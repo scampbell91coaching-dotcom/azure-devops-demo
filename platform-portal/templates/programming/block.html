@@ -1,5 +1,31 @@
-{% extends "coach/base.html" %}{% set coach_section = "programming" %}
+{% extends "coach/base.html" %}
+{% set coach_section = "programming" %}
 {% block title %}{{ block.name }} | Traditional Strength{% endblock %}
-{% block content %}<section class="coach-page"><header class="coach-page__header"><a class="coach-back-link" href="/programming">← Programming</a><span class="coach-eyebrow">{{ block.athlete.full_name }}</span><h1>{{ block.name }}</h1><p>{{ block.objective or 'No objective added.' }}</p></header>
-<section class="coach-panel"><div class="coach-panel__heading"><h2>Add week</h2></div><form class="coach-form programming-form" method="post" action="{{ url_for('programming.create_week', block_id=block.id) }}"><label><span>Name</span><input name="name" placeholder="Week {{ block.weeks|length + 1 }}"></label><label><span>Notes</span><input name="notes"></label><button class="coach-primary-button" type="submit">Add week</button></form></section>
-<section class="coach-panel"><div class="coach-panel__heading"><h2>Weeks</h2></div><div class="programming-list">{% for week in block.weeks %}<div><a href="{{ url_for('programming.week', week_id=week.id) }}"><strong>{{ week.position }}. {{ week.name }}</strong><small>{{ week.sessions|length }} sessions</small></a><form method="post" action="{{ url_for('programming.duplicate_week', week_id=week.id) }}"><button class="coach-link-button">Duplicate</button></form></div>{% else %}<p>No weeks yet.</p>{% endfor %}</div></section></section>{% endblock %}
+{% block content %}
+{% set athlete = block.athlete %}
+<section class="coach-page programme-workspace">
+  <nav class="programme-crumbs" aria-label="Programme hierarchy">
+    <a href="{{ url_for('programming.athlete_program', athlete_id=athlete.id) }}">{{ athlete.full_name }}</a><span aria-hidden="true">/</span><span aria-current="page">{{ block.name }}</span>
+  </nav>
+  <header class="coach-page__header programme-hero">
+    <div><span class="coach-eyebrow">Programme block</span><h1>{{ block.name }}</h1><p>{{ block.objective or 'Objective not yet recorded.' }}</p></div>
+    <span class="coach-status coach-status--active">{{ block.status|title }}</span>
+  </header>
+  <section class="programme-context-grid" aria-label="Programming context">
+    <article class="context-card"><span class="coach-eyebrow">Athlete</span><h2>{{ athlete.full_name }}</h2><dl class="context-facts"><div><dt>Class</dt><dd>{{ athlete.weight_class or 'Not set' }}</dd></div><div><dt>Bodyweight</dt><dd>{{ athlete.bodyweight_kg ~ ' kg' if athlete.bodyweight_kg else 'Not set' }}</dd></div><div><dt>Federation</dt><dd>{{ athlete.federation or 'Not set' }}</dd></div></dl></article>
+    <article class="context-card context-card--meet"><span class="coach-eyebrow">Meet context</span><h2>{{ athlete.next_competition or 'No meet selected' }}</h2><p>{{ 'Competition context is available for coach review.' if athlete.next_competition else 'No meet-specific context is recorded.' }}</p></article>
+    <article class="context-card"><span class="coach-eyebrow">Block context</span><h2>{{ block.weeks|length }} weeks</h2><p>{{ block.objective or 'Add an objective to explain the block intent.' }}</p></article>
+  </section>
+  <section class="coach-panel recommendation-panel" aria-labelledby="reasoning-title"><div><span class="coach-eyebrow">Coach reasoning</span><h2 id="reasoning-title">Block intent</h2></div><p>{{ block.objective or 'No recommendation rationale is stored for this block.' }}</p><span class="reasoning-source">Coach-authored objective</span></section>
+  <div class="programme-section-heading"><div><span class="coach-eyebrow">Athlete → block → week</span><h2>Weeks and lift exposure</h2></div><details class="quick-create"><summary class="coach-primary-button">Add week</summary><form class="coach-form programming-form" method="post" action="{{ url_for('programming.create_week', block_id=block.id) }}"><label><span>Name</span><input name="name" placeholder="Week {{ block.weeks|length + 1 }}"></label><label><span>Notes</span><input name="notes" placeholder="Focus or constraints"></label><button class="coach-primary-button" type="submit">Add week</button></form></details></div>
+  <div class="programme-weeks">
+    {% for week in block.weeks %}{% set exposure = week_exposures[week.id] %}
+    <article class="week-card" data-testid="programming-week">
+      <a class="week-card__main" href="{{ url_for('programming.week', week_id=week.id) }}"><span class="week-card__number">Week {{ week.position }}</span><h3>{{ week.name }}</h3><p>{{ week.notes or 'No week focus recorded.' }}</p><span>{{ week.sessions|length }} training sessions</span></a>
+      <div class="exposure-strip" aria-label="Week {{ week.position }} taxonomy-backed lift exposures"><span><b>S</b> Squat <strong>{{ exposure.squat }}</strong></span><span><b>B</b> Bench <strong>{{ exposure.bench }}</strong></span><span><b>D</b> Deadlift <strong>{{ exposure.deadlift }}</strong></span></div>
+      <form method="post" action="{{ url_for('programming.duplicate_week', week_id=week.id) }}"><button class="coach-link-button" type="submit">Duplicate week</button></form>
+    </article>
+    {% else %}<div class="coach-empty-state"><h3>No weeks yet</h3><p>Add the first training week to begin programming.</p></div>{% endfor %}
+  </div>
+</section>
+{% endblock %}

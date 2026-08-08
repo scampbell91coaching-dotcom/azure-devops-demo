@@ -97,4 +97,25 @@ for (const width of [320, 390, 430]) {
     await expect(page.getByRole('link', { name: 'Nutrition', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: /Meet Prep: Meet Day/ })).toBeVisible();
   });
+
+  test(`coach programming hierarchy remains usable at ${width}px`, async ({ page, authenticatedState }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await authenticatedState(page);
+    await page.goto('/programming');
+    await page.getByRole('link', { name: /Deterministic strength block/ }).click();
+    await expect(page.getByRole('navigation', { name: 'Programme hierarchy' })).toBeVisible();
+    const week = page.getByTestId('programming-week').filter({ hasText: 'Foundation week' });
+    await expect(week.getByLabel('Week 1 taxonomy-backed lift exposures')).toContainText('Squat 1');
+    await expect(week.getByLabel('Week 1 taxonomy-backed lift exposures')).toContainText('Bench 1');
+    await expect(week.getByLabel('Week 1 taxonomy-backed lift exposures')).toContainText('Deadlift 1');
+    await expectNoHorizontalOverflow(page);
+    await week.getByRole('link').click();
+    await expect(page.getByLabel('Taxonomy-backed competition lift exposures')).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    const session = page.getByTestId('programming-session').filter({ hasText: 'Squat day' });
+    await session.getByRole('link', { name: 'Open session' }).click();
+    await expect(page.getByRole('button', { name: 'Swap Exercise' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Delete Competition Squat' })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
 }

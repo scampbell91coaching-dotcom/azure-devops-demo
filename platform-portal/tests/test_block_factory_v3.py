@@ -370,7 +370,7 @@ def test_incomplete_state_and_rpe_adherence_do_not_infer_fatigue(monkeypatch):
     )
     assert response.status_code == 200
     assert b"50% of comparable sets" in response.data
-    assert b"No reported fatigue data exists; none was inferred" in response.data
+    assert b"Reported fatigue:" not in response.data
     assert b"Incomplete data:" in response.data
 
 

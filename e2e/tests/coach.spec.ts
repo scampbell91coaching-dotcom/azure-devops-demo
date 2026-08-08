@@ -112,7 +112,10 @@ test('Meet Day creates a meet and calculates plates and all warm-up plans withou
 });
 
 test('adds, edits, deletes, and preserves prescription order without an HTTP 400', async ({ page }) => {
-  await page.goto('/programming/sessions/501');
+  await page.goto('/programming');
+  await page.getByRole('link', { name: /Deterministic strength block/ }).click();
+  await page.getByRole('link', { name: /Foundation week/ }).click();
+  await page.getByTestId('programming-session').filter({ hasText: 'Squat day' }).getByRole('link', { name: 'Open session' }).click();
   const failedResponses: number[] = [];
   page.on('response', response => {
     if (response.url().includes('/prescriptions') && response.status() >= 400) failedResponses.push(response.status());
@@ -127,7 +130,7 @@ test('adds, edits, deletes, and preserves prescription order without an HTTP 400
     response.request().method() === 'POST'
   );
 
-  await form.getByRole('button', { name: '+' }).click();
+  await form.getByRole('button', { name: 'Add exercise' }).click();
 
   const response = await creationResponse;
   expect(response.status()).toBe(201);
@@ -152,25 +155,24 @@ test('adds, edits, deletes, and preserves prescription order without an HTTP 400
   await added.locator('input[name="sets"]').fill('4');
   await expect(page.getByText('Saved', { exact: true })).toBeVisible();
   page.once('dialog', dialog => dialog.accept());
-  await added.getByRole('button', { name: '×' }).click();
+  await added.getByRole('button', { name: 'Delete Lat Pulldown' }).click();
   await expect(added).toHaveCount(0);
   expect(failedResponses).toEqual([]);
-  await expect(page.locator('[data-prescription-row]').first().locator('input[name="exercise_name"]')).toHaveValue('Competition Squat');
+  await expect(page.locator('[data-prescription-row]').filter({
+    has: page.locator('input[name="exercise_name"][value="Competition Squat"]'),
+  })).toHaveCount(1);
 });
 
 test('Block Factory adds ordered upper and lower accessories and persists generated prescriptions', async ({ page }) => {
   await page.goto('/programming/factory');
-  await page.locator('select[name="athlete_id"]').selectOption('101');
+  await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
   await page.locator('input[name="name"]').fill('Catalogue accessory block');
   await page.getByRole('button', { name: 'Add accessory' }).click();
   const selectAccessory = async (
     select: ReturnType<typeof page.locator>,
     exerciseName: string
   ) => {
-    const option = select
-      .locator('option')
-      .filter({ hasText: exerciseName })
-      .first();
+    const option = select.locator('option').filter({ hasText: exerciseName });
 
     await expect(option).toHaveCount(1);
 
@@ -192,49 +194,113 @@ test('Block Factory adds ordered upper and lower accessories and persists genera
     'Bulgarian Split Squat'
   );
   await page.getByRole('button', { name: 'Preview' }).click();
-  const firstPreview = page.locator('.factory-preview__day').first();
+  const firstPreview = page.locator('.factory-preview__day').filter({ hasText: 'Day 1' });
   const previewText = await firstPreview.locator('li').allTextContents();
   expect(previewText.findIndex(text => text.includes('Cable Row'))).toBeLessThan(
     previewText.findIndex(text => text.includes('Bulgarian Split Squat'))
   );
-  await page.getByRole('button', { name: 'Generate block' }).click();
+  await page.getByRole('button', { name: 'Accept proposal' }).click();
   await expect(page.getByRole('heading', { name: 'Catalogue accessory block' })).toBeVisible();
   await page.getByRole('link', { name: /Week 1/ }).click();
-  await expect(page.getByText('Cable Row').first()).toBeVisible();
-  await expect(page.getByText('Bulgarian Split Squat').first()).toBeVisible();
+  const generatedSession = page.getByTestId('programming-session').filter({ hasText: 'Cable Row' });
+  await expect(generatedSession.getByText('Cable Row')).toBeVisible();
+  await expect(generatedSession.getByText('Bulgarian Split Squat')).toBeVisible();
 });
 
-test('Block Factory previews Standard role-balanced accessory volume', async ({ page }) => {
+test('Block Factory previews taxonomy-backed exposures with zero assistance and incomplete state', async ({ page }) => {
   await page.goto('/programming/factory');
-  await page.locator('select[name="athlete_id"]').selectOption('101');
-  await page.locator('input[name="training_days"]').fill('3');
-  await page.locator('input[name="squat_frequency"]').fill('0');
-  await page.locator('input[name="bench_frequency"]').fill('3');
-  await page.locator('input[name="deadlift_frequency"]').fill('0');
-  await page.locator('select[name="accessory_volume"]').selectOption('standard');
+  await page.getByLabel('Athlete').selectOption({ label: 'Sam Morgan' });
+  await expect(page.getByText('Zero assistance is valid')).toBeVisible();
   await page.getByRole('button', { name: 'Preview' }).click();
-  await expect(page.locator('.factory-preview__count')).toHaveCount(3);
-  await expect(page.locator('.factory-preview__count').first()).toContainText('4 accessories');
-  await expect(page.locator('.factory-preview__day').first()).toContainText('balancing');
+  await expect(page.getByRole('heading', { name: 'Weekly programming intelligence' })).toBeVisible();
+  await expect(page.getByText(/Exposures:/)).toContainText('2 squat · 3 bench · 1 deadlift');
+  await expect(page.getByText(/Incomplete data:/)).toBeVisible();
+  await expect(page.getByText('Reported fatigue:', { exact: false })).toHaveCount(0);
+  await expect(page.getByText(/0 coach-selected assistance/)).toHaveCount(4);
+  await expect(page.getByText('Accessory Day', { exact: false })).toHaveCount(0);
 });
 
-test('Block Factory previews High and exact Custom accessory volume', async ({ page }) => {
+test('Block Factory edit presents coach override provenance', async ({ page }) => {
   await page.goto('/programming/factory');
-  await page.locator('select[name="athlete_id"]').selectOption('101');
-  await page.locator('select[name="accessory_volume"]').selectOption('high');
+  await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
   await page.getByRole('button', { name: 'Preview' }).click();
-  for (const count of await page.locator('.factory-preview__count').allTextContents()) {
-    expect(Number(count.match(/\d+/)?.[0])).toBeGreaterThanOrEqual(5);
-    expect(Number(count.match(/\d+/)?.[0])).toBeLessThanOrEqual(6);
-  }
+  await page.getByLabel('Block name').fill('Coach adjusted proposal');
+  await page.getByLabel('Coach override reason (required after editing)').fill('Meet timing requires a clearer block label');
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await expect(page.getByTestId('coach-override-provenance')).toContainText('Meet timing requires a clearer block label');
+  await expect(page.getByTestId('coach-override-provenance')).toContainText('coach.e2e@example.test');
+});
 
-  await page.locator('select[name="accessory_volume"]').selectOption('custom');
-  await page.locator('input[name="accessory_count_min"]').fill('4');
-  await page.locator('input[name="accessory_count_max"]').fill('4');
+test('Block Factory rejects an edit without the required reason', async ({ page }) => {
+  await page.goto('/programming/factory');
+  await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
   await page.getByRole('button', { name: 'Preview' }).click();
-  for (const count of await page.locator('.factory-preview__count').allTextContents()) {
-    expect(count).toContain('4 accessories · target 4');
-  }
+  await page.getByLabel('Block name').fill('Unreasoned browser edit');
+  const rejected = page.waitForResponse(response =>
+    response.url().endsWith('/programming/factory/preview') && response.request().method() === 'POST'
+  );
+  await page.getByRole('button', { name: 'Preview' }).click();
+  expect((await rejected).status()).toBe(400);
+  await expect(page.getByText(/requires a coach override reason/)).toBeVisible();
+});
+
+test('Block Factory rejects a stale superseded proposal', async ({ page }) => {
+  await page.goto('/programming/factory');
+  await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
+  await page.getByRole('button', { name: 'Preview' }).click();
+  const originalFields = await page.locator('#block-factory-form').evaluate(form =>
+    Array.from(new FormData(form as HTMLFormElement).entries()).map(([key, value]) => [key, String(value)])
+  );
+  await page.getByLabel('Block name').fill('Superseding browser edit');
+  await page.getByLabel('Coach override reason (required after editing)').fill('Supersede the first browser proposal');
+  await page.getByRole('button', { name: 'Preview' }).click();
+  const stale = await page.evaluate(async fields => {
+    const response = await fetch('/programming/factory', {
+      method: 'POST',
+      body: new URLSearchParams(fields),
+      redirect: 'follow',
+    });
+    return { status: response.status, body: await response.text() };
+  }, originalFields);
+  expect(stale.status).toBe(409);
+  expect(stale.body).toContain('already decided');
+});
+
+test('Block Factory prevents replay after acceptance', async ({ page }) => {
+  await page.goto('/programming/factory');
+  await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
+  await page.getByLabel('Block name').fill('Replay protected browser proposal');
+  await page.getByRole('button', { name: 'Preview' }).click();
+  const statuses = await page.locator('#block-factory-form').evaluate(async form => {
+    const fields = Array.from(new FormData(form as HTMLFormElement).entries()).map(([key, value]) => [key, String(value)]);
+    const submit = () => fetch('/programming/factory', { method: 'POST', body: new URLSearchParams(fields), redirect: 'follow' });
+    const first = await submit();
+    const second = await submit();
+    return [first.status, second.status];
+  });
+  expect(statuses).toEqual([200, 409]);
+});
+
+test('Block Factory accepts once and persists the block after reload', async ({ page }) => {
+  await page.goto('/programming/factory');
+  await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
+  await page.getByLabel('Block name').fill('Accepted browser proposal');
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await page.getByRole('button', { name: 'Accept proposal' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Accepted browser proposal' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1, name: 'Accepted browser proposal' })).toBeVisible();
+});
+
+test('Block Factory dismisses a proposal without creating a block', async ({ page }) => {
+  await page.goto('/programming/factory');
+  await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
+  await page.getByLabel('Block name').fill('Dismissed browser proposal');
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await page.getByRole('button', { name: 'Dismiss proposal' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Block Factory' })).toBeVisible();
+  await page.goto('/programming');
+  await expect(page.getByText('Dismissed browser proposal')).toHaveCount(0);
 });
 
 test(

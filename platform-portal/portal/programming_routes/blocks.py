@@ -9,6 +9,7 @@ from ..programming_services.blocks import (
     delete_draft,
     duplicate,
 )
+from ..programming_services.presentation import week_exposure_summary
 
 
 def register_block_routes(blueprint: Blueprint) -> None:
@@ -59,4 +60,10 @@ def register_block_routes(blueprint: Blueprint) -> None:
         item = db.session.get(TrainingBlock, block_id)
         if item is None:
             abort(404)
-        return render_template("programming/block.html", block=item)
+        return render_template(
+            "programming/block.html",
+            block=item,
+            week_exposures={
+                week.id: week_exposure_summary(week) for week in item.weeks
+            },
+        )

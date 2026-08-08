@@ -51,10 +51,9 @@ def seed_database(app: Flask) -> None:
         session = db.session.get(TrainingSession, 501) or TrainingSession(
             id=501, week=week, name="Squat day", day_label="Monday", position=1
         )
-        prescription = db.session.get(
-            ExercisePrescription, 601
-        ) or ExercisePrescription(
-            id=601,
+        prescription = ExercisePrescription.query.filter_by(
+            session=session, exercise_name="Competition Squat"
+        ).one_or_none() or ExercisePrescription(
             session=session,
             exercise_name="Competition Squat",
             position=1,
@@ -70,10 +69,9 @@ def seed_database(app: Flask) -> None:
             day_label="Tuesday",
             position=2,
         )
-        mobile_prescription = db.session.get(
-            ExercisePrescription, 602
-        ) or ExercisePrescription(
-            id=602,
+        mobile_prescription = ExercisePrescription.query.filter_by(
+            session=mobile_session, exercise_name="Competition Squat"
+        ).one_or_none() or ExercisePrescription(
             session=mobile_session,
             exercise_name="Competition Squat",
             position=1,
@@ -93,16 +91,62 @@ def seed_database(app: Flask) -> None:
         squat = Exercise.query.filter_by(
             name="Competition Squat"
         ).one_or_none() or Exercise(
-            id=701,
             name="Competition Squat",
             movement="squat",
             category="main",
             fatigue_rating=4,
+            lift_family="squat",
         )
+        bench = Exercise.query.filter_by(
+            name="Competition Bench"
+        ).one_or_none() or Exercise(
+            name="Competition Bench",
+            movement="bench",
+            category="main",
+            fatigue_rating=3,
+            lift_family="bench",
+        )
+        deadlift = Exercise.query.filter_by(
+            name="Competition Deadlift"
+        ).one_or_none() or Exercise(
+            name="Competition Deadlift",
+            movement="deadlift",
+            category="main",
+            fatigue_rating=5,
+            lift_family="deadlift",
+        )
+        misleading_assistance = Exercise.query.filter_by(
+            name="Squat Named Row"
+        ).one_or_none() or Exercise(
+            name="Squat Named Row",
+            movement="accessory",
+            category="upper body",
+            fatigue_rating=2,
+            accessory_suitable=True,
+        )
+        extra_prescriptions = []
+        for name, position in (
+            ("Competition Bench", 2),
+            ("Competition Deadlift", 3),
+            ("Squat Named Row", 4),
+        ):
+            existing = ExercisePrescription.query.filter_by(
+                session=session, exercise_name=name
+            ).one_or_none()
+            extra_prescriptions.append(
+                existing
+                or ExercisePrescription(
+                    session=session,
+                    exercise_name=name,
+                    position=position,
+                    sets=3,
+                    reps="5",
+                    rpe=7.0,
+                )
+            )
         pulldown = Exercise.query.filter_by(
             name="Lat Pulldown"
         ).one_or_none() or Exercise(
-            id=702,
             name="Lat Pulldown",
             movement="accessory",
             category="accessory",
@@ -163,6 +207,10 @@ def seed_database(app: Flask) -> None:
                 mobile_prescription,
                 settings,
                 squat,
+                bench,
+                deadlift,
+                misleading_assistance,
+                *extra_prescriptions,
                 pulldown,
                 row,
                 split_squat,

@@ -16,6 +16,7 @@
   data-session-builder
   data-session-id="{{ session.id }}"
 >
+  <nav class="programme-crumbs" aria-label="Programme hierarchy"><a href="{{ url_for('programming.athlete_program', athlete_id=block.athlete.id) }}">{{ block.athlete.full_name }}</a><span aria-hidden="true">/</span><a href="{{ url_for('programming.block', block_id=block.id) }}">{{ block.name }}</a><span aria-hidden="true">/</span><a href="{{ url_for('programming.week', week_id=week.id) }}">Week {{ week.position }}</a><span aria-hidden="true">/</span><span aria-current="page">{{ session.name }}</span></nav>
   <header class="coach-page__header coach-page__header--split">
     <div>
       <a
@@ -32,6 +33,7 @@
 
     <span class="autosave-status" data-autosave-status>Saved</span>
   </header>
+  <section class="session-context" aria-label="Session context"><div><span class="coach-eyebrow">Block intent</span><strong>{{ block.objective or 'Not recorded' }}</strong></div><div><span class="coach-eyebrow">Week focus</span><strong>{{ week.notes or 'Follow block intent' }}</strong></div><div><span class="coach-eyebrow">Athlete state</span>{% if athlete_context.active_constraints %}<strong>{{ athlete_context.active_constraints|join(', ') }}</strong>{% else %}<strong>No active constraints reported</strong>{% endif %}{% if athlete_context.state_signals.get('reported_fatigue') is not none %}<small>Reported fatigue: {{ athlete_context.state_signals.get('reported_fatigue') }}</small>{% endif %}</div></section>
 
   <section class="programming-template-strip">
   <div><span class="coach-eyebrow">Start faster</span><h2>Day templates</h2></div>
@@ -49,8 +51,8 @@
 <section class="coach-panel builder-panel">
     <div class="builder-toolbar">
       <div>
-        <span class="coach-eyebrow">Session plan</span>
-        <h2>Exercises</h2>
+        <span class="coach-eyebrow">Coach editing · changes override the generated plan</span>
+        <h2>Session exercises</h2>
       </div>
 
       <div class="builder-shortcuts">
@@ -85,16 +87,16 @@
           data-prescription-id="{{ item.id }}"
         >
           <div class="sheet-exercise-cell">
-            <button class="drag-handle" type="button">⋮⋮</button>
+            <button class="drag-handle" type="button" aria-label="Reorder {{ item.exercise_name }}" title="Drag to reorder">⋮⋮</button>
             <input
               name="exercise_name"
               value="{{ item.exercise_name }}"
               list="exercise-suggestions"
-              data-autosave-field
+              data-autosave-field aria-label="Exercise"
             >
           </div>
 
-          <input name="sets" type="number" value="{{ item.sets or '' }}" data-autosave-field>
+          <input name="sets" type="number" value="{{ item.sets or '' }}" data-autosave-field aria-label="Sets">
           <input name="reps" value="{{ item.reps or '' }}" data-autosave-field>
           <input name="load_kg" type="number" step="0.5" value="{{ item.load_kg or '' }}" data-autosave-field>
           <input name="percentage" type="number" step="0.1" value="{{ item.percentage or '' }}" data-autosave-field>
@@ -103,7 +105,7 @@
           <input name="rest_seconds" type="number" value="{{ item.rest_seconds or '' }}" data-autosave-field>
           <textarea name="notes" rows="1" data-autosave-field>{{ item.notes or "" }}</textarea>
 
-          <button class="sheet-delete-button" type="button" data-delete-prescription>
+          <button class="sheet-delete-button" type="button" data-delete-prescription aria-label="Delete {{ item.exercise_name }}">
             ×
           </button>
         </div>
@@ -125,9 +127,10 @@
         <input name="tempo" placeholder="Tempo">
         <input name="rest_seconds" type="number" placeholder="Rest">
         <input name="notes" placeholder="Notes">
-        <button class="sheet-add-button" type="submit">+</button>
+        <button class="sheet-add-button" type="submit" aria-label="Add exercise">+</button>
       </form>
     </div>
+    <div class="future-action" aria-label="Exercise alternatives"><div><strong>Exercise alternatives</strong><span>Future taxonomy-aware substitution; read-only in this release.</span></div><button class="coach-link-button" type="button" disabled aria-describedby="swap-help">Swap Exercise</button><span id="swap-help" class="visually-hidden">Exercise swapping is not available.</span></div>
   </section>
 </section>
 {% endblock %}

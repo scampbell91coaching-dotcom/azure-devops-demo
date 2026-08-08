@@ -9,6 +9,7 @@ from ..programming_services.sessions import (
     insert_blank,
 )
 from ..programming_templates import day_templates
+from ..services.weekly_programming_intelligence import map_athlete_programming_context
 
 
 def _redirect_after_edit(session: TrainingSession):
@@ -65,6 +66,7 @@ def register_session_routes(blueprint: Blueprint) -> None:
             week=week,
             block=block,
             day_templates=day_templates(),
+            athlete_context=map_athlete_programming_context(block.athlete),
         )
 
     @blueprint.post("/programming/sessions/<int:session_id>/duplicate")

@@ -237,6 +237,9 @@ class WeeklyProgrammingIntelligence:
         reasoning = [
             "Squat, bench, and deadlift exposures were established before assistance.",
             f"The requested {factory.goal} structure uses {factory.training_days} exposure-led days.",
+            f"Coach inputs requested {factory.squat_frequency} squat, {factory.bench_frequency} bench, "
+            f"and {factory.deadlift_frequency} deadlift exposures; the summary counts only "
+            "taxonomy-confirmed selections.",
         ]
         catalogued = sum(
             metadata is not None
@@ -260,9 +263,12 @@ class WeeklyProgrammingIntelligence:
         return WeeklyIntelligencePreview(
             weekly_structure=structure,
             exposures={
-                "squat": factory.squat_frequency,
-                "bench": factory.bench_frequency,
-                "deadlift": factory.deadlift_frequency,
+                family: sum(
+                    metadata is not None and metadata["lift_family"] == family
+                    for day in structure
+                    for metadata in day["exposure_taxonomy"]
+                )
+                for family in ("squat", "bench", "deadlift")
             },
             reasoning=tuple(reasoning),
             fatigue=fatigue,

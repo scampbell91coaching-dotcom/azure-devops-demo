@@ -49,9 +49,14 @@
 }
 
 .programming-sheet {
+  max-width: 100%;
   overflow-x: auto;
   border: 1px solid var(--coach-border);
 }
+
+.future-action { display: flex; justify-content: space-between; gap: 1rem; align-items: center; margin-top: 1rem; border: 1px dashed var(--coach-border); padding: .85rem; color: var(--coach-muted); }
+.future-action > div { display: grid; gap: .2rem; }.future-action strong { color: var(--coach-text); }.future-action button:disabled { cursor: not-allowed; opacity: .55; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 
 .programming-sheet__head,
 .programming-sheet__row,
@@ -146,4 +151,5 @@
   }
 
   .programming-template-grid { grid-template-columns: 1fr; }
+  .builder-shortcuts { display: none; }.future-action { align-items: stretch; flex-direction: column; }.future-action button { width: 100%; }
 }

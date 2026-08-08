@@ -777,6 +777,7 @@ def preview():
 
     payload = _proposal_payload(factory, scheduled_preview, intelligence_preview)
     previous_id = request.form.get("proposal_id", type=int)
+    proposal_override = None
     if previous_id is not None:
         previous = db.session.get(AthleteStateRecommendation, previous_id)
         if (
@@ -800,16 +801,15 @@ def preview():
                 description="Editing a generated proposal requires a coach override reason.",
             )
         if previous.recommendation_json != payload:
-            db.session.add(
-                AthleteStateOverride(
-                    athlete_id=athlete.id,
-                    target_type="programming_proposal",
-                    target_ref=str(previous.id),
-                    override_json={"replacement": payload},
-                    reason=reason,
-                    recorded_by=_actor(),
-                )
+            proposal_override = AthleteStateOverride(
+                athlete_id=athlete.id,
+                target_type="programming_proposal",
+                target_ref=str(previous.id),
+                override_json={"replacement": payload},
+                reason=reason,
+                recorded_by=_actor(),
             )
+            db.session.add(proposal_override)
         previous.status = "superseded"
         previous.decided_at = datetime.now(UTC)
         previous.decided_by = _actor()
@@ -836,6 +836,7 @@ def preview():
         accessory_exercises=accessory_exercises,
         proposal=proposal,
         proposal_integrity=integrity,
+        proposal_override=proposal_override,
     )
 
 

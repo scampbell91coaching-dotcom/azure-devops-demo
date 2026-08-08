@@ -164,8 +164,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     row.innerHTML = `
       <div class="sheet-exercise-cell">
-        <button class="drag-handle" type="button">⋮⋮</button>
-        <input name="exercise_name" list="exercise-suggestions" data-autosave-field>
+        <button class="drag-handle" type="button" aria-label="Reorder exercise">⋮⋮</button>
+        <input name="exercise_name" list="exercise-suggestions" data-autosave-field aria-label="Exercise">
       </div>
       <input name="sets" type="number" data-autosave-field>
       <input name="reps" data-autosave-field>
@@ -175,7 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <input name="tempo" data-autosave-field>
       <input name="rest_seconds" type="number" data-autosave-field>
       <textarea name="notes" rows="1" data-autosave-field></textarea>
-      <button class="sheet-delete-button" type="button" data-delete-prescription>×</button>
+      <button class="sheet-delete-button" type="button" data-delete-prescription aria-label="Delete exercise">×</button>
     `;
 
     Object.entries(item).forEach(([name, value]) => {
@@ -185,6 +185,10 @@ document.addEventListener("DOMContentLoaded", () => {
         field.value = value;
       }
     });
+
+    const exerciseName = item.exercise_name || "exercise";
+    row.querySelector(".drag-handle").setAttribute("aria-label", `Reorder ${exerciseName}`);
+    row.querySelector("[data-delete-prescription]").setAttribute("aria-label", `Delete ${exerciseName}`);
 
     return row;
   };
