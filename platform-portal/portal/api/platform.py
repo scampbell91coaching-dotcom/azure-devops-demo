@@ -39,17 +39,7 @@ def gitops():
 
 @platform_bp.get("/observability")
 def observability():
-    d = service.get_status()
-    return jsonify(
-        {
-            "generated_at": d.get("generated_at"),
-            "observability": d.get("observability", {}),
-            "availability": d.get("availability", {}),
-            "checks": service.checks_for(
-                "Observability", "Availability", "Performance"
-            ),
-        }
-    )
+    return jsonify(service.observability_status())
 
 
 @platform_bp.get("/resilience")
