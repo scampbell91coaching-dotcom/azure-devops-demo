@@ -20,7 +20,9 @@ test('coach login, invalid credentials, and logout are usable', async ({ page })
   );
   await page.getByRole('button', { name: /sign in/i }).click();
   await expect(page).toHaveURL(/\/coach$/);
-  await expect(page.getByText('coach.e2e@example.test')).toBeVisible();
+  await expect(
+    page.locator('.coach-user').getByText('coach.e2e@example.test', { exact: true })
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/\/login$/);
 });
