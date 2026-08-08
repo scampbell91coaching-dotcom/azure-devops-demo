@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <meta name="theme-color" content="#0b0d0c">
+  <link rel="icon" href="{{ url_for('static', filename='img/traditional-strength-logo.png') }}">
 
   <title>{% block title %}Traditional Strength Coach{% endblock %}</title>
 
@@ -27,7 +28,13 @@
   <header class="coach-topbar">
     <div class="coach-topbar__inner">
       <a class="coach-brand" href="{{ url_for('coach_dashboard.index') }}">
-        <span class="coach-brand__mark" aria-hidden="true">TS</span>
+        <img
+          class="coach-brand__mark"
+          src="{{ url_for('static', filename='img/traditional-strength-logo.png') }}"
+          alt=""
+          width="1170"
+          height="1675"
+        >
 
         <span class="coach-brand__copy">
           <strong>Traditional Strength Platform</strong>
@@ -95,10 +102,20 @@
           aria-label="Meet Prep: Meet Day"
           {% if coach_section == "meet_day" %}aria-current="page"{% endif %}
         >Meet Day</a>
+
+        <div class="coach-navigation__utilities">
+          {% if current_user %}
+            <span class="coach-navigation__user">Signed in as <strong>{{ current_user.email }}</strong> · {{ current_user.role }}</span>
+          {% endif %}
+          <a href="/">Platform</a>
+          <form method="post" action="{{ url_for('auth.logout') }}">
+            <button type="submit">Sign out</button>
+          </form>
+        </div>
       </nav>
 
       <div class="coach-topbar__actions">
-        {% if current_user %}<span class="coach-user">{{ current_user.email }} · {{ current_user.role }}</span>{% endif %}
+        {% if current_user %}<span class="coach-user"><strong>{{ current_user.email }}</strong><small>{{ current_user.role }}</small></span>{% endif %}
         <a
           class="coach-link-button"
           href="/"

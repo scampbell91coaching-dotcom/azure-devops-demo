@@ -96,6 +96,9 @@ for (const width of [320, 390, 430]) {
     await menu.click();
     await expect(page.getByRole('link', { name: 'Nutrition', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: /Meet Prep: Meet Day/ })).toBeVisible();
+    await expect(page.locator('.coach-navigation__utilities').getByRole('link', { name: 'Platform' })).toBeVisible();
+    await expect(page.locator('.coach-navigation__utilities').getByRole('button', { name: 'Sign out' })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
   });
 
   test(`coach programming hierarchy remains usable at ${width}px`, async ({ page, authenticatedState }) => {
