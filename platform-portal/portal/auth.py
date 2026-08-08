@@ -56,6 +56,15 @@ _SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
 _DUMMY_PASSWORD_HASH = generate_password_hash("not-a-real-password", method="scrypt")
 
 
+def _default_destination(user: User) -> str:
+    endpoint = (
+        "athletes.dashboard"
+        if user.user_role == UserRole.ATHLETE
+        else "coach_dashboard.index"
+    )
+    return url_for(endpoint)
+
+
 def _safe_redirect_target(target: str | None) -> bool:
     if not target or not target.startswith("/"):
         return False
@@ -274,12 +283,7 @@ def roles_required(*roles: UserRole):
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if g.get("current_user") is not None:
-        endpoint = (
-            "athletes.dashboard"
-            if g.current_user.role == UserRole.ATHLETE
-            else "coach_dashboard.index"
-        )
-        return redirect(url_for(endpoint))
+        return redirect(_default_destination(g.current_user))
     error = None
     session_expired = request.args.get("reason") == "session_expired"
     if request.method == "POST":
@@ -301,14 +305,12 @@ def login():
             session["athlete_id"] = user.athlete_id
             session.permanent = True
             target = request.form.get("next")
-            if _safe_redirect_target(target):
+            # The legacy overview at `/` is not a useful post-authentication
+            # destination. Some external entry points still submit it as their
+            # generic default, so let role-aware routing handle that case.
+            if target != "/" and _safe_redirect_target(target):
                 return redirect(target)
-            endpoint = (
-                "athletes.dashboard"
-                if user.role == UserRole.ATHLETE
-                else "coach_dashboard.index"
-            )
-            return redirect(url_for(endpoint))
+            return redirect(_default_destination(user))
         if not limited:
             _record_failure(key)
         error = "Invalid email or password."

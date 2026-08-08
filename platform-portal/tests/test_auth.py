@@ -164,6 +164,66 @@ def test_invalid_login_error_is_announced_without_account_disclosure(secured_app
 
 
 @pytest.mark.parametrize(
+    ("email", "password", "expected"),
+    [
+        ("coach@example.test", "correct horse battery staple", "/coach"),
+        ("ada@example.test", "athlete secure password", "/athlete/dashboard"),
+    ],
+)
+def test_successful_login_uses_role_aware_destination(
+    secured_app, email, password, expected
+):
+    response = _login(secured_app.test_client(), email, password)
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == expected
+
+
+@pytest.mark.parametrize(
+    ("email", "password", "expected"),
+    [
+        ("coach@example.test", "correct horse battery staple", "/coach"),
+        ("ada@example.test", "athlete secure password", "/athlete/dashboard"),
+    ],
+)
+def test_legacy_root_next_uses_role_aware_destination(
+    secured_app, email, password, expected
+):
+    client = secured_app.test_client()
+    response = client.post(
+        "/login",
+        data={
+            "email": email,
+            "password": password,
+            "csrf_token": _csrf(client),
+            "next": "/",
+        },
+    )
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == expected
+
+
+@pytest.mark.parametrize(
+    ("email", "password", "expected"),
+    [
+        ("coach@example.test", "correct horse battery staple", "/coach"),
+        ("ada@example.test", "athlete secure password", "/athlete/dashboard"),
+    ],
+)
+def test_authenticated_login_visit_uses_role_aware_destination(
+    secured_app, email, password, expected
+):
+    client = secured_app.test_client()
+    assert _login(client, email, password).status_code == 302
+
+    response = client.get("/login")
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == expected
+
+
+@pytest.mark.parametrize(
     "target",
     [
         "/athletes?view=active#top",

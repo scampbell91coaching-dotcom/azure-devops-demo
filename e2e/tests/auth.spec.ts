@@ -40,13 +40,15 @@ test('athlete cannot access coach programming or mutation controls', async ({ pa
 });
 
 test('branded login is keyboard accessible and responsive', async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 720 });
-  await page.goto('/login');
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 720 });
+    await page.goto('/login');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  }
 
   await expect(page.getByRole('img', { name: 'Traditional Strength' })).toBeVisible();
   await expect(page.getByText('Coach access', { exact: true })).toBeVisible();
   await expect(page.getByText('Athlete access', { exact: true })).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
   await page.keyboard.press('Tab');
   await expect(page.locator('input[name="email"]')).toBeFocused();
