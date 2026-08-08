@@ -194,17 +194,27 @@ test('Block Factory adds ordered upper and lower accessories and persists genera
     'Bulgarian Split Squat'
   );
   await page.getByRole('button', { name: 'Preview' }).click();
-  const firstPreview = page.locator('.factory-preview__day').filter({ hasText: 'Day 1' });
-  const previewText = await firstPreview.locator('li').allTextContents();
-  expect(previewText.findIndex(text => text.includes('Cable Row'))).toBeLessThan(
-    previewText.findIndex(text => text.includes('Bulgarian Split Squat'))
-  );
+  const previewText = await page.locator('.factory-preview__day li').allTextContents();
+  const previewCableRow = previewText.findIndex(text => text.includes('Cable Row'));
+  const previewSplitSquat = previewText.findIndex(text => text.includes('Bulgarian Split Squat'));
+
+  expect(previewCableRow).toBeGreaterThanOrEqual(0);
+  expect(previewSplitSquat).toBeGreaterThanOrEqual(0);
+  expect(previewCableRow).toBeLessThan(previewSplitSquat);
   await page.getByRole('button', { name: 'Accept proposal' }).click();
   await expect(page.getByRole('heading', { name: 'Catalogue accessory block' })).toBeVisible();
   await page.getByRole('link', { name: /Week 1/ }).click();
-  const generatedSession = page.getByTestId('programming-session').filter({ hasText: 'Cable Row' });
-  await expect(generatedSession.getByText('Cable Row')).toBeVisible();
-  await expect(generatedSession.getByText('Bulgarian Split Squat')).toBeVisible();
+  const persistedText = await page
+    .getByTestId('programming-session')
+    .locator('.week-prescription')
+    .allTextContents();
+
+  const persistedCableRow = persistedText.findIndex(text => text.includes('Cable Row'));
+  const persistedSplitSquat = persistedText.findIndex(text => text.includes('Bulgarian Split Squat'));
+
+  expect(persistedCableRow).toBeGreaterThanOrEqual(0);
+  expect(persistedSplitSquat).toBeGreaterThanOrEqual(0);
+  expect(persistedCableRow).toBeLessThan(persistedSplitSquat);
 });
 
 test('Block Factory previews taxonomy-backed exposures with zero assistance and incomplete state', async ({ page }) => {
@@ -213,7 +223,9 @@ test('Block Factory previews taxonomy-backed exposures with zero assistance and 
   await expect(page.getByText('Zero assistance is valid')).toBeVisible();
   await page.getByRole('button', { name: 'Preview' }).click();
   await expect(page.getByRole('heading', { name: 'Weekly programming intelligence' })).toBeVisible();
-  await expect(page.getByText(/Exposures:/)).toContainText('2 squat · 3 bench · 1 deadlift');
+  await expect(
+    page.locator('.factory-preview__intelligence p').filter({ hasText: 'Exposures:' })
+  ).toContainText('2 squat · 3 bench · 1 deadlift');
   await expect(page.getByText(/Incomplete data:/)).toBeVisible();
   await expect(page.getByText('Reported fatigue:', { exact: false })).toHaveCount(0);
   await expect(page.getByText(/0 coach-selected assistance/)).toHaveCount(4);
@@ -273,12 +285,19 @@ test('Block Factory prevents replay after acceptance', async ({ page }) => {
   await page.getByRole('button', { name: 'Preview' }).click();
   const statuses = await page.locator('#block-factory-form').evaluate(async form => {
     const fields = Array.from(new FormData(form as HTMLFormElement).entries()).map(([key, value]) => [key, String(value)]);
-    const submit = () => fetch('/programming/factory', { method: 'POST', body: new URLSearchParams(fields), redirect: 'follow' });
+    const submit = () => fetch('/programming/factory', {
+      method: 'POST',
+      body: new URLSearchParams(fields),
+      redirect: 'manual',
+    });
     const first = await submit();
     const second = await submit();
     return [first.status, second.status];
   });
-  expect(statuses).toEqual([200, 409]);
+  // Chromium exposes a manually handled navigation redirect as an opaque
+  // redirect with status 0. The second identical POST must be rejected.
+  expect(statuses[0]).toBe(0);
+  expect(statuses[1]).toBe(409);
 });
 
 test('Block Factory accepts once and persists the block after reload', async ({ page }) => {

@@ -124,6 +124,53 @@ def seed_database(app: Flask) -> None:
             fatigue_rating=2,
             accessory_suitable=True,
         )
+
+        conventional_deadlift = Exercise.query.filter_by(
+            name="Conventional Deadlift"
+        ).one_or_none() or Exercise(
+            name="Conventional Deadlift",
+            movement="deadlift",
+            category="main",
+            fatigue_rating=5,
+            lift_family="deadlift",
+        )
+        sumo_deadlift = Exercise.query.filter_by(
+            name="Sumo Deadlift"
+        ).one_or_none() or Exercise(
+            name="Sumo Deadlift",
+            movement="deadlift",
+            category="main",
+            fatigue_rating=5,
+            lift_family="deadlift",
+        )
+
+        conventional_deadlift.active = True
+        conventional_deadlift.lift_family = "deadlift"
+        sumo_deadlift.active = True
+        sumo_deadlift.lift_family = "deadlift"
+        # Keep canonical E2E exercise taxonomy deterministic even when
+        # seed rows already exist from an earlier run.
+        squat.movement = "squat"
+        squat.category = "main"
+        squat.fatigue_rating = 4
+        squat.lift_family = "squat"
+
+        bench.movement = "bench"
+        bench.category = "main"
+        bench.fatigue_rating = 3
+        bench.lift_family = "bench"
+
+        deadlift.movement = "deadlift"
+        deadlift.category = "main"
+        deadlift.fatigue_rating = 5
+        deadlift.lift_family = "deadlift"
+
+        misleading_assistance.movement = "accessory"
+        misleading_assistance.category = "upper body"
+        misleading_assistance.fatigue_rating = 2
+        misleading_assistance.accessory_suitable = True
+        misleading_assistance.lift_family = None
+
         extra_prescriptions = []
         for name, position in (
             ("Competition Bench", 2),
@@ -209,6 +256,8 @@ def seed_database(app: Flask) -> None:
                 squat,
                 bench,
                 deadlift,
+                conventional_deadlift,
+                sumo_deadlift,
                 misleading_assistance,
                 *extra_prescriptions,
                 pulldown,

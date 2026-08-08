@@ -238,7 +238,7 @@ def test_factory_v3_generates_complete_block():
             for prescription in session.prescriptions
         ]
         assert sum(name == "Competition Squat" for name in exercise_names) == 2
-        assert sum(name == "Competition Bench Press" for name in exercise_names) == 3
+        assert sum(name == "Competition Bench" for name in exercise_names) == 3
         assert sum(name == "Sumo Deadlift" for name in exercise_names) == 1
 
 

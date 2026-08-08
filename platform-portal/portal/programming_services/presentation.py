@@ -9,6 +9,7 @@ LIFT_FAMILIES = ("squat", "bench", "deadlift")
 
 def taxonomy_exposure_summary(items: Iterable[Any]) -> dict[str, int]:
     """Count S/B/D prescriptions using exact Exercise Library taxonomy."""
+    items = list(items)
     names = {item.exercise_name for item in items if item.exercise_name}
     taxonomy = {
         exercise.name: exercise.lift_family

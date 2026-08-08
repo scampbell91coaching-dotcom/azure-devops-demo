@@ -14,12 +14,18 @@ test('athlete records and finishes a session on a phone, then coach reviews it',
   await expect(page.getByText('Not Started')).toBeVisible();
 
   const sets = page.locator('[data-set-row]');
-  for (let index = 0; index < 3; index += 1) {
+  const setCount = await sets.count();
+
+  for (let index = 0; index < setCount; index += 1) {
     const row = sets.nth(index);
     await row.getByLabel('Complete').check();
-    await row.locator('input[name$="-load"]').fill(String(100 + index * 2.5));
+    await row.locator('input[name$="-load"]').fill(
+      index < 3 ? String(100 + index * 2.5) : '100'
+    );
     await row.locator('input[name$="-reps"]').fill('5');
-    await row.locator('input[name$="-rpe"]').fill(String(7 + index * 0.5));
+    await row.locator('input[name$="-rpe"]').fill(
+      index < 3 ? String(7 + index * 0.5) : '7'
+    );
   }
   await sets.first().getByText('Add note').click();
   await sets.first().locator('textarea').fill('Moved well on video.');

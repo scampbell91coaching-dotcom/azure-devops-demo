@@ -105,7 +105,7 @@ for (const width of [320, 390, 430]) {
     await page.getByRole('link', { name: /Deterministic strength block/ }).click();
     await expect(page.getByRole('navigation', { name: 'Programme hierarchy' })).toBeVisible();
     const week = page.getByTestId('programming-week').filter({ hasText: 'Foundation week' });
-    await expect(week.getByLabel('Week 1 taxonomy-backed lift exposures')).toContainText('Squat 1');
+    await expect(week.getByLabel('Week 1 taxonomy-backed lift exposures')).toContainText('Squat 2');
     await expect(week.getByLabel('Week 1 taxonomy-backed lift exposures')).toContainText('Bench 1');
     await expect(week.getByLabel('Week 1 taxonomy-backed lift exposures')).toContainText('Deadlift 1');
     await expectNoHorizontalOverflow(page);
