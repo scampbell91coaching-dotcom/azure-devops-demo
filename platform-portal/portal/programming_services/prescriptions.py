@@ -7,6 +7,7 @@ from ..extensions import db
 from ..models.programming import (
     PRESCRIPTION_TYPES,
     ExercisePrescription,
+    ProgrammingLiftSlot,
     TrainingSession,
 )
 
@@ -101,8 +102,21 @@ def renumber(
 
 
 def copy(source: TrainingSession, target: TrainingSession) -> None:
+    slots: dict[int, ProgrammingLiftSlot] = {}
+    for source_slot in source.lift_slots:
+        target_slot = ProgrammingLiftSlot(
+            session=target,
+            position=source_slot.position,
+            lift_family=source_slot.lift_family,
+        )
+        db.session.add(target_slot)
+        slots[source_slot.id] = target_slot
     for item in cast(list[ExercisePrescription], source.prescriptions):
-        db.session.add(ExercisePrescription(session=target, **item.copy_values()))
+        values = item.copy_values()
+        if item.lift_slot_id is not None:
+            values["lift_slot"] = slots[item.lift_slot_id]
+            values["slot_role"] = item.slot_role
+        db.session.add(ExercisePrescription(session=target, **values))
 
 
 def create(
@@ -116,6 +130,7 @@ def create(
         session=session,
         exercise_name=name,
         position=len(session.prescriptions) + 1,
+        provenance="coach_authored",
         **_values(form),
     )
     db.session.add(item)
@@ -131,6 +146,8 @@ def update(
 ) -> ExercisePrescription:
     values = _values(form)
     item.exercise_name = name
+    if item.lift_slot_id is None:
+        item.provenance = "coach_authored"
     # Assign every editable value so switching modes cannot retain stale targets.
     for field in _EDITABLE_FIELDS:
         setattr(item, field, values[field])

@@ -232,6 +232,12 @@ def test_factory_v3_generates_complete_block():
             session.prescriptions for week in block.weeks for session in week.sessions
         )
         first_week = block.weeks[0]
+        assert first_week.lift_slot_frequencies() == {
+            "squat": 2,
+            "bench": 3,
+            "deadlift": 1,
+        }
+        assert sum(len(session.lift_slots) for session in first_week.sessions) == 6
         exercise_names = [
             prescription.exercise_name
             for session in first_week.sessions
@@ -285,6 +291,17 @@ def test_factory_uses_multiple_ordered_catalogue_accessories():
         assert [
             name for name in names if name in {"Chest Supported Row", "Reverse Lunge"}
         ] == ["Chest Supported Row", "Reverse Lunge"]
+        assistance = [
+            item
+            for session in block.weeks[0].sessions
+            for item in session.prescriptions
+            if item.exercise_name in {"Chest Supported Row", "Reverse Lunge"}
+        ]
+        assert [item.provenance for item in assistance] == [
+            "coach_selected",
+            "coach_selected",
+        ]
+        assert all(item.lift_slot_id is None for item in assistance)
 
 
 def test_zero_assistance_is_preserved_without_a_quota():
@@ -319,6 +336,7 @@ def test_zero_assistance_generation_persists_after_reload():
             assert [item.position for item in session.prescriptions] == list(
                 range(1, len(session.prescriptions) + 1)
             )
+            assert len(session.lift_slots) == len(day_type)
 
 
 def base_form(athlete_id):

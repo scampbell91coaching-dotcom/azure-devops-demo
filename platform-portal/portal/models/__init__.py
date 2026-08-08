@@ -23,6 +23,7 @@ from .nutrition_import import DailyNutrition, NutritionImportJob, NutritionProvi
 from .platform_snapshot import PlatformSnapshot
 from .programming import (
     ExercisePrescription,
+    ProgrammingLiftSlot,
     TrainingBlock,
     TrainingSession,
     TrainingSessionLog,
@@ -45,6 +46,7 @@ __all__ = [
     "DayTemplateExercise",
     "Exercise",
     "ExercisePrescription",
+    "ProgrammingLiftSlot",
     "LeadCapture",
     "Meet",
     "MeetEntry",

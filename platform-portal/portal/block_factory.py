@@ -26,6 +26,7 @@ from .models.athlete_state import AthleteStateOverride, AthleteStateRecommendati
 from .models.exercise_library import Exercise
 from .models.programming import (
     ExercisePrescription,
+    ProgrammingLiftSlot,
     TrainingBlock,
     TrainingSession,
     TrainingWeek,
@@ -574,6 +575,7 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                     "name": name,
                     "role": _accessory_role(item),
                     "source": "Coach selected",
+                    "provenance": "coach_selected",
                 }
             )
 
@@ -633,8 +635,9 @@ def _apply_active_coach_overrides(factory: FactoryRequest) -> FactoryRequest:
     return replace(factory, **values) if values else factory
 
 
-PROPOSAL_TYPE = "weekly_programming_v6"
-PROPOSAL_VERSION = "programming-v6-1"
+PROPOSAL_TYPE = "weekly_programming_v7"
+ACCEPTED_PROPOSAL_TYPES = {"weekly_programming_v6", PROPOSAL_TYPE}
+PROPOSAL_VERSION = "programming-v7-1"
 
 
 def _actor() -> str:
@@ -692,7 +695,10 @@ def _load_proposal() -> tuple[AthleteStateRecommendation, dict[str, Any]]:
     if proposal_id is None:
         abort(400, description="A previewed proposal is required before acceptance.")
     proposal = db.session.get(AthleteStateRecommendation, proposal_id)
-    if proposal is None or proposal.recommendation_type != PROPOSAL_TYPE:
+    if (
+        proposal is None
+        or proposal.recommendation_type not in ACCEPTED_PROPOSAL_TYPES
+    ):
         abort(404)
     payload = proposal.recommendation_json
     expected = _proposal_integrity(payload)
@@ -899,6 +905,14 @@ def generate():
             db.session.add(session)
             db.session.flush()
 
+            exercise_rows = {
+                item.name: item
+                for item in Exercise.query.filter(Exercise.name.in_(exercises)).all()
+            }
+            main_count = int(day["main_count"])
+            family_by_code = {"S": "squat", "B": "bench", "D": "deadlift"}
+            main_families = [family_by_code[code] for code in day_type]
+
             for exercise_position, exercise_name in enumerate(
                 exercises,
                 start=1,
@@ -908,13 +922,31 @@ def generate():
                     exercise_position,
                 )
 
+                slot = None
+                slot_role = None
+                provenance = "coach_selected"
+                if exercise_position <= main_count:
+                    slot = ProgrammingLiftSlot(
+                        session=session,
+                        position=exercise_position,
+                        lift_family=main_families[exercise_position - 1],
+                    )
+                    db.session.add(slot)
+                    slot_role = "top_set"
+                    provenance = "generated"
+
                 db.session.add(
                     ExercisePrescription(
                         session=session,
+                        exercise=exercise_rows.get(exercise_name),
+                        lift_slot=slot,
+                        slot_role=slot_role,
+                        provenance=provenance,
                         exercise_name=exercise_name,
                         position=exercise_position,
                         sets=sets,
                         reps=reps,
+                        prescription_type="rpe",
                         rpe=week_rpe
                         if exercise_position == 1
                         else min(9.0, week_rpe + 0.5),

@@ -15,6 +15,10 @@ PRESCRIPTION_TYPES = {
     "single_target",
 }
 
+LIFT_FAMILIES = {"squat", "bench", "deadlift"}
+SLOT_ROLES = {"top_set", "back_off"}
+PRESCRIPTION_PROVENANCE = {"generated", "coach_selected", "coach_authored"}
+
 
 class TrainingBlock(db.Model):  # type: ignore[name-defined]
     __tablename__ = "training_blocks"
@@ -70,6 +74,14 @@ class TrainingWeek(db.Model):  # type: ignore[name-defined]
         order_by="TrainingSession.position",
     )
 
+    def lift_slot_frequencies(self) -> dict[str, int]:
+        """Count scheduled exposures, never their top/back-off rows."""
+        counts = {family: 0 for family in sorted(LIFT_FAMILIES)}
+        for session in self.sessions:
+            for slot in session.lift_slots:
+                counts[slot.lift_family] += 1
+        return counts
+
 
 class TrainingSession(db.Model):  # type: ignore[name-defined]
     __tablename__ = "training_sessions"
@@ -93,6 +105,51 @@ class TrainingSession(db.Model):  # type: ignore[name-defined]
         cascade="all, delete-orphan",
         order_by="ExercisePrescription.position",
     )
+    lift_slots = db.relationship(
+        "ProgrammingLiftSlot",
+        back_populates="session",
+        cascade="all, delete-orphan",
+        order_by="ProgrammingLiftSlot.position",
+    )
+
+
+class ProgrammingLiftSlot(db.Model):  # type: ignore[name-defined]
+    """One scheduled squat, bench, or deadlift exposure."""
+
+    __tablename__ = "programming_lift_slots"
+    __table_args__ = (
+        db.CheckConstraint("position > 0", name="ck_programming_lift_slots_position"),
+        db.CheckConstraint(
+            "lift_family IN ('squat', 'bench', 'deadlift')",
+            name="ck_programming_lift_slots_family",
+        ),
+        db.UniqueConstraint(
+            "session_id", "position", name="uq_programming_lift_slots_position"
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(
+        db.Integer,
+        db.ForeignKey("training_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    position = db.Column(db.Integer, nullable=False)
+    lift_family = db.Column(db.String(20), nullable=False, index=True)
+
+    session = db.relationship("TrainingSession", back_populates="lift_slots")
+    prescriptions = db.relationship(
+        "ExercisePrescription",
+        back_populates="lift_slot",
+        order_by="ExercisePrescription.position",
+    )
+
+    def validate(self) -> None:
+        if self.lift_family not in LIFT_FAMILIES:
+            raise ValueError(f"Unknown lift family: {self.lift_family}")
+        if self.position is None or self.position <= 0:
+            raise ValueError("lift slot position must be greater than zero")
 
 
 class TrainingSessionLog(db.Model):  # type: ignore[name-defined]
@@ -213,6 +270,30 @@ class TrainingSetResult(db.Model):  # type: ignore[name-defined]
 
 class ExercisePrescription(db.Model):  # type: ignore[name-defined]
     __tablename__ = "exercise_prescriptions"
+    __table_args__ = (
+        db.CheckConstraint(
+            "slot_role IS NULL OR slot_role IN ('top_set', 'back_off')",
+            name="ck_exercise_prescriptions_slot_role",
+        ),
+        db.CheckConstraint(
+            "provenance IS NULL OR provenance IN "
+            "('generated', 'coach_selected', 'coach_authored')",
+            name="ck_exercise_prescriptions_provenance",
+        ),
+        db.CheckConstraint(
+            "rpe_min IS NULL OR (rpe_min >= 1 AND rpe_min <= 10)",
+            name="ck_exercise_prescriptions_rpe_min",
+        ),
+        db.CheckConstraint(
+            "rpe_max IS NULL OR (rpe_max >= 1 AND rpe_max <= 10)",
+            name="ck_exercise_prescriptions_rpe_max",
+        ),
+        db.CheckConstraint(
+            "(rpe_min IS NULL AND rpe_max IS NULL) OR "
+            "(rpe_min IS NOT NULL AND rpe_max IS NOT NULL AND rpe_min <= rpe_max)",
+            name="ck_exercise_prescriptions_rpe_range",
+        ),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(
@@ -221,6 +302,20 @@ class ExercisePrescription(db.Model):  # type: ignore[name-defined]
         nullable=False,
         index=True,
     )
+    exercise_id = db.Column(
+        db.Integer,
+        db.ForeignKey("exercises.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    lift_slot_id = db.Column(
+        db.Integer,
+        db.ForeignKey("programming_lift_slots.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    slot_role = db.Column(db.String(20), nullable=True)
+    provenance = db.Column(db.String(30), nullable=True)
     exercise_name = db.Column(db.String(160), nullable=False)
     position = db.Column(db.Integer, nullable=False, default=1)
     prescription_type = db.Column(db.String(40), nullable=True)
@@ -232,6 +327,8 @@ class ExercisePrescription(db.Model):  # type: ignore[name-defined]
     load_cap_kg = db.Column(db.Float, nullable=True)
     percentage = db.Column(db.Float, nullable=True)
     rpe = db.Column(db.Float, nullable=True)
+    rpe_min = db.Column(db.Float, nullable=True)
+    rpe_max = db.Column(db.Float, nullable=True)
     rpe_cap = db.Column(db.Float, nullable=True)
     target_reps = db.Column(db.Integer, nullable=True)
     target_rpe = db.Column(db.Float, nullable=True)
@@ -242,19 +339,12 @@ class ExercisePrescription(db.Model):  # type: ignore[name-defined]
     notes = db.Column(db.Text, nullable=True)
 
     session = db.relationship("TrainingSession", back_populates="prescriptions")
+    exercise = db.relationship("Exercise")
+    lift_slot = db.relationship("ProgrammingLiftSlot", back_populates="prescriptions")
 
     def validate(self) -> None:
         """Validate a typed prescription without changing legacy rows."""
-        if self.prescription_type is None:
-            return
-        if self.prescription_type not in PRESCRIPTION_TYPES:
-            raise ValueError(f"Unknown prescription type: {self.prescription_type}")
-
-        for name in ("sets", "reps_min", "reps_max", "target_reps"):
-            value = getattr(self, name)
-            if value is not None and value <= 0:
-                raise ValueError(f"{name} must be greater than zero")
-        for name in ("rpe", "rpe_cap", "target_rpe"):
+        for name in ("rpe", "rpe_min", "rpe_max", "rpe_cap", "target_rpe"):
             value = getattr(self, name)
             if value is not None and not 1 <= value <= 10:
                 raise ValueError(f"{name} must be between 1 and 10")
@@ -268,9 +358,40 @@ class ExercisePrescription(db.Model):  # type: ignore[name-defined]
             and self.reps_min > self.reps_max
         ):
             raise ValueError("reps_min cannot exceed reps_max")
+        if (
+            self.rpe_min is not None
+            and self.rpe_max is not None
+            and self.rpe_min > self.rpe_max
+        ):
+            raise ValueError("rpe_min cannot exceed rpe_max")
+        if (self.rpe_min is None) != (self.rpe_max is None):
+            raise ValueError("rpe_min and rpe_max must be provided together")
+        if self.rpe is not None and self.rpe_min is not None:
+            raise ValueError("use either rpe or an RPE range, not both")
+        if self.slot_role is not None and self.slot_role not in SLOT_ROLES:
+            raise ValueError(f"Unknown slot role: {self.slot_role}")
+        if (
+            self.provenance is not None
+            and self.provenance not in PRESCRIPTION_PROVENANCE
+        ):
+            raise ValueError(f"Unknown prescription provenance: {self.provenance}")
+        has_slot = self.lift_slot is not None or self.lift_slot_id is not None
+        if not has_slot and self.slot_role is not None:
+            raise ValueError("slot_role requires a lift slot")
+        if has_slot and self.slot_role is None:
+            raise ValueError("a lift-slot prescription requires slot_role")
+        if self.prescription_type is None:
+            return
+        if self.prescription_type not in PRESCRIPTION_TYPES:
+            raise ValueError(f"Unknown prescription type: {self.prescription_type}")
+
+        for name in ("sets", "reps_min", "reps_max", "target_reps"):
+            value = getattr(self, name)
+            if value is not None and value <= 0:
+                raise ValueError(f"{name} must be greater than zero")
 
         required = {
-            "rpe": ("sets", "reps", "rpe"),
+            "rpe": ("sets", "reps"),
             "fixed_load": ("sets", "reps", "load_kg"),
             "load_capped": ("sets", "reps", "load_cap_kg"),
             "rep_range": ("sets", "reps_min", "reps_max"),
@@ -278,6 +399,12 @@ class ExercisePrescription(db.Model):  # type: ignore[name-defined]
         missing = [name for name in required if getattr(self, name) in (None, "")]
         if missing:
             raise ValueError(f"{self.prescription_type} requires {', '.join(missing)}")
+        if (
+            self.prescription_type == "rpe"
+            and self.rpe is None
+            and self.rpe_min is None
+        ):
+            raise ValueError("rpe requires rpe or an RPE range")
         if self.prescription_type == "amrap":
             if self.sets is None:
                 raise ValueError("amrap requires sets")
@@ -309,7 +436,12 @@ class ExercisePrescription(db.Model):  # type: ignore[name-defined]
         elif self.prescription_type == "load_capped":
             parts.append(f"up to {self._number(self.load_cap_kg)} kg")
         elif self.prescription_type == "rpe":
-            parts.append(f"@ RPE {self._number(self.rpe)}")
+            if self.rpe_min is not None:
+                parts.append(
+                    f"@ RPE {self._number(self.rpe_min)}-{self._number(self.rpe_max)}"
+                )
+            else:
+                parts.append(f"@ RPE {self._number(self.rpe)}")
         elif self.prescription_type == "amrap":
             parts.append("AMRAP")
             if self.rpe_cap is not None:
@@ -341,6 +473,7 @@ class ExercisePrescription(db.Model):  # type: ignore[name-defined]
         """Return all prescription data fields for duplication workflows."""
         names = (
             "exercise_name",
+            "exercise_id",
             "position",
             "prescription_type",
             "sets",
@@ -351,6 +484,8 @@ class ExercisePrescription(db.Model):  # type: ignore[name-defined]
             "load_cap_kg",
             "percentage",
             "rpe",
+            "rpe_min",
+            "rpe_max",
             "rpe_cap",
             "target_reps",
             "target_rpe",
@@ -359,6 +494,7 @@ class ExercisePrescription(db.Model):  # type: ignore[name-defined]
             "tempo",
             "rest_seconds",
             "notes",
+            "provenance",
         )
         return {name: getattr(self, name) for name in names}
 
@@ -367,6 +503,13 @@ class ExercisePrescription(db.Model):  # type: ignore[name-defined]
 @event.listens_for(ExercisePrescription, "before_update")
 def _validate_prescription(_mapper: object, _connection: object, item: object) -> None:
     assert isinstance(item, ExercisePrescription)
+    item.validate()
+
+
+@event.listens_for(ProgrammingLiftSlot, "before_insert")
+@event.listens_for(ProgrammingLiftSlot, "before_update")
+def _validate_lift_slot(_mapper: object, _connection: object, item: object) -> None:
+    assert isinstance(item, ProgrammingLiftSlot)
     item.validate()
 
 

@@ -33,6 +33,7 @@ EXPECTED_TABLES = {
     "nutrition_import_jobs",
     "daily_nutrition",
     "platform_snapshots",
+    "programming_lift_slots",
     "training_blocks",
     "training_sessions",
     "training_session_logs",
@@ -106,7 +107,10 @@ def test_upgrade_and_schema_verification_on_empty_sqlite(tmp_path: Path):
 def test_athlete_state_upgrade_preserves_existing_athletes(tmp_path: Path):
     app = migration_app(f"sqlite:///{tmp_path / 'existing.db'}")
     runner = app.test_cli_runner()
-    assert runner.invoke(args=["db", "upgrade", "0008_athlete_training_logs"]).exit_code == 0
+    assert (
+        runner.invoke(args=["db", "upgrade", "0008_athlete_training_logs"]).exit_code
+        == 0
+    )
     with app.app_context():
         db.session.execute(text(
             "INSERT INTO athletes "
@@ -119,9 +123,71 @@ def test_athlete_state_upgrade_preserves_existing_athletes(tmp_path: Path):
     upgrade = runner.invoke(args=["db", "upgrade"])
     assert upgrade.exit_code == 0, upgrade.output
     with app.app_context():
-        assert db.session.execute(text(
-            "SELECT email FROM athletes WHERE email = 'existing@example.test'"
-        )).scalar_one() == "existing@example.test"
+        assert (
+            db.session.execute(
+                text("SELECT email FROM athletes WHERE email = 'existing@example.test'")
+            ).scalar_one()
+            == "existing@example.test"
+        )
+
+
+def test_programming_v7_upgrade_preserves_legacy_prescriptions(tmp_path: Path):
+    app = migration_app(f"sqlite:///{tmp_path / 'v6-programming.db'}")
+    runner = app.test_cli_runner()
+    assert runner.invoke(args=["db", "upgrade", "0009"]).exit_code == 0
+    with app.app_context():
+        db.session.execute(text(
+            "INSERT INTO athletes "
+            "(id, created_at, updated_at, first_name, last_name, email, status) "
+            "VALUES (1, '2026-01-01', '2026-01-01', 'Legacy', 'Lifter', "
+            "'legacy@example.test', 'active')"
+        ))
+        db.session.execute(text(
+            "INSERT INTO training_blocks "
+            "(id, athlete_id, name, status, created_at, updated_at) "
+            "VALUES (1, 1, 'V6 Block', 'draft', '2026-01-01', '2026-01-01')"
+        ))
+        db.session.execute(text(
+            "INSERT INTO training_weeks (id, block_id, name, position) "
+            "VALUES (1, 1, 'Week 1', 1)"
+        ))
+        db.session.execute(text(
+            "INSERT INTO training_sessions (id, week_id, name, position) "
+            "VALUES (1, 1, 'Legacy day', 1)"
+        ))
+        db.session.execute(text(
+            "INSERT INTO exercises "
+            "(id, name, movement, category, fatigue_rating, active, created_at, updated_at) "
+            "VALUES (1, 'Competition Squat', 'squat', 'competition', 5, 1, "
+            "'2026-01-01', '2026-01-01')"
+        ))
+        db.session.execute(text(
+            "INSERT INTO exercise_prescriptions "
+            "(id, session_id, exercise_name, position, sets, reps, rpe) "
+            "VALUES (1, 1, 'Competition Squat', 1, 3, '5', 6)"
+        ))
+        db.session.commit()
+
+    upgrade = runner.invoke(args=["db", "upgrade"])
+    assert upgrade.exit_code == 0, upgrade.output
+    with app.app_context():
+        row = db.session.execute(text(
+            "SELECT exercise_name, sets, reps, rpe, exercise_id, lift_slot_id, "
+            "slot_role, rpe_min, rpe_max, provenance "
+            "FROM exercise_prescriptions WHERE id = 1"
+        )).mappings().one()
+        assert dict(row) == {
+            "exercise_name": "Competition Squat",
+            "sets": 3,
+            "reps": "5",
+            "rpe": 6.0,
+            "exercise_id": 1,
+            "lift_slot_id": None,
+            "slot_role": None,
+            "rpe_min": None,
+            "rpe_max": None,
+            "provenance": None,
+        }
 
 
 def test_programming_seed_command_is_idempotent(tmp_path: Path):
