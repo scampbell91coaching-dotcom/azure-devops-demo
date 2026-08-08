@@ -6,6 +6,10 @@ from ..models.programming import TrainingBlock, TrainingSession, TrainingWeek
 from .prescriptions import copy as copy_prescriptions
 
 
+class BlockActivationError(ValueError):
+    """Raised when a draft cannot safely become the athlete's active block."""
+
+
 def create(
     athlete: Athlete,
     *,
@@ -51,6 +55,35 @@ def duplicate(source: TrainingBlock) -> TrainingBlock:
 
     db.session.commit()
     return target
+
+
+def activate(block: TrainingBlock) -> None:
+    """Publish one draft without replacing an existing active programme."""
+    # Serialize activation decisions for this athlete on databases that support
+    # row locks, so two concurrent draft publishes cannot both pass the check.
+    athlete = db.session.get(Athlete, block.athlete_id, with_for_update=True)
+    if athlete is None or block.athlete is None:
+        raise BlockActivationError(
+            "This programme is not associated with a valid athlete."
+        )
+    if block.status == "active":
+        return
+    if block.status != "draft":
+        raise BlockActivationError("Only draft programmes can be published.")
+
+    conflicting = TrainingBlock.query.filter(
+        TrainingBlock.athlete_id == block.athlete_id,
+        TrainingBlock.status == "active",
+        TrainingBlock.id != block.id,
+    ).first()
+    if conflicting is not None:
+        raise BlockActivationError(
+            f'Archive the active programme "{conflicting.name}" before publishing '
+            "this draft."
+        )
+
+    block.status = "active"
+    db.session.commit()
 
 
 def archive(block: TrainingBlock) -> None:

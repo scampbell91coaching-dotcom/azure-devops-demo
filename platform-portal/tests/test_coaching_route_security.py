@@ -269,6 +269,14 @@ def test_existing_athlete_authorization_boundaries_remain_intact(
     client = secured_coaching_app.test_client()
     _sign_in(client, ids["athlete_user"])
 
+    assert (
+        client.post(
+            "/programming/blocks/999999/activate",
+            data={"csrf_token": "unused"},
+        ).status_code
+        == 403
+    )
+
     assert client.get("/athlete/dashboard").status_code == 200
     assert (
         client.get(

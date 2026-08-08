@@ -106,6 +106,15 @@
               >
                 Open block
               </a>
+              {% if block.status == "draft" %}
+                <form
+                  method="post"
+                  action="{{ url_for('programming.activate_block', block_id=block.id) }}"
+                  data-confirm="Publish this programme to {{ athlete.full_name }}?"
+                >
+                  <button class="coach-primary-button" type="submit">Publish programme</button>
+                </form>
+              {% endif %}
               <form
                 method="post"
                 action="{{ url_for('programming.duplicate_block', block_id=block.id) }}"

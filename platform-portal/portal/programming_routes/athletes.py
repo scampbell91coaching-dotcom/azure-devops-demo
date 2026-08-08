@@ -17,10 +17,7 @@ def register_athlete_routes(blueprint: Blueprint) -> None:
             .order_by(TrainingBlock.created_at.desc(), TrainingBlock.id.desc())
             .all()
         )
-        current_block = next(
-            (item for item in blocks if item.status != "archived"),
-            None,
-        )
+        current_block = next((item for item in blocks if item.status == "active"), None)
         previous_blocks = [item for item in blocks if item != current_block]
 
         return render_template(

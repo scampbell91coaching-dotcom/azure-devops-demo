@@ -147,7 +147,7 @@ def test_athlete_programme_empty_state_offers_generation():
     assert b"selected" in factory.data
 
 
-def test_athlete_programme_shows_current_then_previous_newest_first():
+def test_athlete_programme_shows_active_current_then_drafts_and_history():
     app = app_with_db()
     with app.app_context():
         athlete = Athlete(
@@ -169,7 +169,7 @@ def test_athlete_programme_shows_current_then_previous_newest_first():
         current = TrainingBlock(
             athlete=athlete,
             name="Current",
-            status="draft",
+            status="active",
             created_at=start + timedelta(days=2),
         )
         db.session.add_all([athlete, older, newer, current])
@@ -182,6 +182,64 @@ def test_athlete_programme_shows_current_then_previous_newest_first():
     assert response.status_code == 200
     assert "Current block" in page
     assert page.index("Current") < page.index("Newer") < page.index("Older")
+
+
+def test_draft_publish_lifecycle_and_duplicate_active_conflict_persist():
+    app = app_with_db()
+    client = app.test_client()
+    with app.app_context():
+        athlete = Athlete(
+            first_name="Alex", last_name="Lifter", email="alex@example.com"
+        )
+        other = Athlete(
+            first_name="Sam", last_name="Lifter", email="sam@example.com"
+        )
+        draft = TrainingBlock(athlete=athlete, name="Next block")
+        other_draft = TrainingBlock(athlete=other, name="Private draft")
+        db.session.add_all([draft, other_draft])
+        db.session.commit()
+        athlete_id = athlete.id
+        draft_id = draft.id
+
+    with client.session_transaction() as session:
+        session["athlete_id"] = athlete_id
+    draft_page = client.get("/athlete/programme").data
+    assert b"Next block" not in draft_page
+    assert b"Private draft" not in draft_page
+
+    published = client.post(f"/programming/blocks/{draft_id}/activate")
+    assert published.status_code == 302
+    assert b"Next block" in client.get("/athlete/programme").data
+
+    with app.app_context():
+        db.session.remove()
+        assert db.session.get(TrainingBlock, draft_id).status == "active"
+        conflict = TrainingBlock(
+            athlete_id=athlete_id, name="Conflicting draft", status="draft"
+        )
+        db.session.add(conflict)
+        db.session.commit()
+        conflict_id = conflict.id
+
+    response = client.post(f"/programming/blocks/{conflict_id}/activate")
+    assert response.status_code == 409
+    assert b"Archive the active programme" in response.data
+    with app.app_context():
+        assert db.session.get(TrainingBlock, conflict_id).status == "draft"
+
+
+def test_activation_rejects_missing_athlete_association():
+    app = app_with_db()
+    with app.app_context():
+        block = TrainingBlock(athlete_id=999999, name="Orphaned draft")
+        db.session.add(block)
+        db.session.commit()
+        block_id = block.id
+
+    response = app.test_client().post(f"/programming/blocks/{block_id}/activate")
+
+    assert response.status_code == 409
+    assert b"not associated with a valid athlete" in response.data
 
 
 def test_duplicate_block_copies_full_programme_as_a_draft():

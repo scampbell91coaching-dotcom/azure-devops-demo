@@ -2,6 +2,11 @@ from portal import create_app
 from portal.programming import programming_bp
 
 EXPECTED_PROGRAMMING_ROUTES = {
+    (
+        "programming.activate_block",
+        "/programming/blocks/<int:block_id>/activate",
+        "POST",
+    ),
     ("programming.archive_block", "/programming/blocks/<int:block_id>/archive", "POST"),
     ("programming.athlete_program", "/athletes/<int:athlete_id>/programming", "GET"),
     ("programming.block", "/programming/blocks/<int:block_id>", "GET"),

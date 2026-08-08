@@ -9,7 +9,14 @@
   </nav>
   <header class="coach-page__header programme-hero">
     <div><span class="coach-eyebrow">Programme block</span><h1>{{ block.name }}</h1><p>{{ block.objective or 'Objective not yet recorded.' }}</p></div>
-    <span class="coach-status coach-status--active">{{ block.status|title }}</span>
+    <div class="coach-page__actions">
+      <span class="coach-status{% if block.status == 'active' %} coach-status--active{% endif %}">{{ block.status|title }}</span>
+      {% if block.status == "draft" %}
+        <form method="post" action="{{ url_for('programming.activate_block', block_id=block.id) }}" data-confirm="Publish this programme to {{ athlete.full_name }}?">
+          <button class="coach-primary-button" type="submit">Publish programme</button>
+        </form>
+      {% endif %}
+    </div>
   </header>
   <section class="programme-context-grid" aria-label="Programming context">
     <article class="context-card"><span class="coach-eyebrow">Athlete</span><h2>{{ athlete.full_name }}</h2><dl class="context-facts"><div><dt>Class</dt><dd>{{ athlete.weight_class or 'Not set' }}</dd></div><div><dt>Bodyweight</dt><dd>{{ athlete.bodyweight_kg ~ ' kg' if athlete.bodyweight_kg else 'Not set' }}</dd></div><div><dt>Federation</dt><dd>{{ athlete.federation or 'Not set' }}</dd></div></dl></article>

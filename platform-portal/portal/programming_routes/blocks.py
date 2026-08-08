@@ -4,6 +4,8 @@ from ..extensions import db
 from ..models.athlete import Athlete
 from ..models.programming import TrainingBlock
 from ..programming_services.blocks import (
+    BlockActivationError,
+    activate,
     archive,
     create,
     delete_draft,
@@ -34,6 +36,17 @@ def register_block_routes(blueprint: Blueprint) -> None:
             abort(404)
         target = duplicate(source)
         return redirect(url_for("programming.block", block_id=target.id))
+
+    @blueprint.post("/programming/blocks/<int:block_id>/activate")
+    def activate_block(block_id: int):
+        item = db.session.get(TrainingBlock, block_id)
+        if item is None:
+            abort(404)
+        try:
+            activate(item)
+        except BlockActivationError as error:
+            abort(409, description=str(error))
+        return redirect(url_for("programming.block", block_id=item.id))
 
     @blueprint.post("/programming/blocks/<int:block_id>/archive")
     def archive_block(block_id: int):
