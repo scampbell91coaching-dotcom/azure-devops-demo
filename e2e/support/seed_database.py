@@ -295,14 +295,6 @@ def seed_database(app: Flask) -> None:
                 "Athlete E2E password!", method="scrypt"
             ),
         )
-        pilot_user = User.query.filter_by(email=pilot.email).one_or_none() or User(
-            email=pilot.email,
-            role=UserRole.ATHLETE,
-            athlete_id=pilot.id,
-            password_hash=generate_password_hash(
-                "Pilot Athlete password!", method="scrypt"
-            ),
-        )
         db.session.add_all(
             [
                 alex,
@@ -333,7 +325,6 @@ def seed_database(app: Flask) -> None:
                 plank,
                 coach,
                 athlete_user,
-                pilot_user,
             ]
         )
         db.session.flush()
@@ -364,6 +355,11 @@ def seed_database(app: Flask) -> None:
             name="Squat strength and assistance",
             day_label="Monday",
             position=1,
+            notes=(
+                "Warm-up: 5 minutes easy movement; then squat with the empty bar "
+                "for 2 x 10, 60 kg x 5, 80 kg x 3, 100 kg x 1. Stop and contact "
+                "the coach through the agreed support channel if pain occurs."
+            ),
         )
         db.session.add(pilot_session)
         db.session.flush()
