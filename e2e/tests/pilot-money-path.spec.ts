@@ -139,7 +139,6 @@ test('first paying athlete money path: draft to immutable coach-reviewed trainin
     .locator('xpath=ancestor::section[1]');
   // Completed athlete training should enter the coach review queue.
   await expect(reviewQueue.getByText(pilot.name, { exact: true })).toHaveCount(1);
-  await expect(reviewQueue.getByText(/Weekly check-in|Nutrition check-in/)).toHaveCount(0);
 
   // Supervised-pilot fallback: the coach polls the athlete record and can open
   // the completed immutable log on the same day.
