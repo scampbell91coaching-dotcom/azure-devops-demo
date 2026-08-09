@@ -39,10 +39,13 @@ test('athlete core workflow fits a 320px phone viewport', async ({ page, athlete
   await expect(page).toHaveURL('/athlete/programme');
   await expect(page.getByRole('heading', { level: 1, name: 'Your programme' })).toBeVisible();
   await page.getByRole('link', { name: /Squat day/ }).click();
-  const squatHeading = page.getByRole('heading', {
-    level: 2,
-    name: 'Competition Squat',
-  });
+  const squatHeading = page
+    .getByRole('listitem')
+    .filter({ hasText: 'Top Set' })
+    .getByRole('heading', {
+      level: 2,
+      name: 'Competition Squat',
+    });
   await expect(squatHeading).toBeVisible();
 
   const squatCard = squatHeading.locator(
