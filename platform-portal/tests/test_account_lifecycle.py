@@ -150,8 +150,10 @@ def test_activation_once_replay_rejected_and_login_handoff(lifecycle_app):
     athlete_client = lifecycle_app.test_client()
     activated = submit_password(athlete_client, path)
     assert activated.status_code == 302
-    assert activated.headers["Location"] == "/athlete/dashboard"
-    assert athlete_client.get("/athlete/dashboard").status_code == 200
+    assert activated.headers["Location"] == "/athlete/dashboard?welcome=activated"
+    landing = athlete_client.get(activated.headers["Location"])
+    assert landing.status_code == 200
+    assert b"Account activated" in landing.data
     assert athlete_client.get("/coach").status_code == 403
     replay = submit_password(lifecycle_app.test_client(), path)
     assert replay.status_code == 410
@@ -218,6 +220,7 @@ def test_password_reset_changes_password_once_and_logs_in(lifecycle_app):
     athlete = lifecycle_app.test_client()
     reset = submit_password(athlete, f"/account/password_reset#{reset_raw}", "a brand new secure password")
     assert reset.status_code == 302
+    assert reset.headers["Location"] == "/athlete/dashboard?welcome=password-updated"
     assert athlete.get("/athlete/dashboard").status_code == 200
     athlete.get("/account/password_reset")
     assert athlete.post(

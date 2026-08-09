@@ -42,6 +42,12 @@ EXPECTED_TABLES = {
     "training_weeks",
     "users",
     "weekly_checkins",
+    "warmup_protocols",
+    "warmup_protocol_steps",
+    "warmup_assignments",
+    "warmup_overrides",
+    "warmup_plan_snapshots",
+    "warmup_plan_snapshot_steps",
 }
 
 

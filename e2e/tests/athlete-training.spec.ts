@@ -1,5 +1,33 @@
 import { test, expect } from '../fixtures/test';
 
+test('coach assigns an ordered reusable warm-up and athlete sees it before work sets', async ({ page }) => {
+  await page.goto('/login');
+  await page.locator('input[name="email"]').fill('coach.e2e@example.test');
+  await page.locator('input[name="password"]').fill('Coach E2E password!');
+  await page.getByRole('button', { name: /sign in/i }).click();
+  await page.goto('/programming/sessions/502');
+  await page.getByText('Create and assign a reusable plan').click();
+  const editor = page.locator('details').filter({ hasText: 'Create and assign a reusable plan' });
+  await editor.locator('input[name="name"]').fill('E2E squat warm-up');
+  await editor.locator('input[name="reason"]').fill('Coach-reviewed session preparation');
+  await editor.locator('textarea[name="steps"]').fill('general | Bike | duration | 180 | 1 | 30 | Easy pace\nbarbell | Empty bar | barbell | 5@20kg | 2 | 60');
+  await editor.getByRole('button', { name: 'Create and assign' }).click();
+  await expect(page.getByTestId('warmup-editor').getByText('Bike')).toBeVisible();
+
+  await page.context().clearCookies();
+  await page.goto('/login');
+  await page.locator('input[name="email"]').fill('alex.e2e@example.test');
+  await page.locator('input[name="password"]').fill('Athlete E2E password!');
+  await page.getByRole('button', { name: /sign in/i }).click();
+  await page.goto('/athlete/programme/sessions/502');
+  const warmup = page.getByTestId('athlete-warmup');
+  await expect(warmup.getByText('Bike')).toBeVisible();
+  await expect(warmup.getByText('Empty bar')).toBeVisible();
+  const warmupBox = await warmup.boundingBox();
+  const firstWorkSetBox = await page.locator('[data-exercise]').first().boundingBox();
+  expect(warmupBox!.y).toBeLessThan(firstWorkSetBox!.y);
+});
+
 test('athlete records and finishes a session on a phone, then coach reviews it', async ({ page }) => {
   await page.setViewportSize({ width: 412, height: 915 });
 
@@ -49,8 +77,13 @@ test('athlete records and finishes a session on a phone, then coach reviews it',
   await page.locator('input[name="email"]').fill('coach.e2e@example.test');
   await page.locator('input[name="password"]').fill('Coach E2E password!');
   await page.getByRole('button', { name: /sign in/i }).click();
-  await page.goto('/athletes/101');
-  await page.getByRole('link', { name: 'Review training' }).click();
+  await expect(page).toHaveURL('/coach');
+  const reviewItem = page.locator('.coach-dashboard-list article').filter({
+    hasText: 'Alex Rivera',
+  }).filter({ hasText: 'Squat day' });
+  await expect(reviewItem).toContainText('Needs review');
+  await expect(reviewItem).toContainText('Notes: Moved well on video.');
+  await reviewItem.getByRole('link', { name: 'Review session' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Squat day' })).toBeVisible();
   await expect(page.getByText('Moved well on video.')).toBeVisible();
   console.log(

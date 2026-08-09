@@ -12,6 +12,7 @@
       <div><span class="eyebrow">Current block</span><h2>{{ block.name }}</h2></div>
       <span class="status">{{ block.status | title }}</span>
       {% if block.objective %}<p>{{ block.objective }}</p>{% endif %}
+      <p class="schedule-note"><strong>Calendar:</strong> {% if schedule.has_planned_dates %}planned dates are shown below.{% else %}dates are not set; sessions follow programme order. If training shifts, completed sessions stay complete and your coach should confirm what is next.{% endif %}</p>
     </section>
     <div class="programme-weeks">
       {% for week in block.weeks %}
@@ -20,8 +21,9 @@
           <div class="session-list">
             {% for item in week.sessions %}
               {% set session_log = logs_by_session.get(item.id) %}
+              {% set scheduled = schedule_by_session.get(item.id) %}
               <a class="session-card{% if next_session_id == item.id %} session-card--next{% endif %}" href="{{ url_for('athletes.programme_session', session_id=item.id) }}">
-                <span><small>{{ item.day_label or 'Session ' ~ item.position }}{% if next_session_id == item.id %} · Up next{% endif %}</small><strong>{{ item.name }}</strong><span>{{ item.prescriptions | length }} exercise{{ '' if item.prescriptions | length == 1 else 's' }} · {{ (session_log.status | replace('_', ' ') | title) if session_log else 'Not started' }}</span></span>
+                <span><small>{{ scheduled.timing_label(today) }}{% if next_session_id == item.id %} · Up next{% endif %}</small><strong>{{ item.name }}</strong><span>Week {{ week.position }} · Session {{ item.position }} · {{ item.prescriptions | length }} exercise{{ '' if item.prescriptions | length == 1 else 's' }} · {{ (session_log.status | replace('_', ' ') | title) if session_log else 'Not started' }}</span></span>
                 <span class="session-card__action" aria-hidden="true">{{ 'Review' if session_log and session_log.status == 'completed' else 'Open' }} →</span>
               </a>
             {% else %}<div class="empty-state"><strong>No sessions this week</strong><p>Your coach is still building this week.</p></div>{% endfor %}

@@ -1,6 +1,7 @@
 import pytest
 
 from portal.services.warmup_plans import (
+    AssignedWarmupPlanService,
     InMemoryWarmupProtocolRepository,
     InstructionKind,
     LiftFamily,
@@ -12,6 +13,7 @@ from portal.services.warmup_plans import (
     WarmupPhase,
     WarmupPlanService,
     WarmupProtocol,
+    WarmupProtocolAssignment,
     WarmupStep,
 )
 
@@ -214,3 +216,92 @@ def test_duplicate_protocol_step_keys_are_rejected():
     duplicate = step("same", WarmupPhase.GENERAL_PREPARATION)
     with pytest.raises(ValueError, match="unique"):
         protocol("bad", duplicate, duplicate)
+
+
+class AssignedPlans:
+    def __init__(self, assignments=(), overrides=()):
+        self.assignments = assignments
+        self.overrides = overrides
+
+    def list_assignments(self, context):
+        return self.assignments
+
+    def list_overrides(self, context):
+        return self.overrides
+
+
+class Snapshots:
+    def __init__(self):
+        self.saved = []
+
+    def save_resolved(self, plan):
+        self.saved.append(plan)
+
+
+def assignment(protocol_id: str, version: str = "1") -> WarmupProtocolAssignment:
+    return WarmupProtocolAssignment(
+        assignment_id=f"assignment-{protocol_id}",
+        protocol_id=protocol_id,
+        protocol_version=version,
+        assigned_by="coach:4",
+        reason="Selected for this session",
+    )
+
+
+def test_assigned_service_uses_only_pinned_protocol_versions_and_stored_overrides():
+    protocols = InMemoryWarmupProtocolRepository(
+        [
+            protocol("selected", step("prep", WarmupPhase.GENERAL_PREPARATION)),
+            protocol("not-selected", step("other", WarmupPhase.GENERAL_PREPARATION)),
+        ]
+    )
+    override = WarmupOverride(
+        "remove-prep", OverrideAction.REMOVE, "Not today", "coach:4", "selected:prep"
+    )
+
+    plan = AssignedWarmupPlanService(
+        protocols, AssignedPlans([assignment("selected")], [override])
+    ).build(context())
+
+    assert plan.applied_protocols == ("selected",)
+    assert plan.applied_assignments == ("assignment-selected",)
+    assert plan.applied_overrides == ("remove-prep",)
+    assert plan.steps == ()
+
+
+def test_assigned_service_fails_closed_when_pinned_version_is_unavailable():
+    service = AssignedWarmupPlanService(
+        InMemoryWarmupProtocolRepository([protocol("selected")]),
+        AssignedPlans([assignment("selected", "2")]),
+    )
+
+    with pytest.raises(ValueError, match="selected@2"):
+        service.build(context())
+
+
+def test_assigned_service_rejects_conflicting_versions_of_one_protocol():
+    service = AssignedWarmupPlanService(
+        InMemoryWarmupProtocolRepository(),
+        AssignedPlans([assignment("selected", "1"), assignment("selected", "2")]),
+    )
+
+    with pytest.raises(ValueError, match="multiple versions"):
+        service.build(context())
+
+
+def test_resolved_plan_is_snapshotted_only_when_explicitly_requested():
+    snapshots = Snapshots()
+    service = AssignedWarmupPlanService(
+        InMemoryWarmupProtocolRepository([protocol("selected")]),
+        AssignedPlans([assignment("selected")]),
+        snapshots,
+    )
+
+    plan = service.build(context(), save_snapshot=True)
+
+    assert snapshots.saved == [plan]
+
+
+def test_assignment_requires_auditable_identity_actor_and_reason():
+    with pytest.raises(ValueError, match="assignment identity"):
+        WarmupProtocolAssignment("", "selected", "1", "coach:4", "Session plan")

@@ -27,19 +27,37 @@ async function changeAccount(page: import('@playwright/test').Page) {
 test('first paying athlete money path: draft to immutable coach-reviewed training', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
 
-  // Test-only account bootstrap is pre-provisioned because current main has no
-  // invitation delivery flow. From sign-in onward this is the real athlete path.
-  await signIn(page, pilot.email, pilot.password);
-  await expect(page).toHaveURL('/athlete/dashboard');
+  await signIn(page, 'coach.e2e@example.test', 'Coach E2E password!');
+  await expect(page).toHaveURL('/coach');
+
+  // Production currently exposes the secure manual-link fallback when email is
+  // not configured. Exercise the actual one-time invitation/account path.
+  await page.goto(`/athletes/${pilot.id}`);
+  await expect(page.getByText('Not Invited', { exact: true })).toBeVisible();
+  await page.locator('input[name="email"]').fill(pilot.email);
+  await page.getByRole('button', { name: 'Invite athlete' }).click();
+  await expect(page.getByRole('heading', { name: 'Email was not delivered' })).toBeVisible();
+  const activationUrl = await page.locator('[data-manual-account-link]').inputValue();
+  expect(activationUrl).toContain('/account/invitation#');
+  await page.goto(activationUrl);
+  await page.locator('input[name="password"]').fill(pilot.password);
+  await page.locator('input[name="password_confirmation"]').fill(pilot.password);
+  await page.getByRole('button', { name: 'Activate account' }).click();
+  await expect(page).toHaveURL('/athlete/dashboard?welcome=activated');
   await expect(page.getByRole('heading', { name: 'Taylor’s training' })).toBeVisible();
   await expect(page.getByText('No current programme')).toBeVisible();
-  await page.goto('/athlete/programme/sessions/801');
-  await expect(page).toHaveURL('/athlete/programme/sessions/801');
+
+  // User isolation: another athlete's active session and all coach surfaces are
+  // unavailable to the pilot account, even when their identifiers are known.
+  const otherAthleteSession = await page.goto('/athlete/programme/sessions/501');
+  expect(otherAthleteSession?.status()).toBe(404);
   await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+  const coachOnlyAthlete = await page.goto('/athletes/101');
+  expect(coachOnlyAthlete?.status()).toBe(403);
+  await expect(page.getByRole('heading', { name: 'Access denied' })).toBeVisible();
 
   await changeAccount(page);
   await signIn(page, 'coach.e2e@example.test', 'Coach E2E password!');
-  await expect(page).toHaveURL('/coach');
   await page.goto(`/athletes/${pilot.id}/programming`);
   await expect(page.getByRole('heading', { name: pilot.name })).toBeVisible();
   const draft = page.locator('.coach-list__item').filter({ hasText: pilot.block });
@@ -75,11 +93,15 @@ test('first paying athlete money path: draft to immutable coach-reviewed trainin
   await signIn(page, pilot.email, pilot.password);
   await expect(page).toHaveURL('/athlete/dashboard');
   await expect(page.getByText(pilot.block)).toBeVisible();
+  await expect(page.getByText(/next unfinished session in programme order/i)).toBeVisible();
+  await expect(page.getByText(pilot.session)).toBeVisible();
   await expect(page.getByText('Alex Rivera')).toHaveCount(0);
   await expect(page.getByText('Sam Morgan')).toHaveCount(0);
   await expect(page.locator('html')).toHaveJSProperty('scrollWidth', 390);
   await page.getByRole('link', { name: 'View session' }).click();
   await expect(page.getByRole('heading', { level: 1, name: pilot.session })).toBeVisible();
+  await expect(page.getByText(/Warm-up: 5 minutes easy movement/)).toBeVisible();
+  await expect(page.getByText(/60 kg x 5, 80 kg x 3, 100 kg x 1/)).toBeVisible();
 
   const rows = page.locator('[data-set-row]');
   await expect(rows).toHaveCount(5);
@@ -112,6 +134,14 @@ test('first paying athlete money path: draft to immutable coach-reviewed trainin
 
   await changeAccount(page);
   await signIn(page, 'coach.e2e@example.test', 'Coach E2E password!');
+  await page.goto('/coach');
+  const reviewQueue = page.getByRole('heading', { name: 'Athletes requiring review' })
+    .locator('xpath=ancestor::section[1]');
+  // Completed athlete training should enter the coach review queue.
+  await expect(reviewQueue.getByText(pilot.name, { exact: true })).toHaveCount(1);
+
+  // Supervised-pilot fallback: the coach polls the athlete record and can open
+  // the completed immutable log on the same day.
   await page.goto(`/athletes/${pilot.id}`);
   await expect(page.getByRole('heading', { name: pilot.name })).toBeVisible();
   await expect(page.getByText('Alex Rivera')).toHaveCount(0);

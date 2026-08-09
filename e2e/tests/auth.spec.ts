@@ -90,7 +90,8 @@ test('coach can create a manual invitation and athlete activates once', async ({
   await page.locator('input[name="password"]').fill('Sam secure E2E password!');
   await page.locator('input[name="password_confirmation"]').fill('Sam secure E2E password!');
   await page.getByRole('button', { name: 'Activate account' }).click();
-  await expect(page).toHaveURL(/\/athlete\/dashboard$/);
+  await expect(page).toHaveURL(/\/athlete\/dashboard\?welcome=activated$/);
+  await expect(page.getByText('Account activated', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Sam’s training' })).toBeVisible();
 
   await page.goto(activationUrl);

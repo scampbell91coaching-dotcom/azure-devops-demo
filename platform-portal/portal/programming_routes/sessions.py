@@ -10,6 +10,8 @@ from ..programming_services.sessions import (
 )
 from ..programming_templates import day_templates
 from ..services.weekly_programming_intelligence import map_athlete_programming_context
+from ..models.warmup import WarmupAssignment, WarmupProtocol
+from ..services.persisted_warmups import resolve_warmup
 
 
 def _redirect_after_edit(session: TrainingSession):
@@ -67,6 +69,9 @@ def register_session_routes(blueprint: Blueprint) -> None:
             block=block,
             day_templates=day_templates(),
             athlete_context=map_athlete_programming_context(block.athlete),
+            warmup_steps=resolve_warmup(block.athlete_id, item.id),
+            warmup_assignments=WarmupAssignment.query.filter_by(session_id=item.id).all(),
+            warmup_protocols=WarmupProtocol.query.order_by(WarmupProtocol.name, WarmupProtocol.version.desc()).all(),
         )
 
     @blueprint.post("/programming/sessions/<int:session_id>/duplicate")

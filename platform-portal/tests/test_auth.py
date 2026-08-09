@@ -152,6 +152,64 @@ def test_login_template_has_branded_accessible_controls(secured_app):
     assert "Athlete access" in html
 
 
+def test_edge_identity_prefills_email_but_still_requires_app_password(secured_app):
+    client = secured_app.test_client()
+    response = client.get(
+        "/login", headers={"X-Auth-Request-Email": "ADA@EXAMPLE.TEST"}
+    )
+    html = response.get_data(as_text=True)
+    assert 'value="ada@example.test"' in html
+    assert "Identity check complete" in html
+
+    rejected = client.post(
+        "/login",
+        headers={"X-Auth-Request-Email": "ada@example.test"},
+        data={
+            "email": "ada@example.test",
+            "password": "wrong password",
+            "csrf_token": _csrf_from_session(client),
+        },
+    )
+    assert rejected.status_code == 401
+
+
+def test_login_preserves_safe_athlete_destination(secured_app):
+    client = secured_app.test_client()
+    response = client.get("/athlete/programme")
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith(
+        "/login?next=/athlete/programme"
+    )
+    login_page = client.get(response.headers["Location"])
+    assert login_page.status_code == 200
+    logged_in = client.post(
+        response.headers["Location"],
+        data={
+            "email": "ada@example.test",
+            "password": "athlete secure password",
+            "csrf_token": _csrf_from_session(client),
+            "next": "/athlete/programme",
+        },
+    )
+    assert logged_in.status_code == 302
+    assert logged_in.headers["Location"] == "/athlete/programme"
+
+
+def test_account_delivery_readiness_command_redacts_credentials(secured_app):
+    secured_app.config.update(
+        ACCOUNT_PUBLIC_BASE_URL="https://athletes.example.test",
+        SMTP_HOST="smtp.example.test",
+        SMTP_USERNAME="smtp-user",
+        SMTP_PASSWORD="super-secret-value",
+    )
+    result = secured_app.test_cli_runner().invoke(args=["account-delivery-readiness"])
+    assert result.exit_code == 0
+    assert "public_base_url: https://athletes.example.test" in result.output
+    assert "transport: configured" in result.output
+    assert "smtp_auth: configured" in result.output
+    assert "super-secret-value" not in result.output
+
+
 def test_invalid_login_error_is_announced_without_account_disclosure(secured_app):
     response = _login(secured_app.test_client(), "missing@example.test", "wrong")
     html = response.get_data(as_text=True)

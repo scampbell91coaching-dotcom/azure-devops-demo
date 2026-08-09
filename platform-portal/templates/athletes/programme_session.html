@@ -20,12 +20,14 @@
   {% if errors %}<div class="form-notice form-notice--error" role="alert"><strong>Nothing was saved yet.</strong><ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
   {% if session.notes %}<aside class="session-note"><strong>Session notes</strong><p>{{ session.notes }}</p></aside>{% endif %}
 
+  {% if warmup_steps %}<section class="session-note" aria-labelledby="warmup-heading" data-testid="athlete-warmup"><strong id="warmup-heading">Warm-up</strong><p>Complete these steps in order before your work sets.</p><ol>{% for step in warmup_steps %}<li><strong>{{ step.phase_label }} · {{ step.name }}</strong><div>{{ step.instruction }}</div>{% if step.notes %}<p>Coach note: {{ step.notes }}</p>{% endif %}</li>{% endfor %}</ol></section>{% endif %}
+
   {% if state == 'completed' %}
     <div class="completed-banner"><strong>Session complete</strong><span>Your submitted results are locked to protect your training history. Ask your coach if a correction is needed.</span></div>
   {% endif %}
 
   <form method="post" class="training-form" data-training-form>
-    <ol class="exercise-list">
+    <h2 class="sr-only">Work sets</h2><ol class="exercise-list">
       {% for item in session.prescriptions %}
         {% set prescribed_sets = item.sets or 1 %}
         {% set exercise_results = (log.results | selectattr('exercise_position', 'equalto', item.position) | list) if log else [] %}

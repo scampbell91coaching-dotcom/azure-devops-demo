@@ -72,6 +72,25 @@ def configured_transport() -> EmailTransport | None:
     )
 
 
+def delivery_readiness() -> dict[str, str]:
+    """Describe account-email readiness without returning credentials."""
+    base_url = str(current_app.config.get("ACCOUNT_PUBLIC_BASE_URL") or "").rstrip(
+        "/"
+    )
+    return {
+        "public_base_url": base_url or "not configured",
+        "transport": (
+            "configured" if configured_transport() is not None else "not configured"
+        ),
+        "tls": "enabled" if bool(current_app.config.get("SMTP_USE_TLS")) else "disabled",
+        "smtp_auth": (
+            "configured"
+            if current_app.config.get("SMTP_USERNAME")
+            else "not configured"
+        ),
+    }
+
+
 def _send(*, recipient: str, subject: str, text: str) -> EmailDeliveryResult:
     transport = configured_transport()
     if transport is None:
