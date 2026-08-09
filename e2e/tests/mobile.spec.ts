@@ -105,7 +105,11 @@ for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
     await authenticatedState(page);
     await page.goto('/programming');
-    await page.getByRole('link', { name: /Deterministic strength block/ }).click();
+    await page.getByTestId('programming-athlete').filter({ hasText: 'Alex Rivera' }).click();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Alex Rivera' })
+    ).toBeVisible();
+    await page.getByRole('link', { name: 'Open block' }).click();
     await expect(page.getByRole('navigation', { name: 'Programme hierarchy' })).toBeVisible();
     const week = page.getByTestId('programming-week').filter({ hasText: 'Foundation week' });
     await expect(week.getByLabel('Week 1 taxonomy-backed lift exposures')).toContainText('Squat 2');
@@ -117,8 +121,8 @@ for (const width of [320, 390, 430]) {
     await expectNoHorizontalOverflow(page);
     const session = page.getByTestId('programming-session').filter({ hasText: 'Squat day' });
     await session.getByRole('link', { name: 'Open session' }).click();
-    await expect(page.getByRole('button', { name: 'Swap Exercise' })).toBeDisabled();
-    await expect(page.getByRole('button', { name: 'Delete Competition Squat' })).toBeVisible();
+    await expect(page.getByTestId('lift-slot').filter({ hasText: 'Squat exposure' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Edit lift slots' })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 }

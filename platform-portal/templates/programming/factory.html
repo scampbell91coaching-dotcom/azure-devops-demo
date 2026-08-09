@@ -26,6 +26,7 @@
     class="coach-panel coach-form block-factory-form"
     method="post"
   >
+    <nav class="factory-steps" aria-label="Guided block flow"><ol><li>Athlete</li><li>Intent</li><li>Weekly structure</li><li>Main lifts</li><li>Assistance</li><li>Review</li><li>Accept / publish</li></ol></nav>
     {% if proposal %}
       <input type="hidden" name="proposal_id" value="{{ proposal.id }}">
       <input type="hidden" name="proposal_integrity" value="{{ proposal_integrity }}">

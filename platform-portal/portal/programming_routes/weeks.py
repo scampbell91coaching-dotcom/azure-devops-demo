@@ -2,6 +2,7 @@ from flask import Blueprint, abort, redirect, render_template, request, url_for
 
 from ..extensions import db
 from ..models.programming import TrainingBlock, TrainingWeek
+from ..models.exercise_library import Exercise
 from ..programming_services.prescriptions import PRESCRIPTION_MODE_LABELS
 from ..programming_services.presentation import week_exposure_summary
 from ..programming_services.weeks import (
@@ -38,6 +39,9 @@ def register_week_routes(blueprint: Blueprint) -> None:
             prescription_modes=PRESCRIPTION_MODE_LABELS,
             exposure_summary=week_exposure_summary(item),
             athlete_context=map_athlete_programming_context(item.block.athlete),
+            lift_exercises=Exercise.query.filter(
+                Exercise.active.is_(True), Exercise.lift_family.isnot(None)
+            ).order_by(Exercise.lift_family, Exercise.name).all(),
         )
 
     @blueprint.post("/programming/weeks/<int:week_id>/duplicate")

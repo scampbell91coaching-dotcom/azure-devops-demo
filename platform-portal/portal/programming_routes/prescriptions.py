@@ -37,6 +37,8 @@ def register_prescription_routes(blueprint: Blueprint) -> None:
         item = db.session.get(ExercisePrescription, prescription_id)
         if item is None:
             abort(404)
+        if item.lift_slot_id is not None:
+            abort(409, description="Edit main lifts through the lift-slot editor.")
         name = request.form.get("exercise_name", "").strip()
         if not name:
             abort(400)
@@ -51,6 +53,8 @@ def register_prescription_routes(blueprint: Blueprint) -> None:
         item = db.session.get(ExercisePrescription, prescription_id)
         if item is None:
             abort(404)
+        if item.lift_slot_id is not None:
+            abort(409, description="Remove main lifts through the lift-slot editor.")
         session = item.session
         delete(item)
         return _redirect_to_editor(session)

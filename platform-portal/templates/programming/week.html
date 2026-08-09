@@ -22,6 +22,32 @@
   <label><span>Rest (seconds)</span><input name="rest_seconds" type="number" min="0" value="{{ value(item, 'rest_seconds') if item else '' }}"></label>
   <label class="week-editor__notes"><span>Notes</span><textarea name="notes" rows="2">{{ value(item, 'notes') if item else '' }}</textarea></label>
 {% endmacro %}
+{% macro rpe_fields(prefix, item=none) %}
+  {% set ranged = item and item.rpe_min is not none %}
+  <label><span>RPE format</span><select name="{{ prefix }}_rpe_mode" data-rpe-mode><option value="target"{% if not ranged %} selected{% endif %}>Single target</option><option value="range"{% if ranged %} selected{% endif %}>Min–max range</option></select></label>
+  <label data-rpe-target><span>RPE target</span><input name="{{ prefix }}_rpe" type="number" min="1" max="10" step="0.5" value="{{ value(item, 'rpe') if item else '' }}"></label>
+  <label data-rpe-range><span>RPE min</span><input name="{{ prefix }}_rpe_min" type="number" min="1" max="10" step="0.5" value="{{ value(item, 'rpe_min') if item else '' }}"></label>
+  <label data-rpe-range><span>RPE max</span><input name="{{ prefix }}_rpe_max" type="number" min="1" max="10" step="0.5" value="{{ value(item, 'rpe_max') if item else '' }}"></label>
+{% endmacro %}
+{% macro lift_slot_form(session, slot=none) %}
+  {% set top = slot.prescriptions|selectattr('slot_role', 'equalto', 'top_set')|first if slot else none %}
+  {% set back = slot.prescriptions|selectattr('slot_role', 'equalto', 'back_off')|first if slot else none %}
+  {% set family = slot.lift_family if slot else 'squat' %}
+  <form class="lift-slot-form" method="post" action="{{ url_for('programming.update_lift_slot', slot_id=slot.id) if slot else url_for('programming.create_lift_slot', session_id=session.id) }}" data-lift-slot-editor data-testid="lift-slot-editor">
+    <label><span>Lift family</span><select name="lift_family" data-lift-family>{% for item in ('squat', 'bench', 'deadlift') %}<option value="{{ item }}"{% if family == item %} selected{% endif %}>{{ item|title }}</option>{% endfor %}</select></label>
+    <fieldset class="slot-prescription slot-prescription--top"><legend>Top set</legend>
+      <label class="slot-exercise"><span>Exercise</span><select name="top_exercise_id" data-family-exercise required>{% for exercise in lift_exercises %}<option value="{{ exercise.id }}" data-family="{{ exercise.lift_family }}"{% if top and top.exercise_id == exercise.id %} selected{% endif %}>{{ exercise.name }}</option>{% endfor %}</select></label>
+      <label><span>Sets</span><input name="top_sets" type="number" min="1" value="{{ value(top, 'sets') if top else 1 }}" required></label><label><span>Reps</span><input name="top_reps" value="{{ value(top, 'reps') if top else '' }}" required></label>
+      {{ rpe_fields('top', top) }}<label><span>Load kg <small>optional</small></span><input name="top_load_kg" type="number" min="0" step="0.5" value="{{ value(top, 'load_kg') if top else '' }}"></label>
+    </fieldset>
+    <fieldset class="slot-prescription slot-prescription--back"><legend><label><input type="checkbox" name="back_off_enabled" value="1" data-back-off-toggle{% if back %} checked{% endif %}> Back-off work</label></legend><div data-back-off-fields>
+      <label class="slot-exercise"><span>Exercise <small>same family only</small></span><select name="back_off_exercise_id" data-family-exercise><option value="">Same as top set</option>{% for exercise in lift_exercises %}<option value="{{ exercise.id }}" data-family="{{ exercise.lift_family }}"{% if back and back.exercise_id == exercise.id %} selected{% endif %}>{{ exercise.name }}</option>{% endfor %}</select></label>
+      <label><span>Sets</span><input name="back_off_sets" type="number" min="1" value="{{ value(back, 'sets') if back else '' }}"></label><label><span>Reps</span><input name="back_off_reps" value="{{ value(back, 'reps') if back else '' }}"></label>
+      {{ rpe_fields('back_off', back) }}<label><span>Load kg <small>optional</small></span><input name="back_off_load_kg" type="number" min="0" step="0.5" value="{{ value(back, 'load_kg') if back else '' }}"></label>
+    </div></fieldset>
+    <button class="coach-primary-button" type="submit">{{ 'Save lift slot' if slot else 'Add lift slot' }}</button>
+  </form>
+{% endmacro %}
 
 {% block content %}
 <section class="coach-page week-editor">
@@ -50,17 +76,25 @@
           <form method="post" action="{{ url_for('programming.duplicate_session', session_id=session.id) }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Duplicate</button></form>
           <form method="post" action="{{ url_for('programming.delete_session', session_id=session.id) }}"><button class="coach-link-button" type="submit">Delete</button></form>
         </div></div>
-      <div class="week-prescriptions">
-      {% for item in session.prescriptions %}
+      <div class="session-day-structure" aria-label="Scheduled lift structure">{% for slot in session.lift_slots %}<span>{{ slot.lift_family[0]|upper }}</span>{% else %}<span>Assistance only</span>{% endfor %}</div>
+      <section class="lift-slots"><h3>Main-lift prescriptions</h3>
+      {% for slot in session.lift_slots %}
+        <details class="lift-slot" open data-testid="lift-slot"><summary><span class="lift-family-badge">{{ slot.lift_family[0]|upper }}</span><strong>{{ slot.lift_family|title }} exposure {{ loop.index }}</strong><span>{% for row in slot.prescriptions %}{{ 'Top' if row.slot_role == 'top_set' else 'Back-off' }}: {{ row.exercise_name }} {{ row.summary }}{% if not loop.last %} · {% endif %}{% endfor %}</span></summary>{{ lift_slot_form(session, slot) }}<form class="lift-slot-delete" method="post" action="{{ url_for('programming.delete_lift_slot', slot_id=slot.id) }}"><button class="coach-link-button" type="submit">Remove exposure</button></form></details>
+      {% else %}<p class="week-editor__empty">No squat, bench or deadlift exposures scheduled.</p>{% endfor %}
+      <details class="lift-slot lift-slot--new"><summary><strong>Add S/B/D lift slot</strong><span>Top set with optional back-off</span></summary>{{ lift_slot_form(session) }}</details></section>
+      <section class="assistance"><div class="assistance__heading"><div><span class="coach-eyebrow">Subordinate work</span><h3>Assistance</h3></div><span>Zero assistance is valid</span></div><div class="week-prescriptions">
+      {% for item in session.prescriptions if item.lift_slot_id is none %}
         <details class="week-prescription" open><summary><strong>{{ item.position }}. {{ item.exercise_name }}</strong><span>{{ item.summary or 'No prescription set' }}</span></summary>
+          <span class="provenance-badge" data-testid="assistance-provenance">{{ (item.provenance or 'coach_authored')|replace('_', ' ')|title }}</span>
           <form class="week-prescription__form" method="post" action="{{ url_for('programming.update_prescription', prescription_id=item.id) }}"><input type="hidden" name="week_editor" value="1">{{ prescription_fields(item) }}<button class="coach-primary-button" type="submit">Save exercise</button></form>
           <form class="week-prescription__delete" method="post" action="{{ url_for('programming.delete_prescription', prescription_id=item.id) }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Delete exercise</button></form>
         </details>
-      {% else %}<p class="week-editor__empty">No exercises yet.</p>{% endfor %}
+      {% else %}<p class="week-editor__empty">No assistance programmed.</p>{% endfor %}
       </div>
-      <details class="week-prescription week-prescription--new"><summary><strong>Add exercise</strong><span>Choose any prescription mode</span></summary><form class="week-prescription__form" method="post" action="{{ url_for('programming.create_prescription', session_id=session.id) }}"><input type="hidden" name="week_editor" value="1">{{ prescription_fields() }}<button class="coach-primary-button" type="submit">Add exercise</button></form></details>
+      <details class="week-prescription week-prescription--new"><summary><strong>Add coach-authored assistance</strong><span>Optional</span></summary><form class="week-prescription__form" method="post" action="{{ url_for('programming.create_prescription', session_id=session.id) }}"><input type="hidden" name="week_editor" value="1">{{ prescription_fields() }}<button class="coach-primary-button" type="submit">Add assistance</button></form></details></section>
     </article>
   {% else %}<section class="coach-panel"><p>No sessions yet. Add the first session above.</p></section>{% endfor %}
   </div>
 </section>
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/programming_lift_slots.js') }}" defer></script>{% endblock %}

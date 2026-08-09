@@ -75,3 +75,7 @@
   .factory-accessory-row { grid-template-columns: minmax(0, 1fr) auto auto; }.factory-accessory-row [data-remove-accessory] { grid-column: 1 / -1; }
   .proposal-actions { align-items: stretch; flex-direction: column; }.proposal-actions > * { box-sizing: border-box; width: 100%; }
 }
+.factory-steps { grid-column: 1 / -1; overflow: hidden; }
+.factory-steps ol { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 .5rem; padding: 0; list-style: none; counter-reset: flow; }
+.factory-steps li { display: inline-flex; gap: .35rem; align-items: center; color: var(--coach-muted); font-size: .75rem; font-weight: 800; }
+.factory-steps li::before { display: grid; width: 1.35rem; height: 1.35rem; place-items: center; border: 1px solid var(--coach-border); border-radius: 50%; counter-increment: flow; content: counter(flow); color: var(--coach-accent-soft); }

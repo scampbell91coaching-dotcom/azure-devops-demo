@@ -215,3 +215,73 @@ def test_assistance_has_no_slot_and_preserves_provenance_and_order():
             ("Triceps", "coach_selected", None),
             ("Curl", "coach_authored", None),
         ]
+
+
+def test_coach_lift_slot_editor_persists_range_back_off_and_reload():
+    app = app_with_session()
+    with app.app_context():
+        squat = exercise("Competition Squat", "squat")
+        pause = exercise("Pause Squat", "squat")
+        session_id = TrainingSession.query.one().id
+        squat_id, pause_id = squat.id, pause.id
+        db.session.commit()
+    client = app.test_client()
+    response = client.post(
+        f"/programming/sessions/{session_id}/lift-slots",
+        data={
+            "lift_family": "squat",
+            "top_exercise_id": squat_id,
+            "top_sets": "1",
+            "top_reps": "3",
+            "top_rpe_mode": "range",
+            "top_rpe_min": "5",
+            "top_rpe_max": "6",
+            "back_off_enabled": "1",
+            "back_off_exercise_id": pause_id,
+            "back_off_sets": "3",
+            "back_off_reps": "6",
+            "back_off_rpe_mode": "target",
+            "back_off_rpe": "6",
+        },
+    )
+    assert response.status_code == 302
+    with app.app_context():
+        db.session.expire_all()
+        slot = ProgrammingLiftSlot.query.one()
+        assert slot.session.week.lift_slot_frequencies()["squat"] == 1
+        assert [item.summary for item in slot.prescriptions] == [
+            "1 x 3 @ RPE 5-6",
+            "3 x 6 @ RPE 6",
+        ]
+        assert slot.prescriptions[1].exercise_name == "Pause Squat"
+    page = client.get(response.headers["Location"])
+    assert b'data-testid="lift-slot-editor"' in page.data
+    assert b"Top: Competition Squat 1 x 3 @ RPE 5-6" in page.data
+
+
+def test_coach_lift_slot_post_rejects_cross_family_back_off():
+    app = app_with_session()
+    with app.app_context():
+        squat = exercise("Competition Squat", "squat")
+        bench = exercise("Pause Bench", "bench")
+        session_id = TrainingSession.query.one().id
+        squat_id, bench_id = squat.id, bench.id
+        db.session.commit()
+    response = app.test_client().post(
+        f"/programming/sessions/{session_id}/lift-slots",
+        data={
+            "lift_family": "squat",
+            "top_exercise_id": squat_id,
+            "top_sets": "1",
+            "top_reps": "3",
+            "top_rpe": "6",
+            "back_off_enabled": "1",
+            "back_off_exercise_id": bench_id,
+            "back_off_sets": "3",
+            "back_off_reps": "6",
+            "back_off_rpe": "6",
+        },
+    )
+    assert response.status_code == 400
+    with app.app_context():
+        assert ProgrammingLiftSlot.query.count() == 0

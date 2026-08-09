@@ -31,7 +31,7 @@ test('first paying athlete money path: draft to immutable coach-reviewed trainin
   // invitation delivery flow. From sign-in onward this is the real athlete path.
   await signIn(page, pilot.email, pilot.password);
   await expect(page).toHaveURL('/athlete/dashboard');
-  await expect(page.getByRole('heading', { name: 'Welcome back, Taylor' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Taylor’s training' })).toBeVisible();
   await expect(page.getByText('No current programme')).toBeVisible();
   await page.goto('/athlete/programme/sessions/801');
   await expect(page).toHaveURL('/athlete/programme/sessions/801');
@@ -49,14 +49,20 @@ test('first paying athlete money path: draft to immutable coach-reviewed trainin
 
   await page.getByRole('link', { name: 'Pilot week 1' }).click();
   const sessionCard = page.getByTestId('programming-session').filter({ hasText: pilot.session });
+  const liftSlot = sessionCard
+    .getByTestId('lift-slot')
+    .filter({ hasText: 'Competition Squat' })
+    .first();
+  await expect(liftSlot).toContainText('Competition Squat');
+  await expect(liftSlot).toContainText('1 x 3');
+  await expect(liftSlot).toContainText('@ RPE 7.5-8.5');
+  await expect(liftSlot).toContainText('Pause Squat');
+
+  await expect(liftSlot).toContainText('2 x 5');
+  await expect(liftSlot).toContainText('@ RPE 6.5-7.5');
+
   const prescriptions = sessionCard.locator('.week-prescription');
-  await expect(prescriptions.nth(0)).toContainText('Competition Squat');
-  await expect(prescriptions.nth(0)).toContainText('1 x 3');
-  await expect(prescriptions.nth(0)).toContainText('@ RPE 7.5-8.5');
-  await expect(prescriptions.nth(1)).toContainText('Pause Squat');
-  await expect(prescriptions.nth(1)).toContainText('2 x 5');
-  await expect(prescriptions.nth(1)).toContainText('@ RPE 6.5-7.5');
-  await expect(prescriptions.nth(2)).toContainText('Cable Row');
+  await expect(prescriptions.first()).toContainText('Cable Row');
 
   await page.getByRole('link', { name: pilot.block, exact: true }).click();
   page.once('dialog', dialog => dialog.accept());

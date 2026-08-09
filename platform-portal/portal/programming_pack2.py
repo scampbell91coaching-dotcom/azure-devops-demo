@@ -65,6 +65,7 @@ def create_prescription(session_id: int):
         session=session,
         exercise_name=exercise_name,
         position=len(session.prescriptions) + 1,
+        provenance="coach_authored",
         sets=_optional_int(payload.get("sets")),
         reps=str(payload.get("reps", "")).strip() or None,
         load_kg=_optional_float(payload.get("load_kg")),
@@ -87,6 +88,8 @@ def update_prescription(prescription_id: int):
 
     if item is None:
         abort(404)
+    if item.lift_slot_id is not None:
+        return jsonify({"error": "Edit main lifts through the lift-slot editor."}), 409
 
     payload = request.get_json(silent=True) or {}
 
@@ -123,6 +126,8 @@ def delete_prescription(prescription_id: int):
 
     if item is None:
         abort(404)
+    if item.lift_slot_id is not None:
+        return jsonify({"error": "Remove main lifts through the lift-slot editor."}), 409
 
     session = item.session
     db.session.delete(item)
@@ -145,12 +150,17 @@ def reorder_prescriptions(session_id: int):
     payload = request.get_json(silent=True) or {}
     ids = payload.get("prescription_ids", [])
 
-    by_id = {item.id: item for item in session.prescriptions}
+    by_id = {
+        item.id: item for item in session.prescriptions if item.lift_slot_id is None
+    }
 
     if not isinstance(ids, list) or set(ids) != set(by_id):
         return jsonify({"error": "Invalid prescription order."}), 400
 
-    for position, prescription_id in enumerate(ids, start=1):
+    first_assistance_position = 1 + sum(
+        len(slot.prescriptions) for slot in session.lift_slots
+    )
+    for position, prescription_id in enumerate(ids, start=first_assistance_position):
         by_id[prescription_id].position = position
 
     db.session.commit()

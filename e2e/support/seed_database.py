@@ -10,6 +10,7 @@ from portal.models.checkins import AthleteCheckinSettings
 from portal.models.exercise_library import Exercise
 from portal.models.programming import (
     ExercisePrescription,
+    ProgrammingLiftSlot,
     TrainingBlock,
     TrainingSession,
     TrainingWeek,
@@ -362,4 +363,26 @@ def seed_database(app: Flask) -> None:
                     provenance="coach_selected",
                 )
             )
+
+        lift_rows = (
+            (session, prescription, squat, "squat", 1),
+            (session, extra_prescriptions[0], bench, "bench", 2),
+            (session, extra_prescriptions[1], deadlift, "deadlift", 3),
+            (mobile_session, mobile_prescription, squat, "squat", 1),
+        )
+        for target_session, target_row, target_exercise, family, position in lift_rows:
+            slot = ProgrammingLiftSlot.query.filter_by(
+                session_id=target_session.id, position=position
+            ).one_or_none()
+            if slot is None:
+                slot = ProgrammingLiftSlot(
+                    session=target_session, position=position, lift_family=family
+                )
+                db.session.add(slot)
+            target_row.exercise = target_exercise
+            target_row.lift_slot = slot
+            target_row.slot_role = "top_set"
+            target_row.provenance = "generated"
+            target_row.prescription_type = "rpe"
+        extra_prescriptions[2].provenance = "generated"
         db.session.commit()

@@ -16,6 +16,11 @@ EXPECTED_PROGRAMMING_ROUTES = {
         "/programming/sessions/<int:session_id>/prescriptions",
         "POST",
     ),
+    (
+        "programming.create_lift_slot",
+        "/programming/sessions/<int:session_id>/lift-slots",
+        "POST",
+    ),
     ("programming.create_session", "/programming/weeks/<int:week_id>/sessions", "POST"),
     ("programming.create_week", "/programming/blocks/<int:block_id>/weeks", "POST"),
     (
@@ -76,6 +81,16 @@ EXPECTED_PROGRAMMING_ROUTES = {
     ),
     ("programming.session", "/programming/sessions/<int:session_id>", "GET"),
     ("programming.week", "/programming/weeks/<int:week_id>", "GET"),
+    (
+        "programming.update_lift_slot",
+        "/programming/lift-slots/<int:slot_id>",
+        "POST",
+    ),
+    (
+        "programming.delete_lift_slot",
+        "/programming/lift-slots/<int:slot_id>/delete",
+        "POST",
+    ),
 }
 
 

@@ -10,6 +10,11 @@
   color: var(--coach-success);
   font-weight: 800;
 }
+.session-lift-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
+.session-lift-slots article { display: flex; gap: .75rem; min-width: 0; border: 1px solid var(--coach-border); border-left: 3px solid var(--coach-accent); padding: .85rem; background: var(--coach-panel-soft); }
+.session-lift-slots p { margin: .3rem 0 0; color: var(--coach-muted); font-size: .82rem; }
+.lift-family-badge { display: grid; flex: 0 0 auto; width: 1.6rem; height: 1.6rem; place-items: center; border-radius: 50%; background: var(--coach-accent); color: #0b0d0c; font-weight: 900; }
+.sheet-exercise-cell { position: relative; }.sheet-provenance { position: absolute; right: .35rem; bottom: .12rem; color: var(--coach-accent-soft); font-size: .58rem; font-weight: 900; pointer-events: none; text-transform: uppercase; }
 
 .autosave-status.is-saving {
   color: var(--coach-warning);
@@ -151,5 +156,6 @@
   }
 
   .programming-template-grid { grid-template-columns: 1fr; }
+  .session-lift-slots { grid-template-columns: 1fr; }
   .builder-shortcuts { display: none; }.future-action { align-items: stretch; flex-direction: column; }.future-action button { width: 100%; }
 }
