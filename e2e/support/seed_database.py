@@ -14,6 +14,7 @@ from portal.models.programming import (
     TrainingSession,
     TrainingWeek,
 )
+from portal.programming_services.lift_slots import create as create_lift_slot
 from portal.models.user import User, UserRole
 from werkzeug.security import generate_password_hash
 
@@ -37,6 +38,16 @@ def seed_database(app: Flask) -> None:
             last_name="Morgan",
             email="sam.private@example.test",
             bodyweight_kg=68.0,
+        )
+        pilot = db.session.get(Athlete, 303) or Athlete(
+            id=303,
+            first_name="Taylor",
+            last_name="Jordan",
+            email="taylor.pilot@example.test",
+            bodyweight_kg=74.2,
+            weight_class="76 kg",
+            federation="GBPF",
+            next_competition="First Paying Athlete Open",
         )
         block = db.session.get(TrainingBlock, 301) or TrainingBlock(
             id=301,
@@ -207,6 +218,15 @@ def seed_database(app: Flask) -> None:
             fatigue_rating=2,
             accessory_suitable=True,
         )
+        pause_squat = Exercise.query.filter_by(
+            name="Pause Squat"
+        ).one_or_none() or Exercise(
+            name="Pause Squat",
+            movement="squat",
+            category="main",
+            fatigue_rating=4,
+            lift_family="squat",
+        )
         split_squat = Exercise.query.filter_by(
             name="Bulgarian Split Squat"
         ).one_or_none() or Exercise(
@@ -242,10 +262,19 @@ def seed_database(app: Flask) -> None:
                 "Athlete E2E password!", method="scrypt"
             ),
         )
+        pilot_user = User.query.filter_by(email=pilot.email).one_or_none() or User(
+            email=pilot.email,
+            role=UserRole.ATHLETE,
+            athlete_id=pilot.id,
+            password_hash=generate_password_hash(
+                "Pilot Athlete password!", method="scrypt"
+            ),
+        )
         db.session.add_all(
             [
                 alex,
                 sam,
+                pilot,
                 block,
                 week,
                 session,
@@ -262,10 +291,75 @@ def seed_database(app: Flask) -> None:
                 *extra_prescriptions,
                 pulldown,
                 row,
+                pause_squat,
                 split_squat,
                 plank,
                 coach,
                 athlete_user,
+                pilot_user,
             ]
         )
+        db.session.flush()
+
+        # This is deliberately a draft fixture: the browser test must publish it
+        # through the supported coach UI before the athlete can see or log it.
+        pilot_block = db.session.get(TrainingBlock, 601) or TrainingBlock(
+            id=601,
+            athlete=pilot,
+            name="First paying athlete strength pilot",
+            objective="Build competition strength with fatigue-controlled volume",
+            status="draft",
+        )
+        db.session.add(pilot_block)
+        db.session.flush()
+        pilot_week = db.session.get(TrainingWeek, 701) or TrainingWeek(
+            id=701,
+            block=pilot_block,
+            name="Pilot week 1",
+            position=1,
+            notes="Technical strength exposure",
+        )
+        db.session.add(pilot_week)
+        db.session.flush()
+        pilot_session = db.session.get(TrainingSession, 801) or TrainingSession(
+            id=801,
+            week=pilot_week,
+            name="Squat strength and assistance",
+            day_label="Monday",
+            position=1,
+        )
+        db.session.add(pilot_session)
+        db.session.flush()
+
+        if not pilot_session.lift_slots:
+            create_lift_slot(
+                pilot_session,
+                lift_family="squat",
+                top_exercise=squat,
+                top_sets=1,
+                top_reps="3",
+                top_load_kg=120,
+                top_rpe_min=7.5,
+                top_rpe_max=8.5,
+                back_off_exercise=pause_squat,
+                back_off_sets=2,
+                back_off_reps="5",
+                back_off_load_kg=100,
+                back_off_rpe_min=6.5,
+                back_off_rpe_max=7.5,
+            )
+            db.session.add(
+                ExercisePrescription(
+                    session=pilot_session,
+                    exercise=row,
+                    exercise_name=row.name,
+                    position=3,
+                    sets=2,
+                    reps="10",
+                    rpe_min=6.0,
+                    rpe_max=7.0,
+                    prescription_type="rpe",
+                    provenance="coach_selected",
+                )
+            )
         db.session.commit()
