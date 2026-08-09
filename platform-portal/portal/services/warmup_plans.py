@@ -7,7 +7,7 @@ future database adapter only needs to implement :class:`WarmupProtocolRepository
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum, IntEnum
 from typing import Protocol
 
@@ -188,12 +188,53 @@ class WarmupPlan:
     steps: tuple[PlannedWarmupStep, ...]
     applied_protocols: tuple[str, ...]
     applied_overrides: tuple[str, ...]
+    applied_assignments: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class WarmupProtocolAssignment:
+    """An explicit, auditable link between a protocol version and a plan context."""
+
+    assignment_id: str
+    protocol_id: str
+    protocol_version: str
+    assigned_by: str
+    reason: str
+
+    def __post_init__(self) -> None:
+        required = (
+            self.assignment_id,
+            self.protocol_id,
+            self.protocol_version,
+            self.assigned_by,
+            self.reason,
+        )
+        if any(not value.strip() for value in required):
+            raise ValueError(
+                "assignment identity, protocol version, actor, and reason are required"
+            )
 
 
 class WarmupProtocolRepository(Protocol):
     """Persistence seam; adapters return domain objects, never ORM rows."""
 
     def list_active(self) -> Sequence[WarmupProtocol]: ...
+
+
+class AssignedWarmupPlanRepository(Protocol):
+    """Schema-independent read seam for one athlete/session/lift plan."""
+
+    def list_assignments(
+        self, context: WarmupContext
+    ) -> Sequence[WarmupProtocolAssignment]: ...
+
+    def list_overrides(self, context: WarmupContext) -> Sequence[WarmupOverride]: ...
+
+
+class WarmupPlanSnapshotRepository(Protocol):
+    """Write seam implemented later by the transaction-owning database adapter."""
+
+    def save_resolved(self, plan: WarmupPlan) -> None: ...
 
 
 class InMemoryWarmupProtocolRepository:
@@ -291,3 +332,56 @@ class WarmupPlanService:
             applied_protocols=tuple(item.protocol_id for item in protocols),
             applied_overrides=tuple(applied),
         )
+
+
+class AssignedWarmupPlanService:
+    """Resolve only explicitly assigned protocol versions, then optionally snapshot."""
+
+    def __init__(
+        self,
+        protocols: WarmupProtocolRepository,
+        plans: AssignedWarmupPlanRepository,
+        snapshots: WarmupPlanSnapshotRepository | None = None,
+    ) -> None:
+        self._protocols = protocols
+        self._plans = plans
+        self._snapshots = snapshots
+
+    def build(self, context: WarmupContext, *, save_snapshot: bool = False) -> WarmupPlan:
+        assignments = tuple(self._plans.list_assignments(context))
+        assigned_versions = {
+            (item.protocol_id, item.protocol_version) for item in assignments
+        }
+        assigned_protocols = {item.protocol_id for item in assignments}
+        if len(assigned_versions) != len(assigned_protocols):
+            raise ValueError("multiple versions of one protocol are assigned")
+        available = {
+            (item.protocol_id, item.version): item
+            for item in self._protocols.list_active()
+        }
+        missing = sorted(assigned_versions - available.keys())
+        if missing:
+            joined = ", ".join(f"{protocol}@{version}" for protocol, version in missing)
+            raise ValueError(f"assigned protocol version is unavailable: {joined}")
+
+        selected = [available[key] for key in assigned_versions]
+        plan = WarmupPlanService(InMemoryWarmupProtocolRepository(selected)).build(
+            context,
+            overrides=self._plans.list_overrides(context),
+        )
+        applied_protocols = set(plan.applied_protocols)
+        plan = replace(
+            plan,
+            applied_assignments=tuple(
+                item.assignment_id
+                for item in assignments
+                if item.protocol_id in applied_protocols
+            ),
+        )
+        if save_snapshot:
+            if self._snapshots is None:
+                raise ValueError(
+                    "snapshot repository is required to save a resolved plan"
+                )
+            self._snapshots.save_resolved(plan)
+        return plan
