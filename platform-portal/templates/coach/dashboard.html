@@ -31,17 +31,23 @@
         <div class="coach-dashboard-list">
           {% for item in dashboard.requiring_review %}
             <article>
-              <div><strong>{{ athlete_link(item.athlete) }}</strong><span>{{ item.kind }} · {{ item.submitted_at.strftime("%d %b %Y") }}</span></div>
+              <div>
+                <strong>{{ athlete_link(item.athlete) }}</strong>
+                <span>{{ item.kind }} · {{ item.submitted_at.strftime("%d %b %Y, %H:%M") }} · {{ item.review_state }}</span>
+                {% if item.summary %}<span>{{ item.summary }}</span>{% endif %}
+              </div>
               {% if item.url_kind == "weekly" %}
                 <a class="coach-link-button" href="{{ url_for('checkins.detail', checkin_id=item.item_id) }}">Review check-in</a>
-              {% else %}
+              {% elif item.url_kind == "nutrition" %}
                 <a class="coach-link-button" href="{{ url_for('athletes.athlete_dashboard', athlete_id=item.athlete.id) }}#nutrition-checkins">Review nutrition</a>
+              {% else %}
+                <a class="coach-link-button" href="{{ url_for('athletes.coach_training_session', athlete_id=item.athlete.id, log_id=item.item_id) }}">Review session</a>
               {% endif %}
             </article>
           {% endfor %}
         </div>
       {% else %}
-        <div class="coach-empty-state"><h3>Review queue clear</h3><p>No submitted weekly or nutrition check-ins are awaiting review.</p></div>
+        <div class="coach-empty-state"><h3>Review queue clear</h3><p>No completed training sessions or submitted check-ins are awaiting review.</p></div>
       {% endif %}
     </section>
 

@@ -3,10 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 
+from sqlalchemy.orm import selectinload
+
 from ..models.athlete import Athlete
 from ..models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from ..models.nutrition_checkin import NutritionCheckIn
-from ..models.programming import TrainingBlock
+from ..models.programming import TrainingBlock, TrainingSessionLog
 
 
 @dataclass(frozen=True)
@@ -16,6 +18,8 @@ class ReviewItem:
     submitted_at: datetime
     url_kind: str
     item_id: int
+    summary: str | None = None
+    review_state: str = "Needs review"
 
 
 @dataclass(frozen=True)
@@ -67,6 +71,13 @@ class CoachDashboardService:
         nutrition = NutritionCheckIn.query.order_by(
             NutritionCheckIn.submitted_at.desc(), NutritionCheckIn.id.desc()
         ).all()
+        training_logs = (
+            TrainingSessionLog.query.options(selectinload(TrainingSessionLog.results))
+            .filter_by(status="completed")
+            .filter(TrainingSessionLog.completed_at.is_not(None))
+            .order_by(TrainingSessionLog.completed_at.asc(), TrainingSessionLog.id.asc())
+            .all()
+        )
         settings = AthleteCheckinSettings.query.order_by(
             AthleteCheckinSettings.athlete_id
         ).all()
@@ -78,7 +89,9 @@ class CoachDashboardService:
         recent_cutoff = today - timedelta(days=self.RECENT_DAYS - 1)
         recent = tuple(item for item in weekly if item.week_ending >= recent_cutoff)
 
-        requiring_review = self._reviews(athlete_by_id, weekly, nutrition)
+        requiring_review = self._reviews(
+            athlete_by_id, weekly, nutrition, training_logs
+        )
         week_start = today - timedelta(days=today.weekday())
         week_end = week_start + timedelta(days=6)
         submitted_athlete_ids = {
@@ -173,6 +186,7 @@ class CoachDashboardService:
         athletes: dict[int, Athlete],
         weekly: list[WeeklyCheckin],
         nutrition: list[NutritionCheckIn],
+        training_logs: list[TrainingSessionLog],
     ) -> tuple[ReviewItem, ...]:
         items = [
             ReviewItem(
@@ -196,13 +210,40 @@ class CoachDashboardService:
             for item in nutrition
             if item.athlete_id in athletes and not item.reviewed
         )
+        items.extend(
+            ReviewItem(
+                athlete=athletes[item.athlete_id],
+                kind=item.session_name,
+                submitted_at=item.completed_at,
+                url_kind="training",
+                item_id=item.id,
+                summary=CoachDashboardService._training_summary(item),
+            )
+            for item in training_logs
+            if item.athlete_id in athletes and item.completed_at is not None
+        )
         return tuple(
             sorted(
                 items,
                 key=lambda item: (item.submitted_at, item.url_kind, item.item_id),
-                reverse=True,
             )
         )
+
+    @staticmethod
+    def _training_summary(log: TrainingSessionLog) -> str:
+        notes = [
+            result.athlete_note.strip()
+            for result in log.results
+            if result.athlete_note and result.athlete_note.strip()
+        ]
+        if notes:
+            return "Notes: " + " · ".join(notes[:2])
+        completed = sum(1 for result in log.results if result.completed)
+        skipped = sum(1 for result in log.results if result.skipped)
+        parts = [f"{completed} set{'s' if completed != 1 else ''} completed"]
+        if skipped:
+            parts.append(f"{skipped} skipped")
+        return " · ".join(parts)
 
     @staticmethod
     def _nutrition_summaries(

@@ -7,7 +7,13 @@ from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from portal.models.nutrition_checkin import NutritionCheckIn
-from portal.models.programming import TrainingBlock, TrainingWeek
+from portal.models.programming import (
+    TrainingBlock,
+    TrainingSession,
+    TrainingSessionLog,
+    TrainingSetResult,
+    TrainingWeek,
+)
 from portal.services.coach_dashboard import CoachDashboardService
 
 
@@ -80,8 +86,8 @@ def test_service_aggregates_review_due_flags_programming_and_nutrition():
         dashboard = CoachDashboardService().build(today=today)
 
         assert [item.athlete.full_name for item in dashboard.requiring_review] == [
-            "Alex Flagged",
             "Bea Pending",
+            "Alex Flagged",
         ]
         assert [item.athlete.full_name for item in dashboard.pending_checkins] == [
             "Bea Pending"
@@ -193,8 +199,8 @@ def test_service_orders_review_queue_and_pending_athletes_deterministically():
         dashboard = CoachDashboardService().build(today=today)
 
         assert [item.athlete.full_name for item in dashboard.requiring_review] == [
-            "Zed Able",
             "Amy Baker",
+            "Zed Able",
         ]
         assert [item.athlete.full_name for item in dashboard.pending_checkins] == [
             "Zed Able",
@@ -230,7 +236,83 @@ def test_service_build_uses_a_fixed_number_of_selects_for_pending_checkins():
             event.remove(db.engine, "before_cursor_execute", count_selects)
 
         assert len(dashboard.pending_checkins) == 12
-        assert selects == 5
+        assert selects == 6
+
+
+def test_completed_training_for_multiple_athletes_joins_queue_oldest_first():
+    app = _app()
+    with app.app_context():
+        alex = Athlete(first_name="Alex", last_name="Lifter", email="alex@test")
+        sam = Athlete(first_name="Sam", last_name="Lifter", email="sam@test")
+        outsider = Athlete(first_name="Other", last_name="Coach", email="other@test")
+        alex_block = TrainingBlock(athlete=alex, name="Alex prep", status="active")
+        sam_block = TrainingBlock(athlete=sam, name="Sam prep", status="active")
+        alex_week = TrainingWeek(block=alex_block, name="Week 1", position=1)
+        sam_week = TrainingWeek(block=sam_block, name="Week 1", position=1)
+        alex_session = TrainingSession(week=alex_week, name="Squat day", position=1)
+        sam_session = TrainingSession(week=sam_week, name="Bench day", position=1)
+        db.session.add_all([alex_block, sam_block, outsider])
+        db.session.flush()
+        older = TrainingSessionLog(
+            athlete=alex,
+            session=alex_session,
+            session_name="Squat day",
+            block_name="Alex prep",
+            week_name="Week 1",
+            status="completed",
+            completed_at=datetime(2026, 8, 1, 9, tzinfo=UTC),
+        )
+        newer = TrainingSessionLog(
+            athlete=sam,
+            session=sam_session,
+            session_name="Bench day",
+            block_name="Sam prep",
+            week_name="Week 1",
+            status="completed",
+            completed_at=datetime(2026, 8, 2, 9, tzinfo=UTC),
+        )
+        incomplete = TrainingSessionLog(
+            athlete=alex,
+            session_name="Deadlift day",
+            block_name="Alex prep",
+            week_name="Week 1",
+            status="in_progress",
+        )
+        db.session.add_all(
+            [
+                older,
+                newer,
+                incomplete,
+                TrainingSetResult(
+                    session_log=older,
+                    exercise_name="Squat",
+                    exercise_position=1,
+                    set_order=1,
+                    completed=True,
+                    athlete_note="Hip felt tight.",
+                ),
+                TrainingSetResult(
+                    session_log=newer,
+                    exercise_name="Bench",
+                    exercise_position=1,
+                    set_order=1,
+                    completed=True,
+                ),
+            ]
+        )
+        db.session.commit()
+
+        first = CoachDashboardService().build().requiring_review
+        second = CoachDashboardService().build().requiring_review
+
+        assert [(item.athlete.full_name, item.kind) for item in first] == [
+            ("Alex Lifter", "Squat day"),
+            ("Sam Lifter", "Bench day"),
+        ]
+        assert first[0].summary == "Notes: Hip felt tight."
+        assert first[1].summary == "1 set completed"
+        assert all(item.review_state == "Needs review" for item in first)
+        assert [item.item_id for item in second] == [item.item_id for item in first]
 
 
 def test_recent_checkins_cover_exactly_fourteen_calendar_days():
