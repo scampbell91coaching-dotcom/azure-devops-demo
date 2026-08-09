@@ -5,6 +5,7 @@ from datetime import UTC, date, datetime, timedelta
 from flask import (
     Blueprint,
     abort,
+    current_app,
     flash,
     g,
     redirect,
@@ -24,6 +25,17 @@ from .services.athlete_dashboard import get_athlete_dashboard
 from .services.nutrition_dashboard import get_nutrition_dashboard
 from .nutrition_imports import _summary
 from .services.training_log import assigned_log, save_training_session
+from .auth import roles_required
+from .models.account_token import AccountTokenPurpose, DeliveryState
+from .models.user import UserRole
+from .services.account_lifecycle import (
+    AccountLifecycleError,
+    account_state,
+    create_invitation,
+    create_password_reset,
+    latest_token,
+    revoke_tokens,
+)
 
 athletes_bp = Blueprint("athletes", __name__)
 
@@ -364,7 +376,85 @@ def athlete_dashboard(athlete_id: int):
             .order_by(TrainingSessionLog.completed_at.desc())
             .all()
         ),
+        account_state=account_state(athlete),
+        invitation=latest_token(athlete.id, AccountTokenPurpose.INVITATION),
+        password_reset=latest_token(athlete.id, AccountTokenPurpose.PASSWORD_RESET),
     )
+
+
+def _account_link(purpose: AccountTokenPurpose) -> str:
+    endpoint = url_for("auth.account_token", purpose=purpose.value) + "#{token}"
+    base_url = current_app.config.get("ACCOUNT_PUBLIC_BASE_URL")
+    if base_url:
+        link = str(base_url).rstrip("/") + endpoint
+    else:
+        link = request.url_root.rstrip("/") + endpoint
+    return link
+
+
+def _account_action_result(athlete: Athlete, issued):
+    state = issued.record.delivery_state
+    manual_url = None
+    if state in {DeliveryState.NOT_CONFIGURED, DeliveryState.FAILED}:
+        purpose = AccountTokenPurpose(issued.record.purpose)
+        manual_url = _account_link(purpose).format(token=issued.raw_token)
+    return render_template(
+        "athletes/account_delivery.html",
+        athlete=athlete,
+        token=issued.record,
+        manual_url=manual_url,
+    )
+
+
+@athletes_bp.post("/athletes/<int:athlete_id>/account/invite")
+@roles_required(UserRole.COACH)
+def invite_account(athlete_id: int):
+    athlete = db.session.get(Athlete, athlete_id)
+    if athlete is None:
+        abort(404)
+    if request.form.get("email", "").strip().casefold() != athlete.email.casefold():
+        abort(400, description="Confirm the athlete email before sending an invitation.")
+    try:
+        issued = create_invitation(
+            athlete,
+            activation_url=_account_link(AccountTokenPurpose.INVITATION),
+            lifetime=current_app.config["ACCOUNT_INVITATION_LIFETIME"],
+        )
+    except AccountLifecycleError as exc:
+        abort(409, description=str(exc))
+    return _account_action_result(athlete, issued)
+
+
+@athletes_bp.post("/athletes/<int:athlete_id>/account/password-reset")
+@roles_required(UserRole.COACH)
+def create_account_password_reset(athlete_id: int):
+    athlete = db.session.get(Athlete, athlete_id)
+    if athlete is None:
+        abort(404)
+    try:
+        issued = create_password_reset(
+            athlete,
+            reset_url=_account_link(AccountTokenPurpose.PASSWORD_RESET),
+            lifetime=current_app.config["ACCOUNT_RESET_LIFETIME"],
+        )
+    except AccountLifecycleError as exc:
+        abort(409, description=str(exc))
+    return _account_action_result(athlete, issued)
+
+
+@athletes_bp.post("/athletes/<int:athlete_id>/account/<purpose>/revoke")
+@roles_required(UserRole.COACH)
+def revoke_account_token(athlete_id: int, purpose: str):
+    athlete = db.session.get(Athlete, athlete_id)
+    if athlete is None:
+        abort(404)
+    try:
+        token_purpose = AccountTokenPurpose(purpose)
+    except ValueError:
+        abort(404)
+    revoke_tokens(athlete.id, token_purpose)
+    flash(f"{token_purpose.value.replace('_', ' ').title()} link revoked.", "success")
+    return redirect(url_for("athletes.athlete_dashboard", athlete_id=athlete.id))
 
 
 @athletes_bp.get("/athletes/<int:athlete_id>/nutrition-checkins/new")

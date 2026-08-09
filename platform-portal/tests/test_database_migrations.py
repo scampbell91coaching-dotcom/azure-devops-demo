@@ -11,6 +11,7 @@ from portal.extensions import db
 from portal.models.exercise_library import DayTemplate, Exercise
 
 EXPECTED_TABLES = {
+    "account_tokens",
     "athlete_constraint_flags",
     "athlete_checkin_settings",
     "athlete_state_facts",
@@ -102,6 +103,17 @@ def test_upgrade_and_schema_verification_on_empty_sqlite(tmp_path: Path):
             "variation_of",
             "swap_group",
         } <= exercise_columns
+        user_columns = {
+            column["name"]: column for column in inspect(db.engine).get_columns("users")
+        }
+        assert user_columns["password_hash"]["nullable"] is True
+        account_columns = {
+            column["name"] for column in inspect(db.engine).get_columns("account_tokens")
+        }
+        assert {
+            "purpose", "token_digest", "expires_at", "consumed_at", "revoked_at",
+            "athlete_id", "user_id", "delivery_state", "delivery_detail",
+        } <= account_columns
 
 
 def test_athlete_state_upgrade_preserves_existing_athletes(tmp_path: Path):

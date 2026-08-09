@@ -56,6 +56,29 @@
 
   </header>
 
+  <section class="coach-panel" id="athlete-account">
+    <div class="coach-panel__heading coach-panel__heading--split">
+      <div><span class="coach-eyebrow">Athlete access</span><h2>Account lifecycle</h2></div>
+      <span class="coach-status {{ 'coach-status--active' if account_state == 'active' else 'coach-status--pending' }}">{{ account_state | replace('_', ' ') | title }}</span>
+    </div>
+    {% if account_state != 'active' %}
+      <form class="coach-form" method="post" action="{{ url_for('athletes.invite_account', athlete_id=athlete.id) }}">
+        <label><span>Confirm athlete email</span><input name="email" type="email" value="{{ athlete.email }}" autocomplete="off" required></label>
+        <button class="coach-primary-button" type="submit">{{ 'Resend / regenerate invitation' if account_state == 'invited' else 'Invite athlete' }}</button>
+      </form>
+      {% if invitation and invitation.is_available %}
+        <form method="post" action="{{ url_for('athletes.revoke_account_token', athlete_id=athlete.id, purpose='invitation') }}"><button class="coach-link-button" type="submit">Revoke invitation</button></form>
+      {% endif %}
+    {% else %}
+      <form method="post" action="{{ url_for('athletes.create_account_password_reset', athlete_id=athlete.id) }}"><button class="coach-primary-button" type="submit">Generate password reset</button></form>
+      {% if password_reset and password_reset.is_available %}
+        <form method="post" action="{{ url_for('athletes.revoke_account_token', athlete_id=athlete.id, purpose='password_reset') }}"><button class="coach-link-button" type="submit">Revoke password reset</button></form>
+      {% endif %}
+    {% endif %}
+    {% set delivery = password_reset if account_state == 'active' and password_reset else invitation %}
+    {% if delivery %}<p>Latest delivery: <strong>{{ delivery.delivery_state | replace('_', ' ') | title }}</strong>{% if delivery.delivered_at %} · {{ delivery.delivered_at.strftime('%d %b %Y, %H:%M') }}{% endif %}</p>{% endif %}
+  </section>
+
   <section class="coach-metric-grid">
     <article class="coach-metric">
       <span>Bodyweight</span>

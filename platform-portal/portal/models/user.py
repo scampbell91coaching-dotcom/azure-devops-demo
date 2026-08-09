@@ -26,7 +26,7 @@ class User(db.Model):  # type: ignore[name-defined]
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), nullable=False, unique=True, index=True)
-    password_hash = db.Column(db.String(512), nullable=False)
+    password_hash = db.Column(db.String(512), nullable=True)
     role = db.Column(db.String(20), nullable=False, index=True)
     athlete_id = db.Column(
         db.Integer,
@@ -47,7 +47,9 @@ class User(db.Model):  # type: ignore[name-defined]
         self.password_hash = generate_password_hash(password, method="scrypt")
 
     def check_password(self, password: str) -> bool:
-        return check_password_hash(self.password_hash, password)
+        return bool(self.password_hash) and check_password_hash(
+            self.password_hash, password
+        )
 
     @property
     def user_role(self) -> UserRole:
