@@ -394,7 +394,7 @@ test('athlete dashboard is isolated to the selected test athlete', async ({ page
   await expect(page).toHaveURL(/\/login\?next=/);
   await athleteSession(page.request, athleteIds.primary);
   await page.goto('/athlete/dashboard');
-  await expect(page.getByRole('heading', { name: 'Welcome back, Alex' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Alex’s training' })).toBeVisible();
   await expect(page.getByText('Deterministic strength block')).toBeVisible();
   await expect(page.getByText('Sam Morgan')).toHaveCount(0);
   await expect(page.getByText('sam.private@example.test')).toHaveCount(0);
