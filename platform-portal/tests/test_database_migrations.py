@@ -102,7 +102,34 @@ def test_upgrade_and_schema_verification_on_empty_sqlite(tmp_path: Path):
             "constraint_tags",
             "variation_of",
             "swap_group",
+            "auto_select",
+            "lift_relevance",
+            "training_phases",
+            "compatibility_tags",
+            "coach_priority",
         } <= exercise_columns
+
+
+def test_accessory_intelligence_upgrade_preserves_legacy_opt_out(tmp_path: Path):
+    app = migration_app(f"sqlite:///{tmp_path / 'accessory-intelligence.db'}")
+    runner = app.test_cli_runner()
+    assert runner.invoke(args=["db", "upgrade", "0012_athlete_accounts"]).exit_code == 0
+    with app.app_context():
+        db.session.execute(text(
+            "INSERT INTO exercises "
+            "(name, movement, category, fatigue_rating, accessory_suitable, active, created_at, updated_at) "
+            "VALUES ('Legacy Accessory', 'accessory', 'assistance', 3, 1, 1, "
+            "'2026-01-01', '2026-01-01')"
+        ))
+        db.session.commit()
+    upgrade = runner.invoke(args=["db", "upgrade"])
+    assert upgrade.exit_code == 0, upgrade.output
+    with app.app_context():
+        row = db.session.execute(text(
+            "SELECT auto_select, coach_priority, lift_relevance FROM exercises "
+            "WHERE name = 'Legacy Accessory'"
+        )).one()
+        assert tuple(row) == (0, 0, None)
         user_columns = {
             column["name"]: column for column in inspect(db.engine).get_columns("users")
         }

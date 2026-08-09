@@ -138,6 +138,39 @@
       >
     </label>
 
+    <label>
+      <span><input name="accessory_suitable" type="checkbox" {% if exercise.accessory_suitable %}checked{% endif %}> Available as an accessory</span>
+    </label>
+
+    <label>
+      <span><input name="auto_select" type="checkbox" {% if exercise.auto_select %}checked{% endif %}> Allow Block Factory to suggest</span>
+    </label>
+
+    <label>
+      <span>Lift relevance (comma separated)</span>
+      <input name="lift_relevance" value="{{ metadata.lift_relevance }}" placeholder="squat, bench, deadlift, all">
+    </label>
+
+    <label>
+      <span>Training phases (comma separated)</span>
+      <input name="training_phases" value="{{ metadata.training_phases }}" placeholder="development, strength, all">
+    </label>
+
+    <label>
+      <span>Compatibility tags (comma separated)</span>
+      <input name="compatibility_tags" value="{{ metadata.compatibility_tags }}">
+    </label>
+
+    <label>
+      <span>Constraint tags (comma separated)</span>
+      <input name="constraint_tags" value="{{ metadata.constraint_tags }}">
+    </label>
+
+    <label>
+      <span>Coach priority</span>
+      <input name="coach_priority" type="number" value="{{ exercise.coach_priority }}">
+    </label>
+
     <label class="exercise-create-grid__wide">
       <span>Coaching cues</span>
       <textarea

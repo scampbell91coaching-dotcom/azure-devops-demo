@@ -263,7 +263,7 @@ test('Block Factory previews taxonomy-backed exposures with zero assistance and 
   ).toContainText('2 squat · 3 bench · 1 deadlift');
   await expect(page.getByText(/Incomplete data:/)).toBeVisible();
   await expect(page.getByText('Reported fatigue:', { exact: false })).toHaveCount(0);
-  await expect(page.getByText(/0 coach-selected assistance/)).toHaveCount(4);
+  await expect(page.getByText(/0 assistance exercises/)).toHaveCount(4);
   await expect(page.getByText('Accessory Day', { exact: false })).toHaveCount(0);
 });
 

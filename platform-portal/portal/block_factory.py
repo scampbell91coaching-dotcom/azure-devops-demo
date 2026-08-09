@@ -32,6 +32,7 @@ from .models.programming import (
     TrainingWeek,
 )
 from .services.weekly_programming_intelligence import WeeklyProgrammingIntelligence
+from .services.accessory_intelligence import AccessoryIntelligence
 
 block_factory_bp = Blueprint("block_factory", __name__)
 
@@ -50,6 +51,7 @@ class FactoryRequest:
     deadlift_style: str
     meet_date: date | None
     accessory_exercise_ids: tuple[int, ...] = ()
+    accessory_mode: str = "automatic"
 
 
 GOAL_RPE = {
@@ -207,6 +209,11 @@ def _parse_factory_request() -> FactoryRequest:
         for value in request.form.getlist("accessory_exercise_id", type=int)
         if value is not None
     )
+    accessory_mode = request.form.get("accessory_mode", "automatic").strip().lower()
+    if accessory_ids:
+        accessory_mode = "manual"
+    elif accessory_mode not in {"automatic", "none"}:
+        accessory_mode = "automatic"
     return FactoryRequest(
         athlete_id=athlete_id,
         name=request.form.get("name", "").strip() or "Generated Block",
@@ -223,6 +230,7 @@ def _parse_factory_request() -> FactoryRequest:
         ).strip(),
         meet_date=_parse_date(request.form.get("meet_date", "")),
         accessory_exercise_ids=accessory_ids,
+        accessory_mode=accessory_mode,
     )
 
 
@@ -540,6 +548,8 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
         ]
 
     pool = _accessory_pool()
+    intelligence = AccessoryIntelligence()
+    suggested_ids: set[int] = set()
     for day_index, day_type in enumerate(days):
         exercises = _candidate_exercises(
             templates,
@@ -579,6 +589,34 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                 }
             )
 
+        if factory.accessory_mode == "automatic" and not selected_accessories:
+            family_by_code = {"S": "squat", "B": "bench", "D": "deadlift"}
+            candidates = intelligence.candidates(
+                phase=factory.goal,
+                lift_families={family_by_code[code] for code in day_type},
+                exclude_ids=suggested_ids,
+            )
+            if candidates:
+                suggestion = candidates[0]
+                suggested_ids.add(suggestion.exercise.id)
+                generated_accessories.append(
+                    {
+                        "id": suggestion.exercise.id,
+                        "name": suggestion.exercise.name,
+                        "role": _accessory_role(
+                            {
+                                "name": suggestion.exercise.name,
+                                "category": suggestion.exercise.category,
+                                "primary_muscles": suggestion.exercise.primary_muscles,
+                                "technical_purposes": suggestion.exercise.technical_purposes,
+                            }
+                        ),
+                        "source": "Library suggestion",
+                        "provenance": "generated",
+                        "reasons": suggestion.reasons,
+                    }
+                )
+
         preview.append(
             {
                 "day": day_index + 1,
@@ -588,7 +626,10 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                 "main_count": main_count,
                 "accessories": generated_accessories,
                 "accessory_count": len(generated_accessories),
-                "accessory_range": "coach selected only",
+                "accessory_range": (
+                    "library suggestion" if factory.accessory_mode == "automatic"
+                    and not selected_accessories else "coach selected only"
+                ),
             }
         )
 
@@ -686,6 +727,7 @@ def _factory_from_payload(payload: dict[str, Any]) -> FactoryRequest:
         date.fromisoformat(values["meet_date"]) if values.get("meet_date") else None
     )
     values["accessory_exercise_ids"] = tuple(values.get("accessory_exercise_ids") or ())
+    values.setdefault("accessory_mode", "automatic")
     return FactoryRequest(**values)
 
 
@@ -910,6 +952,9 @@ def generate():
                 for item in Exercise.query.filter(Exercise.name.in_(exercises)).all()
             }
             main_count = int(day["main_count"])
+            accessory_by_name = {
+                item["name"]: item for item in day.get("accessories", [])
+            }
             family_by_code = {"S": "squat", "B": "bench", "D": "deadlift"}
             main_families = [family_by_code[code] for code in day_type]
 
@@ -924,7 +969,9 @@ def generate():
 
                 slot = None
                 slot_role = None
-                provenance = "coach_selected"
+                provenance = accessory_by_name.get(exercise_name, {}).get(
+                    "provenance", "coach_selected"
+                )
                 if exercise_position <= main_count:
                     slot = ProgrammingLiftSlot(
                         session=session,
@@ -935,10 +982,14 @@ def generate():
                     slot_role = "top_set"
                     provenance = "generated"
 
+                exercise_row = exercise_rows.get(exercise_name)
+                if exercise_position > main_count and exercise_row is not None:
+                    sets = exercise_row.default_sets or sets
+                    reps = exercise_row.default_reps or reps
                 db.session.add(
                     ExercisePrescription(
                         session=session,
-                        exercise=exercise_rows.get(exercise_name),
+                        exercise=exercise_row,
                         lift_slot=slot,
                         slot_role=slot_role,
                         provenance=provenance,
