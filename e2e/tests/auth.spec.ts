@@ -75,3 +75,27 @@ test('invalid credential error is announced', async ({ page }) => {
   await expect(alert).toHaveAttribute('aria-live', 'assertive');
   await expect(page.locator('input[name="email"]')).toHaveAttribute('aria-invalid', 'true');
 });
+
+test('coach can create a manual invitation and athlete activates once', async ({ page, authenticatedState }) => {
+  await authenticatedState(page);
+  await page.goto('/athletes/202');
+  await expect(page.getByText('Not Invited', { exact: true })).toBeVisible();
+  await page.locator('input[name="email"]').fill('sam.private@example.test');
+  await page.getByRole('button', { name: 'Invite athlete' }).click();
+  await expect(page.getByRole('heading', { name: 'Email was not delivered' })).toBeVisible();
+  const activationUrl = await page.locator('[data-manual-account-link]').inputValue();
+  expect(activationUrl).toContain('/account/invitation#');
+
+  await page.goto(activationUrl);
+  await page.locator('input[name="password"]').fill('Sam secure E2E password!');
+  await page.locator('input[name="password_confirmation"]').fill('Sam secure E2E password!');
+  await page.getByRole('button', { name: 'Activate account' }).click();
+  await expect(page).toHaveURL(/\/athlete\/dashboard$/);
+  await expect(page.getByRole('heading', { name: 'Sam’s training' })).toBeVisible();
+
+  await page.goto(activationUrl);
+  await page.locator('input[name="password"]').fill('Another secure E2E password!');
+  await page.locator('input[name="password_confirmation"]').fill('Another secure E2E password!');
+  await page.getByRole('button', { name: 'Activate account' }).click();
+  await expect(page.getByRole('heading', { name: 'This link can’t be used' })).toBeVisible();
+});

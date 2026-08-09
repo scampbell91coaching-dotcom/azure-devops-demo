@@ -4,6 +4,7 @@ Import this package after ``db.init_app`` so application startup, Alembic, and
 database CLI commands all operate on the same complete model set.
 """
 
+from .account_token import AccountToken, AccountTokenPurpose, DeliveryState
 from .athlete import Athlete
 from .athlete_state import (
     AthleteConstraintFlag,
@@ -34,6 +35,8 @@ from .user import User, UserRole
 
 __all__ = [
     "Athlete",
+    "AccountToken",
+    "AccountTokenPurpose",
     "AthleteConstraintFlag",
     "AthleteStateFact",
     "AthleteStateOverride",
@@ -44,6 +47,7 @@ __all__ = [
     "CoachTechnicalObservation",
     "DayTemplate",
     "DayTemplateExercise",
+    "DeliveryState",
     "Exercise",
     "ExercisePrescription",
     "ProgrammingLiftSlot",

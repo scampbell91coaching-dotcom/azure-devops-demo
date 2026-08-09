@@ -30,10 +30,13 @@
         {% set prescribed_sets = item.sets or 1 %}
         {% set exercise_results = (log.results | selectattr('exercise_position', 'equalto', item.position) | list) if log else [] %}
         {% set extra_results = exercise_results | selectattr('is_extra', 'equalto', true) | list %}
-        <li class="exercise-card" data-exercise data-prescription-id="{{ item.id }}" data-next-set="{{ prescribed_sets + extra_results|length + 1 }}">
+        <li class="exercise-card{% if item.slot_role %} exercise-card--main{% elif has_v7_slots %} exercise-card--assistance{% endif %}" data-exercise data-prescription-id="{{ item.id }}" data-next-set="{{ prescribed_sets + extra_results|length + 1 }}">
           <header class="exercise-card__heading">
             <span class="exercise-number">{{ loop.index }}</span>
-            <div><h2>{{ item.exercise_name }}</h2><strong class="prescription-summary">{{ item.summary }}</strong></div>
+            <div>
+              <span class="exercise-role">{{ item.slot_role | replace('_', ' ') | title if item.slot_role else 'Assistance' if has_v7_slots else 'Exercise' }}</span>
+              <h2>{{ item.exercise_name }}</h2><strong class="prescription-summary">{{ item.summary }}</strong>
+            </div>
           </header>
           <div class="prescription-grid">
             <div><span>Sets × reps</span><strong>{{ prescribed_sets }} × {{ item.reps or (item.reps_min ~ '–' ~ item.reps_max if item.reps_min and item.reps_max else item.target_reps or '—') }}</strong></div>

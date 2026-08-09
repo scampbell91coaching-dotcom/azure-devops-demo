@@ -1,92 +1,64 @@
-from datetime import datetime, timezone
-
 from portal import create_app
-from portal.extensions import db
-from portal.models.platform_snapshot import PlatformSnapshot
 from portal.services.recommendations import RecommendationService
 
 
-def add_snapshot(
-    *,
-    score: int = 98,
-    latency: float = 0.2,
-    restarts: int = 0,
-    sync: str = "Synced",
-    health: str = "Healthy",
-    failures: int = 0,
-) -> None:
-    db.session.add(
-        PlatformSnapshot(
-            recorded_at=datetime.now(timezone.utc),
-            platform_score=score,
-            http_status="200",
-            health_latency_seconds=latency,
-            ready_nodes=2,
-            total_nodes=2,
-            ready_replicas=2,
-            desired_replicas=2,
-            container_restarts=restarts,
-            argo_sync_status=sync,
-            argo_health_status=health,
-            security_pass_count=5,
-            warning_count=0,
-            failure_count=failures,
-            git_revision="abc1234",
-            git_branch="main",
-        )
-    )
-    db.session.commit()
+class Repository:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def load(self):
+        return self.payload
 
 
-def create_test_app():
-    return create_app(
-        {
-            "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        }
-    )
-
-
-def test_recommendation_service_reports_healthy_platform():
-    app = create_test_app()
-
-    with app.app_context():
-        db.create_all()
-        add_snapshot()
-        data = RecommendationService().generate(hours=24)
-
-    assert data["status"] == "healthy"
-    assert data["summary"]["info"] == 1
-
-
-def test_recommendation_service_detects_gitops_problem():
-    app = create_test_app()
-
-    with app.app_context():
-        db.create_all()
-        add_snapshot(sync="OutOfSync", health="Degraded")
-        data = RecommendationService().generate(hours=24)
+def test_recommendations_are_derived_from_failed_and_warning_checks_only():
+    service = RecommendationService(Repository({
+        "generated_at": "2026-08-09T12:00:00+00:00",
+        "freshness": {"state": "current"},
+        "checks": [
+            {"area": "GitOps", "name": "Argo CD", "status": "FAIL", "detail": "OutOfSync"},
+            {"area": "Observability", "name": "ServiceMonitor", "status": "WARN", "detail": "Missing"},
+            {"area": "Workload", "name": "Readiness", "status": "PASS", "detail": "2/2"},
+        ],
+    }))
+    data = service.generate()
 
     assert data["status"] == "critical"
-    assert any(item["category"] == "gitops" for item in data["recommendations"])
+    assert [item["title"] for item in data["recommendations"]] == [
+        "Argo CD requires attention", "ServiceMonitor requires attention"
+    ]
+    assert data["summary"] == {"critical": 1, "warning": 1, "info": 0}
 
 
-def test_recommendations_api_is_available():
-    app = create_test_app()
+def test_no_generic_recommendation_when_snapshot_has_no_evidence():
+    data = RecommendationService(Repository({
+        "freshness": {"state": "current"},
+        "checks": [{"area": "Workload", "name": "Readiness", "status": "PASS"}],
+    })).generate()
 
-    with app.app_context():
-        db.create_all()
-        add_snapshot()
+    assert data["status"] == "healthy"
+    assert data["recommendations"] == []
 
+
+def test_stale_snapshot_is_never_healthy():
+    data = RecommendationService(Repository({
+        "freshness": {"state": "stale", "age_seconds": 901}, "checks": []
+    })).generate()
+
+    assert data["status"] == "warning"
+    assert data["recommendations"][0]["category"] == "data"
+
+
+def test_recommendations_api_uses_snapshot_service(monkeypatch):
+    payload = {"status": "warning", "recommendations": [], "summary": {}}
+    monkeypatch.setattr("portal.api.recommendations.service.generate", lambda hours: payload)
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
     response = app.test_client().get("/api/v1/recommendations")
-
     assert response.status_code == 200
-    assert "recommendations" in response.get_json()
+    assert response.get_json() == payload
 
 
 def test_recommendations_page_is_available():
-    app = create_test_app()
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
     response = app.test_client().get("/recommendations")
-
     assert response.status_code == 200
     assert b"Platform Recommendations" in response.data

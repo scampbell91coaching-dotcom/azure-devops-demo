@@ -1,4 +1,8 @@
+import json
+from datetime import datetime, timezone
+
 from portal import create_app
+from portal.repositories.status_repository import JsonStatusRepository
 from portal.services.platform_status import PlatformStatusService
 
 
@@ -130,3 +134,21 @@ def test_observability_api_uses_stable_contract(monkeypatch):
 
     assert response.status_code == 200
     assert response.get_json() == payload
+
+
+def test_observability_api_is_populated_from_configured_file(tmp_path, monkeypatch):
+    path = tmp_path / "platform-status.json"
+    path.write_text(json.dumps({
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "observability": {"metrics_api_available": True, "service_monitor_present": False},
+        "availability": {"http_code": "200", "health_latency_seconds": 0.1},
+        "checks": [{"area": "Observability", "name": "Metrics API", "status": "PASS", "detail": "Available"}],
+    }), encoding="utf-8")
+    service = PlatformStatusService(JsonStatusRepository(path))
+    monkeypatch.setattr("portal.api.platform.service", service)
+    client = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"}).test_client()
+
+    payload = client.get("/api/v1/observability").get_json()
+    assert payload["freshness"]["state"] == "current"
+    assert payload["telemetry"]["metrics_api"]["status"] == "AVAILABLE"
+    assert payload["controls"][0]["name"] == "Metrics API"

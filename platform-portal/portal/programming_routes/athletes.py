@@ -3,6 +3,7 @@ from flask import Blueprint, abort, render_template
 from ..extensions import db
 from ..models.athlete import Athlete
 from ..models.programming import TrainingBlock
+from ..services.weekly_programming_intelligence import map_athlete_programming_context
 
 
 def register_athlete_routes(blueprint: Blueprint) -> None:
@@ -25,12 +26,16 @@ def register_athlete_routes(blueprint: Blueprint) -> None:
             athlete=athlete,
             current_block=current_block,
             previous_blocks=previous_blocks,
+            current_week=current_block.weeks[0] if current_block and current_block.weeks else None,
+            athlete_context=map_athlete_programming_context(athlete),
         )
 
     @blueprint.get("/programming")
     def index():
         athletes = Athlete.query.order_by(Athlete.last_name.asc()).all()
         blocks = TrainingBlock.query.order_by(TrainingBlock.id.desc()).all()
-        return render_template(
-            "programming/index.html", athletes=athletes, blocks=blocks
-        )
+        active_by_athlete = {}
+        for block in blocks:
+            if block.status == "active" and block.athlete_id not in active_by_athlete:
+                active_by_athlete[block.athlete_id] = block
+        return render_template("programming/index.html", athletes=athletes, blocks=blocks, active_by_athlete=active_by_athlete)

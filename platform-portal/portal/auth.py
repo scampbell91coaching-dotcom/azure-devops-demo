@@ -31,6 +31,7 @@ from .models.user import User, UserRole
 auth_bp = Blueprint("auth", __name__)
 _attempts: dict[str, deque[float]] = defaultdict(deque)
 _PUBLIC_ENDPOINTS = {
+    "auth.account_token",
     "auth.login",
     "health.health",
     "lead_magnets.lead_magnet",
@@ -336,6 +337,56 @@ def login():
         next=request.values.get("next", ""),
         session_expired=session_expired,
     )
+
+
+@auth_bp.route("/account/<purpose>", methods=["GET", "POST"])
+def account_token(purpose: str):
+    from .models.account_token import AccountTokenPurpose
+    from .services.account_lifecycle import (
+        AccountLifecycleError,
+        consume_token,
+        token_record,
+    )
+
+    try:
+        token_purpose = AccountTokenPurpose(purpose)
+    except ValueError:
+        abort(404)
+    token = request.form.get("account_token", "") if request.method == "POST" else ""
+    record = token_record(token, token_purpose) if token else None
+    available = request.method == "GET" or (record is not None and record.is_available)
+    error = None
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        confirmation = request.form.get("password_confirmation", "")
+        if password != confirmation:
+            error = "The passwords do not match."
+        else:
+            try:
+                user = consume_token(token, token_purpose, password)
+            except (AccountLifecycleError, ValueError) as exc:
+                error = str(exc)
+            else:
+                session.clear()
+                session["user_id"] = user.id
+                session["authenticated_at"] = time.time()
+                session["athlete_id"] = user.athlete_id
+                session.permanent = True
+                return redirect(url_for("athletes.dashboard"))
+        record = token_record(token, token_purpose)
+        available = record is not None and record.is_available
+    response = Response(
+        render_template(
+            "auth/set_password.html",
+            purpose=token_purpose,
+            available=available,
+            error=error,
+        ),
+        status=(410 if error and not available else 400) if error else (200 if available else 410),
+        content_type="text/html; charset=utf-8",
+    )
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
 
 
 @auth_bp.post("/logout")

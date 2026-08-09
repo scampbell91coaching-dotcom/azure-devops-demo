@@ -26,6 +26,5 @@ def taxonomy_exposure_summary(items: Iterable[Any]) -> dict[str, int]:
 
 
 def week_exposure_summary(week: Any) -> dict[str, int]:
-    return taxonomy_exposure_summary(
-        item for session in week.sessions for item in session.prescriptions
-    )
+    """Use persisted lift slots as the sole exposure source of truth."""
+    return week.lift_slot_frequencies()

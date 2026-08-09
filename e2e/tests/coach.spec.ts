@@ -29,12 +29,18 @@ test('creates an athlete from deterministic fixture values', async ({ page }, te
 
 test('navigates from a programming block to its week', async ({ page }) => {
   await page.goto('/programming');
-  await page.getByRole('link', { name: /Deterministic strength block/ }).click();
+  await page.getByTestId('programming-athlete').filter({ hasText: 'Alex Rivera' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Alex Rivera' })
+  ).toBeVisible();
+  await page.locator('a[href="/programming/blocks/301"]').click();
   await expect(page.getByRole('heading', { name: 'Deterministic strength block' })).toBeVisible();
   await page.getByRole('link', { name: /Foundation week/ }).click();
   await expect(page.getByRole('heading', { name: 'Foundation week' })).toBeVisible();
   await expect(
-    page.locator('#session-501').getByText('Competition Squat')
+    page.locator('#session-501').getByTestId('lift-slot').filter({
+      hasText: 'Competition Squat',
+    }).first()
   ).toBeVisible();
 });
 
@@ -113,7 +119,11 @@ test('Meet Day creates a meet and calculates plates and all warm-up plans withou
 
 test('adds, edits, deletes, and preserves prescription order without an HTTP 400', async ({ page }) => {
   await page.goto('/programming');
-  await page.getByRole('link', { name: /Deterministic strength block/ }).click();
+  await page.getByTestId('programming-athlete').filter({ hasText: 'Alex Rivera' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Alex Rivera' })
+  ).toBeVisible();
+  await page.locator('a[href="/programming/blocks/301"]').click();
   await page.getByRole('link', { name: /Foundation week/ }).click();
   await page.getByTestId('programming-session').filter({ hasText: 'Squat day' }).getByRole('link', { name: 'Open session' }).click();
   const failedResponses: number[] = [];
@@ -158,9 +168,34 @@ test('adds, edits, deletes, and preserves prescription order without an HTTP 400
   await added.getByRole('button', { name: 'Delete Lat Pulldown' }).click();
   await expect(added).toHaveCount(0);
   expect(failedResponses).toEqual([]);
+  await expect(
+    page.getByTestId('lift-slot').filter({ hasText: 'Competition Squat' }).first()
+  ).toBeVisible();
+
   await expect(page.locator('[data-prescription-row]').filter({
     has: page.locator('input[name="exercise_name"][value="Competition Squat"]'),
-  })).toHaveCount(1);
+  })).toHaveCount(0);
+});
+
+test('lift-slot editor persists an RPE range and same-family back-off after reload', async ({ page }) => {
+  await page.goto('/programming/weeks/902');
+  const session = page.getByTestId('programming-session').filter({ hasText: 'Lift slot persistence session' });
+  const editor = session.getByTestId('lift-slot-editor').first();
+  await editor.locator('select[name="top_rpe_mode"]').selectOption('range');
+  await editor.locator('input[name="top_rpe_min"]').fill('5');
+  await editor.locator('input[name="top_rpe_max"]').fill('6');
+  await editor.locator('input[name="back_off_enabled"]').check();
+  await editor.locator('select[name="back_off_exercise_id"]').selectOption('');
+  await editor.locator('input[name="back_off_sets"]').fill('3');
+  await editor.locator('input[name="back_off_reps"]').fill('6');
+  await editor.locator('input[name="back_off_rpe"]').fill('6');
+  const benchChoice = editor.locator('select[name="back_off_exercise_id"] option[data-family="bench"]').first();
+  await expect(benchChoice).toHaveAttribute('disabled', '');
+  await editor.getByRole('button', { name: 'Save lift slot' }).click();
+  await page.reload();
+  await expect(session.getByText(/Top: Competition Squat 3 x 5 @ RPE 5-6/)).toBeVisible();
+  await expect(session.getByText(/Back-off: Competition Squat 3 x 6 @ RPE 6/)).toBeVisible();
+  await expect(page.getByLabel('Taxonomy-backed competition lift exposures')).toContainText('Squat 1');
 });
 
 test('Block Factory adds ordered upper and lower accessories and persists generated prescriptions', async ({ page }) => {
@@ -359,7 +394,7 @@ test('athlete dashboard is isolated to the selected test athlete', async ({ page
   await expect(page).toHaveURL(/\/login\?next=/);
   await athleteSession(page.request, athleteIds.primary);
   await page.goto('/athlete/dashboard');
-  await expect(page.getByRole('heading', { name: 'Welcome back, Alex' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Alex’s training' })).toBeVisible();
   await expect(page.getByText('Deterministic strength block')).toBeVisible();
   await expect(page.getByText('Sam Morgan')).toHaveCount(0);
   await expect(page.getByText('sam.private@example.test')).toHaveCount(0);

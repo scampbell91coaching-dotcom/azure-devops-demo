@@ -20,6 +20,7 @@ function formatTimestamp(value) {
 }
 
 function signed(value, digits = 0, suffix = "") {
+  if (value === null || value === undefined) return "—";
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return "—";
   const prefix = numeric > 0 ? "+" : "";
@@ -54,7 +55,7 @@ function renderDashboard(data) {
 
   if (!latest) {
     document.getElementById("executive-message").textContent =
-      "No platform snapshots are available.";
+      `Platform status is ${String(data.status || "unavailable").replaceAll("_", " ")}.`;
     renderRecommendations(data.recommendations || []);
     return;
   }
@@ -66,7 +67,7 @@ function renderDashboard(data) {
   document.getElementById("executive-status").textContent =
     data.status || "unknown";
   document.getElementById("executive-generated").textContent =
-    `Latest snapshot: ${formatTimestamp(latest.recorded_at)}`;
+    `${String(data.freshness?.state || "unavailable").toUpperCase()} · Last collected ${formatTimestamp(latest.recorded_at)}`;
 
   document.getElementById("executive-nodes").textContent =
     latest.node_readiness;
@@ -80,7 +81,9 @@ function renderDashboard(data) {
   document.getElementById("executive-http").textContent =
     `HTTP ${latest.http_status}`;
   document.getElementById("executive-latency").textContent =
-    `Latency: ${Number(latest.health_latency_seconds).toFixed(3)}s`;
+    latest.health_latency_seconds === null || latest.health_latency_seconds === undefined
+      ? "Latency unavailable"
+      : `Latency: ${Number(latest.health_latency_seconds).toFixed(3)}s`;
 
   document.getElementById("executive-restarts").textContent =
     String(latest.container_restarts);
@@ -127,7 +130,7 @@ async function loadExecutiveDashboard() {
 
     const data = await response.json();
     renderDashboard(data);
-    message.textContent = `Overview refreshed for the last ${hours} hours.`;
+    message.textContent = `Snapshot state: ${String(data.freshness?.state || data.status || "unavailable").replaceAll("_", " ")}.`;
   } catch (error) {
     message.textContent = `Unable to load overview: ${error.message}`;
   }

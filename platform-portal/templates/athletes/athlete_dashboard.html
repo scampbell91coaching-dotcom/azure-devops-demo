@@ -4,33 +4,29 @@
 {% block content %}
 <section class="dashboard">
   <header class="dashboard__welcome">
-    <span class="eyebrow">Athlete dashboard</span>
-    <h1>Welcome back, {{ dashboard.athlete.first_name }}</h1>
-    <p>Your training, check-in and nutrition information in one place.</p>
+    <div><span class="eyebrow">Today</span><h1>{{ dashboard.athlete.first_name }}’s training</h1></div>
+    <p>Programme, recovery and coach updates.</p>
   </header>
 
   <nav class="dashboard-links" aria-label="Dashboard sections">
     <a href="#programme">Programme</a>
     <a href="#check-in">Check-in</a>
     <a href="#nutrition">Nutrition</a>
-    <a href="#trends">Trends</a>
+    <a href="#account">Account</a>
   </nav>
 
   <div class="dashboard-grid">
     <section class="dashboard-card dashboard-card--wide dashboard-card--priority" id="programme">
       <div class="card-heading">
-        <div><span class="eyebrow">Current programme</span><h2>Training</h2></div>
+        <div><span class="eyebrow">Next session</span><h2>Training</h2></div>
         {% if dashboard.current_block %}<span class="status">{{ dashboard.current_block.status | title }}</span>{% endif %}
       </div>
       {% if dashboard.current_block %}
-        <h3>{{ dashboard.current_block.name }}</h3>
-        {% if dashboard.current_block.objective %}<p>{{ dashboard.current_block.objective }}</p>{% endif %}
-        <p class="muted">{{ dashboard.current_block.weeks | length }}-week block</p>
+        <div class="programme-context"><strong>{{ dashboard.current_block.name }}</strong><span>{{ dashboard.current_block.weeks | length }} weeks{% if dashboard.current_week %} · Week {{ dashboard.current_week.position }}{% endif %}</span></div>
         {% if dashboard.next_session %}
           <div class="next-item">
-            <span>Up next</span>
+            <span>{{ dashboard.next_session.day_label or 'Up next' }}</span>
             <strong>{{ dashboard.next_session.name }}</strong>
-            {% if dashboard.next_session.day_label %}<small>{{ dashboard.next_session.day_label }}</small>{% endif %}
             <a class="button" href="{{ url_for('athletes.programme_session', session_id=dashboard.next_session.id) }}">View session</a>
           </div>
         {% else %}
@@ -39,7 +35,7 @@
       {% else %}
         <div class="empty-state"><strong>No current programme</strong><p>Your programme will appear here when it is ready.</p></div>
       {% endif %}
-      {% if dashboard.current_block %}<a class="text-link" href="{{ url_for('athletes.programme') }}">View full programme →</a>{% endif %}
+      {% if dashboard.current_block %}<a class="text-link" href="{{ url_for('athletes.programme') }}">Programme <span aria-hidden="true">→</span></a>{% endif %}
     </section>
 
     <section class="dashboard-card" id="check-in">
@@ -136,8 +132,8 @@
       {% endif %}
     </section>
 
-    <section class="dashboard-card dashboard-card--wide" id="profile">
-      <div class="card-heading"><div><span class="eyebrow">Athlete details</span><h2>Profile</h2></div></div>
+    <section class="dashboard-card dashboard-card--wide" id="account">
+      <div class="card-heading"><div><span class="eyebrow">Account context</span><h2>Your details</h2></div></div>
       <dl class="profile-grid">
         <div><dt>Name</dt><dd>{{ dashboard.athlete.full_name }}</dd></div>
         {% if dashboard.athlete.weight_class %}<div><dt>Weight class</dt><dd>{{ dashboard.athlete.weight_class }}</dd></div>{% endif %}

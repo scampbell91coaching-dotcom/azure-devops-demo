@@ -63,6 +63,15 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         LOGIN_RATE_LIMIT_WINDOW_SECONDS=15 * 60,
         NUTRITION_UPLOAD_MAX_BYTES=10 * 1024 * 1024,
         MFP_API_ENABLED=False,
+        SMTP_HOST=os.environ.get("SMTP_HOST"),
+        SMTP_PORT=int(os.environ.get("SMTP_PORT", "587")),
+        SMTP_USERNAME=os.environ.get("SMTP_USERNAME"),
+        SMTP_PASSWORD=os.environ.get("SMTP_PASSWORD"),
+        SMTP_USE_TLS=os.environ.get("SMTP_USE_TLS", "true").casefold()
+        in {"1", "true", "yes"},
+        ACCOUNT_PUBLIC_BASE_URL=os.environ.get("ACCOUNT_PUBLIC_BASE_URL"),
+        ACCOUNT_INVITATION_LIFETIME=timedelta(hours=48),
+        ACCOUNT_RESET_LIFETIME=timedelta(hours=1),
         REPOSITORY_ROOT=portal_root.parent,
         RELEASE_EVIDENCE_MAX_AGE_SECONDS=24 * 60 * 60,
     )

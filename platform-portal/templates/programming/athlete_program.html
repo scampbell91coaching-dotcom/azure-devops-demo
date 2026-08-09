@@ -21,7 +21,7 @@
         class="coach-primary-button"
         href="{{ url_for('block_factory.wizard', athlete_id=athlete.id) }}"
       >
-        Generate new block
+        Build next block
       </a>
 
       <a
@@ -32,6 +32,11 @@
       </a>
     </div>
   </header>
+  <section class="programme-context-grid" aria-label="Athlete programming context">
+    <article class="context-card"><span class="coach-eyebrow">Active block</span><h2>{{ current_block.name if current_block else 'None published' }}</h2><p>{{ current_block.objective if current_block and current_block.objective else 'No block intent recorded' }}</p></article>
+    <article class="context-card"><span class="coach-eyebrow">Current programmed week</span><h2>{{ current_week.name if current_week else 'Not scheduled' }}</h2>{% if current_week %}<div class="exposure-strip"><span><b>S</b> {{ current_week.lift_slot_frequencies().squat }}</span><span><b>B</b> {{ current_week.lift_slot_frequencies().bench }}</span><span><b>D</b> {{ current_week.lift_slot_frequencies().deadlift }}</span></div>{% endif %}</article>
+    <article class="context-card context-card--meet"><span class="coach-eyebrow">Athlete state & meet</span>{% if athlete_context.next_competition %}<h2>{{ athlete_context.next_competition }}</h2><p>Meet context recorded</p>{% else %}<h2>No meet date</h2>{% endif %}{% if athlete_context.active_constraints %}<p>{{ athlete_context.active_constraints|join(', ') }}</p>{% endif %}{% if athlete_context.state_signals.get('reported_fatigue') is not none %}<p>Reported fatigue: {{ athlete_context.state_signals.get('reported_fatigue') }}</p>{% endif %}{% if athlete_context.missing %}<small>Incomplete data: {{ athlete_context.missing|join(', ') }}</small>{% endif %}</article>
+  </section>
 
   <section class="coach-panel">
     <div class="coach-panel__heading">

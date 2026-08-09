@@ -21,6 +21,11 @@ function renderSummary(data) {
 function renderRecommendations(items) {
   const container = document.getElementById("recommendation-list");
 
+  if (!items.length) {
+    container.innerHTML = "<p>No evidence-backed recommendations were produced.</p>";
+    return;
+  }
+
   container.innerHTML = items.map(item => `
     <article class="recommendation-card recommendation-${escapeHtml(item.severity)}">
       <header>
@@ -41,7 +46,7 @@ async function loadRecommendations() {
   const message = document.getElementById("recommendation-message");
   const hours = document.getElementById("recommendation-range").value;
 
-  message.textContent = "Analysing platform history…";
+  message.textContent = "Analysing the current platform snapshot…";
 
   try {
     const response = await fetch(
@@ -58,7 +63,7 @@ async function loadRecommendations() {
     renderSummary(data);
     renderRecommendations(data.recommendations || []);
     message.textContent =
-      `Analysis complete for the last ${hours} hours.`;
+      `Snapshot state: ${String(data.freshness?.state || "unavailable").replaceAll("_", " ")}.`;
   } catch (error) {
     message.textContent =
       `Unable to load recommendations: ${error.message}`;

@@ -4,9 +4,8 @@
 {% block content %}
 <section class="athlete-programme">
   <header class="athlete-page-header">
-    <span class="eyebrow">Training plan</span>
-    <h1>Your programme</h1>
-    <p>Everything you need for the gym, organised by week and session.</p>
+    <div><span class="eyebrow">Training plan</span><h1>Your programme</h1></div>
+    <p>Open a session to see the prescription and log your work.</p>
   </header>
   {% if block %}
     <section class="programme-summary">
@@ -16,13 +15,13 @@
     </section>
     <div class="programme-weeks">
       {% for week in block.weeks %}
-        <section class="programme-week" aria-labelledby="week-{{ week.id }}">
+        <section class="programme-week{% if current_week_id == week.id %} programme-week--current{% endif %}" aria-labelledby="week-{{ week.id }}">
           <header><span class="eyebrow">Week {{ week.position }}</span><h2 id="week-{{ week.id }}">{{ week.name }}</h2>{% if week.notes %}<p>{{ week.notes }}</p>{% endif %}</header>
           <div class="session-list">
             {% for item in week.sessions %}
               {% set session_log = logs_by_session.get(item.id) %}
-              <a class="session-card" href="{{ url_for('athletes.programme_session', session_id=item.id) }}">
-                <span><small>{{ item.day_label or 'Session ' ~ item.position }}</small><strong>{{ item.name }}</strong><span>{{ item.prescriptions | length }} exercise{{ '' if item.prescriptions | length == 1 else 's' }} · {{ (session_log.status | replace('_', ' ') | title) if session_log else 'Not started' }}</span></span>
+              <a class="session-card{% if next_session_id == item.id %} session-card--next{% endif %}" href="{{ url_for('athletes.programme_session', session_id=item.id) }}">
+                <span><small>{{ item.day_label or 'Session ' ~ item.position }}{% if next_session_id == item.id %} · Up next{% endif %}</small><strong>{{ item.name }}</strong><span>{{ item.prescriptions | length }} exercise{{ '' if item.prescriptions | length == 1 else 's' }} · {{ (session_log.status | replace('_', ' ') | title) if session_log else 'Not started' }}</span></span>
                 <span class="session-card__action" aria-hidden="true">{{ 'Review' if session_log and session_log.status == 'completed' else 'Open' }} →</span>
               </a>
             {% else %}<div class="empty-state"><strong>No sessions this week</strong><p>Your coach is still building this week.</p></div>{% endfor %}

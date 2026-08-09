@@ -1,0 +1,24 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "athletes" %}
+{% block title %}Account delivery | Traditional Strength{% endblock %}
+{% block content %}
+<section class="coach-page coach-page--narrow">
+  <header class="coach-page__header">
+    <a class="coach-back-link" href="{{ url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}">← {{ athlete.full_name }}</a>
+    <span class="coach-eyebrow">Athlete account</span>
+    <h1>{{ token.purpose | replace('_', ' ') | title }}</h1>
+  </header>
+  <section class="coach-panel">
+    <span class="coach-status {{ 'coach-status--active' if token.delivery_state == 'sent' else 'coach-status--pending' }}">{{ token.delivery_state | replace('_', ' ') | title }}</span>
+    {% if token.delivery_state == 'sent' %}
+      <h2>Email accepted for delivery</h2>
+      <p>The one-time link was submitted to the configured transactional email service from Traditional Strength &lt;coach@traditionalstrength.co.uk&gt;.</p>
+    {% else %}
+      <h2>Email was not delivered</h2>
+      <p>{{ token.delivery_detail }}</p>
+      <p>Copy this one-time link and send it to the confirmed athlete through a trusted channel. It will not be shown again.</p>
+      <label><span>Manual secure link</span><input value="{{ manual_url }}" readonly data-manual-account-link></label>
+    {% endif %}
+  </section>
+</section>
+{% endblock %}

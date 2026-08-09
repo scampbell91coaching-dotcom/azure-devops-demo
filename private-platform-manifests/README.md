@@ -20,6 +20,41 @@ The Secret `platform-oauth2-proxy` is intentionally excluded from Git. It must c
 - `client-secret`
 - `cookie-secret`
 
+## Platform status snapshots
+
+`platform-status-collector` runs every five minutes, reads only the production
+workload resources, cluster node readiness, the named Argo CD Application, and
+the metrics/ServiceMonitor APIs, then atomically replaces
+`/status/platform-status.json`. A dedicated `azurefile-csi` ReadWriteMany PVC is
+used because the short-lived writer and portal reader may run on different
+nodes. The portal mounts that claim read-only and explicitly sets
+`PLATFORM_STATUS_FILE`; it has no Kubernetes API token.
+
+The collector RBAC has only `get`/`list`: pods and services, the named
+deployment and ingress-related resources in `production`; node list; pod
+metrics and ServiceMonitors; and `get` for the single
+`flask-web-production` Argo Application. It has no create, patch, update,
+delete, secrets, logs, exec, or events permissions. Collection jobs time out
+after two minutes and never overlap. A snapshot is current for 15 minutes;
+older data is stale, a configured but unreadable snapshot is unavailable, and
+an unset `PLATFORM_STATUS_FILE` is not configured.
+
+Infrastructure prerequisite: the AKS cluster must provide the built-in
+`azurefile-csi` StorageClass and permit dynamic ReadWriteMany provisioning.
+
+For deterministic local UI/API checks (the values are synthetic fixtures):
+
+```bash
+cd platform-portal
+python -m portal.collectors.platform_status --sample --output /tmp/platform-status.json
+PLATFORM_STATUS_FILE=/tmp/platform-status.json \
+PLATFORM_STATUS_FRESHNESS_SECONDS=900 flask run
+```
+
+Use `--sample-state stale` to generate a snapshot just beyond the configured
+threshold. Point `PLATFORM_STATUS_FILE` at a nonexistent path for the
+configured-but-missing/unavailable state, or leave it unset for not configured.
+
 Apply with:
 
 ```bash

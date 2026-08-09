@@ -76,7 +76,11 @@ function dependencyLabel(dependency) {
 function renderPage(data) {
   const page = document.body.dataset.page;
   const generated = document.getElementById("generated");
-  if (generated) generated.textContent = `Generated ${formatDate(data.generated_at)}`;
+  const freshness = objectValue(data.freshness);
+  if (generated) {
+    const state = displayValue(freshness.state, "unavailable").replace("_", " ");
+    generated.textContent = `${state.toUpperCase()} · Last collected ${formatDate(data.generated_at)}`;
+  }
 
   const summary = objectValue(data.summary);
   const platform = objectValue(data.platform);

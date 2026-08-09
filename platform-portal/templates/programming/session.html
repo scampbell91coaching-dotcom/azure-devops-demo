@@ -49,10 +49,14 @@
   </div>
 </section>
 <section class="coach-panel builder-panel">
+    <div class="builder-toolbar"><div><span class="coach-eyebrow">Scheduled exposures</span><h2>Main lifts</h2></div><a class="coach-link-button" href="{{ url_for('programming.week', week_id=week.id, _anchor='session-' ~ session.id) }}">Edit lift slots</a></div>
+    <div class="session-lift-slots">{% for slot in session.lift_slots %}<article data-testid="lift-slot"><span class="lift-family-badge">{{ slot.lift_family[0]|upper }}</span><div><strong>{{ slot.lift_family|title }} exposure</strong>{% for item in slot.prescriptions %}<p><b>{{ 'Top set' if item.slot_role == 'top_set' else 'Back-off' }}</b> · {{ item.exercise_name }} · {{ item.summary }}</p>{% endfor %}</div></article>{% else %}<p>No S/B/D exposures scheduled.</p>{% endfor %}</div>
+  </section>
+  <section class="coach-panel builder-panel">
     <div class="builder-toolbar">
       <div>
         <span class="coach-eyebrow">Coach editing · changes override the generated plan</span>
-        <h2>Session exercises</h2>
+        <h2>Assistance</h2>
       </div>
 
       <div class="builder-shortcuts">
@@ -79,7 +83,7 @@
       </div>
 
       <div class="programming-sheet__body" data-prescription-list>
-        {% for item in session.prescriptions %}
+        {% for item in session.prescriptions if item.lift_slot_id is none %}
         <div
           class="programming-sheet__row"
           draggable="true"
@@ -94,6 +98,7 @@
               list="exercise-suggestions"
               data-autosave-field aria-label="Exercise"
             >
+            <span class="sheet-provenance">{{ (item.provenance or 'coach_authored')|replace('_', ' ')|title }}</span>
           </div>
 
           <input name="sets" type="number" value="{{ item.sets or '' }}" data-autosave-field aria-label="Sets">
@@ -118,7 +123,7 @@
         action="{{ url_for('programming.create_prescription', session_id=session.id) }}"
         data-new-prescription-form
       >
-        <input name="exercise_name" placeholder="Add exercise" list="exercise-suggestions" required>
+        <input name="exercise_name" placeholder="Add coach-authored assistance" list="exercise-suggestions" required>
         <input name="sets" type="number" placeholder="Sets">
         <input name="reps" placeholder="Reps">
         <input name="load_kg" type="number" step="0.5" placeholder="Kg">
@@ -130,7 +135,6 @@
         <button class="sheet-add-button" type="submit" aria-label="Add exercise">+</button>
       </form>
     </div>
-    <div class="future-action" aria-label="Exercise alternatives"><div><strong>Exercise alternatives</strong><span>Future taxonomy-aware substitution; read-only in this release.</span></div><button class="coach-link-button" type="button" disabled aria-describedby="swap-help">Swap Exercise</button><span id="swap-help" class="visually-hidden">Exercise swapping is not available.</span></div>
   </section>
 </section>
 {% endblock %}

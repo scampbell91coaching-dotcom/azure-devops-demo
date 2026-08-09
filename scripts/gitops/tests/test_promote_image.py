@@ -19,13 +19,16 @@ def test_updates_only_helm_image_tag(tmp_path, monkeypatch):
     assert path.read_text() == "other:\n  tag: keep\nimage:\n  repository: example\n  tag: new\ntail: true\n"
 
 
-def test_private_update_requires_both_references(tmp_path, monkeypatch):
+def test_private_update_requires_all_workload_references(tmp_path, monkeypatch):
     path = tmp_path / "manifest.yaml"
+    collector = tmp_path / "collector.yaml"
     old = "stevedevopslab6280.azurecr.io/platform-portal-private:" + "a" * 40
     path.write_text(f"one: {old}\ntwo: {old}\n")
-    monkeypatch.setitem(MODULE.TARGETS, "private-platform", (path, "private"))
+    collector.write_text(f"collector: {old}\n")
+    monkeypatch.setitem(MODULE.TARGETS, "private-platform", ((path, collector), "private"))
     MODULE.update("private-platform", "registry/platform:new")
     assert path.read_text().count("registry/platform:new") == 2
+    assert collector.read_text().count("registry/platform:new") == 1
 
 
 def git(cwd, *args):
