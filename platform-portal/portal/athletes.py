@@ -22,6 +22,7 @@ from .models.checkins import AthleteCheckinSettings
 from .models.nutrition_checkin import NutritionCheckIn
 from .models.programming import TrainingBlock, TrainingSession, TrainingSessionLog
 from .services.athlete_dashboard import get_athlete_dashboard
+from .services.training_schedule import project_training_schedule
 from .services.nutrition_dashboard import get_nutrition_dashboard
 from .nutrition_imports import _summary
 from .services.training_log import assigned_log, save_training_session
@@ -66,6 +67,7 @@ def dashboard():
     return render_template(
         "athletes/athlete_dashboard.html",
         dashboard=dashboard_data,
+        today=datetime.now(UTC).date(),
     )
 
 
@@ -94,23 +96,18 @@ def programme():
         .all()
     )
     logs_by_session = {item.session_id: item for item in logs}
-    next_session = next(
-        (
-            item
-            for week in block.weeks
-            for item in week.sessions
-            if logs_by_session.get(item.id) is None
-            or logs_by_session[item.id].status != "completed"
-        ),
-        None,
-    ) if block is not None else None
+    today = datetime.now(UTC).date()
+    schedule = project_training_schedule(block, logs_by_session, today=today)
     return render_template(
         "athletes/programme.html",
         athlete=athlete,
         block=block,
         logs_by_session=logs_by_session,
-        next_session_id=next_session.id if next_session is not None else None,
-        current_week_id=next_session.week_id if next_session is not None else None,
+        schedule=schedule,
+        schedule_by_session={item.session.id: item for item in schedule.sessions},
+        today=today,
+        next_session_id=(schedule.next_session.session.id if schedule.next_session else None),
+        current_week_id=(schedule.current_week.id if schedule.current_week else None),
     )
 
 

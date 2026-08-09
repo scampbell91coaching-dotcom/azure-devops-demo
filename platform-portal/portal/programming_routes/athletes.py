@@ -1,8 +1,11 @@
+from datetime import UTC, datetime
+
 from flask import Blueprint, abort, render_template
 
 from ..extensions import db
 from ..models.athlete import Athlete
-from ..models.programming import TrainingBlock
+from ..models.programming import TrainingBlock, TrainingSessionLog
+from ..services.training_schedule import project_training_schedule
 from ..services.weekly_programming_intelligence import map_athlete_programming_context
 
 
@@ -20,13 +23,22 @@ def register_athlete_routes(blueprint: Blueprint) -> None:
         )
         current_block = next((item for item in blocks if item.status == "active"), None)
         previous_blocks = [item for item in blocks if item != current_block]
+        logs = {
+            item.session_id: item
+            for item in TrainingSessionLog.query.filter_by(athlete_id=athlete.id).all()
+            if item.session_id is not None
+        }
+        schedule = project_training_schedule(
+            current_block, logs, today=datetime.now(UTC).date()
+        )
 
         return render_template(
             "programming/athlete_program.html",
             athlete=athlete,
             current_block=current_block,
             previous_blocks=previous_blocks,
-            current_week=current_block.weeks[0] if current_block and current_block.weeks else None,
+            current_week=schedule.current_week,
+            schedule=schedule,
             athlete_context=map_athlete_programming_context(athlete),
         )
 

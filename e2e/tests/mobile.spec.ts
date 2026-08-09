@@ -33,11 +33,13 @@ test('athlete core workflow fits a 320px phone viewport', async ({ page, athlete
   await expect(mobileNav).toBeVisible();
   await expect(mobileNav.getByRole('link', { name: /Today/ })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('link', { name: 'View session' })).toBeVisible();
+  await expect(page.getByText('Nothing is assigned to a calendar date.')).toBeVisible();
   await expect(page.locator('html')).toHaveJSProperty('scrollWidth', 320);
 
   await mobileNav.getByRole('link', { name: /Programme/ }).click();
   await expect(page).toHaveURL('/athlete/programme');
   await expect(page.getByRole('heading', { level: 1, name: 'Your programme' })).toBeVisible();
+  await expect(page.getByText(/dates are not set; sessions follow programme order/i)).toBeVisible();
   await page.getByRole('link', { name: /Squat day/ }).click();
   const squatHeading = page
     .getByRole('listitem')
