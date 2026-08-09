@@ -13,7 +13,13 @@ from pathlib import Path
 TARGETS = {
     "flask": (Path("flask-app/values-production.yaml"), "helm"),
     "lead-magnets": (Path("lead-magnets-chart/values.yaml"), "helm"),
-    "private-platform": (Path("private-platform-manifests/private-platform.yaml"), "private"),
+    "private-platform": (
+        (
+            Path("private-platform-manifests/private-platform.yaml"),
+            Path("private-platform-manifests/platform-status-collector.yaml"),
+        ),
+        "private",
+    ),
 }
 
 
@@ -21,28 +27,35 @@ def run(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     return subprocess.run(args, check=check, text=True, capture_output=True)
 
 
-def update(target: str, image: str) -> Path:
-    path, kind = TARGETS[target]
-    text = path.read_text()
-    if kind == "helm":
-        updated, count = re.subn(
-            r"(?m)^(image:\s*\n(?:^[ \t]+.*\n)*?^[ \t]+tag:)\s*.*$",
-            rf"\g<1> {image}",
-            text,
-            count=1,
-        )
-        expected = 1
-    else:
-        updated, count = re.subn(
-            r"stevedevopslab6280\.azurecr\.io/platform-portal-private:[a-f0-9]{7,64}",
-            image,
-            text,
-        )
-        expected = 2
-    if count != expected:
-        raise RuntimeError(f"Expected {expected} image reference(s) in {path}, found {count}")
-    path.write_text(updated)
-    return path
+def update(target: str, image: str) -> tuple[Path, ...]:
+    configured_paths, kind = TARGETS[target]
+    paths = (
+        configured_paths
+        if isinstance(configured_paths, tuple)
+        else (configured_paths,)
+    )
+    total = 0
+    for path in paths:
+        text = path.read_text()
+        if kind == "helm":
+            updated, count = re.subn(
+                r"(?m)^(image:\s*\n(?:^[ \t]+.*\n)*?^[ \t]+tag:)\s*.*$",
+                rf"\g<1> {image}",
+                text,
+                count=1,
+            )
+        else:
+            updated, count = re.subn(
+                r"stevedevopslab6280\.azurecr\.io/platform-portal-private:[a-f0-9]{7,64}",
+                image,
+                text,
+            )
+        path.write_text(updated)
+        total += count
+    expected = 1 if kind == "helm" else 3
+    if total != expected:
+        raise RuntimeError(f"Expected {expected} image reference(s) in {paths}, found {total}")
+    return paths
 
 
 def promote(target: str, image: str, message: str, attempts: int) -> str:
@@ -54,15 +67,16 @@ def promote(target: str, image: str, message: str, attempts: int) -> str:
         # CI owns this disposable checkout. Rebuild from the latest remote tree so a
         # stale generated commit is never merged over intervening work.
         run("git", "reset", "--hard", "origin/main")
-        path = update(target, image)
-        run("git", "add", "--", str(path))
-        if run("git", "diff", "--cached", "--quiet", "--", str(path), check=False).returncode == 0:
-            print(f"{path} already references {image}; promotion is a no-op.")
+        paths = update(target, image)
+        path_args = tuple(str(path) for path in paths)
+        run("git", "add", "--", *path_args)
+        if run("git", "diff", "--cached", "--quiet", "--", *path_args, check=False).returncode == 0:
+            print(f"{paths} already reference {image}; promotion is a no-op.")
             return "noop"
-        run("git", "commit", "-m", message, "--", str(path))
+        run("git", "commit", "-m", message, "--", *path_args)
         pushed = run("git", "push", "origin", "HEAD:main", check=False)
         if pushed.returncode == 0:
-            print(f"Promoted {image} in {path}.")
+            print(f"Promoted {image} in {paths}.")
             return "promoted"
         if attempt == attempts:
             raise RuntimeError(

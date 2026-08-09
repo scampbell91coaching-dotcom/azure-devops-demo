@@ -43,6 +43,10 @@ spec:
             - name: http
               containerPort: 8080
           env:
+            - name: PLATFORM_STATUS_FILE
+              value: /status/platform-status.json
+            - name: PLATFORM_STATUS_FRESHNESS_SECONDS
+              value: "900"
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
@@ -75,11 +79,17 @@ spec:
               cpu: 250m
               memory: 256Mi
           volumeMounts:
+            - name: platform-status
+              mountPath: /status
+              readOnly: true
             - name: data
               mountPath: /data
             - name: tmp
               mountPath: /tmp
       volumes:
+        - name: platform-status
+          persistentVolumeClaim:
+            claimName: platform-status-snapshots
         - name: data
           persistentVolumeClaim:
             claimName: platform-portal-private-data

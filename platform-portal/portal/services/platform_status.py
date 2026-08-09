@@ -84,6 +84,7 @@ class PlatformStatusService:
 
         return {
             "generated_at": data.get("generated_at"),
+            "freshness": data.get("freshness", {"state": "unavailable"}),
             "telemetry": {
                 "metrics_api": metrics,
                 "service_monitor": service_monitor,

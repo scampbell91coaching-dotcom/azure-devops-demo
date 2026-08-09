@@ -3,25 +3,22 @@
 {% block title %}Recommendations{% endblock %}
 {% block heading %}Platform Recommendations{% endblock %}
 {% block subtitle %}
-Operational guidance generated from recent platform history.
+Operational guidance derived from warning and failed checks in the current snapshot.
 {% endblock %}
 
 {% block content %}
 <section class="recommendation-toolbar">
   <div>
-    <label for="recommendation-range">Analysis range</label>
+    <label for="recommendation-range">View context</label>
     <select id="recommendation-range">
-      <option value="6">Last 6 hours</option>
-      <option value="24" selected>Last 24 hours</option>
-      <option value="72">Last 3 days</option>
-      <option value="168">Last 7 days</option>
+      <option value="24" selected>Current snapshot</option>
     </select>
   </div>
 
   <button id="recommendation-refresh" type="button">Refresh</button>
 
   <p id="recommendation-message" role="status" aria-live="polite">
-    Analysing platform history…
+    Analysing the current platform snapshot…
   </p>
 </section>
 

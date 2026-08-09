@@ -1,0 +1,201 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: platform-status-snapshots
+  namespace: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: azurefile-csi
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: platform-status-collector
+  namespace: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: platform-status-collector
+  namespace: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "networkpolicies"]
+    verbs: ["get", "list"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods"]
+    verbs: ["list"]
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: ["servicemonitors"]
+    verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: platform-status-collector
+  namespace: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+subjects:
+  - kind: ServiceAccount
+    name: platform-status-collector
+    namespace: production
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: platform-status-collector
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: platform-status-collector-nodes
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: platform-status-collector-nodes
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+subjects:
+  - kind: ServiceAccount
+    name: platform-status-collector
+    namespace: production
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: platform-status-collector-nodes
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: platform-status-collector-argo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+rules:
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications"]
+    resourceNames: ["platform-portal-private"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: platform-status-collector-argo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+subjects:
+  - kind: ServiceAccount
+    name: platform-status-collector
+    namespace: production
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: platform-status-collector-argo
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: platform-status-collector
+  namespace: production
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 120
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app: platform-status-collector
+        spec:
+          serviceAccountName: platform-status-collector
+          automountServiceAccountToken: true
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: collector
+              image: stevedevopslab6280.azurecr.io/platform-portal-private:de79381b25f63a00ae57c1a3bb65616d0d553498
+              command: ["python", "-m", "portal.collectors.platform_status"]
+              env:
+                - name: PLATFORM_STATUS_OUTPUT
+                  value: /status/platform-status.json
+                - name: STATUS_NAMESPACE
+                  value: production
+                - name: STATUS_DEPLOYMENT
+                  value: platform-portal-private
+                - name: STATUS_APP_LABEL
+                  value: platform-portal-private
+                - name: STATUS_SERVICE
+                  value: platform-portal-private
+                - name: STATUS_INGRESS
+                  value: platform-portal-private
+                - name: STATUS_ARGO_NAMESPACE
+                  value: argocd
+                - name: STATUS_ARGO_APP
+                  value: platform-portal-private
+                - name: STATUS_HEALTH_URL
+                  value: http://platform-portal-private.production.svc.cluster.local/health
+                - name: STATUS_API_TIMEOUT_SECONDS
+                  value: "5"
+                - name: STATUS_HEALTH_TIMEOUT_SECONDS
+                  value: "5"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 48Mi
+                limits:
+                  cpu: 100m
+                  memory: 96Mi
+              volumeMounts:
+                - name: platform-status
+                  mountPath: /status
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: platform-status
+              persistentVolumeClaim:
+                claimName: platform-status-snapshots
+            - name: tmp
+              emptyDir:
+                sizeLimit: 16Mi
