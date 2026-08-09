@@ -100,6 +100,25 @@ def _client_key(email: str) -> str:
     return f"{request.remote_addr or 'unknown'}:{email}"
 
 
+def _edge_email() -> str:
+    """Return a syntactically plausible edge identity for UX hints only.
+
+    The value is never authentication evidence: the application password is
+    still required and checked against the selected active user.
+    """
+    header = current_app.config.get("EDGE_AUTH_EMAIL_HEADER")
+    if not isinstance(header, str) or not header:
+        return ""
+    value = request.headers.get(header, "").strip().casefold()
+    if (
+        len(value) > 255
+        or value.count("@") != 1
+        or any(char.isspace() for char in value)
+    ):
+        return ""
+    return value
+
+
 def _is_rate_limited(key: str) -> bool:
     now = time.monotonic()
     window = int(current_app.config["LOGIN_RATE_LIMIT_WINDOW_SECONDS"])
@@ -247,6 +266,15 @@ def init_auth(app) -> None:
             raise click.ClickException(str(exc)) from exc
         click.echo(f"Created {role} user {normalized_email}.")
 
+    @app.cli.command("account-delivery-readiness")
+    def account_delivery_readiness() -> None:
+        """Print redacted invitation delivery configuration."""
+        from .services.transactional_email import delivery_readiness
+
+        readiness = delivery_readiness()
+        for key in ("public_base_url", "transport", "tls", "smtp_auth"):
+            click.echo(f"{key}: {readiness[key]}")
+
 
 def _inject_csrf_fields(response: Response) -> Response:
     """Add CSRF fields to existing server-rendered forms during migration."""
@@ -321,6 +349,8 @@ def login():
                 "auth/login.html",
                 error=error,
                 next=request.values.get("next", ""),
+                email=_edge_email(),
+                edge_email=_edge_email(),
                 session_expired=session_expired,
             ),
             status=status,
@@ -335,6 +365,8 @@ def login():
         "auth/login.html",
         error=error,
         next=request.values.get("next", ""),
+        email=_edge_email(),
+        edge_email=_edge_email(),
         session_expired=session_expired,
     )
 
@@ -372,7 +404,12 @@ def account_token(purpose: str):
                 session["authenticated_at"] = time.time()
                 session["athlete_id"] = user.athlete_id
                 session.permanent = True
-                return redirect(url_for("athletes.dashboard"))
+                welcome = (
+                    "activated"
+                    if token_purpose == AccountTokenPurpose.INVITATION
+                    else "password-updated"
+                )
+                return redirect(url_for("athletes.dashboard", welcome=welcome))
         record = token_record(token, token_purpose)
         available = record is not None and record.is_available
     response = Response(

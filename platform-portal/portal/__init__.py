@@ -61,6 +61,9 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         SESSION_COOKIE_SAMESITE="Lax",
         LOGIN_RATE_LIMIT_ATTEMPTS=5,
         LOGIN_RATE_LIMIT_WINDOW_SECONDS=15 * 60,
+        EDGE_AUTH_EMAIL_HEADER=os.environ.get(
+            "EDGE_AUTH_EMAIL_HEADER", "X-Auth-Request-Email"
+        ),
         NUTRITION_UPLOAD_MAX_BYTES=10 * 1024 * 1024,
         MFP_API_ENABLED=False,
         SMTP_HOST=os.environ.get("SMTP_HOST"),

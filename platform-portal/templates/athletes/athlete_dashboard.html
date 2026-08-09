@@ -3,6 +3,13 @@
 {% block athlete_page %}home{% endblock %}
 {% block content %}
 <section class="dashboard">
+  {% if request.args.get('welcome') == 'activated' %}
+    <div class="empty-state" role="status" data-account-activated>
+      <strong>Account activated</strong><p>You’re signed in. Your training dashboard is ready.</p>
+    </div>
+  {% elif request.args.get('welcome') == 'password-updated' %}
+    <div class="empty-state" role="status"><strong>Password updated</strong><p>You’re signed in with your new password.</p></div>
+  {% endif %}
   <header class="dashboard__welcome">
     <div><span class="eyebrow">Today</span><h1>{{ dashboard.athlete.first_name }}’s training</h1></div>
     <p>Programme, recovery and coach updates.</p>

@@ -40,6 +40,11 @@
             <div><strong>Your session has ended</strong><span>Sign in again to continue securely.</span></div>
           </div>
         {% endif %}
+        {% if edge_email %}
+          <div class="auth-notice auth-notice--info" role="status">
+            <div><strong>Identity check complete</strong><span>Continue with your Traditional Strength password.</span></div>
+          </div>
+        {% endif %}
         {% if error %}
           <div class="auth-notice auth-notice--error" id="login-error" role="alert" aria-live="assertive">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 8v5m0 3.5v.01M10.3 4.5 3.2 17a2 2 0 0 0 1.74 3h14.12a2 2 0 0 0 1.74-3L13.7 4.5a2 2 0 0 0-3.4 0Z"/></svg>
@@ -52,7 +57,7 @@
           <input type="hidden" name="next" value="{{ next }}">
           <div class="form-field">
             <label for="email">Email address</label>
-            <input id="email" name="email" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" required{% if error %} aria-describedby="login-error" aria-invalid="true"{% endif %}>
+            <input id="email" name="email" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" value="{{ email }}" required{% if error %} aria-describedby="login-error" aria-invalid="true"{% endif %}>
           </div>
           <div class="form-field">
             <label for="password">Password</label>
