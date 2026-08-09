@@ -43,7 +43,7 @@ test('first paying athlete money path: draft to immutable coach-reviewed trainin
   await page.locator('input[name="password"]').fill(pilot.password);
   await page.locator('input[name="password_confirmation"]').fill(pilot.password);
   await page.getByRole('button', { name: 'Activate account' }).click();
-  await expect(page).toHaveURL('/athlete/dashboard');
+  await expect(page).toHaveURL('/athlete/dashboard?welcome=activated');
   await expect(page.getByRole('heading', { name: 'Taylor’s training' })).toBeVisible();
   await expect(page.getByText('No current programme')).toBeVisible();
 
@@ -93,7 +93,7 @@ test('first paying athlete money path: draft to immutable coach-reviewed trainin
   await signIn(page, pilot.email, pilot.password);
   await expect(page).toHaveURL('/athlete/dashboard');
   await expect(page.getByText(pilot.block)).toBeVisible();
-  await expect(page.getByText('Next session')).toBeVisible();
+  await expect(page.getByText(/next unfinished session in programme order/i)).toBeVisible();
   await expect(page.getByText(pilot.session)).toBeVisible();
   await expect(page.getByText('Alex Rivera')).toHaveCount(0);
   await expect(page.getByText('Sam Morgan')).toHaveCount(0);
@@ -137,9 +137,8 @@ test('first paying athlete money path: draft to immutable coach-reviewed trainin
   await page.goto('/coach');
   const reviewQueue = page.getByRole('heading', { name: 'Athletes requiring review' })
     .locator('xpath=ancestor::section[1]');
-  // Known P0: completed training is not part of the action queue. Keep this
-  // assertion until a reviewed/unreviewed training workflow replaces polling.
-  await expect(reviewQueue.getByText(pilot.name, { exact: true })).toHaveCount(0);
+  // Completed athlete training should enter the coach review queue.
+  await expect(reviewQueue.getByText(pilot.name, { exact: true })).toHaveCount(1);
   await expect(reviewQueue.getByText(/Weekly check-in|Nutrition check-in/)).toHaveCount(0);
 
   // Supervised-pilot fallback: the coach polls the athlete record and can open
