@@ -109,7 +109,10 @@ for (const width of [320, 390, 430]) {
     await expect(
       page.getByRole('heading', { level: 1, name: 'Alex Rivera' })
     ).toBeVisible();
-    await page.getByRole('link', { name: 'Open block' }).click();
+    await page
+      .locator('a[href="/programming/blocks/301"]')
+      .filter({ hasText: 'Open block' })
+      .click();
     await expect(page.getByRole('navigation', { name: 'Programme hierarchy' })).toBeVisible();
     const week = page.getByTestId('programming-week').filter({ hasText: 'Foundation week' });
     await expect(week.getByLabel('Week 1 taxonomy-backed lift exposures')).toContainText('Squat 2');
