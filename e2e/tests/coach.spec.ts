@@ -33,7 +33,7 @@ test('navigates from a programming block to its week', async ({ page }) => {
   await expect(
     page.getByRole('heading', { level: 1, name: 'Alex Rivera' })
   ).toBeVisible();
-  await page.getByRole('link', { name: 'Open block' }).click();
+  await page.locator('a[href="/programming/blocks/301"]').click();
   await expect(page.getByRole('heading', { name: 'Deterministic strength block' })).toBeVisible();
   await page.getByRole('link', { name: /Foundation week/ }).click();
   await expect(page.getByRole('heading', { name: 'Foundation week' })).toBeVisible();
@@ -123,7 +123,7 @@ test('adds, edits, deletes, and preserves prescription order without an HTTP 400
   await expect(
     page.getByRole('heading', { level: 1, name: 'Alex Rivera' })
   ).toBeVisible();
-  await page.getByRole('link', { name: 'Open block' }).click();
+  await page.locator('a[href="/programming/blocks/301"]').click();
   await page.getByRole('link', { name: /Foundation week/ }).click();
   await page.getByTestId('programming-session').filter({ hasText: 'Squat day' }).getByRole('link', { name: 'Open session' }).click();
   const failedResponses: number[] = [];
