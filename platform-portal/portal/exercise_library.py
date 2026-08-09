@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 
 from flask import Blueprint, abort, redirect, render_template, request, url_for
@@ -34,6 +35,26 @@ def _optional_float(value: str | None) -> float | None:
     if value is None or not value.strip():
         return None
     return float(value)
+
+
+def _json_tags(value: str | None) -> str | None:
+    """Normalize comma-separated coach input to the catalogue JSON-list format."""
+    values = [
+        item.strip().casefold()
+        for item in (value or "").split(",")
+        if item.strip()
+    ]
+    return json.dumps(list(dict.fromkeys(values))) if values else None
+
+
+def _tag_csv(value: str | None) -> str:
+    if not value:
+        return ""
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError):
+        return ""
+    return ", ".join(str(item) for item in parsed) if isinstance(parsed, list) else ""
 
 
 @exercise_library_bp.get("/exercise-library")
@@ -141,6 +162,12 @@ def edit(exercise_id: int):
     return render_template(
         "exercises/edit.html",
         exercise=exercise,
+        metadata={
+            "lift_relevance": _tag_csv(exercise.lift_relevance),
+            "training_phases": _tag_csv(exercise.training_phases),
+            "compatibility_tags": _tag_csv(exercise.compatibility_tags),
+            "constraint_tags": _tag_csv(exercise.constraint_tags),
+        },
     )
 
 
@@ -177,6 +204,15 @@ def update(exercise_id: int):
     )
     exercise.coaching_cues = request.form.get("coaching_cues", "").strip() or None
     exercise.video_url = request.form.get("video_url", "").strip() or None
+    exercise.accessory_suitable = "accessory_suitable" in request.form
+    exercise.auto_select = (
+        exercise.accessory_suitable and "auto_select" in request.form
+    )
+    exercise.lift_relevance = _json_tags(request.form.get("lift_relevance"))
+    exercise.training_phases = _json_tags(request.form.get("training_phases"))
+    exercise.compatibility_tags = _json_tags(request.form.get("compatibility_tags"))
+    exercise.constraint_tags = _json_tags(request.form.get("constraint_tags"))
+    exercise.coach_priority = _optional_int(request.form.get("coach_priority")) or 0
     # A coach edit transfers ownership of the complete row. Future catalogue
     # imports still use its name and aliases for duplicate detection, but do
     # not replace any coach-maintained values.

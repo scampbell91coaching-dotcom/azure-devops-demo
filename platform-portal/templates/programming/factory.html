@@ -178,7 +178,13 @@
 
     <fieldset class="factory-accessories" data-factory-accessories>
       <legend>Accessories</legend>
-      <p>Assistance is optional and never drives the weekly structure. Pinned coach choices are retained once, in order, after powerlifting exposures.</p>
+      <p>Assistance is optional and never drives the weekly structure. Library suggestions are deterministic and limited to one per day. Pinned coach choices fully replace suggestions.</p>
+      <label><span>Selection mode</span>
+        <select name="accessory_mode">
+          <option value="automatic" {% if form.get('accessory_mode', 'automatic') == 'automatic' %}selected{% endif %}>Suggest from enabled library metadata</option>
+          <option value="none" {% if form.get('accessory_mode') == 'none' %}selected{% endif %}>No assistance</option>
+        </select>
+      </label>
       <p class="factory-accessory-summary" data-accessory-summary aria-live="polite">No assistance selected. Zero assistance is valid.</p>
       <label><span>Filter catalogue</span><input type="search" data-accessory-filter placeholder="Search by exercise, category or movement"></label>
       <div data-accessory-rows>
@@ -221,7 +227,7 @@
         {% for day in preview %}
           <article class="factory-preview__day">
             <span>Day {{ day.day }} · {{ day.day_type }}</span>
-            <strong class="factory-preview__count">{{ day.accessory_count }} coach-selected assistance</strong>
+            <strong class="factory-preview__count">{{ day.accessory_count }} assistance exercise{% if day.accessory_count != 1 %}s{% endif %}</strong>
 
             <ol>
               {% for exercise in day.exercises[:day.main_count] %}
@@ -229,6 +235,7 @@
               {% endfor %}
               {% for accessory in day.accessories %}
                 <li><span>{{ accessory.role }}{% if accessory.source == "Coach selected" %} · pinned{% endif %}</span> {{ accessory.name }}</li>
+                {% if accessory.reasons %}<li class="factory-explanation"><span>Why</span> {{ accessory.reasons | join('; ') }}</li>{% endif %}
               {% endfor %}
             </ol>
           </article>

@@ -312,6 +312,37 @@ def test_zero_assistance_is_preserved_without_a_quota():
         assert all(day["accessory_count"] == 0 for day in days)
 
 
+def test_factory_suggests_enabled_metadata_and_manual_selection_overrides_it():
+    app = create_test_app()
+    with app.app_context():
+        suggested = Exercise(
+            name="Development Row", movement="accessory", category="balancing",
+            accessory_suitable=True, auto_select=True,
+            lift_relevance='["bench"]', training_phases='["development"]',
+            coach_priority=10, default_sets=4, default_reps="8-12",
+        )
+        pinned = Exercise(
+            name="Coach Pin", movement="accessory", category="upper body",
+            accessory_suitable=True,
+        )
+        db.session.add_all([suggested, pinned])
+        db.session.commit()
+        automatic = _preview(factory_request(3, 1, 1, 1))
+        automatic_accessories = [item for day in automatic for item in day["accessories"]]
+        assert [item["name"] for item in automatic_accessories] == ["Development Row"]
+        assert automatic_accessories[0]["source"] == "Library suggestion"
+        assert any("relevant to bench" in reason for reason in automatic_accessories[0]["reasons"])
+
+        request = factory_request(3, 1, 1, 1)
+        request = request.__class__(
+            **{**request.__dict__, "accessory_exercise_ids": (pinned.id,)}
+        )
+        manual = _preview(request)
+        assert [item["name"] for day in manual for item in day["accessories"]] == [
+            "Coach Pin"
+        ]
+
+
 def test_zero_assistance_generation_persists_after_reload():
     app = create_test_app()
     athlete_id = create_athlete(app)

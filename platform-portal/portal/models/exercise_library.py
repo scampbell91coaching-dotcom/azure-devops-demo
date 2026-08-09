@@ -52,6 +52,11 @@ class Exercise(db.Model):  # type: ignore[name-defined]
     rep_ranges = db.Column(db.String(80), nullable=True)
     warmup_suitable = db.Column(db.Boolean, nullable=False, default=False)
     accessory_suitable = db.Column(db.Boolean, nullable=False, default=False)
+    auto_select = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    lift_relevance = db.Column(db.Text, nullable=True)
+    training_phases = db.Column(db.Text, nullable=True)
+    compatibility_tags = db.Column(db.Text, nullable=True)
+    coach_priority = db.Column(db.Integer, nullable=False, default=0)
     catalogue_version = db.Column(db.Integer, nullable=True)
     video_url = db.Column(db.String(500), nullable=True)
 
@@ -95,6 +100,11 @@ def ensure_exercise_knowledge_columns() -> None:
         "rep_ranges": "VARCHAR(80)",
         "warmup_suitable": "BOOLEAN NOT NULL DEFAULT 0",
         "accessory_suitable": "BOOLEAN NOT NULL DEFAULT 0",
+        "auto_select": "BOOLEAN NOT NULL DEFAULT 0",
+        "lift_relevance": "TEXT",
+        "training_phases": "TEXT",
+        "compatibility_tags": "TEXT",
+        "coach_priority": "INTEGER NOT NULL DEFAULT 0",
         "catalogue_version": "INTEGER",
         "lift_family": "VARCHAR(20)",
         "movement_pattern": "VARCHAR(40)",
