@@ -81,6 +81,9 @@ EXPECTED_PROGRAMMING_ROUTES = {
     ),
     ("programming.session", "/programming/sessions/<int:session_id>", "GET"),
     ("programming.week", "/programming/weeks/<int:week_id>", "GET"),
+    ("programming.create_warmup_protocol", "/programming/sessions/<int:session_id>/warmup-protocols", "POST"),
+    ("programming.assign_warmup", "/programming/sessions/<int:session_id>/warmup-assignments", "POST"),
+    ("programming.override_warmup", "/programming/sessions/<int:session_id>/warmup-overrides", "POST"),
     (
         "programming.update_lift_slot",
         "/programming/lift-slots/<int:slot_id>",

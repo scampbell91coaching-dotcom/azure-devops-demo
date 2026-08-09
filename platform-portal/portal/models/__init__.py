@@ -32,6 +32,7 @@ from .programming import (
     TrainingWeek,
 )
 from .user import User, UserRole
+from .warmup import WarmupAssignment, WarmupOverride, WarmupPlanSnapshot, WarmupPlanSnapshotStep, WarmupProtocol, WarmupProtocolStep
 
 __all__ = [
     "Athlete",
@@ -68,4 +69,5 @@ __all__ = [
     "User",
     "UserRole",
     "WeeklyCheckin",
+    "WarmupAssignment", "WarmupOverride", "WarmupPlanSnapshot", "WarmupPlanSnapshotStep", "WarmupProtocol", "WarmupProtocolStep",
 ]

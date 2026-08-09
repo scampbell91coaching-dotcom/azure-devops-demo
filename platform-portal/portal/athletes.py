@@ -25,6 +25,7 @@ from .services.athlete_dashboard import get_athlete_dashboard
 from .services.nutrition_dashboard import get_nutrition_dashboard
 from .nutrition_imports import _summary
 from .services.training_log import assigned_log, save_training_session
+from .services.persisted_warmups import athlete_warmup
 from .auth import roles_required
 from .models.account_token import AccountTokenPurpose, DeliveryState
 from .models.user import UserRole
@@ -152,6 +153,7 @@ def programme_session(session_id: int):
         has_v7_slots=any(item.slot_role for item in training_session.prescriptions),
         results_by_set=results_by_set,
         errors=errors,
+        warmup_steps=athlete_warmup(athlete_id, training_session.id),
     ), (400 if errors else 200)
 
 
