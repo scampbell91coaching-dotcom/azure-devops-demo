@@ -202,7 +202,9 @@ def test_dashboard_is_strictly_isolated_to_signed_in_athlete():
     response = client.get("/athlete/dashboard")
 
     assert response.status_code == 200
-    assert b"Welcome back, Alex" in response.data
+    assert "Alex\u2019s training".encode() in response.data
+    assert b"traditional-strength-logo.png" in response.data
+    assert b">TS<" not in response.data
     assert b"Sam" not in response.data
     assert b"Sam-only response" not in response.data
 

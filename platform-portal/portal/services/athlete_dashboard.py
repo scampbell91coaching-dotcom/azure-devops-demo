@@ -9,7 +9,12 @@ from ..extensions import db
 from ..models.athlete import Athlete
 from ..models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from ..models.nutrition_checkin import NutritionCheckIn
-from ..models.programming import TrainingBlock, TrainingSession, TrainingWeek
+from ..models.programming import (
+    TrainingBlock,
+    TrainingSession,
+    TrainingSessionLog,
+    TrainingWeek,
+)
 
 
 @dataclass(frozen=True)
@@ -28,6 +33,7 @@ class TrendPoint:
 class AthleteDashboard:
     athlete: Athlete
     current_block: TrainingBlock | None
+    current_week: TrainingWeek | None
     next_session: TrainingSession | None
     latest_checkin: WeeklyCheckin | None
     recent_checkins: tuple[WeeklyCheckin, ...]
@@ -57,7 +63,8 @@ def get_athlete_dashboard(athlete_id: int, *, today: date) -> AthleteDashboard |
         .order_by(TrainingBlock.created_at.desc(), TrainingBlock.id.desc())
         .first()
     )
-    next_session = _first_session(current_block)
+    next_session = _next_session(current_block, athlete_id)
+    current_week = next_session.week if next_session is not None else None
 
     recent_checkins = tuple(
         WeeklyCheckin.query.filter_by(athlete_id=athlete_id)
@@ -80,6 +87,7 @@ def get_athlete_dashboard(athlete_id: int, *, today: date) -> AthleteDashboard |
     return AthleteDashboard(
         athlete=athlete,
         current_block=current_block,
+        current_week=current_week,
         next_session=next_session,
         latest_checkin=latest_checkin,
         recent_checkins=recent_checkins,
@@ -156,11 +164,25 @@ def _performance_trend(athlete_id: int) -> tuple[TrendPoint, ...]:
     )
 
 
-def _first_session(block: TrainingBlock | None) -> TrainingSession | None:
+def _next_session(
+    block: TrainingBlock | None, athlete_id: int
+) -> TrainingSession | None:
     if block is None:
         return None
+    completed_ids = {
+        session_id
+        for (session_id,) in db.session.query(TrainingSessionLog.session_id)
+        .filter_by(athlete_id=athlete_id, status="completed")
+        .filter(TrainingSessionLog.session_id.is_not(None))
+        .all()
+    }
     return next(
-        (session for week in block.weeks for session in week.sessions),
+        (
+            session
+            for week in block.weeks
+            for session in week.sessions
+            if session.id not in completed_ids
+        ),
         None,
     )
 
