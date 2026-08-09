@@ -178,8 +178,8 @@ test('adds, edits, deletes, and preserves prescription order without an HTTP 400
 });
 
 test('lift-slot editor persists an RPE range and same-family back-off after reload', async ({ page }) => {
-  await page.goto('/programming/weeks/401');
-  const session = page.getByTestId('programming-session').filter({ hasText: 'Squat day' });
+  await page.goto('/programming/weeks/902');
+  const session = page.getByTestId('programming-session').filter({ hasText: 'Lift slot persistence session' });
   const editor = session.getByTestId('lift-slot-editor').first();
   await editor.locator('select[name="top_rpe_mode"]').selectOption('range');
   await editor.locator('input[name="top_rpe_min"]').fill('5');
@@ -195,7 +195,7 @@ test('lift-slot editor persists an RPE range and same-family back-off after relo
   await page.reload();
   await expect(session.getByText(/Top: Competition Squat 3 x 5 @ RPE 5-6/)).toBeVisible();
   await expect(session.getByText(/Back-off: Competition Squat 3 x 6 @ RPE 6/)).toBeVisible();
-  await expect(page.getByLabel('Taxonomy-backed competition lift exposures')).toContainText('Squat 2');
+  await expect(page.getByLabel('Taxonomy-backed competition lift exposures')).toContainText('Squat 1');
 });
 
 test('Block Factory adds ordered upper and lower accessories and persists generated prescriptions', async ({ page }) => {

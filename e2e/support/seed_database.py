@@ -91,6 +91,38 @@ def seed_database(app: Flask) -> None:
             reps="5",
             rpe=7.0,
         )
+        mutation_block = db.session.get(TrainingBlock, 901) or TrainingBlock(
+            id=901,
+            athlete=alex,
+            name="Lift slot persistence fixture",
+            objective="Mutation-only browser fixture",
+            status="draft",
+        )
+        mutation_week = db.session.get(TrainingWeek, 902) or TrainingWeek(
+            id=902,
+            block=mutation_block,
+            name="Lift slot persistence week",
+            position=1,
+        )
+        mutation_session = db.session.get(TrainingSession, 903) or TrainingSession(
+            id=903,
+            week=mutation_week,
+            name="Lift slot persistence session",
+            day_label="Test",
+            position=1,
+        )
+        mutation_prescription = ExercisePrescription.query.filter_by(
+            session=mutation_session,
+            exercise_name="Competition Squat",
+        ).one_or_none() or ExercisePrescription(
+            session=mutation_session,
+            exercise_name="Competition Squat",
+            position=1,
+            sets=3,
+            reps="5",
+            rpe=7.0,
+        )
+
         settings = AthleteCheckinSettings.query.filter_by(
             athlete_id=alex.id
         ).one_or_none() or AthleteCheckinSettings(
@@ -282,6 +314,10 @@ def seed_database(app: Flask) -> None:
                 prescription,
                 mobile_session,
                 mobile_prescription,
+                mutation_block,
+                mutation_week,
+                mutation_session,
+                mutation_prescription,
                 settings,
                 squat,
                 bench,
@@ -369,6 +405,7 @@ def seed_database(app: Flask) -> None:
             (session, extra_prescriptions[0], bench, "bench", 2),
             (session, extra_prescriptions[1], deadlift, "deadlift", 3),
             (mobile_session, mobile_prescription, squat, "squat", 1),
+            (mutation_session, mutation_prescription, squat, "squat", 1),
         )
         for target_session, target_row, target_exercise, family, position in lift_rows:
             slot = ProgrammingLiftSlot.query.filter_by(
