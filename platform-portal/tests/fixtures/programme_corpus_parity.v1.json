@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "scope": "Repository-maintained programme structures; synthetic factory-output tests are policy evidence, not real-programme corpus observations.",
+  "sessions": [
+    {"id": "static-S", "source": "portal/programming_templates.py:DAY_TEMPLATES", "exposures": ["squat"], "primary_slots": 1, "secondary_slots": 0, "accessories": [], "patterns": ["1x3@7"]},
+    {"id": "static-B", "source": "portal/programming_templates.py:DAY_TEMPLATES", "exposures": ["bench"], "primary_slots": 1, "secondary_slots": 0, "accessories": [], "patterns": ["1x5@7"]},
+    {"id": "static-D", "source": "portal/programming_templates.py:DAY_TEMPLATES", "exposures": ["deadlift"], "primary_slots": 1, "secondary_slots": 0, "accessories": [], "patterns": ["1x3@7"]},
+    {"id": "static-SB", "source": "portal/programming_templates.py:DAY_TEMPLATES", "exposures": ["squat", "bench"], "primary_slots": 2, "secondary_slots": 0, "accessories": [], "patterns": ["1x3@7", "1x4@7"]},
+    {"id": "static-BD", "source": "portal/programming_templates.py:DAY_TEMPLATES", "exposures": ["bench", "deadlift"], "primary_slots": 2, "secondary_slots": 0, "accessories": [], "patterns": ["1x4@7", "1x3@7"]},
+    {"id": "static-SBD", "source": "portal/programming_templates.py:DAY_TEMPLATES", "exposures": ["squat", "bench", "deadlift"], "primary_slots": 3, "secondary_slots": 0, "accessories": [], "patterns": ["1x3@7", "1x4@7", "1x3@7"]},
+    {"id": "e2e-501", "source": "e2e/support/seed_database.py", "exposures": ["squat", "bench", "deadlift"], "primary_slots": 3, "secondary_slots": 0, "accessories": [{"name": "Squat Named Row", "family": "upper_pull"}], "patterns": ["3x5@7"]},
+    {"id": "e2e-502", "source": "e2e/support/seed_database.py", "exposures": ["squat"], "primary_slots": 1, "secondary_slots": 0, "accessories": [], "patterns": ["3x5@7"]},
+    {"id": "e2e-903", "source": "e2e/support/seed_database.py", "exposures": ["squat"], "primary_slots": 1, "secondary_slots": 0, "accessories": [], "patterns": ["3x5@7"]},
+    {"id": "e2e-801", "source": "e2e/support/seed_database.py", "exposures": ["squat"], "primary_slots": 1, "secondary_slots": 1, "accessories": [{"name": "Cable Row", "family": "upper_pull"}], "patterns": ["1x3@7.5-8.5", "2x5@6.5-7.5", "2x10@6-7"]}
+  ],
+  "expected": {
+    "session_count": 10,
+    "accessory_count_distribution": {"0": 8, "1": 2},
+    "sessions_over_three_accessories": [],
+    "slot_count_distribution": {"1": 5, "2": 3, "3": 2},
+    "secondary_slot_count": 1,
+    "body_distribution": {"upper": 1, "lower": 5, "full_body": 4},
+    "repeated_accessory_families": {"upper_pull": 2}
+  },
+  "parity_policy": {
+    "automatic_accessory_maxima": {"low": 1, "medium": 2, "high": 3},
+    "manual_pins_replace_automatic": true,
+    "manual_pin_order_is_authoritative": true,
+    "explicit_no_assistance_count": 0,
+    "raise_high_cap_only_when_observed_session_count_over_three_is_positive": true
+  }
+}
