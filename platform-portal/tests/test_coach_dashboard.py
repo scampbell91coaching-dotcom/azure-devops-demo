@@ -237,7 +237,7 @@ def test_service_build_uses_a_fixed_number_of_selects_for_pending_checkins():
             event.remove(db.engine, "before_cursor_execute", count_selects)
 
         assert len(dashboard.pending_checkins) == 12
-        assert selects == 6
+        assert selects == 7
 
 
 def test_completed_training_for_multiple_athletes_joins_queue_oldest_first():

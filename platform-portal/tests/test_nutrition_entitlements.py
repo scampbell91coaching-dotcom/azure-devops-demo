@@ -4,6 +4,7 @@ from portal import create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.checkins import AthleteCheckinSettings
+from portal.models.client_service import ClientServiceChange
 from portal.models.nutrition_checkin import NutritionCheckIn
 from portal.services.coach_dashboard import CoachDashboardService
 from portal.services.nutrition_entitlements import nutrition_coaching_enabled
@@ -39,6 +40,12 @@ def test_explicit_disable_blocks_active_routes_but_preserves_coach_history():
                 training_enabled=True,
                 nutrition_enabled=False,
                 workflow_active=True,
+            ),
+            ClientServiceChange(
+                athlete=athlete,
+                service="nutrition",
+                value="no",
+                effective_at=datetime(2026, 8, 10),
             ),
             _nutrition_record(athlete),
         ])

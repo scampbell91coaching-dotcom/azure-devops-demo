@@ -315,6 +315,36 @@ def create_athlete():
             checkin_day=0,
         )
     )
+
+    service_effective_at = datetime.now(UTC).replace(tzinfo=None)
+    db.session.add_all(
+        [
+            ClientServiceChange(
+                athlete=athlete,
+                service="training",
+                value="yes",
+                effective_at=service_effective_at,
+            ),
+            ClientServiceChange(
+                athlete=athlete,
+                service="nutrition",
+                value="no",
+                effective_at=service_effective_at,
+            ),
+            ClientServiceChange(
+                athlete=athlete,
+                service="meet_day",
+                value="no",
+                effective_at=service_effective_at,
+            ),
+            ClientServiceChange(
+                athlete=athlete,
+                service="video_review",
+                value="none",
+                effective_at=service_effective_at,
+            ),
+        ]
+    )
     try:
         db.session.commit()
     except IntegrityError:
@@ -373,7 +403,7 @@ def athlete_dashboard(athlete_id: int):
         checkins=checkins,
         latest_checkin=latest_checkin,
         checkin_settings=settings,
-        nutrition_coaching_enabled=nutrition_coaching_enabled(athlete),
+        nutrition_coaching_enabled=nutrition_coaching_enabled(athlete.id),
         weekly_checkin_due=settings.is_due_on(datetime.now(UTC).date()),
         imported_nutrition=_summary(
             athlete.id,

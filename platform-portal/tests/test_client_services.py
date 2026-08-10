@@ -67,7 +67,8 @@ def test_coach_can_update_services_without_deleting_history(services_app):
     with services_app.app_context():
         changes = ClientServiceChange.query.order_by(ClientServiceChange.id).all()
         assert [(item.service, item.value) for item in changes] == [
-            ("training", "no"), ("nutrition", "yes"), ("video_review", "limited")
+            ("training", "no"),
+            ("video_review", "limited"),
         ]
         assert all(item.changed_by.email == "coach@example.test" for item in changes)
 

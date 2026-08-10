@@ -9,6 +9,7 @@ from ..models.athlete import Athlete
 from ..models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from ..models.nutrition_checkin import NutritionCheckIn
 from ..models.programming import TrainingBlock, TrainingSessionLog
+from .client_services import nutrition_enabled_athlete_ids
 
 
 @dataclass(frozen=True)
@@ -87,12 +88,9 @@ class CoachDashboardService:
 
         athlete_by_id = {athlete.id: athlete for athlete in athletes}
         explicit_settings = {item.athlete_id: item for item in settings}
-        nutrition_enabled_ids = {
-            athlete.id
-            for athlete in athletes
-            if athlete.id not in explicit_settings
-            or explicit_settings[athlete.id].nutrition_enabled
-        }
+        nutrition_enabled_ids = nutrition_enabled_athlete_ids(
+            [athlete.id for athlete in athletes]
+        )
         recent_cutoff = today - timedelta(days=self.RECENT_DAYS - 1)
         recent = tuple(item for item in weekly if item.week_ending >= recent_cutoff)
 

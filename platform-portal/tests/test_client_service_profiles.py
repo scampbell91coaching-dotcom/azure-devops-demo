@@ -47,13 +47,13 @@ def test_training_and_nutrition_are_independent(training, nutrition):
     assert item.enables(Service.NUTRITION_COACHING) is nutrition
 
 
-def test_missing_persisted_profile_uses_new_client_defaults():
+def test_missing_persisted_profile_uses_legacy_compatibility_defaults():
     result = ClientServiceProfileService(Profiles()).effective_profile(
         7, as_of=date(2026, 8, 10)
     )
     assert result.provenance is EntitlementProvenance.LEGACY_DEFAULT
     assert result.training_coaching_enabled is True
-    assert result.nutrition_coaching_enabled is False
+    assert result.nutrition_coaching_enabled is True
     assert result.meet_day_support_enabled is False
     assert result.video_review_entitlement is VideoReviewEntitlement.NONE
 

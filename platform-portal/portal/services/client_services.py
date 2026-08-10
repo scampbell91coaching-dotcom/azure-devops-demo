@@ -104,6 +104,42 @@ def may_start_client_service(
     )
 
 
+def nutrition_enabled_athlete_ids(athlete_ids: list[int] | tuple[int, ...]) -> set[int]:
+    """Resolve current nutrition entitlement for many athletes with one query."""
+    ids = [int(athlete_id) for athlete_id in athlete_ids]
+    if not ids:
+        return set()
+
+    changes = (
+        ClientServiceChange.query.filter(
+            ClientServiceChange.athlete_id.in_(ids),
+            ClientServiceChange.service == "nutrition",
+            ClientServiceChange.effective_at <= datetime.now(UTC).replace(tzinfo=None),
+        )
+        .order_by(
+            ClientServiceChange.athlete_id.asc(),
+            ClientServiceChange.effective_at.asc(),
+            ClientServiceChange.created_at.asc(),
+            ClientServiceChange.id.asc(),
+        )
+        .all()
+    )
+
+    latest: dict[int, ClientServiceChange] = {}
+    for change in changes:
+        latest[change.athlete_id] = change
+
+    enabled = set()
+
+    for athlete_id in ids:
+        current = latest.get(athlete_id)
+
+        # No persisted entitlement history means legacy compatibility.
+        if current is None or current.value == "yes":
+            enabled.add(athlete_id)
+
+    return enabled
+
 def resolved_client_services(athlete_id: int, *, now: datetime | None = None):
     """Return effective UI state plus the next scheduled decision for each service."""
     at = (now or datetime.now(UTC)).replace(tzinfo=None)
