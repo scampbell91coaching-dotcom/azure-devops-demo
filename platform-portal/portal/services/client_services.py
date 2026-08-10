@@ -87,8 +87,73 @@ def effective_client_service_profile(
     athlete_id: int,
     *,
     as_of: date | None = None,
+    at: datetime | None = None,
 ) -> ClientServiceProfile:
-    return client_service_profile_service().effective_profile(athlete_id, as_of=as_of)
+    """Resolve persisted service decisions using full datetime precision."""
+
+    if at is not None and as_of is not None:
+        raise ValueError("provide either as_of or at, not both")
+
+    if at is not None:
+        cutoff = at
+        if cutoff.tzinfo is not None:
+            cutoff = cutoff.astimezone(UTC).replace(tzinfo=None)
+    elif as_of is not None:
+        cutoff = datetime.combine(as_of, datetime.max.time())
+    else:
+        cutoff = datetime.now(UTC).replace(tzinfo=None)
+
+    changes = (
+        ClientServiceChange.query.filter(
+            ClientServiceChange.athlete_id == athlete_id,
+            ClientServiceChange.effective_at <= cutoff,
+        )
+        .order_by(
+            ClientServiceChange.effective_at.asc(),
+            ClientServiceChange.created_at.asc(),
+            ClientServiceChange.id.asc(),
+        )
+        .all()
+    )
+
+    if not changes:
+        # No persisted decisions means legacy compatibility.
+        return ClientServiceProfile.legacy_default(
+            athlete_id,
+            as_of=cutoff.date(),
+        )
+
+    state = {
+        "training": "yes",
+        "nutrition": "yes",
+        "meet_day": "no",
+        "video_review": "none",
+    }
+
+    latest_by_service: dict[str, ClientServiceChange] = {}
+
+    for change in changes:
+        state[change.service] = change.value
+        latest_by_service[change.service] = change
+
+    latest_changes = list(latest_by_service.values())
+
+    return ClientServiceProfile(
+        athlete_id=athlete_id,
+        training_coaching_enabled=state["training"] == "yes",
+        nutrition_coaching_enabled=state["nutrition"] == "yes",
+        meet_day_support_enabled=state["meet_day"] == "yes",
+        video_review_entitlement=VideoReviewEntitlement(
+            state["video_review"]
+        ),
+        effective_from=min(
+            change.effective_at for change in latest_changes
+        ).date(),
+        recorded_at=max(
+            change.created_at for change in latest_changes
+        ),
+        provenance=EntitlementProvenance.COACH_CREATED,
+    )
 
 
 def may_start_client_service(
@@ -96,12 +161,13 @@ def may_start_client_service(
     service: Service,
     *,
     as_of: date | None = None,
+    at: datetime | None = None,
 ) -> bool:
-    return client_service_profile_service().may_start_service(
+    return effective_client_service_profile(
         athlete_id,
-        service,
         as_of=as_of,
-    )
+        at=at,
+    ).enables(service)
 
 
 def nutrition_enabled_athlete_ids(athlete_ids: list[int] | tuple[int, ...]) -> set[int]:
@@ -156,7 +222,7 @@ def resolved_client_services(athlete_id: int, *, now: datetime | None = None):
 
     profile = effective_client_service_profile(
         athlete_id,
-        as_of=at.date(),
+        at=at,
     )
 
     domain_values = {

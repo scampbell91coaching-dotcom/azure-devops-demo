@@ -11,10 +11,18 @@ test('coach dashboard renders deterministic athlete data', async ({ page }) => {
 });
 
 test('disabled nutrition entitlement removes active surfaces and protects direct routes', async ({ page }) => {
-  const athleteId = 102;
-  await page.request.post(`/athletes/${athleteId}/check-in-settings`, {
-    form: { training_enabled: '1', workflow_active: '1', checkin_day: '0' },
+  const athleteId = 101;
+
+  await page.goto(`/athletes/${athleteId}`);
+  const services = page.locator('#client-services');
+  await services.locator('select[name="nutrition"]').selectOption('no');
+
+  page.once('dialog', async dialog => {
+    await dialog.accept();
   });
+
+  await services.getByRole('button', { name: 'Save client services' }).click();
+
   try {
     await page.goto(`/athletes/${athleteId}`);
     await expect(page.getByRole('link', { name: 'Add nutrition check-in' })).toHaveCount(0);
@@ -23,14 +31,10 @@ test('disabled nutrition entitlement removes active surfaces and protects direct
     await page.goto(`/athletes/${athleteId}/nutrition-checkins/new`);
     await expect(page.getByRole('heading', { name: 'Access denied' })).toBeVisible();
   } finally {
-    await page.request.post(`/athletes/${athleteId}/check-in-settings`, {
-      form: {
-        training_enabled: '1',
-        nutrition_enabled: '1',
-        workflow_active: '1',
-        checkin_day: '0',
-      },
-    });
+    await page.goto(`/athletes/${athleteId}`);
+    const restore = page.locator('#client-services');
+    await restore.locator('select[name="nutrition"]').selectOption('yes');
+    await restore.getByRole('button', { name: 'Save client services' }).click();
   }
 });
 
@@ -52,7 +56,13 @@ test('coach manages concise client services with safe disable confirmation', asy
   await services.getByRole('button', { name: 'Save client services' }).click();
   await expect(page).toHaveURL(/#client-services$/);
   await expect(services.locator('select[name="video_review"]')).toHaveValue('limited');
-  await expect(services.getByText(/Set by coach\.e2e@example\.test/)).toBeVisible();
+  const videoService = services
+    .locator('label')
+    .filter({ hasText: 'Video review' });
+
+  await expect(
+    videoService.getByText(/Set by coach\.e2e@example\.test/)
+  ).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
 });
 
@@ -449,7 +459,7 @@ test('athlete dashboard is isolated to the selected test athlete', async ({ page
   await expect(page).toHaveURL(/\/login\?next=/);
   await athleteSession(page.request, athleteIds.primary);
   await page.goto('/athlete/dashboard');
-  await expect(page.getByRole('heading', { name: 'Alex’s training' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Alex’s coaching' })).toBeVisible();
   await expect(page.getByText('Deterministic strength block')).toBeVisible();
   await expect(page.getByText('Sam Morgan')).toHaveCount(0);
   await expect(page.getByText('sam.private@example.test')).toHaveCount(0);
