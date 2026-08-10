@@ -115,6 +115,13 @@ test('coach can create a manual invitation and athlete activates once', async ({
 
   await page.goto(activationUrl);
   await page.locator('input[name="password"]').fill('Sam secure E2E password!');
+  await page.locator('input[name="password_confirmation"]').fill('Mismatched secure E2E password!');
+  await page.getByRole('button', { name: 'Activate account' }).click();
+  await expect(page.getByRole('alert')).toContainText('The passwords do not match.');
+  await expect(page.locator('input[name="password"]')).toBeEditable();
+  await expect(page.locator('input[name="password_confirmation"]')).toBeEditable();
+
+  await page.locator('input[name="password"]').fill('Sam secure E2E password!');
   await page.locator('input[name="password_confirmation"]').fill('Sam secure E2E password!');
   await page.getByRole('button', { name: 'Activate account' }).click();
   await expect(page).toHaveURL(/\/athlete\/dashboard\?welcome=activated$/);

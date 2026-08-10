@@ -160,6 +160,56 @@ def test_activation_once_replay_rejected_and_login_handoff(lifecycle_app):
     assert b"already been used" in replay.data
 
 
+def test_invitation_password_mismatch_can_be_corrected_before_single_consumption(lifecycle_app):
+    coach_client = lifecycle_app.test_client()
+    login_coach(coach_client)
+    invitation(coach_client, lifecycle_app)
+    raw = raw_token_from_message(lifecycle_app)
+    athlete_client = lifecycle_app.test_client()
+    page = athlete_client.get("/account/invitation")
+    csrf_token = page.data.split(b'name="csrf_token" value="', 1)[1].split(b'"', 1)[0].decode()
+
+    mismatch = athlete_client.post(
+        "/account/invitation",
+        data={
+            "csrf_token": csrf_token,
+            "account_token": raw,
+            "password": "a sufficiently secure password",
+            "password_confirmation": "a different secure password",
+        },
+    )
+
+    assert mismatch.status_code == 400
+    assert mismatch.headers["Cache-Control"] == "no-store"
+    assert b"The passwords do not match." in mismatch.data
+    assert f'name="account_token" value="{raw}"'.encode() in mismatch.data
+    with lifecycle_app.app_context():
+        record = AccountToken.query.filter_by(token_digest=digest_token(raw)).one()
+        user = db.session.get(User, record.user_id)
+        assert record.consumed_at is None
+        assert user.active is False
+        assert user.password_hash is None
+
+    corrected = athlete_client.post(
+        "/account/invitation",
+        data={
+            "csrf_token": csrf_token,
+            "account_token": raw,
+            "password": "a sufficiently secure password",
+            "password_confirmation": "a sufficiently secure password",
+        },
+    )
+    assert corrected.status_code == 302
+    assert corrected.headers["Location"] == "/athlete/dashboard?welcome=activated"
+    with lifecycle_app.app_context():
+        record = AccountToken.query.filter_by(token_digest=digest_token(raw)).one()
+        assert record.consumed_at is not None
+
+    replay = submit_password(lifecycle_app.test_client(), f"/account/invitation#{raw}")
+    assert replay.status_code == 410
+    assert b"already been used" in replay.data
+
+
 def test_expired_invitation_is_rejected(lifecycle_app):
     client = lifecycle_app.test_client()
     login_coach(client)

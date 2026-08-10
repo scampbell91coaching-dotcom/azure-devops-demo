@@ -418,11 +418,13 @@ def account_token(purpose: str):
             purpose=token_purpose,
             available=available,
             error=error,
+            account_token=token if available else "",
         ),
         status=(410 if error and not available else 400) if error else (200 if available else 410),
         content_type="text/html; charset=utf-8",
     )
     response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Cache-Control"] = "no-store"
     return response
 
 
