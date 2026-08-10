@@ -89,12 +89,12 @@ class ClientServiceProfile:
 
     @classmethod
     def legacy_default(cls, athlete_id: int, *, as_of: date) -> ClientServiceProfile:
-        """Preserve all existing service surfaces; video review does not yet exist."""
+        """Return safe defaults when no persisted entitlement history exists."""
         return cls(
             athlete_id=athlete_id,
             training_coaching_enabled=True,
-            nutrition_coaching_enabled=True,
-            meet_day_support_enabled=True,
+            nutrition_coaching_enabled=False,
+            meet_day_support_enabled=False,
             video_review_entitlement=VideoReviewEntitlement.NONE,
             effective_from=as_of,
             provenance=EntitlementProvenance.LEGACY_DEFAULT,
