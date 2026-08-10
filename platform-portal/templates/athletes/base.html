@@ -19,7 +19,7 @@
       <a href="{{ url_for('athletes.dashboard') }}">Home</a>
       <a href="{{ url_for('athletes.programme') }}">Programme</a>
       <a href="{{ url_for('checkins.athlete_history') }}">Check-in</a>
-      <a href="{{ url_for('athletes.nutrition_checkin_form', athlete_id=athlete_navigation_id) }}">Nutrition</a>
+      {% if dashboard is not defined or dashboard.nutrition_coaching_enabled %}<a href="{{ url_for('athletes.nutrition_checkin_form', athlete_id=athlete_navigation_id) }}">Nutrition</a>{% endif %}
       <a href="{{ url_for('athletes.dashboard') }}#account">Account</a>
     </nav>
     <form class="athlete-signout" method="post" action="{{ url_for('auth.logout') }}">
@@ -31,7 +31,7 @@
     <a data-nav-page="home" href="{{ url_for('athletes.dashboard') }}"><span aria-hidden="true">⌂</span>Today</a>
     <a data-nav-page="programme" href="{{ url_for('athletes.programme') }}"><span aria-hidden="true">▤</span>Programme</a>
     <a data-nav-page="checkin" href="{{ url_for('checkins.athlete_history') }}"><span aria-hidden="true">✓</span>Check-in</a>
-    <a data-nav-page="nutrition" href="{{ url_for('athletes.nutrition_checkin_form', athlete_id=athlete_navigation_id) }}"><span aria-hidden="true">◇</span>Nutrition</a>
+    {% if dashboard is not defined or dashboard.nutrition_coaching_enabled %}<a data-nav-page="nutrition" href="{{ url_for('athletes.nutrition_checkin_form', athlete_id=athlete_navigation_id) }}"><span aria-hidden="true">◇</span>Nutrition</a>{% endif %}
     <a data-nav-page="profile" href="{{ url_for('athletes.dashboard') }}#account"><span aria-hidden="true">○</span>Account</a>
   </nav>
   <script src="{{ url_for('static', filename='js/athlete.js') }}" defer></script>

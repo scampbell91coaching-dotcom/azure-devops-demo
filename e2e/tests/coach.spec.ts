@@ -10,6 +10,30 @@ test('coach dashboard renders deterministic athlete data', async ({ page }) => {
   await expect(page.getByText('Alex Rivera').first()).toBeVisible();
 });
 
+test('disabled nutrition entitlement removes active surfaces and protects direct routes', async ({ page }) => {
+  const athleteId = 102;
+  await page.request.post(`/athletes/${athleteId}/check-in-settings`, {
+    form: { training_enabled: '1', workflow_active: '1', checkin_day: '0' },
+  });
+  try {
+    await page.goto(`/athletes/${athleteId}`);
+    await expect(page.getByRole('link', { name: 'Add nutrition check-in' })).toHaveCount(0);
+    await expect(page.getByText('History only')).toBeVisible();
+
+    await page.goto(`/athletes/${athleteId}/nutrition-checkins/new`);
+    await expect(page.getByRole('heading', { name: 'Access denied' })).toBeVisible();
+  } finally {
+    await page.request.post(`/athletes/${athleteId}/check-in-settings`, {
+      form: {
+        training_enabled: '1',
+        nutrition_enabled: '1',
+        workflow_active: '1',
+        checkin_day: '0',
+      },
+    });
+  }
+});
+
 test('athlete list opens an athlete detail', async ({ page }) => {
   await page.goto('/athletes');
   await expect(page.getByRole('heading', { level: 1, name: 'Athletes', exact: true })).toBeVisible();

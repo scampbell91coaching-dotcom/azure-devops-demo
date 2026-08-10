@@ -29,7 +29,10 @@ def _settings_for(athlete: Athlete) -> AthleteCheckinSettings:
         settings = AthleteCheckinSettings(
             athlete=athlete,
             training_enabled=True,
-            nutrition_enabled=False,
+            # A missing row identifies a legacy client whose nutrition access
+            # predates persisted entitlements. New athletes get an explicit
+            # disabled row at creation time.
+            nutrition_enabled=True,
             workflow_active=True,
             checkin_day=0,
         )

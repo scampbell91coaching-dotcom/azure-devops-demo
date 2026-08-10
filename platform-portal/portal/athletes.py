@@ -24,6 +24,7 @@ from .models.programming import TrainingBlock, TrainingSession, TrainingSessionL
 from .services.athlete_dashboard import get_athlete_dashboard
 from .services.training_schedule import project_training_schedule
 from .services.nutrition_dashboard import get_nutrition_dashboard
+from .services.nutrition_entitlements import nutrition_coaching_enabled
 from .nutrition_imports import _summary
 from .services.training_log import assigned_log, save_training_session
 from .services.persisted_warmups import athlete_warmup
@@ -305,6 +306,15 @@ def create_athlete():
     )
 
     db.session.add(athlete)
+    db.session.add(
+        AthleteCheckinSettings(
+            athlete=athlete,
+            training_enabled=True,
+            nutrition_enabled=False,
+            workflow_active=True,
+            checkin_day=0,
+        )
+    )
     try:
         db.session.commit()
     except IntegrityError:
@@ -352,7 +362,7 @@ def athlete_dashboard(athlete_id: int):
         settings = AthleteCheckinSettings(
             athlete_id=athlete.id,
             training_enabled=True,
-            nutrition_enabled=False,
+            nutrition_enabled=True,
             workflow_active=True,
             checkin_day=0,
         )
@@ -363,6 +373,7 @@ def athlete_dashboard(athlete_id: int):
         checkins=checkins,
         latest_checkin=latest_checkin,
         checkin_settings=settings,
+        nutrition_coaching_enabled=nutrition_coaching_enabled(athlete),
         weekly_checkin_due=settings.is_due_on(datetime.now(UTC).date()),
         imported_nutrition=_summary(
             athlete.id,
@@ -509,6 +520,8 @@ def nutrition_checkin_form(athlete_id: int):
 
     if athlete is None:
         abort(404)
+    if not nutrition_coaching_enabled(athlete):
+        abort(403)
 
     return render_template(
         "athletes/nutrition_checkin.html",
@@ -525,6 +538,8 @@ def create_nutrition_checkin(athlete_id: int):
 
     if athlete is None:
         abort(404)
+    if not nutrition_coaching_enabled(athlete):
+        abort(403)
 
     values, errors = _nutrition_form_values()
     if errors:
@@ -568,6 +583,8 @@ def create_nutrition_checkin(athlete_id: int):
     "/athletes/<int:athlete_id>/nutrition-checkins/<int:checkin_id>/review"
 )
 def review_nutrition_checkin(athlete_id: int, checkin_id: int):
+    if not nutrition_coaching_enabled(athlete_id):
+        abort(403)
     checkin = NutritionCheckIn.query.filter_by(
         id=checkin_id,
         athlete_id=athlete_id,

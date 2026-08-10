@@ -10,6 +10,7 @@ from .models.athlete import Athlete
 from .models.nutrition_import import DailyNutrition, NutritionImportJob, NutritionProviderConnection
 from .models.user import UserRole
 from .services.nutrition_import.myfitnesspal import ImportFormatError, MyFitnessPalFileProvider
+from .services.nutrition_entitlements import nutrition_coaching_enabled
 
 nutrition_imports_bp = Blueprint("nutrition_imports", __name__)
 
@@ -26,6 +27,13 @@ def _athlete_access(athlete_id: int) -> Athlete:
     return athlete
 
 
+def _active_nutrition_access(athlete_id: int) -> Athlete:
+    athlete = _athlete_access(athlete_id)
+    if not nutrition_coaching_enabled(athlete):
+        abort(403)
+    return athlete
+
+
 def _summary(athlete_id: int, start: date, end: date) -> dict[str, object]:
     rows = DailyNutrition.query.filter(DailyNutrition.athlete_id == athlete_id, DailyNutrition.date >= start, DailyNutrition.date <= end).order_by(DailyNutrition.date).all()
     fields = ("calories", "protein_g", "carbohydrate_g", "fat_g", "fibre_g", "bodyweight_kg")
@@ -38,7 +46,7 @@ def _summary(athlete_id: int, start: date, end: date) -> dict[str, object]:
 
 @nutrition_imports_bp.get("/athletes/<int:athlete_id>/nutrition-import")
 def index(athlete_id: int):
-    athlete = _athlete_access(athlete_id)
+    athlete = _active_nutrition_access(athlete_id)
     connection = NutritionProviderConnection.query.filter_by(athlete_id=athlete.id, provider="myfitnesspal").first()
     today = datetime.now(UTC).date()
     return render_template("nutrition_import/index.html", athlete=athlete, athlete_navigation_id=athlete.id, connection=connection, summary=_summary(athlete.id, today - timedelta(days=6), today))
@@ -46,7 +54,7 @@ def index(athlete_id: int):
 
 @nutrition_imports_bp.post("/athletes/<int:athlete_id>/nutrition-import/preview")
 def preview(athlete_id: int):
-    athlete = _athlete_access(athlete_id)
+    athlete = _active_nutrition_access(athlete_id)
     upload = request.files.get("export")
     if request.form.get("consent") != "1":
         return render_template("nutrition_import/index.html", athlete=athlete, athlete_navigation_id=athlete.id, connection=None, summary=_summary(athlete.id, date.today() - timedelta(days=6), date.today()), error="Consent is required before importing."), 400
@@ -67,7 +75,7 @@ def preview(athlete_id: int):
 
 @nutrition_imports_bp.post("/athletes/<int:athlete_id>/nutrition-import/<int:job_id>/commit")
 def commit(athlete_id: int, job_id: int):
-    athlete = _athlete_access(athlete_id)
+    athlete = _active_nutrition_access(athlete_id)
     job = NutritionImportJob.query.filter_by(id=job_id, athlete_id=athlete.id, status="preview").first_or_404()
     rows = json.loads(job.preview_json or "[]")
     for item in rows:
@@ -93,7 +101,7 @@ def commit(athlete_id: int, job_id: int):
 
 @nutrition_imports_bp.post("/athletes/<int:athlete_id>/nutrition-import/disconnect")
 def disconnect(athlete_id: int):
-    athlete = _athlete_access(athlete_id)
+    athlete = _active_nutrition_access(athlete_id)
     DailyNutrition.query.filter_by(athlete_id=athlete.id, provider="myfitnesspal").delete()
     connection = NutritionProviderConnection.query.filter_by(athlete_id=athlete.id, provider="myfitnesspal").first()
     if connection:

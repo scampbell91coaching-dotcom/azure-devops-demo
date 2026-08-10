@@ -18,7 +18,7 @@
   <nav class="dashboard-links" aria-label="Dashboard sections">
     <a href="#programme">Programme</a>
     <a href="#check-in">Check-in</a>
-    <a href="#nutrition">Nutrition</a>
+    {% if dashboard.nutrition_coaching_enabled %}<a href="#nutrition">Nutrition</a>{% endif %}
     <a href="#account">Account</a>
   </nav>
 
@@ -68,7 +68,7 @@
       <a class="button button--secondary" href="{{ url_for('checkins.athlete_history') }}">Check-in history</a>
     </section>
 
-    <section class="dashboard-card" id="nutrition">
+    {% if dashboard.nutrition_coaching_enabled %}<section class="dashboard-card" id="nutrition">
       <div class="card-heading"><div><span class="eyebrow">Latest update</span><h2>Nutrition &amp; bodyweight</h2></div></div>
       {% if dashboard.latest_nutrition %}
         <p class="muted">Submitted {{ dashboard.latest_nutrition.submitted_at.strftime('%d %b %Y') }}</p>
@@ -90,7 +90,7 @@
         {% endfor %}
         </ol>
       {% endif %}
-    </section>
+    </section>{% endif %}
 
     <section class="dashboard-card dashboard-card--wide" id="trends">
       <div class="card-heading"><div><span class="eyebrow">Recent history</span><h2>Trends</h2></div></div>
@@ -105,7 +105,7 @@
             <div class="empty-state"><strong>No bodyweight trend yet</strong><p>At least one recorded bodyweight is needed.</p></div>
           {% endif %}
         </div>
-        <div>
+        {% if dashboard.nutrition_coaching_enabled %}<div>
           <h3>Adherence, calories &amp; protein</h3>
           {% if dashboard.nutrition_history %}
             <ol class="trend-list">
@@ -118,7 +118,7 @@
         <div>
           <h3>Training performance</h3>
           {% if dashboard.performance_trend %}<ol class="trend-list">{% for point in dashboard.performance_trend %}<li><span>{{ point.recorded_on.strftime('%d %b') }}</span><strong>{{ point.value | int }}/10</strong></li>{% endfor %}</ol>{% else %}<div class="empty-state"><strong>No performance trend yet</strong><p>Performance scores will appear after nutrition updates.</p></div>{% endif %}
-        </div>
+        </div>{% endif %}
       </div>
       {% if dashboard.recent_checkins %}
         <h3>Recent check-ins</h3>

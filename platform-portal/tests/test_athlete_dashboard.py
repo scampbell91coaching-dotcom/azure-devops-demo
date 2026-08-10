@@ -44,11 +44,12 @@ def test_service_returns_current_athlete_data_and_first_session_only():
         db.session.add_all(
             [
                 block,
-                AthleteCheckinSettings(
-                    athlete_id=athlete.id,
-                    checkin_day=0,
-                    training_enabled=True,
-                    workflow_active=True,
+                    AthleteCheckinSettings(
+                        athlete_id=athlete.id,
+                        checkin_day=0,
+                        training_enabled=True,
+                        nutrition_enabled=True,
+                        workflow_active=True,
                 ),
                 WeeklyCheckin(
                     athlete_id=athlete.id,
@@ -214,11 +215,12 @@ def test_dashboard_renders_data_empty_states_links_and_no_coach_controls():
     with app.app_context():
         athlete = _athlete("Alex", "alex@example.com")
         db.session.add(
-            AthleteCheckinSettings(
-                athlete_id=athlete.id,
-                checkin_day=datetime.now(UTC).date().weekday(),
-                training_enabled=True,
-                workflow_active=True,
+                AthleteCheckinSettings(
+                    athlete_id=athlete.id,
+                    checkin_day=datetime.now(UTC).date().weekday(),
+                    training_enabled=True,
+                    nutrition_enabled=True,
+                    workflow_active=True,
             )
         )
         db.session.commit()

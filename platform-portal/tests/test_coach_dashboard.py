@@ -45,11 +45,12 @@ def test_service_aggregates_review_due_flags_programming_and_nutrition():
                 inactive,
                 block,
                 TrainingWeek(block=block, name="Week 1", position=1),
-                AthleteCheckinSettings(
-                    athlete=unprogrammed,
-                    checkin_day=today.weekday(),
-                    workflow_active=True,
-                    training_enabled=True,
+                    AthleteCheckinSettings(
+                        athlete=unprogrammed,
+                        checkin_day=today.weekday(),
+                        workflow_active=True,
+                        training_enabled=True,
+                        nutrition_enabled=True,
                 ),
                 WeeklyCheckin(
                     athlete=flagged,
@@ -172,7 +173,7 @@ def test_service_orders_review_queue_and_pending_athletes_deterministically():
                 zed,
                 amy,
                 inactive,
-                AthleteCheckinSettings(athlete=amy, checkin_day=0),
+                    AthleteCheckinSettings(athlete=amy, checkin_day=0, nutrition_enabled=True),
                 AthleteCheckinSettings(athlete=zed, checkin_day=0),
                 AthleteCheckinSettings(athlete=inactive, checkin_day=0),
                 WeeklyCheckin(
