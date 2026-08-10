@@ -18,6 +18,20 @@ test('athlete list opens an athlete detail', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Alex Rivera' })).toBeVisible();
 });
 
+test('coach manages concise client services with safe disable confirmation', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/athletes/101');
+  const services = page.locator('#client-services');
+  await expect(services.getByRole('heading', { name: 'Client services' })).toBeVisible();
+  await expect(services.getByText(/Existing programmes, check-ins, reviews and notes are retained/)).toBeVisible();
+  await services.locator('select[name="video_review"]').selectOption('limited');
+  await services.getByRole('button', { name: 'Save client services' }).click();
+  await expect(page).toHaveURL(/#client-services$/);
+  await expect(services.locator('select[name="video_review"]')).toHaveValue('limited');
+  await expect(services.getByText(/Set by coach\.e2e@example\.test/)).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+});
+
 test('creates an athlete from deterministic fixture values', async ({ page }, testInfo) => {
   await page.goto('/athletes');
   await page.locator('input[name="first_name"]').fill('Release');

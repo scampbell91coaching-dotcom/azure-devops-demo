@@ -30,6 +30,8 @@ from .services.persisted_warmups import athlete_warmup
 from .auth import roles_required
 from .models.account_token import AccountTokenPurpose, DeliveryState
 from .models.user import UserRole
+from .models.client_service import ClientServiceChange
+from .services.client_services import SERVICE_DEFINITIONS, resolved_client_services
 from .services.account_lifecycle import (
     AccountLifecycleError,
     account_state,
@@ -378,7 +380,52 @@ def athlete_dashboard(athlete_id: int):
         account_state=account_state(athlete),
         invitation=latest_token(athlete.id, AccountTokenPurpose.INVITATION),
         password_reset=latest_token(athlete.id, AccountTokenPurpose.PASSWORD_RESET),
+        client_services=resolved_client_services(athlete.id),
     )
+
+
+@athletes_bp.post("/athletes/<int:athlete_id>/services")
+@roles_required(UserRole.COACH)
+def update_client_services(athlete_id: int):
+    athlete = db.session.get(Athlete, athlete_id)
+    if athlete is None:
+        abort(404)
+
+    effective_date = request.form.get("effective_date", "").strip()
+    try:
+        effective_at = (
+            datetime.strptime(effective_date, "%Y-%m-%d")
+            if effective_date
+            else datetime.now(UTC).replace(tzinfo=None)
+        )
+    except ValueError:
+        abort(400, description="Choose a valid effective date.")
+
+    current = {item["key"]: item["value"] for item in resolved_client_services(athlete.id)}
+    allowed = {key: choices for key, _label, choices in SERVICE_DEFINITIONS}
+    changed = 0
+    for service, choices in allowed.items():
+        value = request.form.get(service, "")
+        if value not in choices:
+            abort(400, description="Choose a valid state for every client service.")
+        if value == current[service]:
+            continue
+        db.session.add(
+            ClientServiceChange(
+                athlete_id=athlete.id,
+                service=service,
+                value=value,
+                effective_at=effective_at,
+                changed_by_user_id=getattr(g.get("current_user"), "id", None),
+            )
+        )
+        changed += 1
+    db.session.commit()
+    flash(
+        "Client services updated." if changed else "No service changes were needed.",
+        "success",
+    )
+    return redirect(url_for("athletes.athlete_dashboard", athlete_id=athlete.id) + "#client-services")
 
 
 def _account_link(purpose: AccountTokenPurpose) -> str:

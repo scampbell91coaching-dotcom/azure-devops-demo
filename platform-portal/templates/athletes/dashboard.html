@@ -56,6 +56,36 @@
 
   </header>
 
+  <section class="coach-panel client-services" id="client-services">
+    <div class="coach-panel__heading coach-panel__heading--split">
+      <div><span class="coach-eyebrow">Current access</span><h2>Client services</h2></div>
+      <span class="coach-status coach-status--active">Effective now</span>
+    </div>
+    <form class="coach-form" method="post" action="{{ url_for('athletes.update_client_services', athlete_id=athlete.id) }}" data-client-services-form>
+      <div class="client-services__grid">
+        {% for service in client_services %}
+          <label class="client-service">
+            <span>{{ service.label }}</span>
+            <select name="{{ service.key }}" data-initial-value="{{ service.value }}">
+              {% for choice in service.choices %}<option value="{{ choice }}"{% if choice == service.value %} selected{% endif %}>{{ choice | replace('_', ' ') | title }}</option>{% endfor %}
+            </select>
+            <small>
+              Set by {{ service.provenance }}{% if service.effective_at %} · effective {{ service.effective_at.strftime('%d %b %Y') }}{% endif %}
+            </small>
+            {% if service.scheduled %}
+              <small class="client-service__scheduled">Scheduled: {{ service.scheduled.value | title }} from {{ service.scheduled.effective_at.strftime('%d %b %Y') }} · {{ service.scheduled.changed_by.email if service.scheduled.changed_by else 'Service default' }}</small>
+            {% endif %}
+          </label>
+        {% endfor %}
+      </div>
+      <div class="client-services__footer">
+        <label><span>Effective date (optional)</span><input type="date" name="effective_date"><small>Leave blank to apply now.</small></label>
+        <p>Disabling a service stops future access only. Existing programmes, check-ins, reviews and notes are retained.</p>
+        <button class="coach-primary-button" type="submit">Save client services</button>
+      </div>
+    </form>
+  </section>
+
   <section class="coach-panel" id="athlete-account">
     <div class="coach-panel__heading coach-panel__heading--split">
       <div><span class="coach-eyebrow">Athlete access</span><h2>Account lifecycle</h2></div>
@@ -261,3 +291,5 @@
   </section>
 </section>
 {% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/client_services.js') }}" defer></script>{% endblock %}

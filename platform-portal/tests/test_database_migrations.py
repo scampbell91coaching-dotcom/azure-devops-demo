@@ -20,6 +20,7 @@ EXPECTED_TABLES = {
     "athlete_state_signals",
     "athletes",
     "coaching_applications",
+    "client_service_changes",
     "coach_technical_observations",
     "day_template_exercises",
     "day_templates",

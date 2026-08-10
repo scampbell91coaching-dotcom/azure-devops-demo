@@ -429,6 +429,42 @@ select {
   border-radius: var(--coach-radius);
 }
 
+.client-services__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.client-service {
+  align-content: start;
+  border: 1px solid var(--coach-border);
+  padding: 1rem;
+  background: var(--coach-panel-soft);
+}
+
+.client-service small,
+.client-services__footer small {
+  color: var(--coach-muted);
+  line-height: 1.45;
+}
+
+.client-service__scheduled { color: var(--coach-warning) !important; }
+
+.client-services__footer {
+  display: grid;
+  grid-template-columns: minmax(12rem, .6fr) minmax(16rem, 1.4fr) auto;
+  align-items: end;
+  gap: 1rem;
+}
+
+.client-services__footer p { margin: 0; color: var(--coach-muted); font-size: .86rem; }
+
+@media (max-width: 760px) {
+  .client-services__grid,
+  .client-services__footer { grid-template-columns: 1fr; }
+  .client-services__footer .coach-primary-button { width: 100%; }
+}
+
 .coach-empty-state h3 {
   margin-top: 0;
   color: var(--coach-heading);
