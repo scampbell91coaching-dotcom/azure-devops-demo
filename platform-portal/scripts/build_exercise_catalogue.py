@@ -843,7 +843,7 @@ def swap_metadata(name: str, movement: str, family: str, category: str, equipmen
         constraints.append("neutral_grip_option")
     if any(term in lowered for term in ("pin ", "block pull", "rack pull", "board press", "box squat")):
         constraints.append("reduced_range_option")
-    if any(term in lowered for term in ("single-arm", "single-leg", "unilateral", "split squat", "lunge", "step-up", "step-down")):
+    if any(term in lowered for term in ("single-arm", "single-leg", "unilateral", "kickstand", "split squat", "lunge", "step-up", "step-down")):
         constraints.append("unilateral")
 
     if name in GENERAL_ASSISTANCE_IN_MAIN_MOVEMENTS:

@@ -4941,7 +4941,9 @@
       "equipment_options": [
         "dumbbells"
       ],
-      "constraint_tags": [],
+      "constraint_tags": [
+        "unilateral"
+      ],
       "variation_of": "Competition Deadlift",
       "swap_group": "deadlift:hinge"
     },
