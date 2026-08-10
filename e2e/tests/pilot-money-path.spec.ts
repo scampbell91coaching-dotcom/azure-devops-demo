@@ -24,6 +24,26 @@ async function changeAccount(page: import('@playwright/test').Page) {
   await page.context().clearCookies();
 }
 
+test.beforeEach(async ({ request }) => {
+  const login = await request.get('/login');
+  const loginToken = (await login.text()).match(/name="csrf_token" value="([^"]+)"/)?.[1];
+  expect(loginToken).toBeTruthy();
+  await request.post('/login', {
+    form: {
+      email: 'coach.e2e@example.test',
+      password: 'Coach E2E password!',
+      csrf_token: loginToken!,
+    },
+  });
+  const coach = await request.get('/coach');
+  const resetToken = (await coach.text()).match(/name="csrf_token" value="([^"]+)"/)?.[1];
+  expect(resetToken).toBeTruthy();
+  const reset = await request.post('/__e2e/reset/pilot', {
+    form: { csrf_token: resetToken! },
+  });
+  expect(reset.ok(), await reset.text()).toBeTruthy();
+});
+
 test('first paying athlete money path: draft to immutable coach-reviewed training', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
 
