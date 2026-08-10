@@ -72,6 +72,65 @@ def test_candidates_are_ordered_by_coach_priority_then_fatigue_and_name():
         ]
 
 
+def test_volume_policy_selects_six_plus_without_a_count_ceiling():
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite://"})
+    with app.app_context():
+        for index in range(10):
+            db.session.add(Exercise(
+                name=f"Low Fatigue {index:02d}", movement="accessory",
+                category="assistance", accessory_suitable=True, auto_select=True,
+                lift_relevance='["bench"]', training_phases='["development"]',
+                coach_priority=10 - index, fatigue_rating=1,
+            ))
+        db.session.commit()
+        intelligence = AccessoryIntelligence()
+        candidates = intelligence.candidates(
+            phase="development", lift_families={"bench"}
+        )
+
+        selected = intelligence.select_for_volume(candidates, volume="high")
+
+        assert len(selected) == 9
+        assert [item.exercise.name for item in selected] == [
+            f"Low Fatigue {index:02d}" for index in range(9)
+        ]
+        assert all("fits high fatigue budget (1/9)" in item.reasons for item in selected)
+
+
+def test_volume_policy_keeps_phase_lift_compatibility_and_exclusions_authoritative():
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite://"})
+    with app.app_context():
+        rows = [
+            Exercise(
+                name="Eligible", movement="accessory", category="assistance",
+                accessory_suitable=True, auto_select=True, fatigue_rating=1,
+                lift_relevance='["bench"]', training_phases='["strength"]',
+                compatibility_tags='["home_gym"]',
+            ),
+            Exercise(
+                name="Wrong Equipment", movement="accessory", category="assistance",
+                accessory_suitable=True, auto_select=True, fatigue_rating=1,
+                lift_relevance='["bench"]', training_phases='["strength"]',
+                compatibility_tags='["commercial_gym"]',
+            ),
+            Exercise(
+                name="Excluded", movement="accessory", category="assistance",
+                accessory_suitable=True, auto_select=True, fatigue_rating=1,
+                lift_relevance='["bench"]', training_phases='["strength"]',
+                compatibility_tags='["home_gym"]', constraint_tags='["exclude_me"]',
+            ),
+        ]
+        db.session.add_all(rows)
+        db.session.commit()
+        candidates = AccessoryIntelligence().candidates(
+            phase="strength", lift_families={"bench"},
+            required_compatibility_tags={"home_gym"},
+            excluded_constraint_tags={"exclude_me"},
+        )
+
+        assert [item.exercise.name for item in candidates] == ["Eligible"]
+
+
 def test_coach_can_configure_accessory_selection_metadata():
     app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite://"})
     with app.app_context():
