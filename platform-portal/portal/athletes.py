@@ -22,14 +22,18 @@ from .models.checkins import AthleteCheckinSettings
 from .models.nutrition_checkin import NutritionCheckIn
 from .models.programming import TrainingBlock, TrainingSession, TrainingSessionLog
 from .services.athlete_dashboard import get_athlete_dashboard
+from .services.athlete_services import athlete_services
 from .services.training_schedule import project_training_schedule
 from .services.nutrition_dashboard import get_nutrition_dashboard
+from .services.nutrition_entitlements import nutrition_coaching_enabled
 from .nutrition_imports import _summary
 from .services.training_log import assigned_log, save_training_session
 from .services.persisted_warmups import athlete_warmup
 from .auth import roles_required
 from .models.account_token import AccountTokenPurpose, DeliveryState
 from .models.user import UserRole
+from .models.client_service import ClientServiceChange
+from .services.client_services import SERVICE_DEFINITIONS, resolved_client_services
 from .services.account_lifecycle import (
     AccountLifecycleError,
     account_state,
@@ -82,6 +86,8 @@ def _signed_in_athlete_id() -> int:
 @athletes_bp.get("/athlete/programme")
 def programme():
     athlete_id = _signed_in_athlete_id()
+    if not athlete_services(athlete_id).training:
+        abort(404)
     athlete = db.session.get(Athlete, athlete_id)
     if athlete is None:
         abort(401)
@@ -116,6 +122,8 @@ def programme():
 )
 def programme_session(session_id: int):
     athlete_id = _signed_in_athlete_id()
+    if not athlete_services(athlete_id).training:
+        abort(404)
     training_session = db.session.get(TrainingSession, session_id)
     if training_session is None or training_session.week.block.athlete_id != athlete_id:
         abort(404)
@@ -303,6 +311,45 @@ def create_athlete():
     )
 
     db.session.add(athlete)
+    db.session.add(
+        AthleteCheckinSettings(
+            athlete=athlete,
+            training_enabled=True,
+            nutrition_enabled=False,
+            workflow_active=True,
+            checkin_day=0,
+        )
+    )
+
+    service_effective_at = datetime.now(UTC).replace(tzinfo=None)
+    db.session.add_all(
+        [
+            ClientServiceChange(
+                athlete=athlete,
+                service="training",
+                value="yes",
+                effective_at=service_effective_at,
+            ),
+            ClientServiceChange(
+                athlete=athlete,
+                service="nutrition",
+                value="no",
+                effective_at=service_effective_at,
+            ),
+            ClientServiceChange(
+                athlete=athlete,
+                service="meet_day",
+                value="no",
+                effective_at=service_effective_at,
+            ),
+            ClientServiceChange(
+                athlete=athlete,
+                service="video_review",
+                value="none",
+                effective_at=service_effective_at,
+            ),
+        ]
+    )
     try:
         db.session.commit()
     except IntegrityError:
@@ -350,7 +397,7 @@ def athlete_dashboard(athlete_id: int):
         settings = AthleteCheckinSettings(
             athlete_id=athlete.id,
             training_enabled=True,
-            nutrition_enabled=False,
+            nutrition_enabled=True,
             workflow_active=True,
             checkin_day=0,
         )
@@ -361,6 +408,7 @@ def athlete_dashboard(athlete_id: int):
         checkins=checkins,
         latest_checkin=latest_checkin,
         checkin_settings=settings,
+        nutrition_coaching_enabled=nutrition_coaching_enabled(athlete.id),
         weekly_checkin_due=settings.is_due_on(datetime.now(UTC).date()),
         imported_nutrition=_summary(
             athlete.id,
@@ -378,7 +426,52 @@ def athlete_dashboard(athlete_id: int):
         account_state=account_state(athlete),
         invitation=latest_token(athlete.id, AccountTokenPurpose.INVITATION),
         password_reset=latest_token(athlete.id, AccountTokenPurpose.PASSWORD_RESET),
+        client_services=resolved_client_services(athlete.id),
     )
+
+
+@athletes_bp.post("/athletes/<int:athlete_id>/services")
+@roles_required(UserRole.COACH)
+def update_client_services(athlete_id: int):
+    athlete = db.session.get(Athlete, athlete_id)
+    if athlete is None:
+        abort(404)
+
+    effective_date = request.form.get("effective_date", "").strip()
+    try:
+        effective_at = (
+            datetime.strptime(effective_date, "%Y-%m-%d")
+            if effective_date
+            else datetime.now(UTC).replace(tzinfo=None)
+        )
+    except ValueError:
+        abort(400, description="Choose a valid effective date.")
+
+    current = {item["key"]: item["value"] for item in resolved_client_services(athlete.id)}
+    allowed = {key: choices for key, _label, choices in SERVICE_DEFINITIONS}
+    changed = 0
+    for service, choices in allowed.items():
+        value = request.form.get(service, "")
+        if value not in choices:
+            abort(400, description="Choose a valid state for every client service.")
+        if value == current[service]:
+            continue
+        db.session.add(
+            ClientServiceChange(
+                athlete_id=athlete.id,
+                service=service,
+                value=value,
+                effective_at=effective_at,
+                changed_by_user_id=getattr(g.get("current_user"), "id", None),
+            )
+        )
+        changed += 1
+    db.session.commit()
+    flash(
+        "Client services updated." if changed else "No service changes were needed.",
+        "success",
+    )
+    return redirect(url_for("athletes.athlete_dashboard", athlete_id=athlete.id) + "#client-services")
 
 
 def _account_link(purpose: AccountTokenPurpose) -> str:
@@ -458,10 +551,15 @@ def revoke_account_token(athlete_id: int, purpose: str):
 
 @athletes_bp.get("/athletes/<int:athlete_id>/nutrition-checkins/new")
 def nutrition_checkin_form(athlete_id: int):
+    if g.get("current_user") is not None and g.current_user.role == "athlete":
+        if not athlete_services(athlete_id).nutrition:
+            abort(404)
     athlete = db.session.get(Athlete, athlete_id)
 
     if athlete is None:
         abort(404)
+    if not nutrition_coaching_enabled(athlete):
+        abort(403)
 
     return render_template(
         "athletes/nutrition_checkin.html",
@@ -474,10 +572,15 @@ def nutrition_checkin_form(athlete_id: int):
 
 @athletes_bp.post("/athletes/<int:athlete_id>/nutrition-checkins")
 def create_nutrition_checkin(athlete_id: int):
+    if g.get("current_user") is not None and g.current_user.role == "athlete":
+        if not athlete_services(athlete_id).nutrition:
+            abort(404)
     athlete = db.session.get(Athlete, athlete_id)
 
     if athlete is None:
         abort(404)
+    if not nutrition_coaching_enabled(athlete):
+        abort(403)
 
     values, errors = _nutrition_form_values()
     if errors:
@@ -521,6 +624,8 @@ def create_nutrition_checkin(athlete_id: int):
     "/athletes/<int:athlete_id>/nutrition-checkins/<int:checkin_id>/review"
 )
 def review_nutrition_checkin(athlete_id: int, checkin_id: int):
+    if not nutrition_coaching_enabled(athlete_id):
+        abort(403)
     checkin = NutritionCheckIn.query.filter_by(
         id=checkin_id,
         athlete_id=athlete_id,

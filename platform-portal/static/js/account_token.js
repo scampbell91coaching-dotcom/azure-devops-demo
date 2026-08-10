@@ -8,6 +8,10 @@
     history.replaceState(null, '', window.location.pathname);
     return;
   }
+  // A validation response has no fragment because it was removed before the
+  // first submission. The server returns the still-available token in the
+  // hidden field so the athlete can correct the form and submit again.
+  if (/^[A-Za-z0-9_-]{43,200}$/.test(field.value)) return;
   form.querySelectorAll('input, button').forEach((control) => {
     control.disabled = true;
   });

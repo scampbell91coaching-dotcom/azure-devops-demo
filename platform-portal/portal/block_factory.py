@@ -52,6 +52,10 @@ class FactoryRequest:
     meet_date: date | None
     accessory_exercise_ids: tuple[int, ...] = ()
     accessory_mode: str = "automatic"
+    accessory_volume: str = "medium"
+    deadlift_grip: str = "mixed"
+    grip_work_priority: str = "none"
+    training_strap_usage: str = "none"
 
 
 GOAL_RPE = {
@@ -214,6 +218,18 @@ def _parse_factory_request() -> FactoryRequest:
         accessory_mode = "manual"
     elif accessory_mode not in {"automatic", "none"}:
         accessory_mode = "automatic"
+    accessory_volume = request.form.get("accessory_volume", "medium").strip().lower()
+    if accessory_volume not in {"low", "medium", "high"}:
+        accessory_volume = "medium"
+    deadlift_grip = request.form.get("deadlift_grip", "mixed").strip().lower()
+    if deadlift_grip not in {"hook", "mixed", "double-overhand", "straps", "other"}:
+        deadlift_grip = "other"
+    grip_work_priority = request.form.get("grip_work_priority", "none").strip().lower()
+    if grip_work_priority not in {"none", "maintain", "build", "priority"}:
+        grip_work_priority = "none"
+    training_strap_usage = request.form.get("training_strap_usage", "none").strip().lower()
+    if training_strap_usage not in {"none", "some", "most"}:
+        training_strap_usage = "none"
     return FactoryRequest(
         athlete_id=athlete_id,
         name=request.form.get("name", "").strip() or "Generated Block",
@@ -231,6 +247,10 @@ def _parse_factory_request() -> FactoryRequest:
         meet_date=_parse_date(request.form.get("meet_date", "")),
         accessory_exercise_ids=accessory_ids,
         accessory_mode=accessory_mode,
+        accessory_volume=accessory_volume,
+        deadlift_grip=deadlift_grip,
+        grip_work_priority=grip_work_priority,
+        training_strap_usage=training_strap_usage,
     )
 
 
@@ -550,6 +570,7 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
     pool = _accessory_pool()
     intelligence = AccessoryIntelligence()
     suggested_ids: set[int] = set()
+    volume_per_day = {"low": 1, "medium": 2, "high": 3}[factory.accessory_volume]
     for day_index, day_type in enumerate(days):
         exercises = _candidate_exercises(
             templates,
@@ -567,8 +588,8 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
         )
         main_count = len(day_type)
         main_exercises = exercises[:main_count]
-        # Intelligence never fills an accessory quota. Pinned coach selections
-        # are distributed once across exposure-led days and remain in coach order.
+        # Pinned selections replace automatic volume behaviour, are distributed
+        # once across exposure-led days, and remain in coach order.
         manual_for_day = selected_accessories[day_index :: len(days)]
         generated_accessories = []
         for name in manual_for_day:
@@ -596,8 +617,19 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                 lift_families={family_by_code[code] for code in day_type},
                 exclude_ids=suggested_ids,
             )
-            if candidates:
-                suggestion = candidates[0]
+            if "D" in day_type and factory.grip_work_priority != "none":
+                grip = intelligence.grip_candidates(
+                    phase=factory.goal,
+                    competition_grip=factory.deadlift_grip,
+                    strap_usage=factory.training_strap_usage,
+                    priority=factory.grip_work_priority,
+                    exclude_ids=suggested_ids,
+                )
+                grip_ids = {item.exercise.id for item in grip}
+                candidates = grip + [
+                    item for item in candidates if item.exercise.id not in grip_ids
+                ]
+            for suggestion in candidates[:volume_per_day]:
                 suggested_ids.add(suggestion.exercise.id)
                 generated_accessories.append(
                     {
@@ -627,7 +659,8 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                 "accessories": generated_accessories,
                 "accessory_count": len(generated_accessories),
                 "accessory_range": (
-                    "library suggestion" if factory.accessory_mode == "automatic"
+                    f"{factory.accessory_volume} volume · up to {volume_per_day} library suggestions"
+                    if factory.accessory_mode == "automatic"
                     and not selected_accessories else "coach selected only"
                 ),
             }
@@ -728,6 +761,10 @@ def _factory_from_payload(payload: dict[str, Any]) -> FactoryRequest:
     )
     values["accessory_exercise_ids"] = tuple(values.get("accessory_exercise_ids") or ())
     values.setdefault("accessory_mode", "automatic")
+    values.setdefault("accessory_volume", "medium")
+    values.setdefault("deadlift_grip", "mixed")
+    values.setdefault("grip_work_priority", "none")
+    values.setdefault("training_strap_usage", "none")
     return FactoryRequest(**values)
 
 

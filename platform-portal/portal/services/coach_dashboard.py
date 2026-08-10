@@ -9,6 +9,7 @@ from ..models.athlete import Athlete
 from ..models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from ..models.nutrition_checkin import NutritionCheckIn
 from ..models.programming import TrainingBlock, TrainingSessionLog
+from .client_services import nutrition_enabled_athlete_ids
 
 
 @dataclass(frozen=True)
@@ -86,11 +87,15 @@ class CoachDashboardService:
         ).all()
 
         athlete_by_id = {athlete.id: athlete for athlete in athletes}
+        explicit_settings = {item.athlete_id: item for item in settings}
+        nutrition_enabled_ids = nutrition_enabled_athlete_ids(
+            [athlete.id for athlete in athletes]
+        )
         recent_cutoff = today - timedelta(days=self.RECENT_DAYS - 1)
         recent = tuple(item for item in weekly if item.week_ending >= recent_cutoff)
 
         requiring_review = self._reviews(
-            athlete_by_id, weekly, nutrition, training_logs
+            athlete_by_id, weekly, nutrition, training_logs, nutrition_enabled_ids
         )
         week_start = today - timedelta(days=today.weekday())
         week_end = week_start + timedelta(days=6)
@@ -187,6 +192,7 @@ class CoachDashboardService:
         weekly: list[WeeklyCheckin],
         nutrition: list[NutritionCheckIn],
         training_logs: list[TrainingSessionLog],
+        nutrition_enabled_ids: set[int],
     ) -> tuple[ReviewItem, ...]:
         items = [
             ReviewItem(
@@ -208,7 +214,9 @@ class CoachDashboardService:
                 item_id=item.id,
             )
             for item in nutrition
-            if item.athlete_id in athletes and not item.reviewed
+            if item.athlete_id in athletes
+            and item.athlete_id in nutrition_enabled_ids
+            and not item.reviewed
         )
         items.extend(
             ReviewItem(

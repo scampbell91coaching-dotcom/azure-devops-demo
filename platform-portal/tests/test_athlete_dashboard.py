@@ -4,6 +4,7 @@ from portal import create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.checkins import AthleteCheckinSettings, WeeklyCheckin
+from portal.models.client_service import ClientServiceChange
 from portal.models.nutrition_checkin import NutritionCheckIn
 from portal.models.programming import ExercisePrescription, TrainingBlock, TrainingSession, TrainingWeek
 from portal.services.athlete_dashboard import get_athlete_dashboard
@@ -26,6 +27,44 @@ def _athlete(first_name: str, email: str) -> Athlete:
     return athlete
 
 
+
+def _set_services(
+    athlete: Athlete,
+    *,
+    training: bool,
+    nutrition: bool,
+) -> None:
+    effective_at = datetime(2026, 8, 10)
+    db.session.add_all(
+        [
+            ClientServiceChange(
+                athlete=athlete,
+                service="training",
+                value="yes" if training else "no",
+                effective_at=effective_at,
+            ),
+            ClientServiceChange(
+                athlete=athlete,
+                service="nutrition",
+                value="yes" if nutrition else "no",
+                effective_at=effective_at,
+            ),
+            ClientServiceChange(
+                athlete=athlete,
+                service="meet_day",
+                value="no",
+                effective_at=effective_at,
+            ),
+            ClientServiceChange(
+                athlete=athlete,
+                service="video_review",
+                value="none",
+                effective_at=effective_at,
+            ),
+        ]
+    )
+
+
 def _sign_in(client, athlete_id: int) -> None:
     with client.session_transaction() as athlete_session:
         athlete_session["athlete_id"] = athlete_id
@@ -44,11 +83,12 @@ def test_service_returns_current_athlete_data_and_first_session_only():
         db.session.add_all(
             [
                 block,
-                AthleteCheckinSettings(
-                    athlete_id=athlete.id,
-                    checkin_day=0,
-                    training_enabled=True,
-                    workflow_active=True,
+                    AthleteCheckinSettings(
+                        athlete_id=athlete.id,
+                        checkin_day=0,
+                        training_enabled=True,
+                        nutrition_enabled=True,
+                        workflow_active=True,
                 ),
                 WeeklyCheckin(
                     athlete_id=athlete.id,
@@ -202,7 +242,7 @@ def test_dashboard_is_strictly_isolated_to_signed_in_athlete():
     response = client.get("/athlete/dashboard")
 
     assert response.status_code == 200
-    assert "Alex\u2019s training".encode() in response.data
+    assert "Alex\u2019s coaching".encode() in response.data
     assert b"traditional-strength-logo.png" in response.data
     assert b">TS<" not in response.data
     assert b"Sam" not in response.data
@@ -214,12 +254,18 @@ def test_dashboard_renders_data_empty_states_links_and_no_coach_controls():
     with app.app_context():
         athlete = _athlete("Alex", "alex@example.com")
         db.session.add(
-            AthleteCheckinSettings(
-                athlete_id=athlete.id,
-                checkin_day=datetime.now(UTC).date().weekday(),
-                training_enabled=True,
-                workflow_active=True,
+                AthleteCheckinSettings(
+                    athlete_id=athlete.id,
+                    checkin_day=datetime.now(UTC).date().weekday(),
+                    training_enabled=True,
+                    nutrition_enabled=True,
+                    workflow_active=True,
             )
+        )
+        _set_services(
+            athlete,
+            training=True,
+            nutrition=True,
         )
         db.session.commit()
         athlete_id = athlete.id
@@ -289,6 +335,12 @@ def test_dashboard_renders_compliance_recovery_trends_and_coach_notes():
         athlete = _athlete("Alex", "alex@example.com")
         db.session.add_all(
             [
+                AthleteCheckinSettings(
+                    athlete_id=athlete.id,
+                    training_enabled=True,
+                    nutrition_enabled=True,
+                    workflow_active=True,
+                ),
                 WeeklyCheckin(
                     athlete_id=athlete.id,
                     week_ending=date(2026, 8, 2),
@@ -329,3 +381,64 @@ def test_dashboard_renders_compliance_recovery_trends_and_coach_notes():
     assert "92.4 kg" in page
     assert "9/10" in page
     assert "Keep building steadily." in page
+
+
+def test_training_only_dashboard_and_navigation_hide_nutrition():
+    app = _app()
+    with app.app_context():
+        athlete = _athlete("Alex", "training-only@example.com")
+        db.session.add(
+            AthleteCheckinSettings(
+                athlete=athlete,
+                training_enabled=True,
+                nutrition_enabled=False,
+                workflow_active=True,
+            )
+        )
+        _set_services(
+            athlete,
+            training=True,
+            nutrition=False,
+        )
+        db.session.commit()
+        athlete_id = athlete.id
+
+    client = app.test_client()
+    _sign_in(client, athlete_id)
+    page = client.get("/athlete/dashboard").get_data(as_text=True)
+
+    assert 'href="/athlete/programme"' in page
+    assert 'href="/athlete/check-ins"' in page
+    assert f'href="/athletes/{athlete_id}/nutrition-checkins/new"' not in page
+    assert 'id="nutrition"' not in page
+
+
+def test_nutrition_only_dashboard_hides_programme_and_rejects_programme_route():
+    app = _app()
+    with app.app_context():
+        athlete = _athlete("Nia", "nutrition-only@example.com")
+        db.session.add(
+            AthleteCheckinSettings(
+                athlete=athlete,
+                training_enabled=False,
+                nutrition_enabled=True,
+                workflow_active=True,
+            )
+        )
+        _set_services(
+            athlete,
+            training=False,
+            nutrition=True,
+        )
+        db.session.commit()
+        athlete_id = athlete.id
+
+    client = app.test_client()
+    _sign_in(client, athlete_id)
+    page = client.get("/athlete/dashboard").get_data(as_text=True)
+
+    assert "Nutrition, recovery and coach updates." in page
+    assert 'href="/athlete/programme"' not in page
+    assert 'id="programme"' not in page
+    assert f'href="/athletes/{athlete_id}/nutrition-checkins/new"' in page
+    assert client.get("/athlete/programme").status_code == 404

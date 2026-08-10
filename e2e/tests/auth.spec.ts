@@ -86,13 +86,47 @@ test('coach can create a manual invitation and athlete activates once', async ({
   const activationUrl = await page.locator('[data-manual-account-link]').inputValue();
   expect(activationUrl).toContain('/account/invitation#');
 
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 720 });
+    await page.goto(activationUrl);
+
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+    ).toBe(true);
+    const logo = page.getByRole('img', { name: 'Traditional Strength' });
+    await expect(logo).toBeVisible();
+    expect((await logo.boundingBox())?.height).toBeLessThanOrEqual(88);
+
+    const password = page.locator('input[name="password"]');
+    await expect(password).toBeEditable();
+    expect(await password.evaluate((input) => getComputedStyle(input).fontSize)).toBe('16px');
+    await password.fill('Sam secure E2E password!');
+    await page.locator('input[name="password_confirmation"]').fill('Passwords do not match!');
+
+    const activate = page.getByRole('button', { name: 'Activate account' });
+    await expect(activate).toBeVisible();
+    expect((await activate.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    await activate.click();
+    await expect(page.getByRole('alert')).toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+    ).toBe(true);
+  }
+
   await page.goto(activationUrl);
+  await page.locator('input[name="password"]').fill('Sam secure E2E password!');
+  await page.locator('input[name="password_confirmation"]').fill('Mismatched secure E2E password!');
+  await page.getByRole('button', { name: 'Activate account' }).click();
+  await expect(page.getByRole('alert')).toContainText('The passwords do not match.');
+  await expect(page.locator('input[name="password"]')).toBeEditable();
+  await expect(page.locator('input[name="password_confirmation"]')).toBeEditable();
+
   await page.locator('input[name="password"]').fill('Sam secure E2E password!');
   await page.locator('input[name="password_confirmation"]').fill('Sam secure E2E password!');
   await page.getByRole('button', { name: 'Activate account' }).click();
   await expect(page).toHaveURL(/\/athlete\/dashboard\?welcome=activated$/);
   await expect(page.getByText('Account activated', { exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Sam’s training' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sam’s coaching' })).toBeVisible();
 
   await page.goto(activationUrl);
   await page.locator('input[name="password"]').fill('Another secure E2E password!');

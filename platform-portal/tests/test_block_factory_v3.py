@@ -1,4 +1,5 @@
 import re
+from dataclasses import replace
 
 import pytest
 from portal import create_app
@@ -341,6 +342,58 @@ def test_factory_suggests_enabled_metadata_and_manual_selection_overrides_it():
         assert [item["name"] for day in manual for item in day["accessories"]] == [
             "Coach Pin"
         ]
+
+
+def test_accessory_volume_controls_deterministic_per_day_maximums():
+    app = create_test_app()
+    with app.app_context():
+        for index in range(12):
+            db.session.add(Exercise(
+                name=f"Auto Accessory {index:02d}", movement="accessory",
+                category="assistance", accessory_suitable=True, auto_select=True,
+                lift_relevance='["all"]', coach_priority=12 - index,
+            ))
+        db.session.commit()
+        request = factory_request(3, 1, 1, 1)
+
+        low = _preview(replace(request, accessory_volume="low"))
+        medium = _preview(replace(request, accessory_volume="medium"))
+        high = _preview(replace(request, accessory_volume="high"))
+
+        assert [day["accessory_count"] for day in low] == [1, 1, 1]
+        assert [day["accessory_count"] for day in medium] == [2, 2, 2]
+        assert [day["accessory_count"] for day in high] == [3, 3, 3]
+        assert [item["name"] for day in medium for item in day["accessories"]] == [
+            item["name"] for day in _preview(replace(request, accessory_volume="medium"))
+            for item in day["accessories"]
+        ]
+
+
+def test_deadlift_grip_context_prioritises_explainable_grip_work():
+    app = create_test_app()
+    with app.app_context():
+        db.session.add_all([
+            Exercise(
+                name="General Posterior Chain", movement="accessory",
+                category="assistance", accessory_suitable=True, auto_select=True,
+                lift_relevance='["deadlift"]', coach_priority=10,
+            ),
+            Exercise(
+                name="Hook-Grip Practice Hold", movement="accessory",
+                category="grip", accessory_suitable=True, auto_select=True,
+                lift_relevance='["deadlift"]', coach_priority=1,
+            ),
+        ])
+        db.session.commit()
+        preview = _preview(replace(
+            factory_request(3, 1, 1, 1), accessory_volume="low",
+            deadlift_grip="hook", grip_work_priority="priority",
+            training_strap_usage="most",
+        ))
+        deadlift_day = next(day for day in preview if "D" in day["day_type"])
+
+        assert deadlift_day["accessories"][0]["name"] == "Hook-Grip Practice Hold"
+        assert "competition grip is hook" in deadlift_day["accessories"][0]["reasons"]
 
 
 def test_zero_assistance_generation_persists_after_reload():

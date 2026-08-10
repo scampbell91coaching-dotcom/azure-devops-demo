@@ -29,6 +29,11 @@ def metadata_values(value: str | None) -> set[str]:
 
 
 class AccessoryIntelligence:
+    GRIP_PURPOSES = {
+        "grip", "grip_strength", "deadlift_grip", "hook_grip",
+        "static_hold", "double_overhand", "no_strap",
+    }
+
     def __init__(self, repository: AccessoryRepository | None = None) -> None:
         self.repository = repository or AccessoryRepository()
 
@@ -84,4 +89,59 @@ class AccessoryIntelligence:
             reasons.append(f"fatigue cost {exercise.fatigue_rating}/5")
             results.append(AccessorySuggestion(exercise, tuple(reasons)))
 
+        return results
+
+    def grip_candidates(
+        self,
+        *,
+        phase: str,
+        competition_grip: str,
+        strap_usage: str,
+        priority: str,
+        exclude_ids: set[int] | None = None,
+    ) -> list[AccessorySuggestion]:
+        """Return a conservative deadlift-grip shortlist.
+
+        Catalogue metadata is preferred. A small set of recognisable exercise
+        families is supported for legacy rows; loaded carries are deliberately
+        excluded so grip work does not collapse into farmer-carry suggestions.
+        """
+        if priority == "none":
+            return []
+        results: list[AccessorySuggestion] = []
+        for suggestion in self.candidates(
+            phase=phase,
+            lift_families={"deadlift"},
+            exclude_ids=exclude_ids,
+        ):
+            exercise = suggestion.exercise
+            purposes = metadata_values(exercise.technical_purposes)
+            tags = purposes | metadata_values(exercise.compatibility_tags)
+            name = exercise.name.casefold().replace("-", " ")
+            if "farmer" in name or "carry" in name:
+                continue
+            family = None
+            if tags.intersection(self.GRIP_PURPOSES):
+                family = "catalogue grip metadata"
+            elif "hook grip" in name:
+                family = "hook-grip practice/tolerance"
+            elif "double overhand" in name:
+                family = "double-overhand hold"
+            elif "bar hold" in name or "static hold" in name or "grip hold" in name:
+                family = "static bar hold"
+            elif "no strap" in name and "deadlift" in name:
+                family = "controlled no-strap deadlift exposure"
+            if family is None:
+                continue
+            reasons = list(suggestion.reasons)
+            reasons.extend((
+                f"grip-work priority is {priority}",
+                f"matched {family}",
+                f"competition grip is {competition_grip}",
+            ))
+            if strap_usage != "none":
+                reasons.append(
+                    f"training strap usage is {strap_usage}; unstrapped exposure is programmed separately"
+                )
+            results.append(AccessorySuggestion(exercise, tuple(reasons)))
         return results

@@ -41,7 +41,7 @@ def main() -> None:
     from portal.coaching_applications import coaching_applications_bp
     from portal.extensions import db
     from portal.models.athlete import Athlete
-    from seed_database import seed_database
+    from seed_database import reset_pilot_fixture, seed_database
 
     def stop_for_cleanup(_signum, _frame):
         raise SystemExit(0)
@@ -62,6 +62,16 @@ def main() -> None:
             app.register_blueprint(coaching_applications_bp)
 
         seed_database(app)
+
+        @app.post("/__e2e/reset/pilot")
+        def reset_pilot():
+            if not hmac.compare_digest(
+                request.headers.get("X-E2E-Run-Token", ""), run_token
+            ):
+                abort(404)
+            reset_pilot_fixture()
+            session.clear()
+            return jsonify({"reset": "pilot"})
 
         app.run(
             host="127.0.0.1",

@@ -15,6 +15,7 @@ from .athlete_state import (
     CoachTechnicalObservation,
 )
 from .checkins import AthleteCheckinSettings, WeeklyCheckin
+from .client_service import ClientServiceChange
 from .coaching_application import CoachingApplication
 from .exercise_library import DayTemplate, DayTemplateExercise, Exercise
 from .lead_capture import LeadCapture
@@ -46,6 +47,7 @@ __all__ = [
     "AthleteCheckinSettings",
     "CoachingApplication",
     "CoachTechnicalObservation",
+    "ClientServiceChange",
     "DayTemplate",
     "DayTemplateExercise",
     "DeliveryState",

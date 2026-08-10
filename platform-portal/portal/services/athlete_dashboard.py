@@ -16,6 +16,7 @@ from ..models.programming import (
     TrainingWeek,
 )
 from .training_schedule import ScheduledSession, project_training_schedule
+from .nutrition_entitlements import nutrition_coaching_enabled
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,7 @@ class AthleteDashboard:
     performance_trend: tuple[TrendPoint, ...]
     nutrition_history: tuple[NutritionCheckIn, ...]
     latest_coach_response: CoachResponse | None
+    nutrition_coaching_enabled: bool
 
 
 def get_athlete_dashboard(athlete_id: int, *, today: date) -> AthleteDashboard | None:
@@ -86,13 +88,15 @@ def get_athlete_dashboard(athlete_id: int, *, today: date) -> AthleteDashboard |
     settings = AthleteCheckinSettings.query.filter_by(athlete_id=athlete_id).first()
     next_checkin_date = _next_checkin_date(settings, latest_checkin, today)
 
+    has_nutrition = nutrition_coaching_enabled(athlete_id)
+
     latest_nutrition = (
         NutritionCheckIn.query.options(joinedload(NutritionCheckIn.athlete))
         .filter_by(athlete_id=athlete_id)
         .order_by(NutritionCheckIn.submitted_at.desc(), NutritionCheckIn.id.desc())
         .first()
-    )
-    bodyweight_trend = _bodyweight_trend(athlete_id)
+    ) if has_nutrition else None
+    bodyweight_trend = _bodyweight_trend(athlete_id, include_nutrition=has_nutrition)
 
     return AthleteDashboard(
         athlete=athlete,
@@ -110,9 +114,12 @@ def get_athlete_dashboard(athlete_id: int, *, today: date) -> AthleteDashboard |
             bodyweight_trend[-1].value if bodyweight_trend else athlete.bodyweight_kg
         ),
         bodyweight_trend=bodyweight_trend,
-        performance_trend=_performance_trend(athlete_id),
-        nutrition_history=_nutrition_history(athlete_id),
-        latest_coach_response=_latest_coach_response(athlete_id),
+        performance_trend=_performance_trend(athlete_id) if has_nutrition else (),
+        nutrition_history=_nutrition_history(athlete_id) if has_nutrition else (),
+        latest_coach_response=_latest_coach_response(
+            athlete_id, include_nutrition=has_nutrition
+        ),
+        nutrition_coaching_enabled=has_nutrition,
     )
 
 
@@ -135,7 +142,9 @@ def _nutrition_history(athlete_id: int) -> tuple[NutritionCheckIn, ...]:
     return tuple(items)
 
 
-def _bodyweight_trend(athlete_id: int) -> tuple[TrendPoint, ...]:
+def _bodyweight_trend(
+    athlete_id: int, *, include_nutrition: bool = True
+) -> tuple[TrendPoint, ...]:
     weekly = (
         WeeklyCheckin.query.filter(
             WeeklyCheckin.athlete_id == athlete_id,
@@ -153,7 +162,7 @@ def _bodyweight_trend(athlete_id: int) -> tuple[TrendPoint, ...]:
         .order_by(NutritionCheckIn.submitted_at.desc(), NutritionCheckIn.id.desc())
         .limit(6)
         .all()
-    )
+    ) if include_nutrition else []
     points = [
         TrendPoint(item.week_ending, item.average_bodyweight_kg) for item in weekly
     ] + [TrendPoint(item.submitted_at.date(), item.bodyweight_kg) for item in nutrition]
@@ -203,6 +212,8 @@ def _next_checkin_date(
 
 def _latest_coach_response(
     athlete_id: int,
+    *,
+    include_nutrition: bool = True,
 ) -> CoachResponse | None:
     weekly = (
         WeeklyCheckin.query.filter(
@@ -236,7 +247,7 @@ def _latest_coach_response(
             NutritionCheckIn.id.desc(),
         )
         .first()
-    )
+    ) if include_nutrition else None
     if nutrition is not None:
         responses.append(
             CoachResponse(

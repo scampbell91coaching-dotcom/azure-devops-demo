@@ -10,12 +10,60 @@ test('coach dashboard renders deterministic athlete data', async ({ page }) => {
   await expect(page.getByText('Alex Rivera').first()).toBeVisible();
 });
 
+test('disabled nutrition entitlement removes active surfaces and protects direct routes', async ({ page }) => {
+  const athleteId = 101;
+
+  await page.goto(`/athletes/${athleteId}`);
+  const services = page.locator('#client-services');
+  await services.locator('select[name="nutrition"]').selectOption('no');
+
+  page.once('dialog', async dialog => {
+    await dialog.accept();
+  });
+
+  await services.getByRole('button', { name: 'Save client services' }).click();
+
+  try {
+    await page.goto(`/athletes/${athleteId}`);
+    await expect(page.getByRole('link', { name: 'Add nutrition check-in' })).toHaveCount(0);
+    await expect(page.getByText('History only')).toBeVisible();
+
+    await page.goto(`/athletes/${athleteId}/nutrition-checkins/new`);
+    await expect(page.getByRole('heading', { name: 'Access denied' })).toBeVisible();
+  } finally {
+    await page.goto(`/athletes/${athleteId}`);
+    const restore = page.locator('#client-services');
+    await restore.locator('select[name="nutrition"]').selectOption('yes');
+    await restore.getByRole('button', { name: 'Save client services' }).click();
+  }
+});
+
 test('athlete list opens an athlete detail', async ({ page }) => {
   await page.goto('/athletes');
   await expect(page.getByRole('heading', { level: 1, name: 'Athletes', exact: true })).toBeVisible();
   await page.getByRole('link', { name: /Alex Rivera/ }).click();
   await expect(page).toHaveURL(/\/athletes\/101$/);
   await expect(page.getByRole('heading', { name: 'Alex Rivera' })).toBeVisible();
+});
+
+test('coach manages concise client services with safe disable confirmation', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/athletes/101');
+  const services = page.locator('#client-services');
+  await expect(services.getByRole('heading', { name: 'Client services' })).toBeVisible();
+  await expect(services.getByText(/Existing programmes, check-ins, reviews and notes are retained/)).toBeVisible();
+  await services.locator('select[name="video_review"]').selectOption('limited');
+  await services.getByRole('button', { name: 'Save client services' }).click();
+  await expect(page).toHaveURL(/#client-services$/);
+  await expect(services.locator('select[name="video_review"]')).toHaveValue('limited');
+  const videoService = services
+    .locator('label')
+    .filter({ hasText: 'Video review' });
+
+  await expect(
+    videoService.getByText(/Set by coach\.e2e@example\.test/)
+  ).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
 });
 
 test('creates an athlete from deterministic fixture values', async ({ page }, testInfo) => {
@@ -267,6 +315,23 @@ test('Block Factory previews taxonomy-backed exposures with zero assistance and 
   await expect(page.getByText('Accessory Day', { exact: false })).toHaveCount(0);
 });
 
+test('Block Factory keeps no assistance authoritative across volume and grip context', async ({ page }) => {
+  await page.goto('/programming/factory');
+  await page.getByLabel('Athlete').selectOption({ label: 'Sam Morgan' });
+  await page.getByLabel('Competition deadlift grip').selectOption('hook');
+  await page.getByLabel('Training strap usage').selectOption('most');
+  await page.getByLabel('Grip work priority').selectOption('priority');
+  await page.getByLabel('Accessory volume').selectOption('high');
+  await page.getByLabel('Selection mode').selectOption('none');
+  await page.getByRole('button', { name: 'Preview' }).click();
+
+  await expect(page.getByLabel('Competition deadlift grip')).toHaveValue('hook');
+  await expect(page.getByLabel('Training strap usage')).toHaveValue('most');
+  await expect(page.getByLabel('Grip work priority')).toHaveValue('priority');
+  await expect(page.getByLabel('Accessory volume')).toHaveValue('high');
+  await expect(page.getByText(/0 assistance exercises/)).toHaveCount(4);
+});
+
 test('Block Factory edit presents coach override provenance', async ({ page }) => {
   await page.goto('/programming/factory');
   await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
@@ -394,7 +459,7 @@ test('athlete dashboard is isolated to the selected test athlete', async ({ page
   await expect(page).toHaveURL(/\/login\?next=/);
   await athleteSession(page.request, athleteIds.primary);
   await page.goto('/athlete/dashboard');
-  await expect(page.getByRole('heading', { name: 'Alex’s training' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Alex’s coaching' })).toBeVisible();
   await expect(page.getByText('Deterministic strength block')).toBeVisible();
   await expect(page.getByText('Sam Morgan')).toHaveCount(0);
   await expect(page.getByText('sam.private@example.test')).toHaveCount(0);

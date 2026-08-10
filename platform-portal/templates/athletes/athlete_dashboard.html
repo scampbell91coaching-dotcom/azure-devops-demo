@@ -5,25 +5,25 @@
 <section class="dashboard">
   {% if request.args.get('welcome') == 'activated' %}
     <div class="empty-state" role="status" data-account-activated>
-      <strong>Account activated</strong><p>You’re signed in. Your training dashboard is ready.</p>
+      <strong>Account activated</strong><p>You’re signed in. Your coaching dashboard is ready.</p>
     </div>
   {% elif request.args.get('welcome') == 'password-updated' %}
     <div class="empty-state" role="status"><strong>Password updated</strong><p>You’re signed in with your new password.</p></div>
   {% endif %}
   <header class="dashboard__welcome">
-    <div><span class="eyebrow">Today</span><h1>{{ dashboard.athlete.first_name }}’s training</h1></div>
-    <p>Programme, recovery and coach updates.</p>
+    <div><span class="eyebrow">Today</span><h1>{{ dashboard.athlete.first_name }}’s coaching</h1></div>
+    <p>{% if athlete_services.combined %}Training, nutrition and coach updates.{% elif athlete_services.training %}Training, recovery and coach updates.{% elif athlete_services.nutrition %}Nutrition, recovery and coach updates.{% else %}Your coach updates and account details.{% endif %}</p>
   </header>
 
   <nav class="dashboard-links" aria-label="Dashboard sections">
-    <a href="#programme">Programme</a>
-    <a href="#check-in">Check-in</a>
-    <a href="#nutrition">Nutrition</a>
+    {% if athlete_services.training %}<a href="#programme">Programme</a>{% endif %}
+    {% if athlete_services.checkins %}<a href="#check-in">Check-in</a>{% endif %}
+    {% if athlete_services.nutrition %}<a href="#nutrition">Nutrition</a>{% endif %}
     <a href="#account">Account</a>
   </nav>
 
   <div class="dashboard-grid">
-    <section class="dashboard-card dashboard-card--wide dashboard-card--priority" id="programme">
+    {% if athlete_services.training %}<section class="dashboard-card dashboard-card--wide dashboard-card--priority" id="programme">
       <div class="card-heading">
         <div><span class="eyebrow">Today &amp; next</span><h2>Training</h2></div>
         {% if dashboard.current_block %}<span class="status">{{ dashboard.current_block.status | title }}</span>{% endif %}
@@ -44,9 +44,9 @@
         <div class="empty-state"><strong>No current programme</strong><p>Your programme will appear here when it is ready.</p></div>
       {% endif %}
       {% if dashboard.current_block %}<a class="text-link" href="{{ url_for('athletes.programme') }}">Programme <span aria-hidden="true">→</span></a>{% endif %}
-    </section>
+    </section>{% endif %}
 
-    <section class="dashboard-card" id="check-in">
+    {% if athlete_services.checkins %}<section class="dashboard-card{% if not athlete_services.training %} dashboard-card--wide dashboard-card--priority{% endif %}" id="check-in">
       <div class="card-heading"><div><span class="eyebrow">Weekly review</span><h2>Check-in</h2></div></div>
       {% if dashboard.latest_checkin %}
         <p class="metric"><span>Latest check-in</span><strong>{{ dashboard.latest_checkin.week_ending.strftime('%d %b %Y') }}</strong></p>
@@ -66,9 +66,9 @@
         <p class="muted">No check-in is currently scheduled.</p>
       {% endif %}
       <a class="button button--secondary" href="{{ url_for('checkins.athlete_history') }}">Check-in history</a>
-    </section>
+    </section>{% endif %}
 
-    <section class="dashboard-card" id="nutrition">
+    {% if athlete_services.nutrition %}<section class="dashboard-card{% if not athlete_services.training %} dashboard-card--wide{% endif %}" id="nutrition">
       <div class="card-heading"><div><span class="eyebrow">Latest update</span><h2>Nutrition &amp; bodyweight</h2></div></div>
       {% if dashboard.latest_nutrition %}
         <p class="muted">Submitted {{ dashboard.latest_nutrition.submitted_at.strftime('%d %b %Y') }}</p>
@@ -81,7 +81,7 @@
         <div class="empty-state"><strong>No nutrition update yet</strong><p>Nutrition and bodyweight information will appear after your first submission.</p></div>
         {% if dashboard.latest_bodyweight_kg is not none %}<p class="metric"><span>Latest bodyweight</span><strong>{{ dashboard.latest_bodyweight_kg }} kg</strong></p>{% endif %}
       {% endif %}
-      <a class="button button--secondary" href="{{ url_for('athletes.nutrition_checkin_form', athlete_id=dashboard.athlete.id) }}">Add nutrition check-in</a>
+      <a class="button{% if athlete_services.training %} button--secondary{% endif %}" href="{{ url_for('athletes.nutrition_checkin_form', athlete_id=dashboard.athlete.id) }}">Add nutrition check-in</a>
       {% if dashboard.nutrition_history %}
         <h3>Previous submissions</h3>
         <ol class="trend-list trend-list--checkins">
@@ -90,12 +90,12 @@
         {% endfor %}
         </ol>
       {% endif %}
-    </section>
+    </section>{% endif %}
 
-    <section class="dashboard-card dashboard-card--wide" id="trends">
+    {% if athlete_services.training or athlete_services.nutrition %}<section class="dashboard-card dashboard-card--wide" id="trends">
       <div class="card-heading"><div><span class="eyebrow">Recent history</span><h2>Trends</h2></div></div>
       <div class="trend-grid">
-        <div>
+        {% if athlete_services.nutrition %}<div>
           <h3>Bodyweight</h3>
           {% if dashboard.bodyweight_trend %}
             <ol class="trend-list">
@@ -104,8 +104,8 @@
           {% else %}
             <div class="empty-state"><strong>No bodyweight trend yet</strong><p>At least one recorded bodyweight is needed.</p></div>
           {% endif %}
-        </div>
-        <div>
+        </div>{% endif %}
+        {% if athlete_services.nutrition %}<div>
           <h3>Adherence, calories &amp; protein</h3>
           {% if dashboard.nutrition_history %}
             <ol class="trend-list">
@@ -114,11 +114,11 @@
           {% else %}
             <div class="empty-state"><strong>No nutrition trend yet</strong><p>Adherence, calories and protein appear after submissions.</p></div>
           {% endif %}
-        </div>
-        <div>
+        </div>{% endif %}
+        {% if athlete_services.combined %}<div>
           <h3>Training performance</h3>
           {% if dashboard.performance_trend %}<ol class="trend-list">{% for point in dashboard.performance_trend %}<li><span>{{ point.recorded_on.strftime('%d %b') }}</span><strong>{{ point.value | int }}/10</strong></li>{% endfor %}</ol>{% else %}<div class="empty-state"><strong>No performance trend yet</strong><p>Performance scores will appear after nutrition updates.</p></div>{% endif %}
-        </div>
+        </div>{% endif %}
       </div>
       {% if dashboard.recent_checkins %}
         <h3>Recent check-ins</h3>
@@ -128,7 +128,7 @@
       {% else %}
         <div class="empty-state"><strong>No recent check-ins</strong><p>Submitted weekly reviews will appear here.</p></div>
       {% endif %}
-    </section>
+    </section>{% endif %}
 
     <section class="dashboard-card dashboard-card--wide">
       <div class="card-heading"><div><span class="eyebrow">From your coach</span><h2>Latest response</h2></div></div>

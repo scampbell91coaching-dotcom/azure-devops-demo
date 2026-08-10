@@ -5,19 +5,95 @@ from __future__ import annotations
 from flask import Flask
 
 from portal.extensions import db
+from portal.models.account_token import AccountToken
 from portal.models.athlete import Athlete
-from portal.models.checkins import AthleteCheckinSettings
+from portal.models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from portal.models.exercise_library import Exercise
+from portal.models.nutrition_checkin import NutritionCheckIn
 from portal.models.programming import (
     ExercisePrescription,
     ProgrammingLiftSlot,
     TrainingBlock,
     TrainingSession,
+    TrainingSessionLog,
+    TrainingSetResult,
     TrainingWeek,
+)
+from portal.models.warmup import (
+    WarmupAssignment,
+    WarmupOverride,
+    WarmupPlanSnapshot,
+    WarmupPlanSnapshotStep,
 )
 from portal.programming_services.lift_slots import create as create_lift_slot
 from portal.models.user import User, UserRole
 from werkzeug.security import generate_password_hash
+
+
+PILOT_ATHLETE_ID = 303
+PILOT_BLOCK_ID = 601
+PILOT_SESSION_ID = 801
+
+
+def reset_pilot_fixture() -> None:
+    """Restore only the mutable state owned by the dedicated pilot athlete."""
+    pilot = db.session.get(Athlete, PILOT_ATHLETE_ID)
+    pilot_block = db.session.get(TrainingBlock, PILOT_BLOCK_ID)
+    if pilot is None or pilot_block is None:
+        raise RuntimeError("pilot fixture must be seeded before it can be reset")
+
+    log_ids = [
+        row.id
+        for row in TrainingSessionLog.query.filter_by(
+            athlete_id=PILOT_ATHLETE_ID, session_id=PILOT_SESSION_ID
+        ).all()
+    ]
+    if log_ids:
+        TrainingSetResult.query.filter(
+            TrainingSetResult.session_log_id.in_(log_ids)
+        ).delete(synchronize_session=False)
+        TrainingSessionLog.query.filter(TrainingSessionLog.id.in_(log_ids)).delete(
+            synchronize_session=False
+        )
+
+    snapshot_ids = [
+        row.id
+        for row in WarmupPlanSnapshot.query.filter_by(
+            athlete_id=PILOT_ATHLETE_ID, session_id=PILOT_SESSION_ID
+        ).all()
+    ]
+    if snapshot_ids:
+        WarmupPlanSnapshotStep.query.filter(
+            WarmupPlanSnapshotStep.snapshot_id.in_(snapshot_ids)
+        ).delete(synchronize_session=False)
+        WarmupPlanSnapshot.query.filter(WarmupPlanSnapshot.id.in_(snapshot_ids)).delete(
+            synchronize_session=False
+        )
+    WarmupOverride.query.filter_by(
+        athlete_id=PILOT_ATHLETE_ID, session_id=PILOT_SESSION_ID
+    ).delete(synchronize_session=False)
+    WarmupAssignment.query.filter_by(
+        athlete_id=PILOT_ATHLETE_ID, session_id=PILOT_SESSION_ID
+    ).delete(synchronize_session=False)
+
+    WeeklyCheckin.query.filter_by(athlete_id=PILOT_ATHLETE_ID).delete(
+        synchronize_session=False
+    )
+    NutritionCheckIn.query.filter_by(athlete_id=PILOT_ATHLETE_ID).delete(
+        synchronize_session=False
+    )
+    AthleteCheckinSettings.query.filter_by(athlete_id=PILOT_ATHLETE_ID).delete(
+        synchronize_session=False
+    )
+
+    AccountToken.query.filter_by(athlete_id=PILOT_ATHLETE_ID).delete(
+        synchronize_session=False
+    )
+    User.query.filter_by(athlete_id=PILOT_ATHLETE_ID).delete(
+        synchronize_session=False
+    )
+    pilot_block.status = "draft"
+    db.session.commit()
 
 
 def seed_database(app: Flask) -> None:

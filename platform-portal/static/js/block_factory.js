@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const updateSummary = () => {
     const count = rows.querySelectorAll(".factory-accessory-row").length;
     summary.textContent = count
-      ? `${count} coach-selected assistance exercise${count === 1 ? "" : "s"}; no quota is applied.`
+      ? `${count} coach-selected assistance exercise${count === 1 ? "" : "s"}; manual choices replace automatic suggestions.`
       : "No assistance selected. Zero assistance is valid.";
   };
   const bind = (row) => {

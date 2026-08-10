@@ -168,6 +168,34 @@
     </label>
 
     <label>
+      <span>Competition deadlift grip</span>
+      <select name="deadlift_grip">
+        {% for value, label in (("hook", "Hook"), ("mixed", "Mixed"), ("double-overhand", "Double-overhand"), ("straps", "Straps"), ("other", "Other")) %}
+          <option value="{{ value }}" {% if form.get("deadlift_grip", "mixed") == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>
+      <span>Training strap usage</span>
+      <select name="training_strap_usage">
+        {% for value, label in (("none", "None"), ("some", "Some work sets"), ("most", "Most work sets")) %}
+          <option value="{{ value }}" {% if form.get("training_strap_usage", "none") == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <small>Separate from the intended competition grip.</small>
+    </label>
+
+    <label>
+      <span>Grip work priority</span>
+      <select name="grip_work_priority">
+        {% for value in ("none", "maintain", "build", "priority") %}
+          <option value="{{ value }}" {% if form.get("grip_work_priority", "none") == value %}selected{% endif %}>{{ value | title }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>
       <span>Meet date (optional)</span>
       <input
         name="meet_date"
@@ -178,11 +206,18 @@
 
     <fieldset class="factory-accessories" data-factory-accessories>
       <legend>Accessories</legend>
-      <p>Assistance is optional and never drives the weekly structure. Library suggestions are deterministic and limited to one per day. Pinned coach choices fully replace suggestions.</p>
+      <p>Assistance is optional and never drives the weekly structure. Volume sets a deterministic maximum per day. Pinned coach choices fully replace suggestions.</p>
       <label><span>Selection mode</span>
         <select name="accessory_mode">
           <option value="automatic" {% if form.get('accessory_mode', 'automatic') == 'automatic' %}selected{% endif %}>Suggest from enabled library metadata</option>
           <option value="none" {% if form.get('accessory_mode') == 'none' %}selected{% endif %}>No assistance</option>
+        </select>
+      </label>
+      <label><span>Accessory volume</span>
+        <select name="accessory_volume">
+          {% for value, label in (("low", "Low · up to 1/day"), ("medium", "Medium · up to 2/day"), ("high", "High · up to 3/day")) %}
+            <option value="{{ value }}" {% if form.get("accessory_volume", "medium") == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
         </select>
       </label>
       <p class="factory-accessory-summary" data-accessory-summary aria-live="polite">No assistance selected. Zero assistance is valid.</p>

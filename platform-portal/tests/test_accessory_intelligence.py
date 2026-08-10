@@ -104,3 +104,38 @@ def test_coach_can_configure_accessory_selection_metadata():
         assert exercise.lift_relevance == '["bench", "all"]'
         assert exercise.training_phases == '["development"]'
         assert exercise.coach_priority == 7
+
+
+def test_grip_candidates_use_context_and_exclude_loaded_carry_shortcuts():
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite://"})
+    with app.app_context():
+        db.session.add_all([
+            Exercise(
+                name="Double-Overhand Bar Hold", movement="accessory",
+                category="grip", accessory_suitable=True, auto_select=True,
+                lift_relevance='["deadlift"]', coach_priority=5,
+            ),
+            Exercise(
+                name="Farmer's Carry", movement="accessory", category="grip",
+                accessory_suitable=True, auto_select=True,
+                lift_relevance='["deadlift"]', coach_priority=10,
+                technical_purposes='["grip_strength"]',
+            ),
+        ])
+        db.session.commit()
+
+        candidates = AccessoryIntelligence().grip_candidates(
+            phase="strength", competition_grip="mixed", strap_usage="some",
+            priority="build",
+        )
+
+        assert [item.exercise.name for item in candidates] == [
+            "Double-Overhand Bar Hold"
+        ]
+        assert "grip-work priority is build" in candidates[0].reasons
+        assert "competition grip is mixed" in candidates[0].reasons
+        assert any("training strap usage is some" in item for item in candidates[0].reasons)
+        assert AccessoryIntelligence().grip_candidates(
+            phase="strength", competition_grip="mixed", strap_usage="none",
+            priority="none",
+        ) == []
