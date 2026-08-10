@@ -5,6 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..extensions import db
 from ..models.programming import TrainingBlock, TrainingSession, TrainingWeek
 from .prescriptions import copy as copy_prescriptions
+from .warmups import copy as copy_warmups
 
 
 class FinalWeekDeletionError(ValueError):
@@ -75,6 +76,7 @@ def _copy(source: TrainingWeek, *, position: int) -> TrainingWeek:
         db.session.add(target_session)
         db.session.flush()
         copy_prescriptions(source_session, target_session)
+        copy_warmups(source_session, target_session)
     return target
 
 

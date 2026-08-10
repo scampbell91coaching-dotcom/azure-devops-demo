@@ -4,6 +4,7 @@ from ..extensions import db
 from ..models.athlete import Athlete
 from ..models.programming import TrainingBlock, TrainingSession, TrainingWeek
 from .prescriptions import copy as copy_prescriptions
+from .warmups import copy as copy_warmups
 
 
 class BlockActivationError(ValueError):
@@ -52,6 +53,7 @@ def duplicate(source: TrainingBlock) -> TrainingBlock:
             db.session.add(target_session)
             db.session.flush()
             copy_prescriptions(source_session, target_session)
+            copy_warmups(source_session, target_session)
 
     db.session.commit()
     return target

@@ -9,6 +9,12 @@ from portal.models.programming import (
     TrainingSession,
     TrainingWeek,
 )
+from portal.models.warmup import (
+    WarmupAssignment,
+    WarmupOverride,
+    WarmupPlanSnapshot,
+    WarmupProtocol,
+)
 
 
 def _app():
@@ -127,6 +133,75 @@ def test_duplicate_is_independent_of_source():
         db.session.refresh(source.prescriptions[0])
         assert source.prescriptions[0].sets == 4
         assert source.prescriptions[0].notes == "Controlled"
+
+
+def test_duplicate_preserves_authored_warmup_intent_but_not_resolved_history():
+    app = _app()
+    _, first_id, _ = _programme(app)
+    with app.app_context():
+        source = db.session.get(TrainingSession, first_id)
+        assert source is not None
+        protocol = WarmupProtocol(
+            stable_key="squat-prep",
+            version=1,
+            name="Squat preparation",
+        )
+        db.session.add(protocol)
+        db.session.flush()
+        db.session.add_all(
+            [
+                WarmupAssignment(
+                    protocol_id=protocol.id,
+                    athlete_id=source.week.block.athlete_id,
+                    session_id=source.id,
+                    reason="Prepare hips and competition pattern",
+                ),
+                WarmupOverride(
+                    athlete_id=source.week.block.athlete_id,
+                    session_id=source.id,
+                    action="append",
+                    phase=20,
+                    name="Banded abduction",
+                    kind="reps",
+                    sets=2,
+                    reps=12,
+                    rest_seconds=30,
+                    notes="Keep pelvis level",
+                    reason="Individual preparation drill",
+                ),
+                WarmupPlanSnapshot(
+                    athlete_id=source.week.block.athlete_id,
+                    session_id=source.id,
+                ),
+            ]
+        )
+        db.session.commit()
+
+    response = app.test_client().post(f"/programming/sessions/{first_id}/duplicate")
+
+    assert response.status_code == 302
+    with app.app_context():
+        copied = TrainingSession.query.filter_by(name="Lower Copy").one()
+        assignment = WarmupAssignment.query.filter_by(session_id=copied.id).one()
+        assert assignment.protocol.stable_key == "squat-prep"
+        assert assignment.reason == "Prepare hips and competition pattern"
+        override = WarmupOverride.query.filter_by(session_id=copied.id).one()
+        assert (
+            override.name,
+            override.sets,
+            override.reps,
+            override.rest_seconds,
+            override.notes,
+            override.reason,
+        ) == (
+            "Banded abduction",
+            2,
+            12,
+            30,
+            "Keep pelvis level",
+            "Individual preparation drill",
+        )
+        assert WarmupPlanSnapshot.query.filter_by(session_id=copied.id).count() == 0
 
 
 def test_insert_before_and_after_creates_blank_sessions_and_renumbers():

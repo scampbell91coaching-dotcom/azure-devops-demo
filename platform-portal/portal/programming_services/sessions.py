@@ -5,6 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..extensions import db
 from ..models.programming import TrainingSession, TrainingWeek
 from .prescriptions import copy as copy_prescriptions
+from .warmups import copy as copy_warmups
 
 
 def _commit_or_rollback() -> None:
@@ -85,6 +86,7 @@ def duplicate(source: TrainingSession) -> TrainingSession:
         db.session.add(target)
         db.session.flush()
         copy_prescriptions(source, target)
+        copy_warmups(source, target)
         _commit_or_rollback()
     except SQLAlchemyError:
         db.session.rollback()
