@@ -64,7 +64,7 @@ test('first paying athlete money path: draft to immutable coach-reviewed trainin
   await page.locator('input[name="password_confirmation"]').fill(pilot.password);
   await page.getByRole('button', { name: 'Activate account' }).click();
   await expect(page).toHaveURL('/athlete/dashboard?welcome=activated');
-  await expect(page.getByRole('heading', { name: 'Taylor’s training' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Taylor’s coaching' })).toBeVisible();
   await expect(page.getByText('No current programme')).toBeVisible();
 
   // User isolation: another athlete's active session and all coach surfaces are

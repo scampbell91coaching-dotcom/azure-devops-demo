@@ -28,7 +28,7 @@ test('athlete core workflow fits a 320px phone viewport', async ({ page, athlete
   await athleteSession(page.request, athleteIds.primary);
 
   await page.goto('/athlete/dashboard');
-  await expect(page.getByRole('heading', { level: 1, name: /Alex’s training/i })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /Alex’s coaching/i })).toBeVisible();
   const mobileNav = page.getByRole('navigation', { name: 'Athlete navigation' }).last();
   await expect(mobileNav).toBeVisible();
   await expect(mobileNav.getByRole('link', { name: /Today/ })).toHaveAttribute('aria-current', 'page');
