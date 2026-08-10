@@ -52,6 +52,8 @@ _ATHLETE_ENDPOINTS = {
     "nutrition_imports.index",
     "nutrition_imports.preview",
     "nutrition_imports.commit",
+    "nutrition_imports.disconnect",
+    "nutrition_prescriptions.athlete_current",
 }
 _SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
 _DUMMY_PASSWORD_HASH = generate_password_hash("not-a-real-password", method="scrypt")

@@ -26,6 +26,7 @@ from .extensions import db, migrate
 from .lead_magnets import lead_magnets_bp
 from .meet_day import meet_day_bp
 from .nutrition_imports import nutrition_imports_bp
+from .nutrition_prescriptions import nutrition_prescriptions_bp
 from .programming import programming_bp
 from .programming_engine import programming_engine_bp
 from .programming_pack2 import programming_pack2_bp
@@ -140,6 +141,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(coach_applications_bp)
     app.register_blueprint(meet_day_bp)
     app.register_blueprint(nutrition_imports_bp)
+    app.register_blueprint(nutrition_prescriptions_bp)
 
     if app.config["LEGACY_STARTUP_INITIALIZATION"]:
         with app.app_context():

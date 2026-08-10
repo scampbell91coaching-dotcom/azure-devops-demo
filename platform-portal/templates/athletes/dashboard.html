@@ -15,6 +15,7 @@
     </div>
 
     <div class="coach-page__actions">
+      <a class="coach-primary-button" href="{{ url_for('nutrition_prescriptions.coach_index', athlete_id=athlete.id) }}">Nutrition targets</a>
       {% if nutrition_coaching_enabled %}<a
         class="coach-primary-button"
         href="{{ url_for(

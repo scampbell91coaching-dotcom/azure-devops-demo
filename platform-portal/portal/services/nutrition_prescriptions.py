@@ -161,6 +161,10 @@ class MacroPrescriptionService:
             )
         self._repository.add(prescription)
 
+    def history(self, athlete_id: int) -> Sequence[MacroPrescription]:
+        """Return every immutable version in repository-defined display order."""
+        return self._repository.list_for_athlete(athlete_id)
+
     def prescription_on(
         self, athlete_id: int, on_date: date
     ) -> MacroPrescription | None:
