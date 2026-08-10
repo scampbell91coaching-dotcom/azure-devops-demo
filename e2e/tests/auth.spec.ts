@@ -86,6 +86,33 @@ test('coach can create a manual invitation and athlete activates once', async ({
   const activationUrl = await page.locator('[data-manual-account-link]').inputValue();
   expect(activationUrl).toContain('/account/invitation#');
 
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 720 });
+    await page.goto(activationUrl);
+
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+    ).toBe(true);
+    const logo = page.getByRole('img', { name: 'Traditional Strength' });
+    await expect(logo).toBeVisible();
+    expect((await logo.boundingBox())?.height).toBeLessThanOrEqual(88);
+
+    const password = page.locator('input[name="password"]');
+    await expect(password).toBeEditable();
+    expect(await password.evaluate((input) => getComputedStyle(input).fontSize)).toBe('16px');
+    await password.fill('Sam secure E2E password!');
+    await page.locator('input[name="password_confirmation"]').fill('Passwords do not match!');
+
+    const activate = page.getByRole('button', { name: 'Activate account' });
+    await expect(activate).toBeVisible();
+    expect((await activate.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    await activate.click();
+    await expect(page.getByRole('alert')).toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+    ).toBe(true);
+  }
+
   await page.goto(activationUrl);
   await page.locator('input[name="password"]').fill('Sam secure E2E password!');
   await page.locator('input[name="password_confirmation"]').fill('Sam secure E2E password!');
