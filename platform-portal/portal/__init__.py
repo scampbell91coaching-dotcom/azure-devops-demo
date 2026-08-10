@@ -25,6 +25,7 @@ from .exercise_library import exercise_library_bp
 from .extensions import db, migrate
 from .lead_magnets import lead_magnets_bp
 from .meet_day import meet_day_bp
+from .meal_plan_delivery import meal_plan_delivery_bp
 from .nutrition_imports import nutrition_imports_bp
 from .nutrition_prescriptions import nutrition_prescriptions_bp
 from .programming import programming_bp
@@ -34,6 +35,8 @@ from .programming_templates import programming_templates_bp
 from .release_readiness import release_readiness_bp
 from .security import init_security_headers
 from .services.release_readiness import ReleaseEvidenceService
+from .services.meal_plans import InMemoryMealPlanRepository, MealPlanWorkflow
+from .services.nutrition_entitlements import nutrition_coaching_enabled
 from .views import views_bp
 
 TESTING_SECRET_KEY = "testing-only-secret-key"
@@ -105,6 +108,9 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         evidence_path=app.config.get("RELEASE_EVIDENCE_FILE"),
         max_age_seconds=int(app.config["RELEASE_EVIDENCE_MAX_AGE_SECONDS"]),
     )
+    app.extensions["meal_plan_workflow"] = MealPlanWorkflow(
+        InMemoryMealPlanRepository(), nutrition_coaching_enabled
+    )
     init_security_headers(app, prevent_caching=True)
     migrate.init_app(
         app,
@@ -140,6 +146,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(coach_dashboard_bp)
     app.register_blueprint(coach_applications_bp)
     app.register_blueprint(meet_day_bp)
+    app.register_blueprint(meal_plan_delivery_bp)
     app.register_blueprint(nutrition_imports_bp)
     app.register_blueprint(nutrition_prescriptions_bp)
 

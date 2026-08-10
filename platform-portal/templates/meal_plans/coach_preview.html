@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Meal plan preview{% endblock %}
+{% block content %}
+<main class="page-shell"><h1>{{ draft.name }}</h1><p>Draft revision {{ draft.revision }}</p>
+{% if draft.notes %}<p>{{ draft.notes }}</p>{% endif %}
+{% for day in draft.days|sort(attribute='position') %}<section><h2>{{ day.name }}</h2><p>{{ day.mode.value|title }} · {{ day.planned_macros.calories }} kcal</p>
+{% for meal in day.meals|sort(attribute='position') %}<h3>{{ meal.name }}</h3><ul>{% for item in meal.items %}<li>{{ item.food.name }} — {{ item.amount }} {{ item.food.unit }}</li>{% endfor %}</ul>{% endfor %}</section>{% endfor %}</main>
+{% endblock %}
