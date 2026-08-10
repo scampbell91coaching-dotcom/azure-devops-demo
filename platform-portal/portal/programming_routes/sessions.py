@@ -1,7 +1,8 @@
 from flask import Blueprint, abort, redirect, render_template, request, url_for
+from sqlalchemy.orm import joinedload, selectinload
 
 from ..extensions import db
-from ..models.programming import TrainingSession, TrainingWeek
+from ..models.programming import ProgrammingLiftSlot, TrainingBlock, TrainingSession, TrainingWeek
 from ..programming_services.sessions import (
     create,
     delete,
@@ -58,7 +59,19 @@ def register_session_routes(blueprint: Blueprint) -> None:
 
     @blueprint.get("/programming/sessions/<int:session_id>")
     def session(session_id: int):
-        item = db.session.get(TrainingSession, session_id)
+        item = (
+            TrainingSession.query.options(
+                joinedload(TrainingSession.week)
+                .joinedload(TrainingWeek.block)
+                .joinedload(TrainingBlock.athlete),
+                selectinload(TrainingSession.prescriptions),
+                selectinload(TrainingSession.lift_slots).selectinload(
+                    ProgrammingLiftSlot.prescriptions
+                ),
+            )
+            .filter_by(id=session_id)
+            .one_or_none()
+        )
         if item is None:
             abort(404)
         week = item.week

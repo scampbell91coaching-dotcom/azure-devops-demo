@@ -1,8 +1,9 @@
 from flask import Blueprint, abort, redirect, render_template, request, url_for
+from sqlalchemy.orm import joinedload, selectinload
 
 from ..extensions import db
 from ..models.athlete import Athlete
-from ..models.programming import TrainingBlock
+from ..models.programming import TrainingBlock, TrainingSession, TrainingWeek
 from ..programming_services.blocks import (
     BlockActivationError,
     activate,
@@ -70,7 +71,16 @@ def register_block_routes(blueprint: Blueprint) -> None:
 
     @blueprint.get("/programming/blocks/<int:block_id>")
     def block(block_id: int):
-        item = db.session.get(TrainingBlock, block_id)
+        item = (
+            TrainingBlock.query.options(
+                joinedload(TrainingBlock.athlete),
+                selectinload(TrainingBlock.weeks)
+                .selectinload(TrainingWeek.sessions)
+                .selectinload(TrainingSession.lift_slots),
+            )
+            .filter_by(id=block_id)
+            .one_or_none()
+        )
         if item is None:
             abort(404)
         return render_template(

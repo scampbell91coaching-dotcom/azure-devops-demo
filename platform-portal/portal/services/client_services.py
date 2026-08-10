@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 
+from sqlalchemy.orm import joinedload
+
 from ..models.client_service import ClientServiceChange
 from .client_service_profiles import (
     ClientServiceProfile,
@@ -156,6 +158,40 @@ def effective_client_service_profile(
     )
 
 
+def _profile_from_changes(
+    athlete_id: int,
+    changes: list[ClientServiceChange],
+    *,
+    at: datetime,
+) -> ClientServiceProfile:
+    """Resolve an already-loaded history without issuing another query."""
+    effective = [change for change in changes if change.effective_at <= at]
+    if not effective:
+        return ClientServiceProfile.legacy_default(athlete_id, as_of=at.date())
+
+    state = {
+        "training": "yes",
+        "nutrition": "yes",
+        "meet_day": "no",
+        "video_review": "none",
+    }
+    latest_by_service: dict[str, ClientServiceChange] = {}
+    for change in effective:
+        state[change.service] = change.value
+        latest_by_service[change.service] = change
+    latest = list(latest_by_service.values())
+    return ClientServiceProfile(
+        athlete_id=athlete_id,
+        training_coaching_enabled=state["training"] == "yes",
+        nutrition_coaching_enabled=state["nutrition"] == "yes",
+        meet_day_support_enabled=state["meet_day"] == "yes",
+        video_review_entitlement=VideoReviewEntitlement(state["video_review"]),
+        effective_from=min(change.effective_at for change in latest).date(),
+        recorded_at=max(change.created_at for change in latest),
+        provenance=EntitlementProvenance.COACH_CREATED,
+    )
+
+
 def may_start_client_service(
     athlete_id: int,
     service: Service,
@@ -211,7 +247,8 @@ def resolved_client_services(athlete_id: int, *, now: datetime | None = None):
     at = (now or datetime.now(UTC)).replace(tzinfo=None)
 
     changes = (
-        ClientServiceChange.query.filter_by(athlete_id=athlete_id)
+        ClientServiceChange.query.options(joinedload(ClientServiceChange.changed_by))
+        .filter_by(athlete_id=athlete_id)
         .order_by(
             ClientServiceChange.effective_at.asc(),
             ClientServiceChange.created_at.asc(),
@@ -220,10 +257,7 @@ def resolved_client_services(athlete_id: int, *, now: datetime | None = None):
         .all()
     )
 
-    profile = effective_client_service_profile(
-        athlete_id,
-        at=at,
-    )
+    profile = _profile_from_changes(athlete_id, changes, at=at)
 
     domain_values = {
         "training": "yes" if profile.training_coaching_enabled else "no",

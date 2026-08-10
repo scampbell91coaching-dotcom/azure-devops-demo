@@ -3,10 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
 
 from ..extensions import db
 from ..models.warmup import (
     WarmupAssignment, WarmupOverride, WarmupPlanSnapshot, WarmupPlanSnapshotStep,
+    WarmupProtocol,
 )
 
 PHASE_LABELS = {10: "General preparation", 20: "Athlete preparation", 30: "Lift preparation", 40: "Barbell ramp"}
@@ -47,7 +49,14 @@ class WarmupStepView:
 
 
 def resolve_warmup(athlete_id: int, session_id: int) -> tuple[WarmupStepView, ...]:
-    assignments = WarmupAssignment.query.filter_by(athlete_id=athlete_id, session_id=session_id).order_by(WarmupAssignment.id).all()
+    assignments = (
+        WarmupAssignment.query.options(
+            selectinload(WarmupAssignment.protocol).selectinload(WarmupProtocol.steps)
+        )
+        .filter_by(athlete_id=athlete_id, session_id=session_id)
+        .order_by(WarmupAssignment.id)
+        .all()
+    )
     steps: list[WarmupStepView] = []
     for assignment in assignments:
         for row in assignment.protocol.steps:
