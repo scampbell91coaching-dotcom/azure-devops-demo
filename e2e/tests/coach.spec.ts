@@ -267,6 +267,23 @@ test('Block Factory previews taxonomy-backed exposures with zero assistance and 
   await expect(page.getByText('Accessory Day', { exact: false })).toHaveCount(0);
 });
 
+test('Block Factory keeps no assistance authoritative across volume and grip context', async ({ page }) => {
+  await page.goto('/programming/factory');
+  await page.getByLabel('Athlete').selectOption({ label: 'Sam Morgan' });
+  await page.getByLabel('Competition deadlift grip').selectOption('hook');
+  await page.getByLabel('Training strap usage').selectOption('most');
+  await page.getByLabel('Grip work priority').selectOption('priority');
+  await page.getByLabel('Accessory volume').selectOption('high');
+  await page.getByLabel('Selection mode').selectOption('none');
+  await page.getByRole('button', { name: 'Preview' }).click();
+
+  await expect(page.getByLabel('Competition deadlift grip')).toHaveValue('hook');
+  await expect(page.getByLabel('Training strap usage')).toHaveValue('most');
+  await expect(page.getByLabel('Grip work priority')).toHaveValue('priority');
+  await expect(page.getByLabel('Accessory volume')).toHaveValue('high');
+  await expect(page.getByText(/0 assistance exercises/)).toHaveCount(4);
+});
+
 test('Block Factory edit presents coach override provenance', async ({ page }) => {
   await page.goto('/programming/factory');
   await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
