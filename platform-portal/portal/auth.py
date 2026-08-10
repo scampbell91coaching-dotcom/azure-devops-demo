@@ -27,6 +27,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from .extensions import db
 from .models.athlete import Athlete
 from .models.user import User, UserRole
+from .services.athlete_services import athlete_services
 
 auth_bp = Blueprint("auth", __name__)
 _attempts: dict[str, deque[float]] = defaultdict(deque)
@@ -224,16 +225,24 @@ def init_auth(app) -> None:
     app.before_request(_authorize_request)
     app.before_request(_enforce_csrf)
     app.jinja_env.globals["csrf_token"] = _csrf_token
-    app.context_processor(
-        lambda: {
+    def athlete_context() -> dict[str, object]:
+        athlete_id = (
+            g.current_user.athlete_id
+            if g.get("current_user") is not None
+            else session.get("athlete_id")
+        )
+        services = (
+            athlete_services(athlete_id)
+            if isinstance(athlete_id, int) and not isinstance(athlete_id, bool)
+            else None
+        )
+        return {
             "current_user": g.get("current_user"),
-            "athlete_navigation_id": (
-                g.current_user.athlete_id
-                if g.get("current_user") is not None
-                else session.get("athlete_id")
-            ),
+            "athlete_navigation_id": athlete_id,
+            "athlete_services": services,
         }
-    )
+
+    app.context_processor(athlete_context)
     app.after_request(_inject_csrf_fields)
 
     @app.cli.command("create-user")

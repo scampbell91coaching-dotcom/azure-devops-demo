@@ -22,6 +22,7 @@ from .models.checkins import AthleteCheckinSettings
 from .models.nutrition_checkin import NutritionCheckIn
 from .models.programming import TrainingBlock, TrainingSession, TrainingSessionLog
 from .services.athlete_dashboard import get_athlete_dashboard
+from .services.athlete_services import athlete_services
 from .services.training_schedule import project_training_schedule
 from .services.nutrition_dashboard import get_nutrition_dashboard
 from .services.nutrition_entitlements import nutrition_coaching_enabled
@@ -85,6 +86,8 @@ def _signed_in_athlete_id() -> int:
 @athletes_bp.get("/athlete/programme")
 def programme():
     athlete_id = _signed_in_athlete_id()
+    if not athlete_services(athlete_id).training:
+        abort(404)
     athlete = db.session.get(Athlete, athlete_id)
     if athlete is None:
         abort(401)
@@ -119,6 +122,8 @@ def programme():
 )
 def programme_session(session_id: int):
     athlete_id = _signed_in_athlete_id()
+    if not athlete_services(athlete_id).training:
+        abort(404)
     training_session = db.session.get(TrainingSession, session_id)
     if training_session is None or training_session.week.block.athlete_id != athlete_id:
         abort(404)
@@ -546,6 +551,9 @@ def revoke_account_token(athlete_id: int, purpose: str):
 
 @athletes_bp.get("/athletes/<int:athlete_id>/nutrition-checkins/new")
 def nutrition_checkin_form(athlete_id: int):
+    if g.get("current_user") is not None and g.current_user.role == "athlete":
+        if not athlete_services(athlete_id).nutrition:
+            abort(404)
     athlete = db.session.get(Athlete, athlete_id)
 
     if athlete is None:
@@ -564,6 +572,9 @@ def nutrition_checkin_form(athlete_id: int):
 
 @athletes_bp.post("/athletes/<int:athlete_id>/nutrition-checkins")
 def create_nutrition_checkin(athlete_id: int):
+    if g.get("current_user") is not None and g.current_user.role == "athlete":
+        if not athlete_services(athlete_id).nutrition:
+            abort(404)
     athlete = db.session.get(Athlete, athlete_id)
 
     if athlete is None:

@@ -7,6 +7,7 @@ import pytest
 from portal import TESTING_SECRET_KEY, create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
+from portal.models.checkins import AthleteCheckinSettings
 from portal.models.user import User, UserRole
 
 
@@ -30,7 +31,18 @@ def secured_app():
         coach.set_password("correct horse battery staple")
         athlete = User(email=first.email, role=UserRole.ATHLETE, athlete_id=first.id)
         athlete.set_password("athlete secure password")
-        db.session.add_all([coach, athlete])
+        db.session.add_all(
+            [
+                coach,
+                athlete,
+                AthleteCheckinSettings(
+                    athlete=first,
+                    training_enabled=True,
+                    nutrition_enabled=True,
+                    workflow_active=True,
+                ),
+            ]
+        )
         db.session.commit()
         ids = {
             "coach": coach.id,

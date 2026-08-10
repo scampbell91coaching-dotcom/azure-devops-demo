@@ -17,6 +17,7 @@ from .extensions import db
 from .models.athlete import Athlete
 from .models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from .services.checkins import athlete_checkins, due_message, validate_submission
+from .services.athlete_services import athlete_services
 from .nutrition_imports import _summary
 
 checkins_bp = Blueprint("checkins", __name__)
@@ -93,6 +94,8 @@ def new(athlete_id: int):
     athlete = _session_athlete()
     if athlete.id != athlete_id:
         abort(403)
+    if not athlete_services(athlete.id).checkins:
+        abort(404)
 
     settings = _settings_for(athlete)
     today = datetime.now(UTC).date()
@@ -127,6 +130,8 @@ def create(athlete_id: int):
     athlete = _session_athlete()
     if athlete.id != athlete_id:
         abort(403)
+    if not athlete_services(athlete.id).checkins:
+        abort(404)
 
     settings = _settings_for(athlete)
     submission = validate_submission(request.form, settings)
@@ -185,6 +190,8 @@ def create(athlete_id: int):
 @checkins_bp.get("/athlete/check-ins")
 def athlete_history():
     athlete = _session_athlete()
+    if not athlete_services(athlete.id).checkins:
+        abort(404)
     settings = _settings_for(athlete)
     return render_template(
         "checkins/history.html",

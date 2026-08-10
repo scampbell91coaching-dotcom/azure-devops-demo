@@ -93,7 +93,7 @@ class ClientServiceProfile:
         return cls(
             athlete_id=athlete_id,
             training_coaching_enabled=True,
-            nutrition_coaching_enabled=False,
+            nutrition_coaching_enabled=True,
             meet_day_support_enabled=False,
             video_review_entitlement=VideoReviewEntitlement.NONE,
             effective_from=as_of,
