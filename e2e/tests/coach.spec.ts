@@ -1,5 +1,7 @@
 import { test, expect } from '../fixtures/test';
 
+test.use({ mutationScope: 'services' });
+
 test.beforeEach(async ({ page, authenticatedState }) => {
   await authenticatedState(page);
 });
@@ -10,8 +12,13 @@ test('coach dashboard renders deterministic athlete data', async ({ page }) => {
   await expect(page.getByText('Alex Rivera').first()).toBeVisible();
 });
 
-test('disabled nutrition entitlement removes active surfaces and protects direct routes', async ({ page }) => {
-  const athleteId = 101;
+test('disabled nutrition entitlement removes active surfaces and protects direct routes', async ({
+  page,
+  request,
+  resetE2EFixture,
+}) => {
+  const athleteId = 202;
+  await resetE2EFixture(request, 'services');
 
   await page.goto(`/athletes/${athleteId}`);
   const services = page.locator('#client-services');
@@ -424,7 +431,8 @@ test('Block Factory dismisses a proposal without creating a block', async ({ pag
 
 test(
   'renders and submits a supported weekly check-in',
-  async ({ page, athleteIds, athleteSession }) => {
+  async ({ page, athleteIds, athleteSession, request, resetE2EFixture }) => {
+    await resetE2EFixture(request, 'check-in');
     await athleteSession(page.request, athleteIds.primary);
 
     await page.goto(`/athletes/${athleteIds.primary}/check-ins/new`);

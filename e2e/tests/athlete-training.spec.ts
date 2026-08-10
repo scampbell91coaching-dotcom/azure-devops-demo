@@ -1,5 +1,11 @@
 import { test, expect } from '../fixtures/test';
 
+test.use({ mutationScope: 'training' });
+
+test.beforeEach(async ({ request, resetE2EFixture }) => {
+  await resetE2EFixture(request, 'training');
+});
+
 test('coach assigns an ordered reusable warm-up and athlete sees it before work sets', async ({ page }) => {
   await page.goto('/login');
   await page.locator('input[name="email"]').fill('coach.e2e@example.test');

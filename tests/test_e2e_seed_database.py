@@ -35,6 +35,14 @@ def _load_seed_database():
     return module.seed_database
 
 
+def _load_seed_module():
+    spec = importlib.util.spec_from_file_location("e2e_seed_reset", SEED_PATH)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def test_fresh_e2e_database_seeds_once_and_safe_repeat_is_idempotent(
     isolated_portal_import, tmp_path
 ):
@@ -75,6 +83,57 @@ def test_fresh_e2e_database_seeds_once_and_safe_repeat_is_idempotent(
             "Cable Row",
             "Bulgarian Split Squat",
             "Weighted Plank",
+            "Pause Squat",
         }
-        assert len(exercises) == 10
-        assert Athlete.query.count() == 2
+        assert len(exercises) == 11
+        assert Athlete.query.count() == 4
+
+
+def test_service_reset_is_idempotent_and_leaves_unrelated_athletes_unchanged(
+    isolated_portal_import, tmp_path
+):
+    pytest.importorskip("flask")
+    from datetime import UTC, datetime
+
+    from portal import create_app
+    from portal.extensions import db
+    from portal.models.athlete import Athlete
+    from portal.models.client_service import ClientServiceChange
+    from portal.models.checkins import AthleteCheckinSettings
+
+    database = tmp_path / "reset.sqlite"
+    app = create_app(
+        {
+            "TESTING": True,
+            "AUTHENTICATION_DISABLED": True,
+            "LEGACY_STARTUP_INITIALIZATION": False,
+            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{database}",
+        }
+    )
+    seed = _load_seed_module()
+    seed.seed_database(app)
+
+    with app.app_context():
+        alex = db.session.get(Athlete, 101)
+        alex_before = (alex.email, alex.bodyweight_kg)
+        settings = AthleteCheckinSettings.query.filter_by(athlete_id=202).one()
+        settings.nutrition_enabled = False
+        db.session.add(
+            ClientServiceChange(
+                athlete_id=202,
+                service="nutrition",
+                value="no",
+                effective_at=datetime.now(UTC),
+            )
+        )
+        db.session.commit()
+
+        seed.reset_fixture("services")
+        seed.reset_fixture("services")
+
+        assert ClientServiceChange.query.filter_by(athlete_id=202).count() == 0
+        assert AthleteCheckinSettings.query.filter_by(
+            athlete_id=202
+        ).one().nutrition_enabled
+        alex = db.session.get(Athlete, 101)
+        assert (alex.email, alex.bodyweight_kg) == alex_before

@@ -7,9 +7,15 @@ from flask import Flask
 from portal.extensions import db
 from portal.models.account_token import AccountToken
 from portal.models.athlete import Athlete
+from portal.models.client_service import ClientServiceChange
 from portal.models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from portal.models.exercise_library import Exercise
 from portal.models.nutrition_checkin import NutritionCheckIn
+from portal.models.nutrition_import import (
+    DailyNutrition,
+    NutritionImportJob,
+    NutritionProviderConnection,
+)
 from portal.models.programming import (
     ExercisePrescription,
     ProgrammingLiftSlot,
@@ -24,6 +30,8 @@ from portal.models.warmup import (
     WarmupOverride,
     WarmupPlanSnapshot,
     WarmupPlanSnapshotStep,
+    WarmupProtocol,
+    WarmupProtocolStep,
 )
 from portal.programming_services.lift_slots import create as create_lift_slot
 from portal.models.user import User, UserRole
@@ -33,20 +41,13 @@ from werkzeug.security import generate_password_hash
 PILOT_ATHLETE_ID = 303
 PILOT_BLOCK_ID = 601
 PILOT_SESSION_ID = 801
+SERVICE_ATHLETE_ID = 202
+INVITATION_ATHLETE_ID = 808
 
 
-def reset_pilot_fixture() -> None:
-    """Restore only the mutable state owned by the dedicated pilot athlete."""
-    pilot = db.session.get(Athlete, PILOT_ATHLETE_ID)
-    pilot_block = db.session.get(TrainingBlock, PILOT_BLOCK_ID)
-    if pilot is None or pilot_block is None:
-        raise RuntimeError("pilot fixture must be seeded before it can be reset")
-
+def _delete_training_state(athlete_id: int) -> None:
     log_ids = [
-        row.id
-        for row in TrainingSessionLog.query.filter_by(
-            athlete_id=PILOT_ATHLETE_ID, session_id=PILOT_SESSION_ID
-        ).all()
+        row.id for row in TrainingSessionLog.query.filter_by(athlete_id=athlete_id).all()
     ]
     if log_ids:
         TrainingSetResult.query.filter(
@@ -57,10 +58,7 @@ def reset_pilot_fixture() -> None:
         )
 
     snapshot_ids = [
-        row.id
-        for row in WarmupPlanSnapshot.query.filter_by(
-            athlete_id=PILOT_ATHLETE_ID, session_id=PILOT_SESSION_ID
-        ).all()
+        row.id for row in WarmupPlanSnapshot.query.filter_by(athlete_id=athlete_id).all()
     ]
     if snapshot_ids:
         WarmupPlanSnapshotStep.query.filter(
@@ -69,12 +67,72 @@ def reset_pilot_fixture() -> None:
         WarmupPlanSnapshot.query.filter(WarmupPlanSnapshot.id.in_(snapshot_ids)).delete(
             synchronize_session=False
         )
-    WarmupOverride.query.filter_by(
-        athlete_id=PILOT_ATHLETE_ID, session_id=PILOT_SESSION_ID
-    ).delete(synchronize_session=False)
-    WarmupAssignment.query.filter_by(
-        athlete_id=PILOT_ATHLETE_ID, session_id=PILOT_SESSION_ID
-    ).delete(synchronize_session=False)
+    WarmupOverride.query.filter_by(athlete_id=athlete_id).delete(
+        synchronize_session=False
+    )
+    protocol_ids = [
+        row.protocol_id
+        for row in WarmupAssignment.query.filter_by(athlete_id=athlete_id).all()
+    ]
+    WarmupAssignment.query.filter_by(athlete_id=athlete_id).delete(
+        synchronize_session=False
+    )
+    if protocol_ids:
+        WarmupProtocolStep.query.filter(
+            WarmupProtocolStep.protocol_id.in_(protocol_ids)
+        ).delete(synchronize_session=False)
+        WarmupProtocol.query.filter(WarmupProtocol.id.in_(protocol_ids)).delete(
+            synchronize_session=False
+        )
+
+
+def reset_fixture(name: str) -> None:
+    """Reset one allow-listed mutable E2E workflow, never the whole database."""
+    if name == "services":
+        ClientServiceChange.query.filter_by(athlete_id=SERVICE_ATHLETE_ID).delete(
+            synchronize_session=False
+        )
+        settings = AthleteCheckinSettings.query.filter_by(
+            athlete_id=SERVICE_ATHLETE_ID
+        ).one()
+        settings.training_enabled = True
+        settings.nutrition_enabled = True
+        settings.workflow_active = True
+        settings.checkin_day = 0
+    elif name == "nutrition-import":
+        DailyNutrition.query.filter_by(athlete_id=101).delete(synchronize_session=False)
+        NutritionImportJob.query.filter_by(athlete_id=101).delete(
+            synchronize_session=False
+        )
+        NutritionProviderConnection.query.filter_by(athlete_id=101).delete(
+            synchronize_session=False
+        )
+    elif name == "invitation":
+        AccountToken.query.filter_by(athlete_id=INVITATION_ATHLETE_ID).delete(
+            synchronize_session=False
+        )
+        User.query.filter_by(athlete_id=INVITATION_ATHLETE_ID).delete(
+            synchronize_session=False
+        )
+    elif name == "training":
+        _delete_training_state(101)
+    elif name == "check-in":
+        WeeklyCheckin.query.filter_by(athlete_id=101).delete(
+            synchronize_session=False
+        )
+    else:
+        raise KeyError(name)
+    db.session.commit()
+
+
+def reset_pilot_fixture() -> None:
+    """Restore only the mutable state owned by the dedicated pilot athlete."""
+    pilot = db.session.get(Athlete, PILOT_ATHLETE_ID)
+    pilot_block = db.session.get(TrainingBlock, PILOT_BLOCK_ID)
+    if pilot is None or pilot_block is None:
+        raise RuntimeError("pilot fixture must be seeded before it can be reset")
+
+    _delete_training_state(PILOT_ATHLETE_ID)
 
     WeeklyCheckin.query.filter_by(athlete_id=PILOT_ATHLETE_ID).delete(
         synchronize_session=False
@@ -125,6 +183,13 @@ def seed_database(app: Flask) -> None:
             weight_class="76 kg",
             federation="GBPF",
             next_competition="First Paying Athlete Open",
+        )
+        invitation = db.session.get(Athlete, INVITATION_ATHLETE_ID) or Athlete(
+            id=INVITATION_ATHLETE_ID,
+            first_name="Invite",
+            last_name="Retry",
+            email="invite.retry@example.test",
+            bodyweight_kg=70.0,
         )
         block = db.session.get(TrainingBlock, 301) or TrainingBlock(
             id=301,
@@ -371,11 +436,20 @@ def seed_database(app: Flask) -> None:
                 "Athlete E2E password!", method="scrypt"
             ),
         )
+        service_user = User.query.filter_by(email=sam.email).one_or_none() or User(
+            email=sam.email,
+            role=UserRole.ATHLETE,
+            athlete_id=sam.id,
+            password_hash=generate_password_hash(
+                "Service Athlete password!", method="scrypt"
+            ),
+        )
         db.session.add_all(
             [
                 alex,
                 sam,
                 pilot,
+                invitation,
                 block,
                 week,
                 session,
@@ -401,9 +475,61 @@ def seed_database(app: Flask) -> None:
                 plank,
                 coach,
                 athlete_user,
+                service_user,
             ]
         )
         db.session.flush()
+
+        service_settings = AthleteCheckinSettings.query.filter_by(
+            athlete_id=sam.id
+        ).one_or_none() or AthleteCheckinSettings(
+            athlete=sam,
+            training_enabled=True,
+            nutrition_enabled=True,
+            workflow_active=True,
+            checkin_day=0,
+        )
+        db.session.add(service_settings)
+        db.session.flush()
+        service_block = db.session.get(TrainingBlock, 1201) or TrainingBlock(
+            id=1201,
+            athlete=sam,
+            name="Service isolation block",
+            objective="Keep entitlement tests independent",
+            status="active",
+        )
+        db.session.add(service_block)
+        db.session.flush()
+        service_week = db.session.get(TrainingWeek, 1202) or TrainingWeek(
+            id=1202, block=service_block, name="Service week", position=1
+        )
+        db.session.add(service_week)
+        db.session.flush()
+        service_session = db.session.get(TrainingSession, 1203) or TrainingSession(
+            id=1203,
+            week=service_week,
+            name="Service athlete session",
+            day_label="Wednesday",
+            position=1,
+        )
+        db.session.add(service_session)
+        db.session.flush()
+        service_prescription = ExercisePrescription.query.filter_by(
+            session=service_session, exercise_name="Competition Squat"
+        ).one_or_none() or ExercisePrescription(
+            session=service_session,
+            exercise=squat,
+            exercise_name="Competition Squat",
+            position=1,
+            sets=3,
+            reps="5",
+            rpe=7.0,
+        )
+        db.session.add_all(
+            [
+                service_prescription,
+            ]
+        )
 
         # This is deliberately a draft fixture: the browser test must publish it
         # through the supported coach UI before the athlete can see or log it.

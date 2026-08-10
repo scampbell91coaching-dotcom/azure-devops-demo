@@ -1,10 +1,16 @@
 import { test, expect } from '../fixtures/test';
 
+test.use({ mutationScope: 'nutrition-import' });
+
 const csv = Buffer.from([
   'Date,Meal,Calories,Fat (g),Carbohydrates (g),Protein (g),Fiber (g)',
   '2026-08-04,Breakfast,600,15,70,35,8',
   '2026-08-04,Dinner,900,30,100,60,10',
 ].join('\n'));
+
+test.beforeEach(async ({ request, resetE2EFixture }) => {
+  await resetE2EFixture(request, 'nutrition-import');
+});
 
 test('athlete import preview, commit and mobile summary have no overflow', async ({ page, athleteSession, athleteIds }) => {
   await athleteSession(page.request, athleteIds.primary);
