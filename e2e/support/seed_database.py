@@ -19,6 +19,8 @@ from portal.models.nutrition_import import (
     NutritionImportJob,
     NutritionProviderConnection,
 )
+from portal.models.meal_plan import MealPlanAssignment, MealPlanTemplate
+from portal.models.nutrition_prescription import NutritionMacroPrescription
 from portal.models.programming import (
     ExercisePrescription,
     ProgrammingLiftSlot,
@@ -160,6 +162,10 @@ def reset_fixture(name: str) -> None:
         WeeklyCheckin.query.filter_by(athlete_id=101).delete(
             synchronize_session=False
         )
+    elif name == "meal-plan":
+        MealPlanAssignment.query.filter_by(athlete_id=101).delete(synchronize_session=False)
+        MealPlanTemplate.query.delete(synchronize_session=False)
+        NutritionMacroPrescription.query.filter_by(athlete_id=101).delete(synchronize_session=False)
     else:
         raise KeyError(name)
     db.session.commit()

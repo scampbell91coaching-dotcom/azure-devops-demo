@@ -37,7 +37,8 @@ from .programming_templates import programming_templates_bp
 from .release_readiness import release_readiness_bp
 from .security import init_security_headers
 from .services.release_readiness import ReleaseEvidenceService
-from .services.meal_plans import InMemoryMealPlanRepository, MealPlanWorkflow
+from .repositories.meal_plans import SqlAlchemyMealPlanRepository
+from .services.meal_plans import MealPlanWorkflow
 from .services.nutrition_entitlements import nutrition_coaching_enabled
 from .views import views_bp
 
@@ -111,7 +112,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         max_age_seconds=int(app.config["RELEASE_EVIDENCE_MAX_AGE_SECONDS"]),
     )
     app.extensions["meal_plan_workflow"] = MealPlanWorkflow(
-        InMemoryMealPlanRepository(), nutrition_coaching_enabled
+        SqlAlchemyMealPlanRepository(), nutrition_coaching_enabled
     )
     init_security_headers(app, prevent_caching=True)
     migrate.init_app(

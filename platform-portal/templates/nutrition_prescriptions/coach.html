@@ -3,7 +3,7 @@
 {% block title %}Nutrition targets · {{ athlete.full_name }}{% endblock %}
 {% block content %}
 <section class="coach-page">
-  <header class="coach-page__header"><a class="coach-back-link" href="{{ url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}">← {{ athlete.full_name }}</a><span class="coach-eyebrow">Coach-authored prescription</span><h1>Nutrition targets</h1><p>Targets are versioned by effective date. Intake and check-ins never alter them.</p></header>
+  <header class="coach-page__header"><a class="coach-back-link" href="{{ url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}">← {{ athlete.full_name }}</a><span class="coach-eyebrow">Coach-authored prescription</span><h1>Nutrition targets</h1><p>Targets are versioned by effective date. Intake and check-ins never alter them.</p><a href="{{ url_for('meal_plan_delivery.coach_index') }}">Manage meal plans</a></header>
   {% if entitled %}
   <section class="coach-panel"><h2>Assign targets</h2>
     <form class="coach-form" method="post">
