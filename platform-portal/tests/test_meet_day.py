@@ -8,6 +8,7 @@ from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.meet_day import Meet, MeetEntry, MeetLift
 from portal.services.meet_day import build_board
+from portal.services.competition_day import MARKER, pack_notes, unpack_notes
 
 
 @pytest.fixture
@@ -206,3 +207,77 @@ def test_create_validation_preserves_values_and_calculators_persist_three_lifts(
     with app.app_context():
         assert {item.lift for item in MeetLift.query.filter_by(entry_id=entry_id, kind="warmup")} == {"squat", "bench", "deadlift"}
         assert MeetLift.query.filter_by(entry_id=entry_id, kind="attempt", sequence=1).count() == 3
+
+
+def test_competition_day_notes_envelope_preserves_legacy_text():
+    assert unpack_notes("Rack height 12") == ("Rack height 12", {})
+    encoded = pack_notes("Rack height 12", {"weigh_in_time": "08:30"})
+    assert encoded.startswith(MARKER)
+    assert unpack_notes(encoded) == ("Rack height 12", {"weigh_in_time": "08:30"})
+    assert pack_notes("Plain note", {}) == "Plain note"
+
+
+def test_competition_workflow_records_weigh_in_attempts_notes_and_review(app):
+    client = app.test_client()
+    with app.app_context():
+        athlete = _athlete("Casey", "casey@example.test")
+        meet = Meet(name="Autumn Open", meet_date=date(2026, 10, 3), notes="Bring ID")
+        entry = MeetEntry(meet=meet, athlete=athlete, flight=1, platform_order=1)
+        attempt = MeetLift(entry=entry, lift="squat", kind="attempt", sequence=1, weight_kg=180, notes="Fast opener")
+        db.session.add(attempt)
+        db.session.commit()
+        meet_id, entry_id, attempt_id = meet.id, entry.id, attempt.id
+
+    meet_response = client.post(
+        f"/meet-day/{meet_id}/workflow",
+        data={
+            "status": "complete", "bodyweight_kg": "82.45", "weight_class": "83 kg",
+            "weigh_in_time": "08:30", "notes": "Bring ID", "review_went_well": "Attempt selection",
+            "review_improve": "Start warm-ups earlier", "review_actions": "Practise commands",
+        },
+    )
+    assert meet_response.status_code == 302
+    entry_response = client.post(
+        f"/meet-day/{meet_id}/entries/{entry_id}/workflow",
+        data={"bodyweight_kg": "82.45", "weigh_in_time": "08:31", "warmup_notes": "Bar at 09:05", "notes": "Left rack 12"},
+    )
+    assert entry_response.status_code == 302
+    attempt_response = client.post(
+        f"/meet-day/{meet_id}/lifts/{attempt_id}",
+        data={"weight_kg": "180", "actual_weight_kg": "182.5", "scheduled_time": "10:12", "outcome": "good", "notes": "Three whites"},
+    )
+    assert attempt_response.status_code == 302
+
+    with app.app_context():
+        board = build_board(db.session.get(Meet, meet_id))
+        assert board.meet.status == "complete"
+        assert board.meet.bodyweight_kg == Decimal("82.45")
+        assert board.meet_notes == "Bring ID"
+        assert board.meet_workflow["review_actions"] == "Practise commands"
+        assert board.entry_workflow[entry_id]["warmup_notes"] == "Bar at 09:05"
+        assert board.lift_workflow[attempt_id] == {"actual_weight_kg": "182.50", "scheduled_time": "10:12"}
+        assert board.lift_notes[attempt_id] == "Three whites"
+        assert db.session.get(MeetLift, attempt_id).weight_kg == Decimal("180.00")
+
+    page = client.get(f"/meet-day/{meet_id}")
+    assert b"Competition-day control" in page.data
+    assert b"182.50 kg" in page.data
+    assert b"Practise commands" in page.data
+
+
+def test_competition_workflow_rejects_invalid_status_and_actual_weight(app):
+    client = app.test_client()
+    with app.app_context():
+        athlete = _athlete("Morgan", "morgan@example.test")
+        meet = Meet(name="Open", meet_date=date(2026, 10, 4))
+        entry = MeetEntry(meet=meet, athlete=athlete, flight=1, platform_order=1)
+        attempt = MeetLift(entry=entry, lift="bench", kind="attempt", sequence=1)
+        db.session.add(attempt)
+        db.session.commit()
+        meet_id, attempt_id = meet.id, attempt.id
+    assert client.post(f"/meet-day/{meet_id}/workflow", data={"status": "cancelled"}).status_code == 400
+    response = client.post(
+        f"/meet-day/{meet_id}/lifts/{attempt_id}",
+        data={"weight_kg": "100", "actual_weight_kg": "not-a-weight", "outcome": "miss"},
+    )
+    assert response.status_code == 400

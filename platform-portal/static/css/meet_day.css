@@ -20,11 +20,13 @@
 .meet-day__inventory { display:grid; grid-template-columns:repeat(auto-fit,minmax(6rem,1fr)); gap:.5rem; }
 .meet-day__inventory label { font-size:.8rem; }
 .meet-day__result { border:1px solid var(--coach-border-strong); padding:1rem; margin-top:1rem; }
+.meet-day__status { display:inline-block; border:1px solid var(--coach-accent); padding:.15rem .5rem; color:var(--coach-accent-soft); font-size:.75rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.meet-day__review { display:grid; gap:.75rem; }
 .barbell { display:flex; align-items:center; min-height:7rem; overflow-x:auto; padding:1rem 0; }
 .barbell::before { content:""; width:4rem; height:.65rem; flex:0 0 4rem; background:#aaa; }
 .plate { display:grid; place-items:center; min-width:2.1rem; height:5.5rem; border:2px solid #111; color:#111; font-size:.68rem; font-weight:900; writing-mode:vertical-rl; }
 .plate--red{background:#d32f2f;color:#fff}.plate--blue{background:#1976d2;color:#fff}.plate--yellow{background:#fbc02d}.plate--green{background:#388e3c;color:#fff}.plate--white{background:#eee}.plate--black{background:#222;color:#fff}.plate--silver{background:#aaa}
 .loading-table { width:100%; border-collapse:collapse; font-size:.85rem; }.loading-table th,.loading-table td { border-bottom:1px solid var(--coach-border); padding:.5rem; text-align:left; vertical-align:top; }
-@media(min-width:760px){.meet-day__form--create{grid-template-columns:repeat(3,minmax(0,1fr));align-items:end}.meet-day__wide{grid-column:span 2}.meet-day__form--row{grid-template-columns:repeat(auto-fit,minmax(8rem,1fr));align-items:end}.meet-day__cards{grid-template-columns:repeat(auto-fit,minmax(12rem,1fr))}.meet-day__tools{grid-template-columns:1fr 1fr}}
+@media(min-width:760px){.meet-day__form--create{grid-template-columns:repeat(3,minmax(0,1fr));align-items:end}.meet-day__wide{grid-column:span 2}.meet-day__form--row{grid-template-columns:repeat(auto-fit,minmax(8rem,1fr));align-items:end}.meet-day__cards{grid-template-columns:repeat(auto-fit,minmax(12rem,1fr))}.meet-day__tools{grid-template-columns:1fr 1fr}.meet-day__review{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:759px){.meet-day__next{top:.5rem}.loading-table{display:block;overflow-x:auto}.meet-day__create{padding:1rem}}
 @media print{.coach-topbar,.coach-footer,.meet-day__next,.meet-day details,.meet-day__tools,.meet-day button{display:none!important}.coach-main{padding:0}.meet-day__card{break-inside:avoid}.meet-day{color:#000;background:#fff}}
