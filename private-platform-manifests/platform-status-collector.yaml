@@ -150,7 +150,7 @@ spec:
               type: RuntimeDefault
           containers:
             - name: collector
-              image: stevedevopslab6280.azurecr.io/platform-portal-private:4b55baf61e1b80464c79e75c9f793da7ea3f2bc7
+              image: stevedevopslab6280.azurecr.io/platform-portal-private:86cdd6399591c9790367e6bc5425d14bcfe879b8
               command: ["python", "-m", "portal.collectors.platform_status"]
               env:
                 - name: PLATFORM_STATUS_OUTPUT
