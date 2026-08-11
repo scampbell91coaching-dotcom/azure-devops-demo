@@ -479,6 +479,35 @@ def seed_database(app: Flask) -> None:
             fatigue_rating=2,
             accessory_suitable=True,
         )
+        extra_accessory_specs = (
+            ("Leg Extension", "lower body", 2),
+            ("Leg Curl", "lower body", 2),
+            ("Back Extension", "posterior chain", 2),
+            ("Dumbbell Lateral Raise", "upper body", 1),
+            ("Triceps Pushdown", "upper body", 1),
+            ("Dumbbell Curl", "upper body", 1),
+            ("Standing Calf Raise", "lower body", 1),
+        )
+
+        extra_accessories = []
+        for name, category, fatigue_rating in extra_accessory_specs:
+            exercise = Exercise.query.filter_by(name=name).one_or_none() or Exercise(
+                name=name,
+                movement="accessory",
+                category=category,
+                fatigue_rating=fatigue_rating,
+                accessory_suitable=True,
+            )
+            exercise.active = True
+            exercise.movement = "accessory"
+            exercise.category = category
+            exercise.fatigue_rating = fatigue_rating
+            exercise.accessory_suitable = True
+            exercise.lift_family = None
+            extra_accessories.append(exercise)
+
+        db.session.add_all(extra_accessories)
+
         coach = User.query.filter_by(
             email="coach.e2e@example.test"
         ).one_or_none() or User(

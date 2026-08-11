@@ -84,8 +84,15 @@ def test_fresh_e2e_database_seeds_once_and_safe_repeat_is_idempotent(
             "Bulgarian Split Squat",
             "Weighted Plank",
             "Pause Squat",
+            "Leg Extension",
+            "Leg Curl",
+            "Back Extension",
+            "Dumbbell Lateral Raise",
+            "Triceps Pushdown",
+            "Dumbbell Curl",
+            "Standing Calf Raise",
         }
-        assert len(exercises) == 11
+        assert len(exercises) == 18
         assert Athlete.query.count() == 6
 
 

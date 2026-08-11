@@ -260,32 +260,63 @@ test('Block Factory persists more than three coach-selected accessories per sess
   await page.getByLabel('Training days').fill('3');
 
   const accessoryCount = 12;
+  const selectedValues = new Set<string>();
+
   for (let index = 0; index < accessoryCount; index += 1) {
     await page.getByRole('button', { name: 'Add accessory' }).click();
-    const select = page.locator('select[name="accessory_exercise_id"]').nth(index);
-    const option = select.locator('option').nth(index);
-    const value = await option.getAttribute('value');
-    expect(value, `Accessory option ${index + 1}`).toBeTruthy();
+
+    const select = page
+      .locator('select[name="accessory_exercise_id"]')
+      .nth(index);
+
+    const values = await select.locator('option').evaluateAll((options) =>
+      options
+        .map((option) => (option as HTMLOptionElement).value)
+        .filter(Boolean)
+    );
+
+    const value = values.find((candidate) => !selectedValues.has(candidate));
+    expect(value, `Distinct accessory choice for row ${index + 1}`).toBeTruthy();
+
+    selectedValues.add(value!);
     await select.selectOption(value!);
   }
+
+  expect(selectedValues.size).toBe(12);
 
   await expect(page.locator('[data-accessory-summary]')).toContainText(
     '12 coach-selected assistance exercises'
   );
+
   await page.getByRole('button', { name: 'Preview' }).click();
+
   await expect(page.getByText(/4 assistance exercises/)).toHaveCount(3);
+
   await page.getByRole('button', { name: 'Accept proposal' }).click();
-  await expect(page.getByRole('heading', { name: 'Unlimited accessory block' })).toBeVisible();
+
+  await expect(
+    page.getByRole('heading', { name: 'Unlimited accessory block' })
+  ).toBeVisible();
+
   await page.getByRole('link', { name: /Week 1/ }).click();
+
   const sessions = page.getByTestId('programming-session');
   await expect(sessions).toHaveCount(3);
+
   for (let index = 0; index < 3; index += 1) {
-    await expect(sessions.nth(index).getByTestId('assistance-provenance')).toHaveCount(4);
+    await expect(
+      sessions.nth(index).getByTestId('assistance-provenance')
+    ).toHaveCount(4);
   }
+
   await page.reload();
+
   for (let index = 0; index < 3; index += 1) {
-    await expect(page.getByTestId('programming-session').nth(index)
-      .getByTestId('assistance-provenance')).toHaveCount(4);
+    await expect(
+      page.getByTestId('programming-session')
+        .nth(index)
+        .getByTestId('assistance-provenance')
+    ).toHaveCount(4);
   }
 });
 
