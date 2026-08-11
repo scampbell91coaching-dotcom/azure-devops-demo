@@ -768,6 +768,25 @@ select {
 }
 
 /* Allow coach workspace content to shrink within narrow mobile viewports. */
+
+.athlete-performance-nav { display:flex; gap:.5rem; overflow-x:auto; padding:.25rem 0 1rem; scrollbar-width:thin; }
+.athlete-performance-nav a { color:#d5d9d6; border:1px solid #303633; border-radius:999px; padding:.65rem .9rem; text-decoration:none; white-space:nowrap; }
+.athlete-performance-nav a[aria-current="page"] { background:#d8ff3e; border-color:#d8ff3e; color:#111; font-weight:700; }
+.performance-dashboard { display:grid; gap:1rem; margin-bottom:1.5rem; }
+.performance-toolbar { display:flex; align-items:end; justify-content:space-between; gap:1rem; }
+.performance-toolbar h2, .decision-panel h3, .performance-chart h3 { margin:.2rem 0 0; }
+.performance-filter { min-width:min(100%, 19rem); }
+.performance-filter label { display:block; color:#aeb6b1; font-size:.8rem; margin-bottom:.35rem; }
+.performance-filter select { width:100%; background:#171b19; color:#fff; border:1px solid #414844; border-radius:.55rem; padding:.7rem; }
+.decision-panel { display:grid; grid-template-columns:minmax(0, 1fr) minmax(16rem, 1fr); gap:1rem; padding:1.1rem; background:#171b19; border:1px solid #3e4742; border-left:4px solid #d8ff3e; border-radius:.8rem; }
+.decision-panel--review { border-left-color:#ff9b73; }.decision-panel--insufficient { border-left-color:#89928d; }
+.decision-panel p { margin:.35rem 0; }.decision-panel details { grid-column:1/-1; color:#aeb6b1; font-size:.85rem; }
+.performance-summary-grid, .performance-context-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:.75rem; }
+.performance-summary-grid article, .performance-context-grid article { display:grid; gap:.35rem; padding:1rem; background:#111513; border:1px solid #303633; border-radius:.7rem; }
+.performance-summary-grid span, .performance-context-grid span { color:#aeb6b1; font-size:.8rem; }.performance-summary-grid strong, .performance-context-grid strong { font-size:1.35rem; }.performance-summary-grid small, .performance-context-grid small { color:#89928d; line-height:1.35; }
+.performance-chart-grid { display:grid; grid-template-columns:1.25fr 1fr; gap:.75rem; }.performance-chart { min-width:0; padding:1rem; background:#111513; border:1px solid #303633; border-radius:.7rem; }.performance-chart header { display:flex; justify-content:space-between; gap:1rem; color:#aeb6b1; }.lift-trends { display:grid; grid-template-columns:repeat(3, 1fr); gap:.6rem; margin-top:1rem; }.lift-trends section { min-width:0; background:#171b19; border-radius:.5rem; padding:.7rem; }.lift-trends h4 { margin:0 0 .5rem; }.lift-trends ol, .volume-chart { list-style:none; padding:0; margin:0; }.lift-trends li { display:flex; justify-content:space-between; gap:.5rem; padding:.35rem 0; border-top:1px solid #303633; font-size:.82rem; }.performance-method { color:#89928d; font-size:.78rem; line-height:1.4; }.volume-chart { margin-top:1rem; }.volume-chart li { display:grid; grid-template-columns:3.5rem minmax(2rem,1fr) 5.5rem; align-items:center; gap:.5rem; margin:.6rem 0; font-size:.8rem; }.volume-chart i { display:block; width:var(--volume); min-width:2px; height:.7rem; background:#d8ff3e; border-radius:1rem; }.volume-chart strong { text-align:right; }.performance-context-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+@media (max-width: 760px) { .performance-toolbar, .decision-panel { display:grid; grid-template-columns:1fr; align-items:stretch; }.performance-summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.performance-chart-grid, .performance-context-grid { grid-template-columns:1fr; }.lift-trends { grid-template-columns:1fr; }.performance-filter { min-width:0; }.performance-summary-grid strong { font-size:1.1rem; } }
+@media (max-width: 410px) { .performance-summary-grid { grid-template-columns:1fr; }.performance-chart { padding:.8rem; }.volume-chart li { grid-template-columns:3.2rem minmax(1.5rem,1fr) 4.8rem; } }
 .coach-main,
 .coach-shell,
 .coach-page,

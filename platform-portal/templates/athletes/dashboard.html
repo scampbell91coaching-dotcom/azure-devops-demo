@@ -58,6 +58,70 @@
 
   </header>
 
+  <nav class="athlete-performance-nav" aria-label="{{ athlete.full_name }} workspace">
+    <a href="#performance-dashboard" aria-current="page">Dashboard</a>
+    <a href="#training-sessions">Training Log</a>
+    <a href="#personal-records">PRs</a>
+    <a href="#nutrition-checkins">Nutrition</a>
+    <a href="{{ url_for('checkins.index', athlete_id=athlete.id) }}">Check-ins</a>
+  </nav>
+
+  <section class="performance-dashboard" id="performance-dashboard">
+    <div class="performance-toolbar">
+      <div><span class="coach-eyebrow">Decision view</span><h2>Performance dashboard</h2></div>
+      <form method="get" class="performance-filter">
+        <label for="performance-block">Training block</label>
+        <select id="performance-block" name="block" onchange="this.form.submit()">
+          <option value="">All recorded blocks</option>
+          {% for block in performance.blocks %}<option value="{{ block.id }}"{% if performance.selected_block and performance.selected_block.id == block.id %} selected{% endif %}>{{ block.name }} · {{ block.status | title }}</option>{% endfor %}
+        </select>
+        <noscript><button class="coach-link-button" type="submit">Apply</button></noscript>
+      </form>
+    </div>
+
+    <article class="decision-panel decision-panel--{{ performance.decision.status }}" aria-labelledby="coach-decision-title">
+      <div><span class="coach-eyebrow">Deterministic coach summary</span><h3 id="coach-decision-title">{{ performance.decision.headline }}</h3></div>
+      <p>{{ performance.decision.explanation }}</p>
+      <details><summary>How this decision is made</summary><p>Rules check completed sessions in order: missed exact-prescription reps, average RPE overshoot of at least 1.0, then RPE adherence. Adherence means actual RPE is within 0.5 of prescribed RPE. No AI or inferred data is used.</p></details>
+    </article>
+
+    <div class="performance-summary-grid" aria-label="Training summary">
+      <article><span>SBD volume</span><strong>{{ '{:,.0f}'.format(performance.volume_kg) ~ ' kg' if performance.volume_kg is not none else 'Not available' }}</strong><small>Completed load × reps</small></article>
+      <article><span>RPE adherence</span><strong>{{ performance.rpe_adherence_percent ~ '%' if performance.rpe_adherence_percent is not none else 'Not available' }}</strong><small>Within ±0.5 RPE</small></article>
+      <article><span>Completed / missed reps</span><strong>{{ performance.completed_reps }} / {{ performance.missed_reps if performance.missed_reps is not none else '—' }}</strong><small>{% if performance.missed_reps is none %}Exact prescribed reps unavailable{% else %}Across comparable sets{% endif %}</small></article>
+      <article><span>Top sets recorded</span><strong>{{ performance.top_set_count }}</strong><small>{% if performance.top_set_count %}Tagged programme top sets{% else %}No tagged top-set history{% endif %}</small></article>
+    </div>
+
+    <div class="performance-chart-grid">
+      <article class="performance-chart" id="personal-records">
+        <header><div><span class="coach-eyebrow">Strength trend</span><h3>Squat / bench / deadlift e1RM</h3></div><span>{{ performance.session_count }} sessions</span></header>
+        {% if performance.e1rm_trends | selectattr('points') | list %}
+          <div class="lift-trends">
+          {% for trend in performance.e1rm_trends %}
+            <section><h4>{{ trend.lift | title }}</h4>
+              {% if trend.points %}<ol>{% for point in trend.points %}<li><span>{{ point.recorded_on.strftime('%d %b') }}</span><strong>{{ point.value }} kg</strong></li>{% endfor %}</ol>
+              {% else %}<p>Not enough recorded load and rep data.</p>{% endif %}
+            </section>
+          {% endfor %}
+          </div>
+          <p class="performance-method">Estimated with Epley (load × (1 + reps ÷ 30)); best SBD set per session. This is not stored as a competition PR.</p>
+        {% else %}<div class="coach-empty-state"><h4>No e1RM trend yet</h4><p>Completed SBD sets need both load and reps. Historical gaps are not estimated.</p></div>{% endif %}
+      </article>
+
+      <article class="performance-chart">
+        <header><div><span class="coach-eyebrow">Workload</span><h3>SBD training volume</h3></div></header>
+        {% if performance.volume_trend %}<ol class="volume-chart" aria-label="SBD volume by training date">{% set max_volume = performance.volume_trend | map(attribute='value') | max %}{% for point in performance.volume_trend %}<li><span>{{ point.recorded_on.strftime('%d %b') }}</span><i style="--volume: {{ (point.value / max_volume * 100) | round if max_volume else 0 }}%"></i><strong>{{ '{:,.0f}'.format(point.value) }} kg</strong></li>{% endfor %}</ol>
+        {% else %}<div class="coach-empty-state"><h4>No SBD volume yet</h4><p>Completed SBD sets need load and reps before volume can be shown.</p></div>{% endif %}
+      </article>
+    </div>
+
+    <div class="performance-context-grid">
+      <article><span>Prescribed vs actual RPE</span><strong>{% if performance.average_prescribed_rpe is not none %}{{ performance.average_prescribed_rpe }} → {{ performance.average_actual_rpe }}{% else %}Not available{% endif %}</strong><small>Averages for paired set records</small></article>
+      <article><span>Bodyweight</span><strong>{{ athlete.bodyweight_kg ~ ' kg' if athlete.bodyweight_kg is not none else 'Not recorded' }}</strong><small>Current athlete profile; trend remains in nutrition history</small></article>
+      <article><span>Meet / weight class</span><strong>{{ athlete.weight_class or 'No class recorded' }}</strong><small>{% if athlete.next_competition %}{{ athlete.next_competition }} · countdown unavailable without a structured meet date{% else %}No upcoming meet recorded{% endif %}</small></article>
+    </div>
+  </section>
+
   <section class="coach-panel client-services" id="client-services">
     <div class="coach-panel__heading coach-panel__heading--split">
       <div><span class="coach-eyebrow">Current access</span><h2>Client services</h2></div>

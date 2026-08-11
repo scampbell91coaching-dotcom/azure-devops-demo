@@ -16,6 +16,7 @@ from portal.models.programming import (
     TrainingWeek,
 )
 from portal.models.user import User, UserRole
+from portal.services.coach_athlete_performance import get_coach_athlete_performance
 
 
 @pytest.fixture()
@@ -276,3 +277,53 @@ def test_prescription_edits_do_not_overwrite_result_snapshot(training_app):
         prescription.load_kg = 120
         db.session.commit()
         assert TrainingSetResult.query.one().prescribed_load_kg == 100
+
+
+def test_coach_performance_dashboard_uses_results_and_explains_decision(training_app):
+    ids = training_app.config["TRAINING_IDS"]
+    athlete_client = training_app.test_client()
+    token = _sign_in(athlete_client, ids["alex_user"])
+    data = _set_data(ids["prescription"], 1, completed=1, load=100, reps=4, rpe=8)
+    data.update(_set_data(ids["prescription"], 2, skipped=1))
+    data.update(intent="finish", csrf_token=token)
+    athlete_client.post(f"/athlete/programme/sessions/{ids['session']}", data=data)
+
+    with training_app.app_context():
+        performance = get_coach_athlete_performance(ids["alex"])
+        block_id = TrainingBlock.query.filter_by(athlete_id=ids["alex"]).one().id
+        assert performance.session_count == 1
+        assert performance.completed_reps == 4
+        assert performance.missed_reps == 6
+        assert performance.volume_kg == 400
+        assert performance.rpe_adherence_percent == 0
+        assert performance.decision.status == "review"
+
+    coach_client = training_app.test_client()
+    _sign_in(coach_client, ids["coach_user"])
+    page = coach_client.get(f"/athletes/{ids['alex']}?block={block_id}").get_data(
+        as_text=True
+    )
+    assert "Performance dashboard" in page
+    assert "Review prescription before progressing" in page
+    assert "400 kg" in page
+    assert "0%" in page
+    assert "Epley" in page
+    assert "Training Log" in page
+    assert "How this decision is made" in page
+
+
+def test_performance_filter_rejects_another_athletes_block(training_app):
+    ids = training_app.config["TRAINING_IDS"]
+    with training_app.app_context():
+        private = TrainingBlock(
+            athlete_id=ids["sam"], name="Sam private", status="active"
+        )
+        db.session.add(private)
+        db.session.commit()
+        private_id = private.id
+
+    coach_client = training_app.test_client()
+    _sign_in(coach_client, ids["coach_user"])
+    response = coach_client.get(f"/athletes/{ids['alex']}?block={private_id}")
+    assert response.status_code == 404
+    assert b"Sam private" not in response.data
