@@ -50,6 +50,8 @@ _ATHLETE_ENDPOINTS = {
     "checkins.athlete_history",
     "checkins.athlete_detail",
     "nutrition_imports.index",
+    "nutrition_imports.preview",
+    "nutrition_imports.commit",
 }
 _SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
 _DUMMY_PASSWORD_HASH = generate_password_hash("not-a-real-password", method="scrypt")

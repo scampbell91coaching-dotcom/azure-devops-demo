@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from flask import Flask
 
 from portal.extensions import db
@@ -100,6 +102,41 @@ def reset_fixture(name: str) -> None:
         settings.workflow_active = True
         settings.checkin_day = 0
     elif name == "nutrition-import":
+        # Restore the complete nutrition-import fixture boundary. Other E2E
+        # workflows may change athlete 101's service entitlements, so import
+        # tests must not inherit that mutable state.
+        ClientServiceChange.query.filter_by(athlete_id=101).delete(
+            synchronize_session=False
+        )
+        db.session.add_all(
+            [
+                ClientServiceChange(
+                    athlete_id=101,
+                    service="training",
+                    value="yes",
+                    effective_at=datetime(2026, 8, 10),
+                ),
+                ClientServiceChange(
+                    athlete_id=101,
+                    service="nutrition",
+                    value="yes",
+                    effective_at=datetime(2026, 8, 10),
+                ),
+                ClientServiceChange(
+                    athlete_id=101,
+                    service="meet_day",
+                    value="no",
+                    effective_at=datetime(2026, 8, 10),
+                ),
+                ClientServiceChange(
+                    athlete_id=101,
+                    service="video_review",
+                    value="none",
+                    effective_at=datetime(2026, 8, 10),
+                ),
+            ]
+        )
+
         DailyNutrition.query.filter_by(athlete_id=101).delete(synchronize_session=False)
         NutritionImportJob.query.filter_by(athlete_id=101).delete(
             synchronize_session=False

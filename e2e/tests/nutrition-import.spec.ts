@@ -4,8 +4,8 @@ test.use({ mutationScope: 'nutrition-import' });
 
 const csv = Buffer.from([
   'Date,Meal,Calories,Fat (g),Carbohydrates (g),Protein (g),Fiber (g)',
-  '2026-08-04,Breakfast,600,15,70,35,8',
-  '2026-08-04,Dinner,900,30,100,60,10',
+  '2026-08-10,Breakfast,600,15,70,35,8',
+  '2026-08-10,Dinner,900,30,100,60,10',
 ].join('\n'));
 
 test.beforeEach(async ({ request, resetE2EFixture }) => {
