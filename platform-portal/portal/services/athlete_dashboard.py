@@ -69,11 +69,7 @@ def get_athlete_dashboard(athlete_id: int, *, today: date) -> AthleteDashboard |
         .order_by(TrainingBlock.created_at.desc(), TrainingBlock.id.desc())
         .first()
     )
-    logs = {
-        item.session_id: item
-        for item in TrainingSessionLog.query.filter_by(athlete_id=athlete_id)
-        .filter(TrainingSessionLog.session_id.is_not(None)).all()
-    }
+    logs = _current_block_logs(athlete_id, current_block)
     schedule = project_training_schedule(current_block, logs, today=today)
     next_session = schedule.next_session.session if schedule.next_session else None
     current_week = schedule.current_week
@@ -121,6 +117,33 @@ def get_athlete_dashboard(athlete_id: int, *, today: date) -> AthleteDashboard |
         ),
         nutrition_coaching_enabled=has_nutrition,
     )
+
+
+def _current_block_logs(
+    athlete_id: int, current_block: TrainingBlock | None
+) -> dict[int, TrainingSessionLog]:
+    """Load only logs that schedule projection can consume.
+
+    The athlete predicate is intentionally retained alongside the block join.  A
+    session belongs to one block, but its log is also athlete-owned data and must
+    never become visible merely because a malformed row references that session.
+    """
+    if current_block is None:
+        return {}
+
+    items = (
+        TrainingSessionLog.query.join(
+            TrainingSession,
+            TrainingSessionLog.session_id == TrainingSession.id,
+        )
+        .join(TrainingWeek, TrainingSession.week_id == TrainingWeek.id)
+        .filter(
+            TrainingSessionLog.athlete_id == athlete_id,
+            TrainingWeek.block_id == current_block.id,
+        )
+        .all()
+    )
+    return {item.session_id: item for item in items}
 
 
 def _nutrition_history(athlete_id: int) -> tuple[NutritionCheckIn, ...]:
