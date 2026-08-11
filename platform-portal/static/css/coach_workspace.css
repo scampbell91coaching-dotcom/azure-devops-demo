@@ -839,3 +839,29 @@ select {
     width: 100%;
   }
 }
+
+
+/* V7.10 performance filters: CSP-safe, shrinkable mobile layout. */
+.performance-filter,
+#performance-decisions .coach-panel__heading--split > form,
+#performance-decisions .coach-panel__heading--split > form label,
+#performance-decisions .coach-panel__heading--split select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+#performance-decisions .coach-panel__heading--split > form {
+  flex: 0 1 19rem;
+}
+
+#performance-decisions .coach-panel__heading--split select {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+@media (max-width: 650px) {
+  #performance-decisions .coach-panel__heading--split > form {
+    width: 100%;
+    flex-basis: auto;
+  }
+}

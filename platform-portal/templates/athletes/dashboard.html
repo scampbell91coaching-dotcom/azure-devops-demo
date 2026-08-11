@@ -71,7 +71,7 @@
       <div><span class="coach-eyebrow">Decision view</span><h2>Performance dashboard</h2></div>
       <form method="get" class="performance-filter">
         <label for="performance-block">Training block</label>
-        <select id="performance-block" name="block" onchange="this.form.submit()">
+        <select id="performance-block" name="block" data-auto-submit>
           <option value="">All recorded blocks</option>
           {% for block in performance.blocks %}<option value="{{ block.id }}"{% if performance.selected_block and performance.selected_block.id == block.id %} selected{% endif %}>{{ block.name }} · {{ block.status | title }}</option>{% endfor %}
         </select>
@@ -208,7 +208,7 @@
       <div><span class="coach-eyebrow">Deterministic review</span><h2>Performance decisions</h2></div>
       <form method="get">
         <label><span class="coach-eyebrow">Training block</span>
-          <select name="block_id" onchange="this.form.submit()">
+          <select name="block_id" data-auto-submit>
             <option value="">All blocks · last 42 days</option>
             {% for block in performance_blocks %}<option value="{{ block.id }}"{% if performance_decisions.block_id == block.id %} selected{% endif %}>{{ block.name }}</option>{% endfor %}
           </select>

@@ -86,7 +86,7 @@ def test_fresh_e2e_database_seeds_once_and_safe_repeat_is_idempotent(
             "Pause Squat",
         }
         assert len(exercises) == 11
-        assert Athlete.query.count() == 4
+        assert Athlete.query.count() == 6
 
 
 def test_service_reset_is_idempotent_and_leaves_unrelated_athletes_unchanged(

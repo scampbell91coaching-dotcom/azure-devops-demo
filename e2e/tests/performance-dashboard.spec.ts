@@ -51,7 +51,7 @@ test('presents deterministic coaching metrics and chart data', async ({ page }) 
 
 test('filters every dashboard metric to the selected training block', async ({ page }) => {
   await page.goto(`/athletes/${performanceAthleteId}`);
-  await page.getByLabel('Training block').selectOption('1401');
+  await page.locator('#performance-block').selectOption('1401');
 
   await expect(page).toHaveURL(`/athletes/${performanceAthleteId}?block=1401`);
   const dashboard = page.locator('#performance-dashboard');
