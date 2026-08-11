@@ -161,6 +161,50 @@
     {% else %}<div class="coach-empty-state"><h3>No completed sessions</h3><p>Submitted athlete training will appear here.</p></div>{% endif %}
   </section>
 
+  <section class="coach-panel" id="external-reviews">
+    <div class="coach-panel__heading coach-panel__heading--split">
+      <div><span class="coach-eyebrow">External coaching</span><h2>WhatsApp reviews</h2></div>
+      <span class="coach-count">{{ external_reviews | length }}</span>
+    </div>
+    <p>Record the coaching outcome only. Messages and media remain outside Traditional Strength.</p>
+    <form class="coach-form" method="post" action="{{ url_for('external_reviews.create', athlete_id=athlete.id) }}">
+      <div class="coach-form__grid">
+        <label><span>Reviewed at</span><input type="datetime-local" name="reviewed_at" required></label>
+        <label><span>Channel</span><input value="WhatsApp" disabled><input type="hidden" name="channel" value="whatsapp"></label>
+        <label><span>Session (optional)</span><select name="session_log_id"><option value="">No session link</option>{% for log in training_logs %}<option value="{{ log.id }}">{{ log.session_name }}{% if log.completed_at %} · {{ log.completed_at.strftime('%d %b %Y') }}{% endif %}</option>{% endfor %}</select></label>
+        <label><span>Set (optional)</span><select name="set_result_id"><option value="">No set link</option>{% for log in training_logs %}{% for result in log.results %}<option value="{{ result.id }}">{{ log.session_name }} · {{ result.exercise_name }} set {{ result.set_order }}</option>{% endfor %}{% endfor %}</select></label>
+        <label><span>Observation (optional)</span><select name="observation_id"><option value="">No observation link</option>{% for observation in external_review_observations %}<option value="{{ observation.id }}">{{ observation.lift | title }} · {{ observation.observation }}</option>{% endfor %}</select></label>
+        <label><span>External URL (optional)</span><input type="url" name="external_url" maxlength="2048" placeholder="https://…"></label>
+      </div>
+      <label><span>Coach summary</span><textarea name="coach_summary" rows="3" required></textarea></label>
+      <label><span>Action</span><textarea name="action" rows="2" required></textarea></label>
+      <div class="coach-form__checks">
+        <label><input type="checkbox" name="follow_up_required" value="1"> Follow-up required</label>
+        <label><input type="checkbox" name="resolved" value="1"> Already resolved</label>
+      </div>
+      <button class="coach-primary-button" type="submit">Record review</button>
+    </form>
+
+    {% if external_reviews %}
+      <div class="coach-checkin-list">
+        {% for review in external_reviews %}
+          <article class="coach-checkin-card">
+            <header class="coach-checkin-card__header"><div><strong>{{ review.reviewed_at.strftime('%d %B %Y, %H:%M') }}</strong><span class="coach-status {{ 'coach-status--active' if review.resolved else 'coach-status--pending' }}">{{ 'Resolved' if review.resolved else 'Open' }}</span></div><span>WhatsApp</span></header>
+            <div class="coach-checkin-card__copy"><div><h3>Summary</h3><p>{{ review.coach_summary }}</p></div><div><h3>Action</h3><p>{{ review.action }}</p></div></div>
+            <p>{% if review.follow_up_required %}<strong>Follow-up required.</strong>{% else %}No follow-up required.{% endif %}</p>
+            <div class="coach-checkin-card__actions">
+              {% if review.session_log %}<a class="coach-link-button" href="{{ url_for('athletes.coach_training_session', athlete_id=athlete.id, log_id=review.session_log.id) }}">Session: {{ review.session_log.session_name }}</a>{% endif %}
+              {% if review.set_result %}<span>Set: {{ review.set_result.exercise_name }} #{{ review.set_result.set_order }}</span>{% endif %}
+              {% if review.observation %}<span>Observation: {{ review.observation.lift | title }}</span>{% endif %}
+              {% if review.external_url %}<a class="coach-link-button" href="{{ review.external_url }}" target="_blank" rel="noopener noreferrer">External reference</a>{% endif %}
+              {% if not review.resolved %}<form method="post" action="{{ url_for('external_reviews.resolve', athlete_id=athlete.id, review_id=review.id) }}"><button class="coach-link-button" type="submit">Mark resolved</button></form>{% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}<div class="coach-empty-state"><h3>No external reviews</h3><p>WhatsApp coaching outcomes recorded for this athlete will appear here.</p></div>{% endif %}
+  </section>
+
   {% if latest_checkin %}
     <section class="coach-panel">
       <div class="coach-panel__heading coach-panel__heading--split">

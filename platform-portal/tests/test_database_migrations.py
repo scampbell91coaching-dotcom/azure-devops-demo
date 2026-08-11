@@ -27,6 +27,7 @@ EXPECTED_TABLES = {
     "day_templates",
     "exercise_prescriptions",
     "exercises",
+    "external_coaching_reviews",
     "lead_captures",
     "meet_entries",
     "meet_lifts",

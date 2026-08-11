@@ -21,6 +21,8 @@ from .models.athlete import Athlete
 from .models.checkins import AthleteCheckinSettings
 from .models.nutrition_checkin import NutritionCheckIn
 from .models.programming import TrainingBlock, TrainingSession, TrainingSessionLog
+from .models.external_coaching_review import ExternalCoachingReview
+from .models.athlete_state import CoachTechnicalObservation
 from .services.athlete_dashboard import get_athlete_dashboard
 from .services.athlete_services import athlete_services
 from .services.training_schedule import project_training_schedule
@@ -586,6 +588,16 @@ def athlete_dashboard(athlete_id: int):
         invitation=latest_token(athlete.id, AccountTokenPurpose.INVITATION),
         password_reset=latest_token(athlete.id, AccountTokenPurpose.PASSWORD_RESET),
         client_services=resolved_client_services(athlete.id),
+        external_reviews=(
+            ExternalCoachingReview.query.filter_by(athlete_id=athlete.id)
+            .order_by(ExternalCoachingReview.reviewed_at.desc(), ExternalCoachingReview.id.desc())
+            .all()
+        ),
+        external_review_observations=(
+            CoachTechnicalObservation.query.filter_by(athlete_id=athlete.id)
+            .order_by(CoachTechnicalObservation.observed_on.desc(), CoachTechnicalObservation.id.desc())
+            .all()
+        ),
     )
 
 

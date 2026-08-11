@@ -18,6 +18,7 @@ from .checkins import AthleteCheckinSettings, WeeklyCheckin
 from .client_service import ClientServiceChange
 from .coaching_application import CoachingApplication
 from .exercise_library import DayTemplate, DayTemplateExercise, Exercise
+from .external_coaching_review import ExternalCoachingReview
 from .lead_capture import LeadCapture
 from .meet_day import Meet, MeetEntry, MeetLift
 from .nutrition_checkin import NutritionCheckIn
@@ -55,6 +56,7 @@ __all__ = [
     "DeliveryState",
     "Exercise",
     "ExercisePrescription",
+    "ExternalCoachingReview",
     "ProgrammingLiftSlot",
     "ProgrammeRevision",
     "LeadCapture",

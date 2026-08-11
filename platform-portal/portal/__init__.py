@@ -22,6 +22,7 @@ from .coach_applications import coach_applications_bp
 from .database_cli import register_database_commands
 from .database_config import resolve_database_uri
 from .exercise_library import exercise_library_bp
+from .external_reviews import external_reviews_bp
 from .extensions import db, migrate
 from .lead_magnets import lead_magnets_bp
 from .meet_day import meet_day_bp
@@ -137,6 +138,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(programming_bp)
     app.register_blueprint(block_factory_bp)
     app.register_blueprint(exercise_library_bp)
+    app.register_blueprint(external_reviews_bp)
     app.register_blueprint(programming_engine_bp)
     app.register_blueprint(programming_pack2_bp)
     app.register_blueprint(programming_templates_bp)
