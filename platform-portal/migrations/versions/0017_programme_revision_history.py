@@ -1,8 +1,8 @@
-"""Add immutable programme revision history without consuming a numbered slot."""
+"""Add immutable programme revision history."""
 import sqlalchemy as sa
 from alembic import op
-revision = "programme_revision_history"
-down_revision = "0015_client_services"
+revision = "0017_programme_revision_history"
+down_revision = "0016_nutrition_macros"
 branch_labels = None
 depends_on = None
 def upgrade():

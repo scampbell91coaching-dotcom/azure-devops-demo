@@ -1,14 +1,14 @@
 """Add the external WhatsApp coaching review prototype.
 
-Revision ID: whatsapp_external_review
-Revises: 0015_client_services
+Revision ID: 0018_external_coaching_reviews
+Revises: 0017_programme_revision_history
 """
 
 import sqlalchemy as sa
 from alembic import op
 
-revision = "whatsapp_external_review"
-down_revision = "0015_client_services"
+revision = "0018_external_coaching_reviews"
+down_revision = "0017_programme_revision_history"
 branch_labels = None
 depends_on = None
 
