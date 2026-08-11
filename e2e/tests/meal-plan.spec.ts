@@ -49,7 +49,7 @@ test('coach builds, previews, publishes and revises a meal plan that the athlete
   await page.getByRole('button', { name: 'Create revision' }).click();
   await expect(page.getByText('Revision 6')).toBeVisible();
 
-  await athleteSession(request, 101);
+  await athleteSession(page.request, 101);
   await page.goto('/athlete/meal-plan');
   await expect(page.getByRole('heading', { name: 'Competition week meals' })).toBeVisible();
   await expect(page.getByText('Oats')).toBeVisible();
