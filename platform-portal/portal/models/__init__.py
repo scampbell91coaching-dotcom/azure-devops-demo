@@ -21,6 +21,7 @@ from .exercise_library import DayTemplate, DayTemplateExercise, Exercise
 from .external_coaching_review import ExternalCoachingReview
 from .lead_capture import LeadCapture
 from .meet_day import Meet, MeetEntry, MeetLift
+from .meal_plan import MealPlanAssignment, MealPlanTemplate
 from .nutrition_checkin import NutritionCheckIn
 from .nutrition_import import DailyNutrition, NutritionImportJob, NutritionProviderConnection
 from .nutrition_prescription import NutritionMacroPrescription
@@ -63,6 +64,8 @@ __all__ = [
     "Meet",
     "MeetEntry",
     "MeetLift",
+    "MealPlanAssignment",
+    "MealPlanTemplate",
     "NutritionCheckIn",
     "DailyNutrition",
     "NutritionImportJob",

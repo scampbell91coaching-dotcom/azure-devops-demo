@@ -85,5 +85,5 @@ test('training and nutrition athlete gets both services without changing the pri
   await expect(page.getByRole('heading', { level: 2, name: 'Training' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Nutrition & bodyweight' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'View session' })).toBeVisible();
-  await expect(page.locator('.athlete-mobile-nav a')).toHaveCount(5);
+  await expect(page.locator('.athlete-mobile-nav a')).toHaveCount(6);
 });

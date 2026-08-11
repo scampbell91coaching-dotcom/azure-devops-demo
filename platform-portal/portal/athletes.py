@@ -24,6 +24,8 @@ from .models.programming import TrainingBlock, TrainingSession, TrainingSessionL
 from .models.external_coaching_review import ExternalCoachingReview
 from .models.athlete_state import CoachTechnicalObservation
 from .services.athlete_dashboard import get_athlete_dashboard
+from .services.performance_decisions import build_performance_decisions
+from .services.coach_athlete_performance import get_coach_athlete_performance
 from .services.athlete_services import athlete_services
 from .services.training_schedule import project_training_schedule
 from .services.nutrition_dashboard import get_nutrition_dashboard
@@ -539,6 +541,30 @@ def athlete_dashboard(athlete_id: int):
     if athlete is None:
         abort(404)
 
+    raw_block_id = request.args.get("block") or request.args.get("block_id")
+    block_id = None
+    if raw_block_id:
+        try:
+            block_id = int(raw_block_id)
+        except ValueError:
+            abort(400, description="Choose a valid training block.")
+
+    performance_decisions = build_performance_decisions(
+        athlete.id,
+        as_of=datetime.now(UTC).date(),
+        block_id=block_id,
+    )
+    if performance_decisions is None:
+        abort(404)
+
+    try:
+        performance = get_coach_athlete_performance(
+            athlete.id,
+            block_id=block_id,
+        )
+    except LookupError:
+        abort(404)
+
     checkins = NutritionCheckIn.query.filter_by(athlete_id=athlete.id).all()
 
     checkins.sort(key=lambda checkin: (checkin.checkin_date, checkin.id), reverse=True)
@@ -566,6 +592,13 @@ def athlete_dashboard(athlete_id: int):
     return render_template(
         "athletes/dashboard.html",
         athlete=athlete,
+        performance_decisions=performance_decisions,
+        performance=performance,
+        performance_blocks=(
+            TrainingBlock.query.filter_by(athlete_id=athlete.id)
+            .order_by(TrainingBlock.created_at.desc(), TrainingBlock.id.desc())
+            .all()
+        ),
         checkins=checkins,
         latest_checkin=latest_checkin,
         checkin_settings=settings,

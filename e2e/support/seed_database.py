@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, date, datetime
 
 from flask import Flask
 
@@ -13,11 +13,14 @@ from portal.models.client_service import ClientServiceChange
 from portal.models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from portal.models.exercise_library import Exercise
 from portal.models.nutrition_checkin import NutritionCheckIn
+from portal.models.meet_day import Meet, MeetEntry
 from portal.models.nutrition_import import (
     DailyNutrition,
     NutritionImportJob,
     NutritionProviderConnection,
 )
+from portal.models.meal_plan import MealPlanAssignment, MealPlanTemplate
+from portal.models.nutrition_prescription import NutritionMacroPrescription
 from portal.models.programming import (
     ExercisePrescription,
     ProgrammingLiftSlot,
@@ -45,6 +48,8 @@ PILOT_BLOCK_ID = 601
 PILOT_SESSION_ID = 801
 SERVICE_ATHLETE_ID = 202
 INVITATION_ATHLETE_ID = 808
+PERFORMANCE_ATHLETE_ID = 404
+PERFORMANCE_EMPTY_ATHLETE_ID = 405
 
 
 def _delete_training_state(athlete_id: int) -> None:
@@ -157,6 +162,10 @@ def reset_fixture(name: str) -> None:
         WeeklyCheckin.query.filter_by(athlete_id=101).delete(
             synchronize_session=False
         )
+    elif name == "meal-plan":
+        MealPlanAssignment.query.filter_by(athlete_id=101).delete(synchronize_session=False)
+        MealPlanTemplate.query.delete(synchronize_session=False)
+        NutritionMacroPrescription.query.filter_by(athlete_id=101).delete(synchronize_session=False)
     else:
         raise KeyError(name)
     db.session.commit()
@@ -227,6 +236,26 @@ def seed_database(app: Flask) -> None:
             last_name="Retry",
             email="invite.retry@example.test",
             bodyweight_kg=70.0,
+        )
+        performance_athlete = db.session.get(Athlete, PERFORMANCE_ATHLETE_ID) or Athlete(
+            id=PERFORMANCE_ATHLETE_ID,
+            first_name="Morgan",
+            last_name="Performance",
+            email="morgan.performance@example.test",
+            bodyweight_kg=82.5,
+            weight_class="83 kg",
+            federation="GBPF",
+            next_competition="Autumn Open",
+        )
+        performance_empty_athlete = db.session.get(
+            Athlete, PERFORMANCE_EMPTY_ATHLETE_ID
+        ) or Athlete(
+            id=PERFORMANCE_EMPTY_ATHLETE_ID,
+            first_name="Casey",
+            last_name="No History",
+            email="casey.no-history@example.test",
+            bodyweight_kg=None,
+            weight_class="69 kg",
         )
         block = db.session.get(TrainingBlock, 301) or TrainingBlock(
             id=301,
@@ -456,6 +485,35 @@ def seed_database(app: Flask) -> None:
             fatigue_rating=2,
             accessory_suitable=True,
         )
+        extra_accessory_specs = (
+            ("Leg Extension", "lower body", 2),
+            ("Leg Curl", "lower body", 2),
+            ("Back Extension", "posterior chain", 2),
+            ("Dumbbell Lateral Raise", "upper body", 1),
+            ("Triceps Pushdown", "upper body", 1),
+            ("Dumbbell Curl", "upper body", 1),
+            ("Standing Calf Raise", "lower body", 1),
+        )
+
+        extra_accessories = []
+        for name, category, fatigue_rating in extra_accessory_specs:
+            exercise = Exercise.query.filter_by(name=name).one_or_none() or Exercise(
+                name=name,
+                movement="accessory",
+                category=category,
+                fatigue_rating=fatigue_rating,
+                accessory_suitable=True,
+            )
+            exercise.active = True
+            exercise.movement = "accessory"
+            exercise.category = category
+            exercise.fatigue_rating = fatigue_rating
+            exercise.accessory_suitable = True
+            exercise.lift_family = None
+            extra_accessories.append(exercise)
+
+        db.session.add_all(extra_accessories)
+
         coach = User.query.filter_by(
             email="coach.e2e@example.test"
         ).one_or_none() or User(
@@ -487,6 +545,8 @@ def seed_database(app: Flask) -> None:
                 sam,
                 pilot,
                 invitation,
+                performance_athlete,
+                performance_empty_athlete,
                 block,
                 week,
                 session,
@@ -516,6 +576,194 @@ def seed_database(app: Flask) -> None:
             ]
         )
         db.session.flush()
+
+        # Dedicated, immutable performance-dashboard data. Keeping these rows on
+        # their own athletes means mutable training E2E workflows cannot make
+        # analytics assertions order-dependent when Playwright uses many workers.
+        current_performance_block = db.session.get(TrainingBlock, 1401) or TrainingBlock(
+            id=1401,
+            athlete=performance_athlete,
+            name="Peak strength block",
+            objective="Prepare the competition lifts",
+            status="active",
+        )
+        db.session.add(current_performance_block)
+        prior_performance_block = db.session.get(TrainingBlock, 1402) or TrainingBlock(
+            id=1402,
+            athlete=performance_athlete,
+            name="Base strength block",
+            objective="Establish baseline strength",
+            status="archived",
+        )
+        db.session.add_all([current_performance_block, prior_performance_block])
+        db.session.flush()
+
+        current_performance_week = db.session.get(TrainingWeek, 1411) or TrainingWeek(
+            id=1411,
+            block=current_performance_block,
+            name="Peak week",
+            position=1,
+        )
+        db.session.add(current_performance_week)
+        prior_performance_week = db.session.get(TrainingWeek, 1412) or TrainingWeek(
+            id=1412,
+            block=prior_performance_block,
+            name="Base week",
+            position=1,
+        )
+        db.session.add_all([current_performance_week, prior_performance_week])
+        db.session.flush()
+
+        current_performance_session = db.session.get(
+            TrainingSession, 1421
+        ) or TrainingSession(
+            id=1421,
+            week=current_performance_week,
+            name="SBD performance day",
+            day_label="Saturday",
+            position=1,
+        )
+        db.session.add(current_performance_session)
+        prior_performance_session = db.session.get(
+            TrainingSession, 1422
+        ) or TrainingSession(
+            id=1422,
+            week=prior_performance_week,
+            name="Baseline squat day",
+            day_label="Saturday",
+            position=1,
+        )
+        db.session.add_all([current_performance_session, prior_performance_session])
+        db.session.flush()
+
+        performance_slots = []
+        for row_id, target_session, family, position in (
+            (1425, current_performance_session, "squat", 1),
+            (1426, current_performance_session, "bench", 2),
+            (1427, current_performance_session, "deadlift", 3),
+            (1428, prior_performance_session, "squat", 1),
+        ):
+            slot = db.session.get(ProgrammingLiftSlot, row_id) or ProgrammingLiftSlot(
+                id=row_id,
+                session=target_session,
+                lift_family=family,
+                position=position,
+            )
+            performance_slots.append(slot)
+            db.session.add(slot)
+        db.session.add_all(performance_slots)
+        db.session.flush()
+
+        performance_prescriptions = []
+        for row_id, target_session, slot, exercise, position, reps, load, rpe in (
+            (1431, current_performance_session, performance_slots[0], squat, 1, "3", 145.0, 8.0),
+            (1432, current_performance_session, performance_slots[1], bench, 2, "5", 100.0, 8.0),
+            (1433, current_performance_session, performance_slots[2], deadlift, 3, "3", 180.0, 8.0),
+            (1434, prior_performance_session, performance_slots[3], squat, 1, "3", 140.0, 8.0),
+        ):
+            performance_prescription = db.session.get(
+                ExercisePrescription, row_id
+            ) or ExercisePrescription(
+                id=row_id,
+                session=target_session,
+                lift_slot=slot,
+                exercise=exercise,
+                exercise_name=exercise.name,
+                position=position,
+                sets=1,
+                reps=reps,
+                load_kg=load,
+                rpe=rpe,
+                slot_role="top_set",
+                provenance="coach_authored",
+                prescription_type="rpe",
+            )
+            performance_prescriptions.append(performance_prescription)
+            db.session.add(performance_prescription)
+        db.session.add_all(performance_prescriptions)
+        db.session.flush()
+
+        current_log = db.session.get(TrainingSessionLog, 1441) or TrainingSessionLog(
+            id=1441,
+            athlete_id=PERFORMANCE_ATHLETE_ID,
+            session=current_performance_session,
+            session_name=current_performance_session.name,
+            block_name=current_performance_block.name,
+            week_name=current_performance_week.name,
+            status="completed",
+            started_at=datetime(2026, 8, 8, 9, 0, tzinfo=UTC),
+            completed_at=datetime(2026, 8, 8, 10, 0, tzinfo=UTC),
+        )
+        prior_log = db.session.get(TrainingSessionLog, 1442) or TrainingSessionLog(
+            id=1442,
+            athlete_id=PERFORMANCE_ATHLETE_ID,
+            session=prior_performance_session,
+            session_name=prior_performance_session.name,
+            block_name=prior_performance_block.name,
+            week_name=prior_performance_week.name,
+            status="completed",
+            started_at=datetime(2026, 7, 11, 9, 0, tzinfo=UTC),
+            completed_at=datetime(2026, 7, 11, 10, 0, tzinfo=UTC),
+        )
+        db.session.add_all([current_log, prior_log])
+        db.session.flush()
+
+        for row_id, log, prescription_row, position, load, reps, actual_rpe in (
+            (1451, current_log, performance_prescriptions[0], 1, 150.0, 3, 8.0),
+            (1452, current_log, performance_prescriptions[1], 2, 100.0, 5, 8.5),
+            (1453, current_log, performance_prescriptions[2], 3, 180.0, 2, 9.0),
+            (1454, prior_log, performance_prescriptions[3], 1, 140.0, 3, 8.0),
+        ):
+            result = db.session.get(TrainingSetResult, row_id) or TrainingSetResult(
+                id=row_id,
+                session_log=log,
+                prescription=prescription_row,
+                exercise_name=prescription_row.exercise_name,
+                exercise_position=position,
+                set_order=1,
+                prescribed_reps=prescription_row.reps,
+                prescribed_load_kg=prescription_row.load_kg,
+                prescribed_rpe=prescription_row.rpe,
+                completed=True,
+                skipped=False,
+                actual_load_kg=load,
+                actual_reps=reps,
+                actual_rpe=actual_rpe,
+            )
+            db.session.add(result)
+
+        for row_id, observed_on, bodyweight in (
+            (1461, date(2026, 7, 12), 83.0),
+            (1462, date(2026, 8, 9), 82.5),
+        ):
+            checkin = db.session.get(WeeklyCheckin, row_id) or WeeklyCheckin(
+                id=row_id,
+                athlete_id=PERFORMANCE_ATHLETE_ID,
+                week_ending=observed_on,
+                nutrition_included=True,
+                average_bodyweight_kg=bodyweight,
+                status="submitted",
+            )
+            db.session.add(checkin)
+
+        performance_meet = db.session.get(Meet, 1471) or Meet(
+            id=1471,
+            name="Autumn Open",
+            meet_date=date(2026, 9, 20),
+            status="planned",
+            federation="GBPF",
+            weight_class="83 kg",
+        )
+        db.session.add(performance_meet)
+        db.session.flush()
+        performance_entry = db.session.get(MeetEntry, 1472) or MeetEntry(
+            id=1472,
+            meet=performance_meet,
+            athlete=performance_athlete,
+            flight=1,
+            platform_order=1,
+        )
+        db.session.add(performance_entry)
 
         service_settings = AthleteCheckinSettings.query.filter_by(
             athlete_id=sam.id

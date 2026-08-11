@@ -32,6 +32,8 @@ EXPECTED_TABLES = {
     "meet_entries",
     "meet_lifts",
     "meets",
+    "meal_plan_assignments",
+    "meal_plan_templates",
     "nutrition_checkins",
     "nutrition_provider_connections",
     "nutrition_import_jobs",

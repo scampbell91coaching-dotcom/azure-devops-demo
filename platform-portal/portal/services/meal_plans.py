@@ -315,6 +315,7 @@ class PublishedAssignment:
     published_at: datetime
     publication_note: str | None = None
     tolerance: MacroTolerance = field(default_factory=MacroTolerance)
+    template_name: str | None = None
 
     def __post_init__(self) -> None:
         if not self.assignment_id.strip() or not self.published_by.strip():
@@ -402,7 +403,7 @@ class MealPlanWorkflow:
             raise PublicationError("; ".join(structural))
         if mismatch and not (override_reason and override_reason.strip()):
             raise PublicationError("outside-tolerance publication requires an override reason")
-        assignment = PublishedAssignment(assignment_id, athlete_id, draft.template_id, draft.revision, draft.days, draft.substitutions, prescription, effective_from, effective_until, actor_id, now or datetime.now(UTC), override_reason, tolerance)
+        assignment = PublishedAssignment(assignment_id, athlete_id, draft.template_id, draft.revision, draft.days, draft.substitutions, prescription, effective_from, effective_until, actor_id, now or datetime.now(UTC), override_reason, tolerance, draft.name)
         self.repository.add_assignment(assignment)
         self.repository.save_draft(replace(draft, status=DraftStatus.PUBLISHED))
         return assignment

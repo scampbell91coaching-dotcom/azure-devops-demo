@@ -253,58 +253,71 @@ test('lift-slot editor persists an RPE range and same-family back-off after relo
   await expect(page.getByLabel('Taxonomy-backed competition lift exposures')).toContainText('Squat 1');
 });
 
-test('Block Factory adds ordered upper and lower accessories and persists generated prescriptions', async ({ page }) => {
+test('Block Factory persists more than three coach-selected accessories per session', async ({ page }) => {
   await page.goto('/programming/factory');
   await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
-  await page.locator('input[name="name"]').fill('Catalogue accessory block');
-  await page.getByRole('button', { name: 'Add accessory' }).click();
-  const selectAccessory = async (
-    select: ReturnType<typeof page.locator>,
-    exerciseName: string
-  ) => {
-    const option = select.locator('option').filter({ hasText: exerciseName });
+  await page.locator('input[name="name"]').fill('Unlimited accessory block');
+  await page.getByLabel('Training days').fill('3');
 
-    await expect(option).toHaveCount(1);
+  const accessoryCount = 12;
+  const selectedValues = new Set<string>();
 
-    const value = await option.getAttribute('value');
-    expect(value, `Value for ${exerciseName}`).toBeTruthy();
+  for (let index = 0; index < accessoryCount; index += 1) {
+    await page.getByRole('button', { name: 'Add accessory' }).click();
 
+    const select = page
+      .locator('select[name="accessory_exercise_id"]')
+      .nth(index);
+
+    const values = await select.locator('option').evaluateAll((options) =>
+      options
+        .map((option) => (option as HTMLOptionElement).value)
+        .filter(Boolean)
+    );
+
+    const value = values.find((candidate) => !selectedValues.has(candidate));
+    expect(value, `Distinct accessory choice for row ${index + 1}`).toBeTruthy();
+
+    selectedValues.add(value!);
     await select.selectOption(value!);
-  };
+  }
 
-  await selectAccessory(
-    page.locator('select[name="accessory_exercise_id"]').nth(0),
-    'Cable Row'
+  expect(selectedValues.size).toBe(12);
+
+  await expect(page.locator('[data-accessory-summary]')).toContainText(
+    '12 coach-selected assistance exercises'
   );
 
-  await page.getByRole('button', { name: 'Add accessory' }).click();
-
-  await selectAccessory(
-    page.locator('select[name="accessory_exercise_id"]').nth(1),
-    'Bulgarian Split Squat'
-  );
   await page.getByRole('button', { name: 'Preview' }).click();
-  const previewText = await page.locator('.factory-preview__day li').allTextContents();
-  const previewCableRow = previewText.findIndex(text => text.includes('Cable Row'));
-  const previewSplitSquat = previewText.findIndex(text => text.includes('Bulgarian Split Squat'));
 
-  expect(previewCableRow).toBeGreaterThanOrEqual(0);
-  expect(previewSplitSquat).toBeGreaterThanOrEqual(0);
-  expect(previewCableRow).toBeLessThan(previewSplitSquat);
+  await expect(page.getByText(/4 assistance exercises/)).toHaveCount(3);
+
   await page.getByRole('button', { name: 'Accept proposal' }).click();
-  await expect(page.getByRole('heading', { name: 'Catalogue accessory block' })).toBeVisible();
+
+  await expect(
+    page.getByRole('heading', { name: 'Unlimited accessory block' })
+  ).toBeVisible();
+
   await page.getByRole('link', { name: /Week 1/ }).click();
-  const persistedText = await page
-    .getByTestId('programming-session')
-    .locator('.week-prescription')
-    .allTextContents();
 
-  const persistedCableRow = persistedText.findIndex(text => text.includes('Cable Row'));
-  const persistedSplitSquat = persistedText.findIndex(text => text.includes('Bulgarian Split Squat'));
+  const sessions = page.getByTestId('programming-session');
+  await expect(sessions).toHaveCount(3);
 
-  expect(persistedCableRow).toBeGreaterThanOrEqual(0);
-  expect(persistedSplitSquat).toBeGreaterThanOrEqual(0);
-  expect(persistedCableRow).toBeLessThan(persistedSplitSquat);
+  for (let index = 0; index < 3; index += 1) {
+    await expect(
+      sessions.nth(index).getByTestId('assistance-provenance')
+    ).toHaveCount(4);
+  }
+
+  await page.reload();
+
+  for (let index = 0; index < 3; index += 1) {
+    await expect(
+      page.getByTestId('programming-session')
+        .nth(index)
+        .getByTestId('assistance-provenance')
+    ).toHaveCount(4);
+  }
 });
 
 test('Block Factory previews taxonomy-backed exposures with zero assistance and incomplete state', async ({ page }) => {

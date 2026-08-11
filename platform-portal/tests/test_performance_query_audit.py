@@ -10,10 +10,12 @@ from portal.models.programming import (
     ProgrammingLiftSlot,
     TrainingBlock,
     TrainingSession,
+    TrainingSessionLog,
     TrainingWeek,
 )
 from portal.models.user import User, UserRole
 from portal.models.warmup import WarmupAssignment, WarmupProtocol, WarmupProtocolStep
+from portal.services.athlete_dashboard import _current_block_logs
 from portal.services.client_services import resolved_client_services
 from portal.services.persisted_warmups import resolve_warmup
 
@@ -163,3 +165,77 @@ def test_warmup_resolution_select_count_is_constant_across_protocols():
         assert len(short_steps) == 1
         assert len(long_steps) == 5
         assert long_count == short_count == 4
+
+
+def test_dashboard_schedule_reads_only_active_block_logs_for_athlete():
+    app = _app()
+    with app.app_context():
+        athlete = Athlete(first_name="Alex", last_name="Lifter", email="alex@test")
+        other = Athlete(first_name="Sam", last_name="Lifter", email="sam@test")
+        current = _programme(athlete, weeks=1, sessions_per_week=2)
+        current.status = "active"
+        historical = _programme(athlete, weeks=8, sessions_per_week=3)
+        historical.status = "archived"
+        db.session.add(other)
+        db.session.flush()
+
+        current_session = current.weeks[0].sessions[0]
+        db.session.add_all(
+            [
+                TrainingSessionLog(
+                    athlete_id=athlete.id,
+                    session_id=current_session.id,
+                    session_name="Current",
+                    block_name=current.name,
+                    week_name="Week 1",
+                ),
+                TrainingSessionLog(
+                    athlete_id=other.id,
+                    session_id=current_session.id,
+                    session_name="Invalid cross-athlete reference",
+                    block_name=current.name,
+                    week_name="Week 1",
+                ),
+                *[
+                    TrainingSessionLog(
+                        athlete_id=athlete.id,
+                        session_id=session.id,
+                        session_name="Historical",
+                        block_name=historical.name,
+                        week_name=week.name,
+                    )
+                    for week in historical.weeks
+                    for session in week.sessions
+                ],
+            ]
+        )
+        db.session.commit()
+        athlete_id = athlete.id
+        current_id = current.id
+        current_session_id = current_session.id
+        db.session.expire_all()
+        current = db.session.get(TrainingBlock, current_id)
+
+        count, logs = _select_count(
+            lambda: _current_block_logs(athlete_id, current)
+        )
+
+        assert count == 1
+        assert tuple(logs) == (current_session_id,)
+        assert logs[current_session_id].athlete_id == athlete_id
+
+
+def test_dashboard_schedule_skips_log_query_without_active_block():
+    app = _app()
+    with app.app_context():
+        athlete = Athlete(first_name="Alex", last_name="Lifter", email="alex@test")
+        db.session.add(athlete)
+        db.session.commit()
+        athlete_id = athlete.id
+
+        count, logs = _select_count(
+            lambda: _current_block_logs(athlete_id, None)
+        )
+
+        assert count == 0
+        assert logs == {}
