@@ -83,16 +83,56 @@ def _sign_in(client, user_id: int, csrf: str = "v79-valid-csrf") -> str:
     return csrf
 
 
+def test_athlete_can_access_own_nutrition_import_mutation_surface(
+    secured_delivery_app,
+):
+    ids = secured_delivery_app.config["DELIVERY_IDS"]
+    client = secured_delivery_app.test_client()
+    csrf = _sign_in(client, ids["owner_user"])
+
+    preview = client.post(
+        f"/athletes/{ids['owner']}/nutrition-import/preview",
+        data={"csrf_token": csrf},
+    )
+    assert preview.status_code == 400
+
+    disconnect = client.post(
+        f"/athletes/{ids['owner']}/nutrition-import/disconnect",
+        data={"csrf_token": csrf},
+    )
+    assert disconnect.status_code == 302
+
+
+def test_athlete_cannot_access_another_athletes_nutrition_import_mutations(
+    secured_delivery_app,
+):
+    ids = secured_delivery_app.config["DELIVERY_IDS"]
+    client = secured_delivery_app.test_client()
+    csrf = _sign_in(client, ids["owner_user"])
+
+    response = client.post(
+        f"/athletes/{ids['other']}/nutrition-import/preview",
+        data={"csrf_token": csrf},
+    )
+    assert response.status_code == 404
+
+
 @pytest.mark.parametrize(
     ("path", "data"),
     [
-        ("/athletes/{owner}/nutrition-import/preview", {}),
-        ("/athletes/{owner}/nutrition-import/123/commit", {}),
-        ("/athletes/{owner}/nutrition-import/disconnect", {}),
-        ("/programming/sessions/{session}/warmup-assignments", {"protocol_id": "1", "reason": "test"}),
-        ("/programming/sessions/{session}/warmup-overrides", {"action": "remove", "target_key": "x", "reason": "test"}),
+        (
+            "/programming/sessions/{session}/warmup-assignments",
+            {"protocol_id": "1", "reason": "test"},
+        ),
+        (
+            "/programming/sessions/{session}/warmup-overrides",
+            {"action": "remove", "target_key": "x", "reason": "test"},
+        ),
         ("/programming/factory/preview", {"athlete_id": "1"}),
-        ("/programming/factory", {"proposal_id": "1", "proposal_integrity": "x"}),
+        (
+            "/programming/factory",
+            {"proposal_id": "1", "proposal_integrity": "x"},
+        ),
     ],
 )
 def test_athlete_cannot_invoke_coaching_delivery_mutations(
@@ -106,7 +146,6 @@ def test_athlete_cannot_invoke_coaching_delivery_mutations(
     response = client.post(path.format(**ids), data=payload)
 
     assert response.status_code == 403
-
 
 def test_athlete_nutrition_read_is_owned_and_does_not_trust_path_identity(
     secured_delivery_app,
