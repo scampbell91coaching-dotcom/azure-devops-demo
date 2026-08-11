@@ -344,7 +344,7 @@ def test_factory_suggests_enabled_metadata_and_manual_selection_overrides_it():
         ]
 
 
-def test_accessory_volume_controls_deterministic_per_day_maximums():
+def test_accessory_volume_produces_deterministic_default_metadata_recommendations():
     app = create_test_app()
     with app.app_context():
         for index in range(12):
