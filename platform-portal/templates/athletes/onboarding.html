@@ -1,0 +1,76 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "athletes" %}
+{% block title %}Onboard {{ onboarding.athlete.full_name }} | Traditional Strength{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/client_onboarding.css') }}">{% endblock %}
+{% block content %}
+<section class="coach-page onboarding-page">
+  <header class="coach-page__header coach-page__header--split">
+    <div>
+      <a class="coach-back-link" href="{{ url_for('athletes.athlete_dashboard', athlete_id=onboarding.athlete.id) }}">← Athlete dashboard</a>
+      <span class="coach-eyebrow">Guided onboarding</span>
+      <h1>{{ onboarding.athlete.full_name }}</h1>
+      <p>Complete each hand-off in order. Progress is derived from the client’s existing account, service, programme and check-in records.</p>
+    </div>
+    <span class="coach-status {{ 'coach-status--active' if onboarding.ready else 'coach-status--pending' }}">{{ 'Ready' if onboarding.ready else 'In progress' }}</span>
+  </header>
+
+  <ol class="onboarding-progress" aria-label="Client onboarding progress">
+    {% for step in onboarding.steps %}
+      <li class="{{ 'is-complete' if step.complete else '' }} {{ 'is-current' if step.current else '' }}"{% if step.current %} aria-current="step"{% endif %}>
+        <span>{{ loop.index }}</span><div><strong>{{ step.label }}</strong><small>{{ step.detail }}</small></div>
+      </li>
+    {% endfor %}
+  </ol>
+
+  <section class="coach-panel onboarding-action">
+    {% if onboarding.current_step == 'invite' %}
+      <span class="coach-eyebrow">Step 1</span><h2>Invite the client</h2>
+      <p>Send the secure 48-hour activation link to <strong>{{ onboarding.athlete.email }}</strong>.</p>
+      <form method="post" action="{{ url_for('athletes.onboarding_invite', athlete_id=onboarding.athlete.id) }}"><button class="coach-primary-button" type="submit">Issue invitation</button></form>
+    {% elif onboarding.current_step == 'account' %}
+      <span class="coach-eyebrow">Step 2</span><h2>Waiting for account activation</h2>
+      <p>The invitation has been issued. The client must choose a password before goals and delivery can be confirmed.</p>
+      <div class="coach-form__actions"><a class="coach-link-button" href="{{ url_for('athletes.athlete_dashboard', athlete_id=onboarding.athlete.id) }}#athlete-account">Manage invitation</a><a class="coach-link-button" href="{{ url_for('athletes.client_onboarding', athlete_id=onboarding.athlete.id) }}">Refresh status</a></div>
+    {% elif onboarding.current_step == 'goals' %}
+      <span class="coach-eyebrow">Step 3</span><h2>Define the coaching outcome</h2>
+      <form class="coach-form" method="post" action="{{ url_for('athletes.onboarding_goals', athlete_id=onboarding.athlete.id) }}">
+        <label><span>Primary goal</span><textarea name="primary_goal" rows="4" maxlength="1000" required>{{ onboarding.goals.get('primary_goal', '') }}</textarea></label>
+        <label><span>What will success look like?</span><textarea name="success_definition" rows="4" maxlength="1000" required>{{ onboarding.goals.get('success_definition', '') }}</textarea></label>
+        <button class="coach-primary-button" type="submit">Save goals and continue</button>
+      </form>
+    {% elif onboarding.current_step == 'services' %}
+      <span class="coach-eyebrow">Step 4</span><h2>Confirm service entitlements</h2>
+      <p>This controls future access. It does not charge the client or change billing.</p>
+      <form class="coach-form" method="post" action="{{ url_for('athletes.onboarding_services', athlete_id=onboarding.athlete.id) }}">
+        <div class="onboarding-service-grid">
+          {% for service in client_services %}<label><span>{{ service.label }}</span><select name="{{ service.key }}">{% for choice in service.choices %}<option value="{{ choice }}"{% if choice == service.value %} selected{% endif %}>{{ choice | title }}</option>{% endfor %}</select></label>{% endfor %}
+        </div>
+        <button class="coach-primary-button" type="submit">Confirm services and continue</button>
+      </form>
+    {% elif onboarding.current_step == 'programme' %}
+      <span class="coach-eyebrow">Step 5</span><h2>Publish the starting programme</h2>
+      {% if onboarding.draft_programmes %}
+        <form class="coach-form" method="post" action="{{ url_for('athletes.onboarding_programme', athlete_id=onboarding.athlete.id) }}">
+          <label><span>Draft programme</span><select name="block_id" required>{% for block in onboarding.draft_programmes %}<option value="{{ block.id }}">{{ block.name }}</option>{% endfor %}</select></label>
+          <button class="coach-primary-button" type="submit">Publish programme and continue</button>
+        </form>
+      {% else %}
+        <div class="coach-empty-state"><h3>No draft programme</h3><p>Create a draft for this athlete, then return here to publish it.</p><a class="coach-primary-button" href="{{ url_for('programming.athlete_program', athlete_id=onboarding.athlete.id) }}">Create programme</a></div>
+      {% endif %}
+    {% elif onboarding.current_step == 'checkin' %}
+      <span class="coach-eyebrow">Step 6</span><h2>Set the weekly check-in</h2>
+      <form class="coach-form" method="post" action="{{ url_for('athletes.onboarding_checkin', athlete_id=onboarding.athlete.id) }}">
+        <fieldset><legend>Included modules</legend>
+          {% for service in client_services %}{% if service.key in ('training', 'nutrition') and service.value == 'yes' %}<label class="onboarding-check"><input type="checkbox" name="{{ service.key }}_enabled" value="1" checked><span>{{ service.label }}</span></label>{% endif %}{% endfor %}
+        </fieldset>
+        <label><span>Check-in day</span><select name="checkin_day">{% for value, label in weekdays %}<option value="{{ value }}"{% if onboarding.checkin_settings and onboarding.checkin_settings.checkin_day == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <button class="coach-primary-button" type="submit">Complete onboarding</button>
+      </form>
+    {% else %}
+      <span class="coach-eyebrow">Ready state</span><h2>{{ onboarding.athlete.first_name }} is ready to start</h2>
+      <p>The account is active, goals and entitlements are recorded, delivery is in place, and the weekly feedback loop is configured.</p>
+      <div class="coach-form__actions"><a class="coach-primary-button" href="{{ url_for('athletes.athlete_dashboard', athlete_id=onboarding.athlete.id) }}">Open athlete dashboard</a>{% if onboarding.active_programme %}<a class="coach-link-button" href="{{ url_for('programming.athlete_program', athlete_id=onboarding.athlete.id) }}">View programme</a>{% endif %}</div>
+    {% endif %}
+  </section>
+</section>
+{% endblock %}

@@ -206,7 +206,7 @@
 
     <fieldset class="factory-accessories" data-factory-accessories>
       <legend>Accessories</legend>
-      <p>Assistance is optional and never drives the weekly structure. Volume sets a deterministic maximum per day. Pinned coach choices fully replace suggestions.</p>
+      <p>Assistance is optional and never drives the weekly structure. Volume sets a deterministic fatigue budget per day, not an exercise-count ceiling. Pinned coach choices fully replace suggestions.</p>
       <label><span>Selection mode</span>
         <select name="accessory_mode">
           <option value="automatic" {% if form.get('accessory_mode', 'automatic') == 'automatic' %}selected{% endif %}>Suggest from enabled library metadata</option>
@@ -215,7 +215,7 @@
       </label>
       <label><span>Accessory volume</span>
         <select name="accessory_volume">
-          {% for value, label in (("low", "Low · up to 1/day"), ("medium", "Medium · up to 2/day"), ("high", "High · up to 3/day")) %}
+          {% for value, label in (("low", "Low · 3 fatigue units/day"), ("medium", "Medium · 6 fatigue units/day"), ("high", "High · 9 fatigue units/day")) %}
             <option value="{{ value }}" {% if form.get("accessory_volume", "medium") == value %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>

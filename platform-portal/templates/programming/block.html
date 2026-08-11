@@ -34,5 +34,11 @@
     </article>
     {% else %}<div class="coach-empty-state"><h3>No weeks yet</h3><p>Add the first training week to begin programming.</p></div>{% endfor %}
   </div>
+  <section class="coach-panel" aria-labelledby="revision-history-title">
+    <div class="programme-section-heading"><div><span class="coach-eyebrow">Append-only record</span><h2 id="revision-history-title">Programme revision history</h2></div></div>
+    {% if block.revisions %}<ol class="revision-history">
+      {% for revision in block.revisions %}<li><div><strong>Revision {{ revision.revision_number }} · {{ revision.summary }}</strong><p>{{ revision.reason }}</p></div><span>{{ revision.authored_at.strftime('%d %b %Y, %H:%M') }} · {{ revision.authored_by }}</span></li>{% endfor %}
+    </ol>{% else %}<div class="coach-empty-state"><h3>No revisions recorded</h3><p>History begins with the next authored programme change.</p></div>{% endif %}
+  </section>
 </section>
 {% endblock %}

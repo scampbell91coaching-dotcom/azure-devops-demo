@@ -31,6 +31,7 @@ from .models.programming import (
     TrainingSession,
     TrainingWeek,
 )
+from .programming_services.revisions import append_revision
 from .services.weekly_programming_intelligence import WeeklyProgrammingIntelligence
 from .services.accessory_intelligence import AccessoryIntelligence
 
@@ -570,7 +571,7 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
     pool = _accessory_pool()
     intelligence = AccessoryIntelligence()
     suggested_ids: set[int] = set()
-    volume_per_day = {"low": 1, "medium": 2, "high": 3}[factory.accessory_volume]
+    fatigue_budget = intelligence.VOLUME_FATIGUE_BUDGETS[factory.accessory_volume]
     for day_index, day_type in enumerate(days):
         exercises = _candidate_exercises(
             templates,
@@ -629,7 +630,9 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                 candidates = grip + [
                     item for item in candidates if item.exercise.id not in grip_ids
                 ]
-            for suggestion in candidates[:volume_per_day]:
+            for suggestion in intelligence.select_for_volume(
+                candidates, volume=factory.accessory_volume
+            ):
                 suggested_ids.add(suggestion.exercise.id)
                 generated_accessories.append(
                     {
@@ -659,7 +662,7 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                 "accessories": generated_accessories,
                 "accessory_count": len(generated_accessories),
                 "accessory_range": (
-                    f"{factory.accessory_volume} volume · up to {volume_per_day} library suggestions"
+                    f"{factory.accessory_volume} volume · {fatigue_budget}-unit fatigue budget"
                     if factory.accessory_mode == "automatic"
                     and not selected_accessories else "coach selected only"
                 ),
@@ -1041,6 +1044,7 @@ def generate():
                     )
                 )
 
+    append_revision(block, change_type="factory_programme_created", summary="Created programme from accepted factory proposal", reason=proposal.rationale)
     db.session.commit()
 
     return redirect(url_for("programming.block", block_id=block.id))

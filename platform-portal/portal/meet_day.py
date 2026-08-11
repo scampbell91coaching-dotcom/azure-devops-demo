@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from .extensions import db
 from .models.athlete import Athlete
 from .models.meet_day import LIFTS, OUTCOMES, Meet, MeetEntry, MeetLift
+from .services.competition_day import pack_notes, unpack_notes
 from .services.meet_day import build_board
 from .services.plate_loading import (
     DEFAULT_PLATES_KG,
@@ -132,6 +133,67 @@ def detail(meet_id: int):
         default_plate_inventory=DEFAULT_PLATE_INVENTORY,
         plate_result=None,
     )
+
+
+@meet_day_bp.post("/<int:meet_id>/workflow")
+def update_workflow(meet_id: int):
+    meet = _meet(meet_id)
+    status = request.form.get("status", "")
+    if status not in {"planned", "active", "complete"}:
+        return "Invalid meet status.", 400
+    try:
+        meet.bodyweight_kg = _weight(request.form.get("bodyweight_kg"))
+        meet.weight_class = _optional_text(
+            request.form.get("weight_class"), "Weight class", 40
+        )
+        notes = _optional_text(request.form.get("notes"), "Meet notes")
+        workflow = {
+            "weigh_in_time": _optional_text(
+                request.form.get("weigh_in_time"), "Weigh-in time", 20
+            ),
+            "review_went_well": _optional_text(
+                request.form.get("review_went_well"), "What went well"
+            ),
+            "review_improve": _optional_text(
+                request.form.get("review_improve"), "What to improve"
+            ),
+            "review_actions": _optional_text(
+                request.form.get("review_actions"), "Next actions"
+            ),
+        }
+    except ValueError as exc:
+        return str(exc), 400
+    meet.status = status
+    meet.notes = pack_notes(notes, workflow)
+    db.session.commit()
+    return redirect(url_for("meet_day.detail", meet_id=meet.id))
+
+
+@meet_day_bp.post("/<int:meet_id>/entries/<int:entry_id>/workflow")
+def update_entry_workflow(meet_id: int, entry_id: int):
+    meet = _meet(meet_id)
+    entry = db.session.get(MeetEntry, entry_id)
+    if entry is None or entry.meet_id != meet.id:
+        abort(404)
+    _, existing = unpack_notes(entry.notes)
+    try:
+        notes = _optional_text(request.form.get("notes"), "Athlete meet notes")
+        bodyweight = _weight(request.form.get("bodyweight_kg"))
+        workflow = {
+            **existing,
+            "bodyweight_kg": str(bodyweight) if bodyweight is not None else None,
+            "weigh_in_time": _optional_text(
+                request.form.get("weigh_in_time"), "Weigh-in time", 20
+            ),
+            "warmup_notes": _optional_text(
+                request.form.get("warmup_notes"), "Warm-up notes"
+            ),
+        }
+    except ValueError as exc:
+        return str(exc), 400
+    entry.notes = pack_notes(notes, workflow)
+    db.session.commit()
+    return redirect(url_for("meet_day.detail", meet_id=meet.id))
 
 
 def _inventory_from_form():
@@ -343,12 +405,26 @@ def update_lift(meet_id: int, lift_id: int):
         return "Invalid outcome.", 400
     try:
         weight = _weight(request.form.get("weight_kg"))
+        actual_weight = _weight(request.form.get("actual_weight_kg"))
     except ValueError as exc:
         return str(exc), 400
     item.weight_kg = weight
     item.outcome = outcome
     try:
-        item.notes = _optional_text(request.form.get("notes"), "Notes")
+        notes = _optional_text(request.form.get("notes"), "Notes")
+        _, existing = unpack_notes(item.notes)
+        item.notes = pack_notes(
+            notes,
+            {
+                **existing,
+                "actual_weight_kg": (
+                    str(actual_weight) if actual_weight is not None else None
+                ),
+                "scheduled_time": _optional_text(
+                    request.form.get("scheduled_time"), "Scheduled time", 20
+                ),
+            },
+        )
     except ValueError as exc:
         return str(exc), 400
     db.session.commit()

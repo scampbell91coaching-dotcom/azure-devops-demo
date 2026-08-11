@@ -18,14 +18,17 @@ from .checkins import AthleteCheckinSettings, WeeklyCheckin
 from .client_service import ClientServiceChange
 from .coaching_application import CoachingApplication
 from .exercise_library import DayTemplate, DayTemplateExercise, Exercise
+from .external_coaching_review import ExternalCoachingReview
 from .lead_capture import LeadCapture
 from .meet_day import Meet, MeetEntry, MeetLift
 from .nutrition_checkin import NutritionCheckIn
 from .nutrition_import import DailyNutrition, NutritionImportJob, NutritionProviderConnection
+from .nutrition_prescription import NutritionMacroPrescription
 from .platform_snapshot import PlatformSnapshot
 from .programming import (
     ExercisePrescription,
     ProgrammingLiftSlot,
+    ProgrammeRevision,
     TrainingBlock,
     TrainingSession,
     TrainingSessionLog,
@@ -53,7 +56,9 @@ __all__ = [
     "DeliveryState",
     "Exercise",
     "ExercisePrescription",
+    "ExternalCoachingReview",
     "ProgrammingLiftSlot",
+    "ProgrammeRevision",
     "LeadCapture",
     "Meet",
     "MeetEntry",
@@ -62,6 +67,7 @@ __all__ = [
     "DailyNutrition",
     "NutritionImportJob",
     "NutritionProviderConnection",
+    "NutritionMacroPrescription",
     "PlatformSnapshot",
     "TrainingBlock",
     "TrainingSession",

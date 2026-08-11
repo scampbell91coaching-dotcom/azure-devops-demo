@@ -1,0 +1,6 @@
+{% extends "athletes/base.html" %}
+{% block title %}My nutrition targets{% endblock %}
+{% block content %}<section class="athlete-page"><header class="athlete-page__header"><span class="athlete-eyebrow">Effective {{ today.strftime('%d %b %Y') }}</span><h1>My nutrition targets</h1></header>
+{% if prescription %}<section class="athlete-card"><h2>Daily targets</h2>{% with targets=prescription.daily_targets %}{% include 'nutrition_prescriptions/_targets.html' %}{% endwith %}{% if prescription.meal_count %}<p>{{ prescription.meal_count }} meals per day</p>{% endif %}{% if prescription.notes %}<h2>Coach notes</h2><p>{{ prescription.notes }}</p>{% endif %}</section>
+{% if prescription.training_day_targets or prescription.rest_day_targets %}<section class="athlete-card"><h2>Day-specific targets</h2>{% if prescription.training_day_targets %}<h3>Training day</h3>{% with targets=prescription.training_day_targets %}{% include 'nutrition_prescriptions/_targets.html' %}{% endwith %}{% endif %}{% if prescription.rest_day_targets %}<h3>Rest day</h3>{% with targets=prescription.rest_day_targets %}{% include 'nutrition_prescriptions/_targets.html' %}{% endwith %}{% endif %}</section>{% endif %}
+{% else %}<section class="athlete-card"><h2>No targets assigned</h2><p>Your coach has not set nutrition targets for today.</p></section>{% endif %}</section>{% endblock %}

@@ -5,6 +5,8 @@ from flask import Blueprint, abort, flash, g, redirect, request, url_for
 from ..extensions import db
 from ..models.programming import TrainingSession
 from ..models.warmup import WarmupAssignment, WarmupOverride, WarmupPlanSnapshot, WarmupProtocol, WarmupProtocolStep
+from ..services.movement_warmup_candidates import find_candidate
+from ..programming_services.revisions import append_revision
 
 PHASES = {"general": 10, "athlete": 20, "lift": 30, "barbell": 40}
 
@@ -58,6 +60,7 @@ def register_warmup_routes(blueprint: Blueprint) -> None:
         db.session.add(protocol)
         db.session.flush()
         db.session.add(WarmupAssignment(protocol_id=protocol.id, athlete_id=session.week.block.athlete_id, session_id=session.id, assigned_by_user_id=_actor_id(), reason=reason))
+        append_revision(session.week.block, change_type="warmup_created", summary=f'Created and assigned warm-up "{name}"', reason=reason)
         db.session.commit()
         flash("Reusable warm-up created and assigned.", "success")
         return redirect(url_for("programming.session", session_id=session.id))
@@ -70,7 +73,34 @@ def register_warmup_routes(blueprint: Blueprint) -> None:
         if protocol is None or not reason:
             abort(400, description="Protocol and assignment reason are required.")
         db.session.add(WarmupAssignment(protocol_id=protocol.id, athlete_id=session.week.block.athlete_id, session_id=session.id, assigned_by_user_id=_actor_id(), reason=reason))
+        append_revision(session.week.block, change_type="warmup_assigned", summary=f'Assigned warm-up "{protocol.name}"', reason=reason)
         db.session.commit()
+        return redirect(url_for("programming.session", session_id=session.id))
+
+    @blueprint.post("/programming/sessions/<int:session_id>/warmup-candidates/accept")
+    def accept_warmup_candidate(session_id: int):
+        session = _session(session_id)
+        athlete_id = session.week.block.athlete_id
+        candidate = find_candidate(
+            athlete_id, session, request.form.get("protocol_id", type=int)
+        )
+        if candidate is None:
+            abort(409, description="This warm-up candidate is no longer applicable.")
+        reason = candidate.assignment_reason()
+        if len(reason) > 500:
+            abort(409, description="Candidate provenance exceeds assignment storage.")
+        db.session.add(
+            WarmupAssignment(
+                protocol_id=candidate.protocol_id,
+                athlete_id=athlete_id,
+                session_id=session.id,
+                assigned_by_user_id=_actor_id(),
+                reason=reason,
+            )
+        )
+        append_revision(session.week.block, change_type="warmup_candidate_accepted", summary="Accepted warm-up candidate", reason=reason)
+        db.session.commit()
+        flash("Coach accepted the warm-up candidate.", "success")
         return redirect(url_for("programming.session", session_id=session.id))
 
     @blueprint.post("/programming/sessions/<int:session_id>/warmup-overrides")
@@ -92,6 +122,7 @@ def register_warmup_routes(blueprint: Blueprint) -> None:
             values.update(phase=int(request.form.get("phase", 20)), name=name, kind=kind, sets=int(request.form.get("sets", 1)), reps=int(request.form["value"]) if kind == "reps" else None, duration_seconds=int(request.form["value"]) if kind == "duration" else None, rest_seconds=request.form.get("rest_seconds", type=int), notes=request.form.get("notes", "").strip() or None)
         else: abort(400)
         db.session.add(WarmupOverride(**values))
+        append_revision(session.week.block, change_type="warmup_overridden", summary="Saved manual warm-up override", reason=reason)
         db.session.commit()
         flash("Manual warm-up override saved.", "success")
         return redirect(url_for("programming.session", session_id=session.id))

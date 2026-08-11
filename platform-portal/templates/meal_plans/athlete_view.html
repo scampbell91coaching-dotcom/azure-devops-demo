@@ -1,0 +1,8 @@
+{% extends "athletes/base.html" %}
+{% block content %}
+<h1>Your meal plan</h1><p>Effective {{ assignment.effective_from }} · prescription {{ assignment.prescription.prescription_id }} revision {{ assignment.prescription.revision }}</p>
+{% for day in assignment.days|sort(attribute='position') %}<section><h2>{{ day.name }}</h2>{% if day.note %}<p>{{ day.note }}</p>{% endif %}
+{% for meal in day.meals|sort(attribute='position') %}<h3>{{ meal.name }}</h3><ul>{% for item in meal.items %}<li>{{ item.food.name }} — {{ item.amount }} {{ item.food.unit }}{% if item.note %} ({{ item.note }}){% endif %}</li>{% endfor %}</ul>{% endfor %}
+<p>Planned: {{ day.planned_macros.calories }} kcal, {{ day.planned_macros.protein_g }} g protein</p></section>{% endfor %}
+{% if assignment.substitutions %}<section><h2>Coach-approved substitutions</h2><ul>{% for option in assignment.substitutions %}<li>{{ option.label }}: {{ option.replacement.food.name }}, {{ option.replacement.amount }} {{ option.replacement.food.unit }}</li>{% endfor %}</ul></section>{% endif %}
+{% endblock %}

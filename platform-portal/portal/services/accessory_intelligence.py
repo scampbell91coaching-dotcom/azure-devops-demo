@@ -29,6 +29,10 @@ def metadata_values(value: str | None) -> set[str]:
 
 
 class AccessoryIntelligence:
+    # These are fatigue-unit budgets, not accessory-count limits.  The catalogue
+    # default fatigue rating is 3, preserving the established 1/2/3 output for
+    # legacy rows while allowing more low-fatigue work when metadata justifies it.
+    VOLUME_FATIGUE_BUDGETS = {"low": 3, "medium": 6, "high": 9}
     GRIP_PURPOSES = {
         "grip", "grip_strength", "deadlift_grip", "hook_grip",
         "static_hold", "double_overhand", "no_strap",
@@ -90,6 +94,38 @@ class AccessoryIntelligence:
             results.append(AccessorySuggestion(exercise, tuple(reasons)))
 
         return results
+
+    def select_for_volume(
+        self,
+        candidates: list[AccessorySuggestion],
+        *,
+        volume: str,
+    ) -> list[AccessorySuggestion]:
+        """Fill a deterministic fatigue budget without imposing a count ceiling.
+
+        Candidates retain repository priority order. A row which does not fit the
+        remaining budget is skipped so later, lower-fatigue eligible work can
+        still be selected. Ratings are clamped to the catalogue's documented
+        1-5 scale; this also handles malformed legacy values conservatively.
+        """
+        budget = self.VOLUME_FATIGUE_BUDGETS.get(
+            volume, self.VOLUME_FATIGUE_BUDGETS["medium"]
+        )
+        remaining = budget
+        selected: list[AccessorySuggestion] = []
+        for suggestion in candidates:
+            fatigue_cost = max(1, min(5, suggestion.exercise.fatigue_rating or 3))
+            if fatigue_cost > remaining:
+                continue
+            reasons = (
+                *suggestion.reasons,
+                f"fits {volume} fatigue budget ({fatigue_cost}/{budget})",
+            )
+            selected.append(AccessorySuggestion(suggestion.exercise, reasons))
+            remaining -= fatigue_cost
+            if remaining == 0:
+                break
+        return selected
 
     def grip_candidates(
         self,

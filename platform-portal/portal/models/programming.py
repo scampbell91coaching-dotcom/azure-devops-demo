@@ -50,6 +50,61 @@ class TrainingBlock(db.Model):  # type: ignore[name-defined]
         cascade="all, delete-orphan",
         order_by="TrainingWeek.position",
     )
+    revisions = db.relationship(
+        "ProgrammeRevision",
+        back_populates="block",
+        cascade="save-update, merge",
+        order_by="ProgrammeRevision.revision_number.desc()",
+        passive_deletes=True,
+    )
+
+
+class ProgrammeRevision(db.Model):  # type: ignore[name-defined]
+    """An immutable, authored-fidelity snapshot of one programme change."""
+
+    __tablename__ = "programme_revisions"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "block_id", "revision_number", name="uq_programme_revisions_number"
+        ),
+        db.CheckConstraint(
+            "revision_number > 0", name="ck_programme_revisions_number"
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    block_id = db.Column(
+        db.Integer,
+        db.ForeignKey("training_blocks.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    athlete_id = db.Column(
+        db.Integer, db.ForeignKey("athletes.id", ondelete="SET NULL"), nullable=True,
+        index=True,
+    )
+    revision_number = db.Column(db.Integer, nullable=False)
+    change_type = db.Column(db.String(80), nullable=False)
+    summary = db.Column(db.String(240), nullable=False)
+    reason = db.Column(db.Text, nullable=False)
+    authored_snapshot = db.Column(db.JSON, nullable=False)
+    authored_at = db.Column(
+        db.DateTime, nullable=False, default=lambda: datetime.now(UTC), index=True
+    )
+    authored_by_user_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    authored_by = db.Column(db.String(255), nullable=False)
+
+    block = db.relationship("TrainingBlock", back_populates="revisions")
+    author = db.relationship("User")
+    athlete = db.relationship("Athlete")
+
+
+@event.listens_for(ProgrammeRevision, "before_update")
+@event.listens_for(ProgrammeRevision, "before_delete")
+def _prevent_revision_mutation(*_args: object) -> None:
+    raise ValueError("programme revisions are append-only")
 
 
 class TrainingWeek(db.Model):  # type: ignore[name-defined]

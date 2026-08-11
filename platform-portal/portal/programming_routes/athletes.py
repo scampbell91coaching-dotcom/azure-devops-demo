@@ -1,10 +1,11 @@
 from datetime import UTC, datetime
 
 from flask import Blueprint, abort, render_template
+from sqlalchemy.orm import selectinload
 
 from ..extensions import db
 from ..models.athlete import Athlete
-from ..models.programming import TrainingBlock, TrainingSessionLog
+from ..models.programming import TrainingBlock, TrainingSessionLog, TrainingWeek
 from ..services.training_schedule import project_training_schedule
 from ..services.weekly_programming_intelligence import map_athlete_programming_context
 
@@ -17,7 +18,10 @@ def register_athlete_routes(blueprint: Blueprint) -> None:
             abort(404)
 
         blocks = (
-            TrainingBlock.query.filter_by(athlete_id=athlete.id)
+            TrainingBlock.query.options(
+                selectinload(TrainingBlock.weeks).selectinload(TrainingWeek.sessions)
+            )
+            .filter_by(athlete_id=athlete.id)
             .order_by(TrainingBlock.created_at.desc(), TrainingBlock.id.desc())
             .all()
         )

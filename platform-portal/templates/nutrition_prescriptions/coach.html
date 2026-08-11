@@ -1,0 +1,22 @@
+{% extends "coach/base.html" %}
+{% set coach_section = "athletes" %}
+{% block title %}Nutrition targets · {{ athlete.full_name }}{% endblock %}
+{% block content %}
+<section class="coach-page">
+  <header class="coach-page__header"><a class="coach-back-link" href="{{ url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}">← {{ athlete.full_name }}</a><span class="coach-eyebrow">Coach-authored prescription</span><h1>Nutrition targets</h1><p>Targets are versioned by effective date. Intake and check-ins never alter them.</p></header>
+  {% if entitled %}
+  <section class="coach-panel"><h2>Assign targets</h2>
+    <form class="coach-form" method="post">
+      <div class="coach-form-grid"><label><span>Effective from</span><input type="date" name="effective_from" required></label><label><span>Effective until (optional)</span><input type="date" name="effective_until"></label></div>
+      <fieldset><legend>Daily targets</legend><div class="coach-form-grid">{% for name, label in [('calories','Calories'),('protein_g','Protein (g)'),('carbohydrate_g','Carbohydrate (g)'),('fat_g','Fat (g)'),('fibre_g','Fibre (g, optional)')] %}<label><span>{{ label }}</span><input type="number" name="{{ name }}" min="0"{% if name != 'fibre_g' %} required{% endif %}></label>{% endfor %}</div></fieldset>
+      {% for prefix, title in [('training_','Training-day variant (optional)'),('rest_','Rest-day variant (optional)')] %}<fieldset><legend>{{ title }}</legend><div class="coach-form-grid">{% for name, label in [('calories','Calories'),('protein_g','Protein (g)'),('carbohydrate_g','Carbohydrate (g)'),('fat_g','Fat (g)'),('fibre_g','Fibre (g)')] %}<label><span>{{ label }}</span><input type="number" name="{{ prefix }}{{ name }}" min="0"></label>{% endfor %}</div></fieldset>{% endfor %}
+      <label><span>Meal count (optional)</span><input type="number" name="meal_count" min="1" max="12"></label>
+      <label><span>Coach notes (optional)</span><textarea name="coach_notes" maxlength="2000"></textarea></label>
+      <button class="coach-primary-button" type="submit">Assign nutrition targets</button>
+    </form>
+  </section>
+  {% else %}<section class="coach-panel"><h2>Assignment unavailable</h2><p>Enable nutrition coaching in Client services before assigning new targets. Existing history remains below.</p></section>{% endif %}
+  <section class="coach-panel"><h2>Current prescription</h2>{% if current %}<h3>Daily</h3>{% with targets=current.daily_targets %}{% include 'nutrition_prescriptions/_targets.html' %}{% endwith %}{% if current.training_day_targets %}<h3>Training day</h3>{% with targets=current.training_day_targets %}{% include 'nutrition_prescriptions/_targets.html' %}{% endwith %}{% endif %}{% if current.rest_day_targets %}<h3>Rest day</h3>{% with targets=current.rest_day_targets %}{% include 'nutrition_prescriptions/_targets.html' %}{% endwith %}{% endif %}<p>Effective {{ current.effective_from.strftime('%d %b %Y') }}{% if current.effective_until %} to {{ current.effective_until.strftime('%d %b %Y') }}{% else %}, ongoing{% endif %}{% if current.meal_count %} · {{ current.meal_count }} meals{% endif %}</p>{% if current.notes %}<p><strong>Coach notes:</strong> {{ current.notes }}</p>{% endif %}{% else %}<p>No prescription is effective today.</p>{% endif %}</section>
+  <section class="coach-panel"><h2>Prescription history</h2>{% if history %}<ol>{% for item in history %}<li><strong>{{ item.effective_from.strftime('%d %b %Y') }}{% if item.effective_until %} – {{ item.effective_until.strftime('%d %b %Y') }}{% else %} onwards{% endif %}</strong> · daily {{ item.daily_targets.calories }} kcal, P {{ item.daily_targets.protein_g }} g / C {{ item.daily_targets.carbohydrate_g }} g / F {{ item.daily_targets.fat_g }} g{% if item.training_day_targets %} · training {{ item.training_day_targets.calories }} kcal{% endif %}{% if item.rest_day_targets %} · rest {{ item.rest_day_targets.calories }} kcal{% endif %}{% if item.meal_count %} · {{ item.meal_count }} meals{% endif %}{% if item.notes %}<p>{{ item.notes }}</p>{% endif %}</li>{% endfor %}</ol>{% else %}<p>No nutrition targets have been assigned.</p>{% endif %}</section>
+</section>
+{% endblock %}

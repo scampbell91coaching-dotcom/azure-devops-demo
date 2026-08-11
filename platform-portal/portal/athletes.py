@@ -21,6 +21,8 @@ from .models.athlete import Athlete
 from .models.checkins import AthleteCheckinSettings
 from .models.nutrition_checkin import NutritionCheckIn
 from .models.programming import TrainingBlock, TrainingSession, TrainingSessionLog
+from .models.external_coaching_review import ExternalCoachingReview
+from .models.athlete_state import CoachTechnicalObservation
 from .services.athlete_dashboard import get_athlete_dashboard
 from .services.athlete_services import athlete_services
 from .services.training_schedule import project_training_schedule
@@ -33,7 +35,11 @@ from .auth import roles_required
 from .models.account_token import AccountTokenPurpose, DeliveryState
 from .models.user import UserRole
 from .models.client_service import ClientServiceChange
-from .services.client_services import SERVICE_DEFINITIONS, resolved_client_services
+from .services.client_services import (
+    SERVICE_DEFINITIONS,
+    effective_client_service_profile,
+    resolved_client_services,
+)
 from .services.account_lifecycle import (
     AccountLifecycleError,
     account_state,
@@ -42,6 +48,10 @@ from .services.account_lifecycle import (
     latest_token,
     revoke_tokens,
 )
+from .models.athlete_state import AthleteStateFact
+from .services.athlete_state import record_fact
+from .services.client_onboarding import build_client_onboarding, require_current
+from .programming_services.blocks import BlockActivationError, activate
 
 athletes_bp = Blueprint("athletes", __name__)
 
@@ -365,10 +375,161 @@ def create_athlete():
 
     return redirect(
         url_for(
-            "athletes.athlete_dashboard",
+            "athletes.client_onboarding",
             athlete_id=athlete.id,
         )
     )
+
+
+def _onboarding_athlete(athlete_id: int) -> Athlete:
+    athlete = db.session.get(Athlete, athlete_id)
+    if athlete is None:
+        abort(404)
+    return athlete
+
+
+@athletes_bp.get("/athletes/<int:athlete_id>/onboarding")
+@roles_required(UserRole.COACH)
+def client_onboarding(athlete_id: int):
+    athlete = _onboarding_athlete(athlete_id)
+    return render_template(
+        "athletes/onboarding.html",
+        onboarding=build_client_onboarding(athlete),
+        client_services=resolved_client_services(athlete.id),
+        weekdays=enumerate(("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")),
+    )
+
+
+@athletes_bp.post("/athletes/<int:athlete_id>/onboarding/invite")
+@roles_required(UserRole.COACH)
+def onboarding_invite(athlete_id: int):
+    athlete = _onboarding_athlete(athlete_id)
+    try:
+        require_current(build_client_onboarding(athlete), "invite")
+        create_invitation(
+            athlete,
+            activation_url=_account_link(AccountTokenPurpose.INVITATION),
+            lifetime=current_app.config["ACCOUNT_INVITATION_LIFETIME"],
+        )
+    except (AccountLifecycleError, ValueError) as exc:
+        abort(409, description=str(exc))
+    flash("Invitation issued. Onboarding will continue when the athlete activates their account.", "success")
+    return redirect(url_for("athletes.client_onboarding", athlete_id=athlete.id))
+
+
+def _replace_onboarding_fact(athlete: Athlete, fact_type: str, value: object) -> None:
+    previous = (
+        AthleteStateFact.query.filter_by(athlete_id=athlete.id, fact_type=fact_type)
+        .order_by(AthleteStateFact.recorded_at.desc(), AthleteStateFact.id.desc())
+        .first()
+    )
+    record_fact(
+        athlete_id=athlete.id,
+        fact_type=fact_type,
+        value=value,
+        source_type="coach",
+        recorded_by=getattr(g.get("current_user"), "email", None),
+        source_ref="client_onboarding",
+        supersedes=previous,
+    )
+
+
+@athletes_bp.post("/athletes/<int:athlete_id>/onboarding/goals")
+@roles_required(UserRole.COACH)
+def onboarding_goals(athlete_id: int):
+    athlete = _onboarding_athlete(athlete_id)
+    try:
+        require_current(build_client_onboarding(athlete), "goals")
+    except ValueError as exc:
+        abort(409, description=str(exc))
+    primary_goal = request.form.get("primary_goal", "").strip()
+    success_definition = request.form.get("success_definition", "").strip()
+    if not primary_goal or not success_definition or len(primary_goal) > 1000 or len(success_definition) > 1000:
+        abort(400, description="Enter a primary goal and a concise definition of success.")
+    _replace_onboarding_fact(athlete, "onboarding_goals", {
+        "primary_goal": primary_goal,
+        "success_definition": success_definition,
+    })
+    db.session.commit()
+    return redirect(url_for("athletes.client_onboarding", athlete_id=athlete.id))
+
+
+@athletes_bp.post("/athletes/<int:athlete_id>/onboarding/services")
+@roles_required(UserRole.COACH)
+def onboarding_services(athlete_id: int):
+    athlete = _onboarding_athlete(athlete_id)
+    try:
+        require_current(build_client_onboarding(athlete), "services")
+    except ValueError as exc:
+        abort(409, description=str(exc))
+    allowed = {key: choices for key, _label, choices in SERVICE_DEFINITIONS}
+    values = {key: request.form.get(key, "") for key in allowed}
+    if any(values[key] not in allowed[key] for key in allowed):
+        abort(400, description="Choose a valid state for every client service.")
+    now = datetime.now(UTC).replace(tzinfo=None)
+    current = {item["key"]: item["value"] for item in resolved_client_services(athlete.id)}
+    for key, value in values.items():
+        if current[key] != value:
+            db.session.add(ClientServiceChange(
+                athlete_id=athlete.id, service=key, value=value, effective_at=now,
+                changed_by_user_id=getattr(g.get("current_user"), "id", None),
+            ))
+    _replace_onboarding_fact(athlete, "onboarding_services", values)
+    db.session.commit()
+    return redirect(url_for("athletes.client_onboarding", athlete_id=athlete.id))
+
+
+@athletes_bp.post("/athletes/<int:athlete_id>/onboarding/programme")
+@roles_required(UserRole.COACH)
+def onboarding_programme(athlete_id: int):
+    athlete = _onboarding_athlete(athlete_id)
+    onboarding = build_client_onboarding(athlete)
+    try:
+        require_current(onboarding, "programme")
+    except ValueError as exc:
+        abort(409, description=str(exc))
+    block = db.session.get(TrainingBlock, request.form.get("block_id", type=int))
+    if block is None or block.athlete_id != athlete.id:
+        abort(404)
+    try:
+        activate(block)
+        db.session.commit()
+    except BlockActivationError as exc:
+        db.session.rollback()
+        abort(409, description=str(exc))
+    return redirect(url_for("athletes.client_onboarding", athlete_id=athlete.id))
+
+
+@athletes_bp.post("/athletes/<int:athlete_id>/onboarding/check-in")
+@roles_required(UserRole.COACH)
+def onboarding_checkin(athlete_id: int):
+    athlete = _onboarding_athlete(athlete_id)
+    try:
+        require_current(build_client_onboarding(athlete), "checkin")
+    except ValueError as exc:
+        abort(409, description=str(exc))
+    checkin_day = request.form.get("checkin_day", type=int)
+    if checkin_day not in range(7):
+        abort(400, description="Choose a valid check-in day.")
+    settings = AthleteCheckinSettings.query.filter_by(athlete_id=athlete.id).first()
+    if settings is None:
+        settings = AthleteCheckinSettings(athlete=athlete)
+        db.session.add(settings)
+    profile = effective_client_service_profile(athlete.id)
+    settings.training_enabled = profile.training_coaching_enabled and request.form.get("training_enabled") == "1"
+    settings.nutrition_enabled = profile.nutrition_coaching_enabled and request.form.get("nutrition_enabled") == "1"
+    settings.workflow_active = True
+    settings.checkin_day = checkin_day
+    if not settings.has_enabled_modules:
+        abort(400, description="Enable at least one entitled check-in module.")
+    _replace_onboarding_fact(athlete, "onboarding_checkin_setup", {
+        "checkin_day": checkin_day,
+        "training_enabled": settings.training_enabled,
+        "nutrition_enabled": settings.nutrition_enabled,
+    })
+    db.session.commit()
+    flash("Onboarding complete. The client is ready to start.", "success")
+    return redirect(url_for("athletes.client_onboarding", athlete_id=athlete.id))
 
 
 @athletes_bp.get("/athletes/<int:athlete_id>")
@@ -427,6 +588,16 @@ def athlete_dashboard(athlete_id: int):
         invitation=latest_token(athlete.id, AccountTokenPurpose.INVITATION),
         password_reset=latest_token(athlete.id, AccountTokenPurpose.PASSWORD_RESET),
         client_services=resolved_client_services(athlete.id),
+        external_reviews=(
+            ExternalCoachingReview.query.filter_by(athlete_id=athlete.id)
+            .order_by(ExternalCoachingReview.reviewed_at.desc(), ExternalCoachingReview.id.desc())
+            .all()
+        ),
+        external_review_observations=(
+            CoachTechnicalObservation.query.filter_by(athlete_id=athlete.id)
+            .order_by(CoachTechnicalObservation.observed_on.desc(), CoachTechnicalObservation.id.desc())
+            .all()
+        ),
     )
 
 

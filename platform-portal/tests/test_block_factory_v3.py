@@ -369,6 +369,59 @@ def test_accessory_volume_controls_deterministic_per_day_maximums():
         ]
 
 
+def test_low_fatigue_metadata_justifies_more_than_three_accessories_per_session():
+    app = create_test_app()
+    with app.app_context():
+        for index in range(9):
+            db.session.add(Exercise(
+                name=f"Low Cost Accessory {index:02d}", movement="accessory",
+                category="assistance", accessory_suitable=True, auto_select=True,
+                lift_relevance='["all"]', coach_priority=9 - index, fatigue_rating=1,
+            ))
+        db.session.commit()
+
+        preview = _preview(replace(
+            factory_request(3, 1, 1, 1), accessory_volume="high"
+        ))
+
+        assert preview[0]["accessory_count"] == 9
+        assert preview[1]["accessory_count"] == 0
+        assert [item["name"] for item in preview[0]["accessories"]] == [
+            f"Low Cost Accessory {index:02d}" for index in range(9)
+        ]
+
+
+def test_more_than_three_manual_accessories_replace_automatic_selection():
+    app = create_test_app()
+    with app.app_context():
+        automatic = Exercise(
+            name="Automatic Row", movement="accessory", category="assistance",
+            accessory_suitable=True, auto_select=True, lift_relevance='["all"]',
+        )
+        pinned = [
+            Exercise(
+                name=f"Coach Pin {index}", movement="accessory", category="assistance",
+                accessory_suitable=True,
+            )
+            for index in range(7)
+        ]
+        db.session.add_all([automatic, *pinned])
+        db.session.commit()
+
+        preview = _preview(replace(
+            factory_request(3, 1, 1, 1),
+            accessory_exercise_ids=tuple(item.id for item in pinned),
+        ))
+
+        accessories = [item for day in preview for item in day["accessories"]]
+        assert [item["name"] for item in accessories] == [
+            "Coach Pin 0", "Coach Pin 3", "Coach Pin 6",
+            "Coach Pin 1", "Coach Pin 4", "Coach Pin 2", "Coach Pin 5",
+        ]
+        assert all(item["provenance"] == "coach_selected" for item in accessories)
+        assert "Automatic Row" not in {item["name"] for item in accessories}
+
+
 def test_deadlift_grip_context_prioritises_explainable_grip_work():
     app = create_test_app()
     with app.app_context():

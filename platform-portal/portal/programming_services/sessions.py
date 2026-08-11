@@ -5,6 +5,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..extensions import db
 from ..models.programming import TrainingSession, TrainingWeek
 from .prescriptions import copy as copy_prescriptions
+from .warmups import copy as copy_warmups
+from .revisions import append_revision
 
 
 def _commit_or_rollback() -> None:
@@ -46,6 +48,7 @@ def create(
         position=position,
     )
     db.session.add(session)
+    append_revision(week.block, change_type="session_created", summary=f'Added session "{session.name}"')
     _commit_or_rollback()
     return session
 
@@ -63,6 +66,7 @@ def insert_blank(source: TrainingSession, *, after: bool) -> TrainingSession:
         position=insertion_position,
     )
     db.session.add(target)
+    append_revision(week.block, change_type="session_inserted", summary=f'Inserted session "{target.name}"')
     _commit_or_rollback()
     return target
 
@@ -85,6 +89,8 @@ def duplicate(source: TrainingSession) -> TrainingSession:
         db.session.add(target)
         db.session.flush()
         copy_prescriptions(source, target)
+        copy_warmups(source, target)
+        append_revision(week.block, change_type="session_duplicated", summary=f'Duplicated session "{source.name}"')
         _commit_or_rollback()
     except SQLAlchemyError:
         db.session.rollback()
@@ -98,6 +104,7 @@ def delete(session: TrainingSession) -> int:
     try:
         db.session.delete(session)
         renumber(week, excluding=session)
+        append_revision(week.block, change_type="session_deleted", summary=f'Deleted session "{session.name}"')
         _commit_or_rollback()
     except SQLAlchemyError:
         db.session.rollback()

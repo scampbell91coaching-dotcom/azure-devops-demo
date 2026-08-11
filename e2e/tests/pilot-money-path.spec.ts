@@ -1,5 +1,7 @@
 import { test, expect } from '../fixtures/test';
 
+test.use({ mutationScope: 'pilot' });
+
 const pilot = {
   id: 303,
   name: 'Taylor Jordan',

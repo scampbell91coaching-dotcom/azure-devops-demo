@@ -10,6 +10,7 @@ from ..models.programming import (
     ProgrammingLiftSlot,
     TrainingSession,
 )
+from .revisions import append_revision
 
 PRESCRIPTION_MODE_LABELS = {
     "rpe": "RPE",
@@ -134,6 +135,7 @@ def create(
         **_values(form),
     )
     db.session.add(item)
+    append_revision(session.week.block, change_type="prescription_created", summary=f'Added prescription "{name}"')
     _commit_or_rollback()
     return item
 
@@ -153,6 +155,7 @@ def update(
         setattr(item, field, values[field])
     item.prescription_type = cast(str | None, values["prescription_type"])
     item.amrap = cast(bool, values["amrap"])
+    append_revision(item.session.week.block, change_type="prescription_updated", summary=f'Updated prescription "{name}"')
     _commit_or_rollback()
     return item
 
@@ -163,6 +166,7 @@ def delete(item: ExercisePrescription) -> int:
     try:
         db.session.delete(item)
         renumber(session, excluding=item)
+        append_revision(session.week.block, change_type="prescription_deleted", summary=f'Deleted prescription "{item.exercise_name}"')
         _commit_or_rollback()
     except (SQLAlchemyError, ValueError):
         db.session.rollback()

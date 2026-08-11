@@ -70,10 +70,13 @@ class MacroPrescription:
     rest_day_targets: MacroTargets | None = None
     meal_count: int | None = None
     notes: str | None = None
+    revision: int = 1
 
     def __post_init__(self) -> None:
         if not self.prescription_id.strip():
             raise ValueError("prescription_id is required")
+        if isinstance(self.revision, bool) or self.revision < 1:
+            raise ValueError("revision must be positive")
         if isinstance(self.athlete_id, bool) or self.athlete_id < 1:
             raise ValueError("athlete_id must be positive")
         if self.effective_until is not None and self.effective_until < self.effective_from:
@@ -134,6 +137,7 @@ class ResolvedMacroTargets:
     meal_count: int | None
     notes: str | None
     provenance: PrescriptionProvenance
+    revision: int
 
 
 class MacroPrescriptionService:
@@ -160,6 +164,10 @@ class MacroPrescriptionService:
                 f"effective period overlaps prescription {overlap.prescription_id}"
             )
         self._repository.add(prescription)
+
+    def history(self, athlete_id: int) -> Sequence[MacroPrescription]:
+        """Return every immutable version in repository-defined display order."""
+        return self._repository.list_for_athlete(athlete_id)
 
     def prescription_on(
         self, athlete_id: int, on_date: date
@@ -190,6 +198,7 @@ class MacroPrescriptionService:
             meal_count=prescription.meal_count,
             notes=prescription.notes,
             provenance=prescription.provenance,
+            revision=prescription.revision,
         )
 
 

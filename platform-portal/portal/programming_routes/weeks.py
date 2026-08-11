@@ -1,7 +1,8 @@
 from flask import Blueprint, abort, redirect, render_template, request, url_for
+from sqlalchemy.orm import joinedload, selectinload
 
 from ..extensions import db
-from ..models.programming import TrainingBlock, TrainingWeek
+from ..models.programming import ProgrammingLiftSlot, TrainingBlock, TrainingSession, TrainingWeek
 from ..models.exercise_library import Exercise
 from ..programming_services.prescriptions import PRESCRIPTION_MODE_LABELS
 from ..programming_services.presentation import week_exposure_summary
@@ -30,7 +31,19 @@ def register_week_routes(blueprint: Blueprint) -> None:
 
     @blueprint.get("/programming/weeks/<int:week_id>")
     def week(week_id: int):
-        item = db.session.get(TrainingWeek, week_id)
+        item = (
+            TrainingWeek.query.options(
+                joinedload(TrainingWeek.block).joinedload(TrainingBlock.athlete),
+                selectinload(TrainingWeek.sessions).selectinload(
+                    TrainingSession.prescriptions
+                ),
+                selectinload(TrainingWeek.sessions)
+                .selectinload(TrainingSession.lift_slots)
+                .selectinload(ProgrammingLiftSlot.prescriptions),
+            )
+            .filter_by(id=week_id)
+            .one_or_none()
+        )
         if item is None:
             abort(404)
         return render_template(

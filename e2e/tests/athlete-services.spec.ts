@@ -1,15 +1,18 @@
 import { test, expect } from '../fixtures/test';
 import type { Page } from '@playwright/test';
 
+test.use({ mutationScope: 'services' });
+
 async function configureServices(
   page: Page,
   authenticatedState: (page: Page) => Promise<void>,
+  athleteId: number,
   nutrition: boolean,
 ) {
   await authenticatedState(page);
 
   // Product access is controlled by client service entitlements.
-  await page.goto('/athletes/101');
+  await page.goto(`/athletes/${athleteId}`);
   const services = page.locator('#client-services');
   await services.locator('select[name="training"]').selectOption('yes');
   await services.locator('select[name="nutrition"]').selectOption(
@@ -30,12 +33,16 @@ async function configureServices(
   );
 
   // Weekly check-in modules remain independently configurable.
-  await page.goto('/athletes/101/check-in-settings');
+  await page.goto(`/athletes/${athleteId}/check-in-settings`);
   await page.getByLabel('Weekly check-in workflow active').check();
   await page.getByLabel('Weekly training check-in').check();
   await page.getByLabel('Weekly nutrition check-in').setChecked(nutrition);
   await page.getByRole('button', { name: 'Save' }).click();
 }
+
+test.beforeEach(async ({ request, resetE2EFixture }) => {
+  await resetE2EFixture(request, 'services');
+});
 
 test('training-only athlete gets a focused dashboard with no nutrition links', async ({
   page,
@@ -43,11 +50,11 @@ test('training-only athlete gets a focused dashboard with no nutrition links', a
   athleteSession,
   athleteIds,
 }) => {
-  await configureServices(page, authenticatedState, false);
-  await athleteSession(page.request, athleteIds.primary);
+  await configureServices(page, authenticatedState, athleteIds.isolated, false);
+  await athleteSession(page.request, athleteIds.isolated);
 
   const disabledNutrition = await page.request.get(
-    `/athletes/${athleteIds.primary}/nutrition-checkins/new`,
+    `/athletes/${athleteIds.isolated}/nutrition-checkins/new`,
   );
   expect(disabledNutrition.status()).toBe(404);
 
@@ -65,11 +72,11 @@ test('training and nutrition athlete gets both services without changing the pri
   athleteSession,
   athleteIds,
 }) => {
-  await configureServices(page, authenticatedState, true);
-  await athleteSession(page.request, athleteIds.primary);
+  await configureServices(page, authenticatedState, athleteIds.isolated, true);
+  await athleteSession(page.request, athleteIds.isolated);
 
   const enabledNutrition = await page.request.get(
-    `/athletes/${athleteIds.primary}/nutrition-checkins/new`,
+    `/athletes/${athleteIds.isolated}/nutrition-checkins/new`,
   );
   expect(enabledNutrition.status()).toBe(200);
 

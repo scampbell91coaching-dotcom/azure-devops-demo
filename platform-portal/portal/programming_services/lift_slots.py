@@ -11,6 +11,7 @@ from ..models.programming import (
     ProgrammingLiftSlot,
     TrainingSession,
 )
+from .revisions import append_revision
 
 
 def _validate_exercise(exercise: Exercise, lift_family: str, role: str) -> None:
@@ -209,6 +210,7 @@ def save_from_form(
                 setattr(back, name, value)
         elif back is not None:
             db.session.delete(back)
+        append_revision(session.week.block, change_type="lift_slot_saved", summary=f'Saved {family} lift slot')
         db.session.commit()
     except (SQLAlchemyError, TypeError, ValueError):
         db.session.rollback()
@@ -224,6 +226,8 @@ def delete(slot: ProgrammingLiftSlot) -> None:
         db.session.flush()
         for position, item in enumerate(slot.session.lift_slots, start=1):
             item.position = position
+        session = slot.session
+        append_revision(session.week.block, change_type="lift_slot_deleted", summary=f'Deleted {slot.lift_family} lift slot')
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()

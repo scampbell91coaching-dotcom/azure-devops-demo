@@ -13,6 +13,7 @@ from .models.programming import (
     TrainingSession,
     TrainingWeek,
 )
+from .programming_services.revisions import append_revision
 
 programming_templates_bp = Blueprint("programming_templates", __name__)
 
@@ -177,6 +178,7 @@ def create_factory_block():
             db.session.flush()
             _apply_template(session, key)
 
+    append_revision(block, change_type="template_programme_created", summary="Created programme from block template")
     db.session.commit()
     return redirect(url_for("programming.block", block_id=block.id))
 
@@ -208,5 +210,6 @@ def apply_day_template(session_id: int):
                 rpe=rpe,
             )
         )
+    append_revision(session.week.block, change_type="day_template_applied", summary=f"Applied day template {key}")
     db.session.commit()
     return redirect(url_for("programming.session", session_id=session.id))

@@ -1,0 +1,7 @@
+<dl class="coach-detail-grid">
+  <div><dt>Calories</dt><dd>{{ targets.calories }} kcal</dd></div>
+  <div><dt>Protein</dt><dd>{{ targets.protein_g }} g</dd></div>
+  <div><dt>Carbohydrate</dt><dd>{{ targets.carbohydrate_g }} g</dd></div>
+  <div><dt>Fat</dt><dd>{{ targets.fat_g }} g</dd></div>
+  {% if targets.fibre_g is not none %}<div><dt>Fibre</dt><dd>{{ targets.fibre_g }} g</dd></div>{% endif %}
+</dl>

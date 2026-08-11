@@ -1,5 +1,7 @@
 import { test, expect } from '../fixtures/test';
 
+test.use({ mutationScope: 'invitation' });
+
 test('unauthenticated coach routes redirect to login', async ({ page }) => {
   await page.goto('/programming');
   await expect(page).toHaveURL(/\/login\?next=/);
@@ -76,11 +78,17 @@ test('invalid credential error is announced', async ({ page }) => {
   await expect(page.locator('input[name="email"]')).toHaveAttribute('aria-invalid', 'true');
 });
 
-test('coach can create a manual invitation and athlete activates once', async ({ page, authenticatedState }) => {
+test('coach can create a manual invitation and athlete activates once', async ({
+  page,
+  authenticatedState,
+  request,
+  resetE2EFixture,
+}) => {
+  await resetE2EFixture(request, 'invitation');
   await authenticatedState(page);
-  await page.goto('/athletes/202');
+  await page.goto('/athletes/808');
   await expect(page.getByText('Not Invited', { exact: true })).toBeVisible();
-  await page.locator('input[name="email"]').fill('sam.private@example.test');
+  await page.locator('input[name="email"]').fill('invite.retry@example.test');
   await page.getByRole('button', { name: 'Invite athlete' }).click();
   await expect(page.getByRole('heading', { name: 'Email was not delivered' })).toBeVisible();
   const activationUrl = await page.locator('[data-manual-account-link]').inputValue();
@@ -126,7 +134,7 @@ test('coach can create a manual invitation and athlete activates once', async ({
   await page.getByRole('button', { name: 'Activate account' }).click();
   await expect(page).toHaveURL(/\/athlete\/dashboard\?welcome=activated$/);
   await expect(page.getByText('Account activated', { exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Sam’s coaching' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Invite’s coaching' })).toBeVisible();
 
   await page.goto(activationUrl);
   await page.locator('input[name="password"]').fill('Another secure E2E password!');

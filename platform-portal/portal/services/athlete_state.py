@@ -16,6 +16,7 @@ FACT_TYPES = {
     "training_start_date", "experience_level", "competition_date",
     "training_days_per_week", "squat_exposures_per_week",
     "bench_exposures_per_week", "deadlift_exposures_per_week",
+    "onboarding_goals", "onboarding_services", "onboarding_checkin_setup",
 }
 FREQUENCY_FACTS = {
     "training_days_per_week", "squat_exposures_per_week",

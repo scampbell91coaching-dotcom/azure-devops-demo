@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import inspect, text
+from sqlalchemy.exc import IntegrityError
 
 from portal import create_app
 from portal.extensions import db
@@ -26,6 +27,7 @@ EXPECTED_TABLES = {
     "day_templates",
     "exercise_prescriptions",
     "exercises",
+    "external_coaching_reviews",
     "lead_captures",
     "meet_entries",
     "meet_lifts",
@@ -33,9 +35,11 @@ EXPECTED_TABLES = {
     "nutrition_checkins",
     "nutrition_provider_connections",
     "nutrition_import_jobs",
+    "nutrition_macro_prescriptions",
     "daily_nutrition",
     "platform_snapshots",
     "programming_lift_slots",
+    "programme_revisions",
     "training_blocks",
     "training_sessions",
     "training_session_logs",
@@ -115,6 +119,25 @@ def test_upgrade_and_schema_verification_on_empty_sqlite(tmp_path: Path):
             "compatibility_tags",
             "coach_priority",
         } <= exercise_columns
+
+
+def test_nutrition_macro_migration_enforces_overlap_and_append_only(tmp_path: Path):
+    app = migration_app(f"sqlite:///{tmp_path / 'nutrition-macros.db'}")
+    assert app.test_cli_runner().invoke(args=["db", "upgrade"]).exit_code == 0
+    with app.app_context():
+        db.session.execute(text("INSERT INTO athletes (id, created_at, updated_at, first_name, last_name, email, status) VALUES (1, '2026-01-01', '2026-01-01', 'Test', 'Athlete', 'macro@example.test', 'active')"))
+        db.session.execute(text("INSERT INTO users (id, email, role, active, created_at) VALUES (1, 'coach@example.test', 'coach', 1, '2026-01-01')"))
+        insert = "INSERT INTO nutrition_macro_prescriptions (id, athlete_id, effective_from, effective_until, calories, protein_g, carbohydrate_g, fat_g, created_by_user_id, created_at) VALUES (:id, 1, :start, :end, 2500, 180, 300, 65, 1, '2026-01-01')"
+        db.session.execute(text(insert), {"id": "first", "start": "2026-08-01", "end": "2026-08-31"})
+        db.session.commit()
+        with pytest.raises(IntegrityError, match="overlap"):
+            db.session.execute(text(insert), {"id": "overlap", "start": "2026-08-31", "end": "2026-09-10"})
+            db.session.commit()
+        db.session.rollback()
+        with pytest.raises(IntegrityError, match="append-only"):
+            db.session.execute(text("UPDATE nutrition_macro_prescriptions SET calories = 2600 WHERE id = 'first'"))
+            db.session.commit()
+        db.session.rollback()
 
 
 def test_accessory_intelligence_upgrade_preserves_legacy_opt_out(tmp_path: Path):
