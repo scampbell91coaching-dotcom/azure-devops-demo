@@ -1,4 +1,4 @@
-.meet-day { display:grid; gap:1.25rem; min-width:0; }
+.meet-day { display:grid; grid-template-columns:minmax(0,1fr); gap:1.25rem; min-width:0; max-width:100%; }
 .meet-day__hero { padding-top:.25rem; }
 .meet-day h1 { margin:.25rem 0 .45rem; font:700 clamp(2rem,3vw,3rem)/1 var(--coach-display); letter-spacing:-.04em; text-transform:uppercase; }
 .meet-day h2,.meet-day h3 { margin:.2rem 0; }
@@ -11,7 +11,7 @@
 .meet-day__list a,.meet-day__entry>header,.meet-day__next { display:flex; flex-wrap:wrap; justify-content:space-between; gap:.75rem; }
 .meet-day__list a { border:1px solid var(--coach-border); padding:1rem; text-decoration:none; }
 .meet-day__next { position:sticky; top:5.4rem; z-index:2; border:2px solid var(--coach-accent); padding:1rem; background:var(--coach-panel); }
-.meet-day__entry { display:grid; gap:1rem; min-width:0; }
+.meet-day__entry { display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; min-width:0; max-width:100%; }
 .meet-day__lift { border-top:1px solid var(--coach-border); padding-top:1rem; }
 .meet-day__card { display:grid; gap:.5rem; border-left:4px solid var(--coach-border); padding:.75rem; background:var(--coach-panel-soft); }
 .meet-day__card--good { border-color:#57b879; }.meet-day__card--miss { border-color:#e46f61; }.meet-day__card--skipped { opacity:.65; }
@@ -30,3 +30,21 @@
 @media(min-width:760px){.meet-day__form--create{grid-template-columns:repeat(3,minmax(0,1fr));align-items:end}.meet-day__wide{grid-column:span 2}.meet-day__form--row{grid-template-columns:repeat(auto-fit,minmax(8rem,1fr));align-items:end}.meet-day__cards{grid-template-columns:repeat(auto-fit,minmax(12rem,1fr))}.meet-day__tools{grid-template-columns:1fr 1fr}.meet-day__review{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:759px){.meet-day__next{top:.5rem}.loading-table{display:block;overflow-x:auto}.meet-day__create{padding:1rem}}
 @media print{.coach-topbar,.coach-footer,.meet-day__next,.meet-day details,.meet-day__tools,.meet-day button{display:none!important}.coach-main{padding:0}.meet-day__card{break-inside:avoid}.meet-day{color:#000;background:#fff}}
+
+/* Mobile containment: keep controls inside the Meet Day workspace. */
+.meet-day input,
+.meet-day select,
+.meet-day textarea,
+.meet-day button {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.meet-day details,
+.meet-day summary,
+.meet-day__entry > header,
+.meet-day__form,
+.meet-day__form label {
+  min-width: 0;
+  max-width: 100%;
+}
