@@ -139,6 +139,41 @@
     </article>
   </section>
 
+  <section class="coach-panel" id="performance-decisions">
+    <div class="coach-panel__heading coach-panel__heading--split">
+      <div><span class="coach-eyebrow">Deterministic review</span><h2>Performance decisions</h2></div>
+      <form method="get">
+        <label><span class="coach-eyebrow">Training block</span>
+          <select name="block_id" onchange="this.form.submit()">
+            <option value="">All blocks · last 42 days</option>
+            {% for block in performance_blocks %}<option value="{{ block.id }}"{% if performance_decisions.block_id == block.id %} selected{% endif %}>{{ block.name }}</option>{% endfor %}
+          </select>
+        </label>
+      </form>
+    </div>
+    <p>Window: {{ performance_decisions.window_start.strftime('%d %b %Y') }}–{{ performance_decisions.window_end.strftime('%d %b %Y') }}{% if performance_decisions.block_name %} · {{ performance_decisions.block_name }}{% endif %}. Rules: {{ performance_decisions.calculation_version }}.</p>
+    {% if performance_decisions.decisions %}
+      <div class="coach-dashboard-list">
+        {% for decision in performance_decisions.decisions %}
+          <article><div><strong>{{ decision.title }}</strong><span>{{ decision.evidence }}</span><span><b>Suggested action:</b> {{ decision.action }}</span><details><summary>Rule {{ decision.rule_id }} · {{ decision.source_refs | length }} source record(s)</summary><small>{{ decision.source_refs | join(', ') }}</small></details></div></article>
+        {% endfor %}
+      </div>
+    {% else %}<div class="coach-empty-state"><h3>Insufficient training evidence</h3><p>No decision is produced until recorded data supports one.</p></div>{% endif %}
+
+    <h3>SBD evidence</h3>
+    <div class="coach-score-grid">
+      {% for lift in performance_decisions.lifts %}
+        <article><span>{{ lift.lift | title }}</span><strong>{{ lift.latest_e1rm_kg ~ ' kg e1RM' if lift.latest_e1rm_kg is not none else '—' }}</strong><small>{{ lift.volume_kg }} kg volume{% if lift.top_set_e1rm_kg is not none %} · latest top set {{ lift.top_set_e1rm_kg }} kg e1RM{% endif %}{% if lift.e1rm_change_percent is not none %} · {{ '%+.1f' | format(lift.e1rm_change_percent) }}% vs prior eligible set{% endif %}</small></article>
+      {% endfor %}
+      {% for metric in performance_decisions.metrics %}
+        {% if metric.key in ('rpe_adherence_rate', 'mean_rpe_delta', 'completed_reps', 'missed_reps') %}<article><span>{{ metric.key | replace('_', ' ') | title }}</span><strong>{{ '%.0f%%' | format(metric.value * 100) if metric.unit == 'rate' else metric.value }}</strong><small>{{ metric.explanation }}</small></article>{% endif %}
+      {% endfor %}
+      <article><span>Meet context</span><strong>{{ performance_decisions.bodyweight_context.competition.days_away ~ ' days' if performance_decisions.bodyweight_context.competition.days_away is not none else '—' }}</strong><small>{{ performance_decisions.bodyweight_context.weight_class or 'Weight class not recorded' }} · {{ performance_decisions.bodyweight_context.latest.bodyweight_kg ~ ' kg' if performance_decisions.bodyweight_context.latest else 'Bodyweight not recorded' }}</small></article>
+    </div>
+    <p class="coach-dashboard__source">e1RM uses Epley (load × (1 + reps ÷ 30)) for completed 1–12 rep SBD sets. Volume is actual load × actual reps. Source references identify persisted set results.</p>
+    {% for limitation in performance_decisions.limitations %}<p class="coach-dashboard__source">Data limitation: {{ limitation }}</p>{% endfor %}
+  </section>
+
   <section class="coach-panel" id="imported-nutrition">
     <div class="coach-panel__heading coach-panel__heading--split"><div><span class="coach-eyebrow">Last seven days</span><h2>Imported nutrition</h2></div>{% if nutrition_coaching_enabled %}<a class="coach-link-button" href="{{ url_for('nutrition_imports.index', athlete_id=athlete.id) }}">Manage import</a>{% else %}<span class="coach-status coach-status--pending">History only</span>{% endif %}</div>
     <p>{{ imported_nutrition.rows|length }} of {{ imported_nutrition.expected_days }} days present; {{ imported_nutrition.complete_days }} complete. Source: MyFitnessPal file upload.</p>
