@@ -5,6 +5,7 @@ from ..models.athlete import Athlete
 from ..models.programming import TrainingBlock, TrainingSession, TrainingWeek
 from .prescriptions import copy as copy_prescriptions
 from .warmups import copy as copy_warmups
+from .revisions import append_revision
 
 
 class BlockActivationError(ValueError):
@@ -19,6 +20,8 @@ def create(
 ) -> TrainingBlock:
     block = TrainingBlock(athlete=athlete, name=name, objective=objective)
     db.session.add(block)
+    db.session.flush()
+    append_revision(block, change_type="block_created", summary="Created programme block")
     db.session.commit()
     return block
 
@@ -55,6 +58,7 @@ def duplicate(source: TrainingBlock) -> TrainingBlock:
             copy_prescriptions(source_session, target_session)
             copy_warmups(source_session, target_session)
 
+    append_revision(target, change_type="block_duplicated", summary=f'Duplicated from "{source.name}"')
     db.session.commit()
     return target
 
@@ -85,11 +89,13 @@ def activate(block: TrainingBlock) -> None:
         )
 
     block.status = "active"
+    append_revision(block, change_type="block_published", summary="Published programme to athlete")
     db.session.commit()
 
 
 def archive(block: TrainingBlock) -> None:
     block.status = "archived"
+    append_revision(block, change_type="block_archived", summary="Archived programme")
     db.session.commit()
 
 

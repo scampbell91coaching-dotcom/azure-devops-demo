@@ -38,6 +38,7 @@ EXPECTED_TABLES = {
     "daily_nutrition",
     "platform_snapshots",
     "programming_lift_slots",
+    "programme_revisions",
     "training_blocks",
     "training_sessions",
     "training_session_logs",

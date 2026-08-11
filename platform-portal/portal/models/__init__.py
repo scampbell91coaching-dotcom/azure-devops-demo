@@ -27,6 +27,7 @@ from .platform_snapshot import PlatformSnapshot
 from .programming import (
     ExercisePrescription,
     ProgrammingLiftSlot,
+    ProgrammeRevision,
     TrainingBlock,
     TrainingSession,
     TrainingSessionLog,
@@ -55,6 +56,7 @@ __all__ = [
     "Exercise",
     "ExercisePrescription",
     "ProgrammingLiftSlot",
+    "ProgrammeRevision",
     "LeadCapture",
     "Meet",
     "MeetEntry",

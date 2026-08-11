@@ -6,6 +6,7 @@ from ..extensions import db
 from ..models.programming import TrainingBlock, TrainingSession, TrainingWeek
 from .prescriptions import copy as copy_prescriptions
 from .warmups import copy as copy_warmups
+from .revisions import append_revision
 
 
 class FinalWeekDeletionError(ValueError):
@@ -52,6 +53,7 @@ def create(
         notes=notes,
     )
     db.session.add(week)
+    append_revision(block, change_type="week_created", summary=f'Added week "{week.name}"')
     _commit_or_rollback()
     return week
 
@@ -89,6 +91,7 @@ def duplicate(source: TrainingWeek) -> TrainingWeek:
             if item.position >= target_position:
                 item.position += 1
         target = _copy(source, position=target_position)
+        append_revision(block, change_type="week_duplicated", summary=f'Duplicated week "{source.name}"')
         _commit_or_rollback()
     except SQLAlchemyError:
         db.session.rollback()
@@ -111,6 +114,7 @@ def extend(block: TrainingBlock, *, count: int) -> TrainingWeek:
         target = source
         for _ in range(count):
             target = _copy(target, position=len(block.weeks) + 1)
+        append_revision(block, change_type="block_extended", summary=f"Extended programme by {count} week(s)")
         _commit_or_rollback()
     except SQLAlchemyError:
         db.session.rollback()
@@ -127,6 +131,7 @@ def delete(week: TrainingWeek) -> int:
     try:
         db.session.delete(week)
         renumber(block, excluding=week)
+        append_revision(block, change_type="week_deleted", summary=f'Deleted week "{week.name}"')
         _commit_or_rollback()
     except SQLAlchemyError:
         db.session.rollback()

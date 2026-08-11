@@ -5,6 +5,7 @@ from flask import Blueprint, abort, jsonify, request
 from .extensions import db
 from .models.programming import ExercisePrescription, TrainingSession
 from .models.exercise_library import Exercise
+from .programming_services.revisions import append_revision
 
 programming_pack2_bp = Blueprint("programming_pack2", __name__)
 
@@ -77,6 +78,7 @@ def create_prescription(session_id: int):
     )
 
     db.session.add(item)
+    append_revision(session.week.block, change_type="prescription_created", summary=f'Added prescription "{exercise_name}"')
     db.session.commit()
 
     return jsonify(_serialize(item)), 201
@@ -116,6 +118,7 @@ def update_prescription(prescription_id: int):
     if "notes" in payload:
         item.notes = str(payload["notes"]).strip() or None
 
+    append_revision(item.session.week.block, change_type="prescription_updated", summary=f'Updated prescription "{item.exercise_name}"')
     db.session.commit()
     return jsonify(_serialize(item))
 
@@ -136,6 +139,7 @@ def delete_prescription(prescription_id: int):
     for position, prescription in enumerate(session.prescriptions, start=1):
         prescription.position = position
 
+    append_revision(session.week.block, change_type="prescription_deleted", summary=f'Deleted prescription "{item.exercise_name}"')
     db.session.commit()
     return "", 204
 
@@ -163,5 +167,6 @@ def reorder_prescriptions(session_id: int):
     for position, prescription_id in enumerate(ids, start=first_assistance_position):
         by_id[prescription_id].position = position
 
+    append_revision(session.week.block, change_type="prescriptions_reordered", summary="Reordered assistance prescriptions")
     db.session.commit()
     return jsonify({"status": "saved"})

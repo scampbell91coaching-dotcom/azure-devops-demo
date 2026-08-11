@@ -31,6 +31,7 @@ from .models.programming import (
     TrainingSession,
     TrainingWeek,
 )
+from .programming_services.revisions import append_revision
 from .services.weekly_programming_intelligence import WeeklyProgrammingIntelligence
 from .services.accessory_intelligence import AccessoryIntelligence
 
@@ -1043,6 +1044,7 @@ def generate():
                     )
                 )
 
+    append_revision(block, change_type="factory_programme_created", summary="Created programme from accepted factory proposal", reason=proposal.rationale)
     db.session.commit()
 
     return redirect(url_for("programming.block", block_id=block.id))
