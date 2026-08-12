@@ -158,3 +158,37 @@ def register_database_commands(app: Flask) -> None:
             f"Production database verified: driver={dialect}; "
             f"users_table=yes; exercises_table=yes; exercises={exercise_count}."
         )
+
+    @app.cli.command("ingest-platform-snapshot")
+    def ingest_platform_snapshot_command():
+        """Persist the current platform status snapshot to platform history."""
+        import json
+        import os
+        from pathlib import Path
+
+        from .services.snapshot_ingestion import SnapshotIngestionService
+
+        status_file = Path(
+            os.getenv("PLATFORM_STATUS_FILE", "/status/platform-status.json")
+        )
+
+        if not status_file.exists():
+            raise click.ClickException(
+                f"Missing platform status JSON: {status_file}"
+            )
+
+        try:
+            with status_file.open(encoding="utf-8") as handle:
+                status = json.load(handle)
+
+            snapshot = SnapshotIngestionService().ingest(status)
+        except Exception as exc:
+            raise click.ClickException(
+                f"Unable to ingest platform snapshot: {exc}"
+            ) from exc
+
+        click.echo(
+            f"Snapshot inserted id={snapshot.id} "
+            f"score={snapshot.platform_score} "
+            f"time={snapshot.recorded_at.isoformat()}"
+        )

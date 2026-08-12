@@ -155,7 +155,7 @@ spec:
               args:
                 - |
                   python -m portal.collectors.platform_status
-                  PLATFORM_STATUS_FILE=/status/platform-status.json python ingest_snapshot.py
+                  flask ingest-platform-snapshot
               env:
                 - name: PLATFORM_STATUS_OUTPUT
                   value: /status/platform-status.json
