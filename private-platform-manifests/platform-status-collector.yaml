@@ -150,7 +150,7 @@ spec:
               type: RuntimeDefault
           containers:
             - name: collector
-              image: stevedevopslab6280.azurecr.io/platform-portal-private:c19a1f58c9fa79baa930e7116410f3a3972cfb0c
+              image: stevedevopslab6280.azurecr.io/platform-portal-private:bf3379755a3794b345fa7f50e02e544a332eb11a
               command: ["/bin/sh", "-ec"]
               args:
                 - |
