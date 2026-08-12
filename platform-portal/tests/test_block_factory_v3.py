@@ -590,6 +590,40 @@ def test_active_coach_override_is_surfaced_as_authoritative():
     assert b"2 bench" in response.data
 
 
+def test_reviewed_volume_proposal_is_stored_and_allocated_only_on_acceptance():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    client = app.test_client()
+    response = client.post(
+        "/programming/factory/preview",
+        data={
+            **base_form(athlete_id),
+            "week_count": 4,
+            "goal": "peaking",
+            "meet_date": "2026-10-24",
+        },
+    )
+    assert response.status_code == 200
+    assert b"Volume progression proposal" in response.data
+    assert b"Taper" in response.data
+    with app.app_context():
+        assert TrainingBlock.query.count() == 0
+        stored = AthleteStateRecommendation.query.one().recommendation_json
+        assert stored["volume_progression"]["weeks"][-1]["phase"] == "taper"
+
+    accepted = client.post("/programming/factory", data=preview_fields(response))
+    assert accepted.status_code == 302
+    with app.app_context():
+        block = TrainingBlock.query.one()
+        final_week = block.weeks[-1]
+        totals = {"squat": 0, "bench": 0, "deadlift": 0}
+        for session in final_week.sessions:
+            for item in session.prescriptions:
+                if item.lift_slot is not None:
+                    totals[item.lift_slot.lift_family] += item.sets
+        assert totals == {"squat": 1, "bench": 1, "deadlift": 1}
+
+
 def test_exposure_metadata_uses_exact_taxonomy_not_name_substrings():
     app = create_test_app()
     athlete_id = create_athlete(app)

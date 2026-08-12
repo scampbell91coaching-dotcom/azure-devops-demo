@@ -283,6 +283,22 @@
           <p><strong>Exposures:</strong> {{ intelligence.exposures.squat }} squat · {{ intelligence.exposures.bench }} bench · {{ intelligence.exposures.deadlift }} deadlift</p>
           {% if intelligence.fatigue.status == 'reported' %}<p><strong>Reported fatigue:</strong> {{ intelligence.fatigue.detail }}</p>{% endif %}
           <p><strong>RPE adherence:</strong> {{ intelligence.fatigue.rpe_adherence }}</p>
+          <h4>Volume progression proposal</h4>
+          <p>S/B/D work sets stay separate from assistance fatigue. This remains a reviewable proposal until you accept it.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Week</th><th>Phase</th><th>RPE</th><th>Squat</th><th>Bench</th><th>Deadlift</th><th>Assistance fatigue</th></tr></thead>
+              <tbody>{% for week in intelligence.volume.weeks %}<tr>
+                <td>{{ week.week }}</td><td>{{ week.phase|title }}</td><td>{{ week.target_rpe|round(1) }}</td>
+                <td>{{ week.sbd_sets.squat }} ({{ week.sbd_range.squat[0] }}–{{ week.sbd_range.squat[1] }})</td>
+                <td>{{ week.sbd_sets.bench }} ({{ week.sbd_range.bench[0] }}–{{ week.sbd_range.bench[1] }})</td>
+                <td>{{ week.sbd_sets.deadlift }} ({{ week.sbd_range.deadlift[0] }}–{{ week.sbd_range.deadlift[1] }})</td>
+                <td>{{ week.assistance_fatigue_budget }} units</td>
+              </tr>{% endfor %}</tbody>
+            </table>
+          </div>
+          <ul>{% for item in intelligence.volume.explanation %}<li>{{ item }}</li>{% endfor %}</ul>
+          {% if intelligence.volume.overrides_applied %}<p><strong>Coach overrides applied:</strong></p><ul>{% for item in intelligence.volume.overrides_applied %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
           <h4>Reasoning</h4>
           <ul>{% for item in intelligence.reasoning %}<li>{{ item }}</li>{% endfor %}</ul>
           <h4>Constraints and data safety</h4>

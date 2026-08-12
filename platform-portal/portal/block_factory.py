@@ -778,6 +778,7 @@ def _proposal_payload(
         "factory": _json_value(asdict(factory)),
         "preview": _json_value(scheduled_preview),
         "source_context": _json_value(asdict(intelligence.data)),
+        "volume_progression": _json_value(asdict(intelligence.volume)),
         "generator_version": PROPOSAL_VERSION,
     }
 
@@ -997,6 +998,13 @@ def generate():
         db.session.flush()
 
         week_rpe = _week_rpe(factory, week_position)
+        volume_week = intelligence.volume.weeks[week_position - 1]
+        exposure_seen = {family: 0 for family in ("squat", "bench", "deadlift")}
+        exposure_totals = {
+            "squat": factory.squat_frequency,
+            "bench": factory.bench_frequency,
+            "deadlift": factory.deadlift_frequency,
+        }
 
         for day in scheduled_preview:
             day_index = int(day["day"]) - 1
@@ -1038,10 +1046,16 @@ def generate():
                     "provenance", "coach_selected"
                 )
                 if exercise_position <= main_count:
+                    family = main_families[exercise_position - 1]
+                    quotient, remainder = divmod(
+                        volume_week.sbd_sets[family], exposure_totals[family]
+                    )
+                    sets = quotient + (exposure_seen[family] < remainder)
+                    exposure_seen[family] += 1
                     slot = ProgrammingLiftSlot(
                         session=session,
                         position=exercise_position,
-                        lift_family=main_families[exercise_position - 1],
+                        lift_family=family,
                     )
                     db.session.add(slot)
                     slot_role = "top_set"
