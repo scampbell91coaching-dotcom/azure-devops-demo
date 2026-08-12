@@ -15,11 +15,17 @@ test('presents deterministic coaching metrics and chart data', async ({ page }) 
   await expect(dashboard.getByRole('heading', { name: 'Performance dashboard' })).toBeVisible();
   await expect(dashboard.getByText('Review prescription before progressing')).toBeVisible();
 
-  const summary = dashboard.getByLabel('Training summary');
+  const summary = dashboard.getByRole('region', { name: 'Training summary' });
   await expect(summary).toContainText('1,730 kg');
   await expect(summary).toContainText('75%');
   await expect(summary).toContainText('13 / 1');
   await expect(summary).toContainText('Top sets recorded4');
+  await expect(dashboard.getByLabel('Primary training metrics')).toContainText('75%');
+  await expect(dashboard.getByLabel('Supporting training metrics')).toContainText('13 / 1');
+
+  const decisionMethod = dashboard.getByText('How this decision is made');
+  await decisionMethod.click();
+  await expect(dashboard.getByText(/missed exact-prescription reps/)).toBeVisible();
 
   const strengthChart = dashboard.locator('#personal-records');
   await expect(strengthChart.getByRole('heading', { name: 'Squat / bench / deadlift e1RM' })).toBeVisible();
@@ -55,9 +61,9 @@ test('filters every dashboard metric to the selected training block', async ({ p
 
   await expect(page).toHaveURL(`/athletes/${performanceAthleteId}?block=1401`);
   const dashboard = page.locator('#performance-dashboard');
-  await expect(dashboard.getByLabel('Training summary')).toContainText('1,310 kg');
-  await expect(dashboard.getByLabel('Training summary')).toContainText('10 / 1');
-  await expect(dashboard.getByLabel('Training summary')).toContainText('Top sets recorded3');
+  await expect(dashboard.getByRole('region', { name: 'Training summary' })).toContainText('1,310 kg');
+  await expect(dashboard.getByRole('region', { name: 'Training summary' })).toContainText('10 / 1');
+  await expect(dashboard.getByRole('region', { name: 'Training summary' })).toContainText('Top sets recorded3');
   await expect(dashboard.locator('#personal-records')).toContainText('1 sessions');
   await expect(dashboard.locator('#personal-records')).not.toContainText('154.0 kg');
 
@@ -80,8 +86,8 @@ test('explains incomplete history instead of fabricating metrics', async ({ page
   await expect(dashboard.getByText('No training decision yet')).toBeVisible();
   await expect(dashboard.getByText('No e1RM trend yet')).toBeVisible();
   await expect(dashboard.getByText('No SBD volume yet')).toBeVisible();
-  await expect(dashboard.getByLabel('Training summary')).toContainText('Not available');
-  await expect(dashboard.getByLabel('Training summary')).toContainText('0 / —');
+  await expect(dashboard.getByRole('region', { name: 'Training summary' })).toContainText('Not available');
+  await expect(dashboard.getByRole('region', { name: 'Training summary' })).toContainText('0 / —');
   await expect(dashboard.getByText('Not recorded', { exact: true })).toBeVisible();
 
   const response = await page.request.get(

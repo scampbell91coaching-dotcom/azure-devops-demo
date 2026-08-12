@@ -92,12 +92,17 @@
       <details><summary>How this decision is made</summary><p>Rules check completed sessions in order: missed exact-prescription reps, average RPE overshoot of at least 1.0, then RPE adherence. Adherence means actual RPE is within 0.5 of prescribed RPE. No AI or inferred data is used.</p></details>
     </article>
 
-    <div class="performance-summary-grid" aria-label="Training summary">
-      <article><span>SBD volume</span><strong>{{ '{:,.0f}'.format(performance.volume_kg) ~ ' kg' if performance.volume_kg is not none else 'Not available' }}</strong><small>Completed load × reps</small></article>
-      <article><span>RPE adherence</span><strong>{{ performance.rpe_adherence_percent ~ '%' if performance.rpe_adherence_percent is not none else 'Not available' }}</strong><small>Within ±0.5 RPE</small></article>
-      <article><span>Completed / missed reps</span><strong>{{ performance.completed_reps }} / {{ performance.missed_reps if performance.missed_reps is not none else '—' }}</strong><small>{% if performance.missed_reps is none %}Exact prescribed reps unavailable{% else %}Across comparable sets{% endif %}</small></article>
-      <article><span>Top sets recorded</span><strong>{{ performance.top_set_count }}</strong><small>{% if performance.top_set_count %}Tagged programme top sets{% else %}No tagged top-set history{% endif %}</small></article>
-    </div>
+    <section class="performance-summary" aria-labelledby="training-summary-title">
+      <h3 class="sr-only" id="training-summary-title">Training summary</h3>
+      <div class="performance-primary-metrics" aria-label="Primary training metrics">
+        <div><span>SBD volume</span><strong>{{ '{:,.0f}'.format(performance.volume_kg) ~ ' kg' if performance.volume_kg is not none else 'Not available' }}</strong><small>Completed load × reps</small></div>
+        <div><span>RPE adherence</span><strong>{{ performance.rpe_adherence_percent ~ '%' if performance.rpe_adherence_percent is not none else 'Not available' }}</strong><small>Within ±0.5 RPE</small></div>
+      </div>
+      <dl class="performance-supporting-metrics" aria-label="Supporting training metrics">
+        <div><dt>Completed / missed reps</dt><dd><strong>{{ performance.completed_reps }} / {{ performance.missed_reps if performance.missed_reps is not none else '—' }}</strong><small>{% if performance.missed_reps is none %}Exact prescribed reps unavailable{% else %}Across comparable sets{% endif %}</small></dd></div>
+        <div><dt>Top sets recorded</dt><dd><strong>{{ performance.top_set_count }}</strong><small>{% if performance.top_set_count %}Tagged programme top sets{% else %}No tagged top-set history{% endif %}</small></dd></div>
+      </dl>
+    </section>
 
     <div class="performance-chart-grid">
       <article class="performance-chart" id="personal-records">
@@ -122,11 +127,14 @@
       </article>
     </div>
 
-    <div class="performance-context-grid">
-      <article><span>Prescribed vs actual RPE</span><strong>{% if performance.average_prescribed_rpe is not none %}{{ performance.average_prescribed_rpe }} → {{ performance.average_actual_rpe }}{% else %}Not available{% endif %}</strong><small>Averages for paired set records</small></article>
-      <article><span>Bodyweight</span><strong>{{ athlete.bodyweight_kg ~ ' kg' if athlete.bodyweight_kg is not none else 'Not recorded' }}</strong><small>Current athlete profile; trend remains in nutrition history</small></article>
-      <article><span>Meet / weight class</span><strong>{{ athlete.weight_class or 'No class recorded' }}</strong><small>{% if athlete.next_competition %}{{ athlete.next_competition }} · countdown unavailable without a structured meet date{% else %}No upcoming meet recorded{% endif %}</small></article>
-    </div>
+    <section class="performance-context" aria-labelledby="performance-context-title">
+      <h3 id="performance-context-title">Supporting context</h3>
+      <dl>
+        <div><dt>Prescribed vs actual RPE</dt><dd><strong>{% if performance.average_prescribed_rpe is not none %}{{ performance.average_prescribed_rpe }} → {{ performance.average_actual_rpe }}{% else %}Not available{% endif %}</strong><small>Averages for paired set records</small></dd></div>
+        <div><dt>Bodyweight</dt><dd><strong>{{ athlete.bodyweight_kg ~ ' kg' if athlete.bodyweight_kg is not none else 'Not recorded' }}</strong><small>Current athlete profile</small></dd></div>
+        <div><dt>Meet / weight class</dt><dd><strong>{{ athlete.weight_class or 'No class recorded' }}</strong><small>{% if athlete.next_competition %}{{ athlete.next_competition }} · countdown unavailable without a structured meet date{% else %}No upcoming meet recorded{% endif %}</small></dd></div>
+      </dl>
+    </section>
   </section>
 
   <section class="coach-panel client-services" id="client-services">

@@ -314,6 +314,9 @@ def test_coach_performance_dashboard_uses_results_and_explains_decision(training
     assert ">Training log</a>" in page
     assert 'href="#client-services">Administration</a>' in page
     assert "How this decision is made" in page
+    assert 'aria-label="Primary training metrics"' in page
+    assert 'aria-label="Supporting training metrics"' in page
+    assert "Supporting context" in page
 
 
 def test_performance_filter_rejects_another_athletes_block(training_app):
