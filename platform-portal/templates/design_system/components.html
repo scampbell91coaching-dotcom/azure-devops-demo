@@ -89,6 +89,10 @@
   <nav class="ts-tabs" aria-label="Section navigation">{% for key, label, href in items %}<a class="ts-tabs__link" href="{{ href }}"{% if key == current %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
 {%- endmacro %}
 
+{% macro context_bar(items, label='Current workspace context') -%}
+  <dl class="ts-context-bar" aria-label="{{ label }}">{% for item_label, value in items %}<div class="ts-context-item"><dt class="ts-context-item__label">{{ item_label }}</dt><dd class="ts-context-item__value">{{ value }}</dd></div>{% endfor %}</dl>
+{%- endmacro %}
+
 {% macro dialog(id, title, description=none) -%}
   <dialog class="ts-dialog" id="{{ id }}" aria-labelledby="{{ id }}-title"{% if description %} aria-describedby="{{ id }}-description"{% endif %}>
     <header class="ts-dialog__header"><div><h2 class="ts-type-h3" id="{{ id }}-title">{{ title }}</h2>{% if description %}<p id="{{ id }}-description">{{ description }}</p>{% endif %}</div><form method="dialog"><button class="ts-dialog__close" aria-label="Close dialog" value="cancel"><span aria-hidden="true">×</span></button></form></header>

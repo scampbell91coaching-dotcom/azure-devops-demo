@@ -11,6 +11,10 @@
 
   <link
     rel="stylesheet"
+    href="{{ url_for('static', filename='css/design-system.css') }}"
+  >
+  <link
+    rel="stylesheet"
     href="{{ url_for('static', filename='css/coach_workspace.css') }}"
   >
   <link
@@ -22,7 +26,7 @@
   {% block head %}{% endblock %}
 </head>
 
-<body class="coach-workspace">
+<body class="coach-workspace ts-theme-coach">
   <a class="coach-skip-link" href="#coach-main">Skip to content</a>
 
   <header class="coach-topbar">

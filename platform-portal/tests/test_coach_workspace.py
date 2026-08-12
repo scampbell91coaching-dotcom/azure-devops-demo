@@ -14,6 +14,17 @@ def test_coach_base_has_dedicated_navigation():
     assert "Meet Prep" in text
     assert "coach_applications.index" in text
     assert "traditionalstrength.co.uk/apply" not in text
+    assert "css/design-system.css" in text
+    assert 'class="coach-workspace ts-theme-coach"' in text
+
+
+def test_coach_workspace_uses_shared_foundation_without_dashboard_effects():
+    css = (ROOT / "static" / "css" / "coach_workspace.css").read_text()
+
+    assert "var(--ts-workspace-bg" in css
+    assert "background: var(--coach-bg);" in css
+    assert "radial-gradient" not in css
+    assert "backdrop-filter" not in css
 
 
 def test_athlete_pages_use_coach_base():

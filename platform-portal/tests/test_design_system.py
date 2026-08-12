@@ -39,6 +39,9 @@ def test_design_system_stylesheet_is_available(app, client):
     assert response.mimetype == "text/css"
     assert b"--ts-color-brand-black" in response.data
     assert b"prefers-reduced-motion: reduce" in response.data
+    assert b"--ts-workspace-bg" in response.data
+    assert b".ts-context-bar" in response.data
+    assert b".ts-workspace-grid" in response.data
 
 
 def test_button_variants_disabled_and_loading_states_render(app):
@@ -129,6 +132,17 @@ def test_dialog_uses_native_element_and_accessible_relationships(app):
     assert 'aria-label="Close dialog"' in html
 
 
+def test_context_bar_preserves_term_value_relationships(app):
+    html = render_component(
+        app,
+        "{{ ds.context_bar([('Athlete', 'Alex Morgan'), ('Week', '3 of 8')]) }}",
+    )
+
+    assert '<dl class="ts-context-bar" aria-label="Current workspace context">' in html
+    assert '<dt class="ts-context-item__label">Athlete</dt>' in html
+    assert '<dd class="ts-context-item__value">Alex Morgan</dd>' in html
+
+
 def test_showcase_renders_all_foundational_sections(app):
     with app.test_request_context("/"):
         html = render_template("design_system/showcase.html")
@@ -137,5 +151,6 @@ def test_showcase_renders_all_foundational_sections(app):
     assert "Forms" in html
     assert "Feedback and data" in html
     assert "Dark context" in html
+    assert "Coach workspace" in html
     assert 'css/design-system.css' in html
     assert '<dialog class="ts-dialog"' not in html  # documented, not demo-opened

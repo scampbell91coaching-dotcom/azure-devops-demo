@@ -47,6 +47,18 @@ Interactive primitives share `--ts-focus-ring`, timings and easing. The reduced-
 - `.ts-stack`, `.ts-cluster`, and `.ts-grid` cover the common vertical, wrapping horizontal, and responsive grid arrangements. Tight/loose and compact variants are intentionally few.
 - Contracts are documented in CSS at 40rem compact, 64rem wide, and 80rem maximum content. V1 currently needs a compact media query only.
 
+### Coach workspace foundation
+
+Coach templates load this stylesheet before `coach_workspace.css` and apply `.ts-theme-coach` to the body. The theme exposes a near-black, cream and restrained-gold semantic palette while the legacy `coach-` selectors consume the same tokens during incremental migration. It deliberately removes decorative gradients and raised dashboard surfaces.
+
+- `.ts-workspace` is the desktop-first 86.25rem shell with a shared responsive gutter.
+- `.ts-workspace-grid`, `.ts-workspace-main`, and `.ts-workspace-aside` create a 12-column authoring surface that collapses below 64rem. The aside uses a divider, not a nested card.
+- `ds.context_bar()` renders persistent term/value context such as athlete, block, week and status as a semantic description list.
+- `.ts-control-row` and `.ts-control-row__actions` keep related controls and verb-led actions together.
+- `.ts-section-divider` separates workflow stages without introducing another container.
+
+Coach surfaces should prefer these flat structures, native tables and inline editing. Use `.ts-card` only when the content is genuinely a self-contained object; do not use it as a default page-section wrapper.
+
 ## Components
 
 ### Actions
