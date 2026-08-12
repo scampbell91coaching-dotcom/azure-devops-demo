@@ -52,9 +52,10 @@ class AccessoryIntelligence:
     ) -> list[AccessorySuggestion]:
         """Return eligible records in an inspectable coach-priority order.
 
-        Empty phase/relevance metadata means "unrestricted" only after the coach
-        has explicitly enabled ``auto_select``. Constraint tags are exact tags;
-        they are not athlete-state or injury diagnoses.
+        ``auto_select`` is a preference signal: preferred eligible rows rank
+        before fallback rows, but its absence never makes an otherwise eligible
+        catalogue empty. Empty phase/relevance metadata means unrestricted.
+        Constraint tags are exact tags; they are not athlete-state diagnoses.
         """
         phase = phase.casefold()
         lift_families = {item.casefold() for item in lift_families}
@@ -80,7 +81,11 @@ class AccessoryIntelligence:
             if excluded.intersection(constraints):
                 continue
 
-            reasons = ["coach enabled automatic selection"]
+            reasons = [
+                "preferred for automatic selection"
+                if exercise.auto_select
+                else "eligible accessory fallback"
+            ]
             if matched_lifts:
                 reasons.append(f"relevant to {', '.join(matched_lifts)}")
             elif "all" in relevance:

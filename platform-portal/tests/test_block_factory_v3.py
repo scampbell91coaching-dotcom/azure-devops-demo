@@ -330,9 +330,15 @@ def test_factory_suggests_enabled_metadata_and_manual_selection_overrides_it():
         db.session.commit()
         automatic = _preview(factory_request(3, 1, 1, 1))
         automatic_accessories = [item for day in automatic for item in day["accessories"]]
-        assert [item["name"] for item in automatic_accessories] == ["Development Row"]
-        assert automatic_accessories[0]["source"] == "Library suggestion"
-        assert any("relevant to bench" in reason for reason in automatic_accessories[0]["reasons"])
+        assert [item["name"] for item in automatic_accessories] == [
+            "Development Row", "Coach Pin"
+        ]
+        suggested_accessory = automatic_accessories[0]
+        assert suggested_accessory["source"] == "Library suggestion"
+        assert any(
+            "relevant to bench" in reason
+            for reason in suggested_accessory["reasons"]
+        )
 
         request = factory_request(3, 1, 1, 1)
         request = request.__class__(
@@ -342,6 +348,37 @@ def test_factory_suggests_enabled_metadata_and_manual_selection_overrides_it():
         assert [item["name"] for day in manual for item in day["accessories"]] == [
             "Coach Pin"
         ]
+        assert all(day["accessory_outcome"] == "coach_selected" for day in manual)
+
+
+def test_factory_automatic_falls_back_and_explains_zero_outcomes():
+    app = create_test_app()
+    with app.app_context():
+        fallback = Exercise(
+            name="Fallback Row", movement="accessory", category="balancing",
+            accessory_suitable=True, auto_select=False,
+            lift_relevance='["bench"]', fatigue_rating=3,
+        )
+        db.session.add(fallback)
+        db.session.commit()
+
+        automatic = _preview(factory_request(3, 1, 1, 1))
+        selected = [item for day in automatic for item in day["accessories"]]
+        assert [item["name"] for item in selected] == ["Fallback Row"]
+        assert "eligible accessory fallback" in selected[0]["reasons"]
+        assert any(
+            day["accessory_outcome"] == "no_eligible_candidates"
+            for day in automatic
+        )
+
+        intentional_none = _preview(replace(
+            factory_request(3, 1, 1, 1), accessory_mode="none"
+        ))
+        assert all(not day["accessories"] for day in intentional_none)
+        assert all(
+            day["accessory_outcome"] == "intentional_none"
+            for day in intentional_none
+        )
 
 
 def test_accessory_volume_produces_deterministic_default_metadata_recommendations():

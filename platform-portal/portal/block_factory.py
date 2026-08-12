@@ -652,6 +652,25 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                     }
                 )
 
+        if selected_accessories:
+            accessory_outcome = "coach_selected"
+            accessory_outcome_reason = "Pinned coach choices replace suggestions."
+        elif factory.accessory_mode == "none":
+            accessory_outcome = "intentional_none"
+            accessory_outcome_reason = "The coach selected no assistance."
+        elif generated_accessories:
+            accessory_outcome = "automatic_selected"
+            accessory_outcome_reason = (
+                "Automatic assistance filled the available fatigue budget from "
+                "eligible catalogue candidates."
+            )
+        else:
+            accessory_outcome = "no_eligible_candidates"
+            accessory_outcome_reason = (
+                "No unused active, accessory-suitable catalogue candidates met "
+                "this day's metadata constraints and fatigue budget."
+            )
+
         preview.append(
             {
                 "day": day_index + 1,
@@ -661,6 +680,8 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                 "main_count": main_count,
                 "accessories": generated_accessories,
                 "accessory_count": len(generated_accessories),
+                "accessory_outcome": accessory_outcome,
+                "accessory_outcome_reason": accessory_outcome_reason,
                 "accessory_range": (
                     f"{factory.accessory_volume} volume · {fatigue_budget}-unit fatigue budget"
                     if factory.accessory_mode == "automatic"

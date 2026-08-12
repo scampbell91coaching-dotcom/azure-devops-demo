@@ -43,11 +43,13 @@ def test_candidates_filter_and_explain_structured_metadata():
         assert "relevant to squat" in candidates[0].reasons
         assert "suitable for development phase" in candidates[0].reasons
 
-        assert AccessoryIntelligence().candidates(
+        fallback = AccessoryIntelligence().candidates(
             phase="development",
             lift_families={"squat"},
             excluded_constraint_tags={"knee_flexion"},
-        ) == []
+        )
+        assert [item.exercise.name for item in fallback] == ["Legacy Row"]
+        assert "eligible accessory fallback" in fallback[0].reasons
 
 
 def test_candidates_are_ordered_by_coach_priority_then_fatigue_and_name():
@@ -70,6 +72,41 @@ def test_candidates_are_ordered_by_coach_priority_then_fatigue_and_name():
         assert [item.exercise.name for item in candidates] == [
             "Lower fatigue", "Higher fatigue", "Lower priority"
         ]
+
+
+def test_auto_select_is_preferred_but_eligible_rows_are_fallback_candidates():
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite://"})
+    with app.app_context():
+        db.session.add_all([
+            Exercise(
+                name="Preferred but wrong lift", movement="accessory",
+                accessory_suitable=True, auto_select=True,
+                lift_relevance='["squat"]', coach_priority=1,
+            ),
+            Exercise(
+                name="Eligible fallback", movement="accessory",
+                accessory_suitable=True, auto_select=False,
+                lift_relevance='["bench"]', coach_priority=10,
+            ),
+            Exercise(
+                name="Inactive fallback", movement="accessory", active=False,
+                accessory_suitable=True, auto_select=False,
+                lift_relevance='["bench"]', coach_priority=20,
+            ),
+            Exercise(
+                name="Unsuitable fallback", movement="accessory",
+                accessory_suitable=False, auto_select=False,
+                lift_relevance='["bench"]', coach_priority=20,
+            ),
+        ])
+        db.session.commit()
+
+        candidates = AccessoryIntelligence().candidates(
+            phase="strength", lift_families={"bench"}
+        )
+
+        assert [item.exercise.name for item in candidates] == ["Eligible fallback"]
+        assert "eligible accessory fallback" in candidates[0].reasons
 
 
 def test_volume_policy_selects_six_plus_without_a_count_ceiling():
