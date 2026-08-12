@@ -151,10 +151,26 @@ spec:
           containers:
             - name: collector
               image: stevedevopslab6280.azurecr.io/platform-portal-private:b76b7db44e961daf6f9b0a89ee5ad3018e986f5e
-              command: ["python", "-m", "portal.collectors.platform_status"]
+              command: ["/bin/sh", "-ec"]
+              args:
+                - |
+                  python -m portal.collectors.platform_status
+                  PLATFORM_STATUS_FILE=/status/platform-status.json python ingest_snapshot.py
               env:
                 - name: PLATFORM_STATUS_OUTPUT
                   value: /status/platform-status.json
+                - name: PLATFORM_STATUS_FILE
+                  value: /status/platform-status.json
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: flask-runtime-secrets
+                      key: DATABASE_URL
+                - name: SECRET_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: flask-runtime-secrets
+                      key: SECRET_KEY
                 - name: STATUS_NAMESPACE
                   value: production
                 - name: STATUS_DEPLOYMENT

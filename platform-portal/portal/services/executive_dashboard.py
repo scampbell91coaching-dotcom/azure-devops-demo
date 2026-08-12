@@ -3,17 +3,24 @@ from __future__ import annotations
 from typing import Any
 
 from ..repositories.status_repository import JsonStatusRepository
+from ..repositories.platform_snapshot_repository import PlatformSnapshotRepository
 from .recommendations import RecommendationService
 
 
 class ExecutiveDashboardService:
     """Build Overview from the same collector snapshot used by observability."""
 
-    def __init__(self, repository=None, recommendation_service=None) -> None:
+    def __init__(
+        self,
+        repository=None,
+        recommendation_service=None,
+        snapshot_repository=None,
+    ) -> None:
         self.repository = repository or JsonStatusRepository()
         self.recommendation_service = recommendation_service or RecommendationService(
             self.repository
         )
+        self.snapshot_repository = snapshot_repository
 
     def build(self, hours: int = 24) -> dict[str, Any]:
         data = self.repository.load()
@@ -63,12 +70,40 @@ class ExecutiveDashboardService:
             "git_revision": git.get("revision") or "not reported",
             "git_branch": git.get("branch") or "not reported",
         }
+        trend = {
+            "score_change": None,
+            "latency_change": None,
+            "restart_change": None,
+        }
+
+        snapshot_repository = self.snapshot_repository
+        if snapshot_repository is None:
+            try:
+                snapshot_repository = PlatformSnapshotRepository()
+                snapshots = snapshot_repository.list_since(hours=hours)
+            except RuntimeError:
+                snapshots = []
+        else:
+            snapshots = snapshot_repository.list_since(hours=hours)
+
+        if len(snapshots) >= 2:
+            first = snapshots[0]
+            last = snapshots[-1]
+            trend = {
+                "score_change": last.platform_score - first.platform_score,
+                "latency_change": round(
+                    last.health_latency_seconds - first.health_latency_seconds,
+                    4,
+                ),
+                "restart_change": last.container_restarts - first.container_restarts,
+            }
+
         return {
             "status": "stale" if freshness.get("state") == "stale" else recommendations["status"],
             "freshness": freshness,
             "hours": hours,
             "latest": latest,
-            "trend": {"score_change": None, "latency_change": None, "restart_change": None},
+            "trend": trend,
             "summary": recommendations["summary"],
             "recommendations": recommendations["recommendations"][:3],
         }
