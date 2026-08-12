@@ -888,9 +888,145 @@ select {
   width: 100%;
 }
 
+/* V7.12 athlete profile: a dense coaching workspace, not a tile dashboard. */
+.coach-page--athlete-profile { gap: 0; }
+
+.athlete-profile-header {
+  display: grid;
+  grid-template-columns: minmax(14rem, .8fr) minmax(30rem, 1.4fr);
+  gap: 1rem 2.5rem;
+  align-items: end;
+  margin: 0;
+  padding-bottom: 1.15rem;
+  border-bottom: 1px solid var(--coach-border-strong);
+}
+
+.athlete-profile-header__identity .coach-back-link { margin-bottom: .45rem; }
+.athlete-profile-header__identity h1 { font-size: clamp(2rem, 3.5vw, 3.35rem); }
+
+.athlete-context {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-self: stretch;
+  margin: 0;
+}
+
+.athlete-context div {
+  min-width: 0;
+  padding: .45rem 1rem;
+  border-left: 1px solid var(--coach-border);
+}
+
+.athlete-context dt {
+  color: var(--coach-muted);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.athlete-context dd {
+  overflow: hidden;
+  margin: .35rem 0 0;
+  color: var(--coach-heading);
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.athlete-profile-header__actions {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+}
+
+.coach-page--athlete-profile > .athlete-performance-nav {
+  position: sticky;
+  z-index: 5;
+  top: 0;
+  order: 5;
+  gap: 1.35rem;
+  margin-bottom: 0;
+  padding: .75rem 0;
+  border-bottom: 1px solid var(--coach-border);
+  background: var(--coach-bg);
+}
+
+.coach-page--athlete-profile .athlete-performance-nav a {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: .45rem 0;
+  color: var(--coach-muted);
+  font-size: .82rem;
+  font-weight: 750;
+}
+
+.coach-page--athlete-profile .athlete-performance-nav a:hover,
+.coach-page--athlete-profile .athlete-performance-nav a:focus-visible { color: var(--coach-heading); }
+.coach-page--athlete-profile .athlete-performance-nav a[aria-current="page"] { border-color: var(--coach-accent); background: transparent; color: var(--coach-heading); }
+
+.coach-page--athlete-profile > section:not(.athlete-profile-header) {
+  margin: 0;
+  padding: 1.4rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--coach-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.coach-page--athlete-profile > #performance-dashboard { order: 10; }
+.coach-page--athlete-profile > #performance-decisions { order: 20; }
+.coach-page--athlete-profile > #training-sessions { order: 30; }
+.coach-page--athlete-profile > #imported-nutrition { order: 40; }
+.coach-page--athlete-profile > #latest-nutrition-checkin { order: 50; }
+.coach-page--athlete-profile > #nutrition-checkins { order: 60; }
+.coach-page--athlete-profile > #external-reviews { order: 70; }
+.coach-page--athlete-profile > #client-services { order: 80; }
+.coach-page--athlete-profile > #athlete-account { order: 90; }
+
+.coach-page--athlete-profile .performance-toolbar p { margin: .25rem 0 0; color: var(--coach-muted); font-size: .82rem; }
+.coach-page--athlete-profile .performance-filter select { border-radius: 2px; }
+.coach-page--athlete-profile .decision-panel { border-width: 0 0 0 3px; border-radius: 0; background: var(--coach-panel-soft); }
+.decision-panel__label { display: block; margin-top: .3rem; color: var(--coach-muted); font-size: .75rem; text-transform: uppercase; }
+
+.coach-page--athlete-profile .performance-summary-grid,
+.coach-page--athlete-profile .performance-context-grid,
+.coach-page--athlete-profile .coach-score-grid { gap: 0; border-top: 1px solid var(--coach-border); border-bottom: 1px solid var(--coach-border); }
+
+.coach-page--athlete-profile .performance-summary-grid article,
+.coach-page--athlete-profile .performance-context-grid article,
+.coach-page--athlete-profile .coach-score-grid article {
+  border: 0;
+  border-right: 1px solid var(--coach-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.coach-page--athlete-profile .performance-summary-grid article:last-child,
+.coach-page--athlete-profile .performance-context-grid article:last-child,
+.coach-page--athlete-profile .coach-score-grid article:last-child { border-right: 0; }
+
+.coach-page--athlete-profile .performance-chart-grid { gap: 0; border-top: 1px solid var(--coach-border); border-bottom: 1px solid var(--coach-border); }
+.coach-page--athlete-profile .performance-chart { border: 0; border-right: 1px solid var(--coach-border); border-radius: 0; background: transparent; }
+.coach-page--athlete-profile .performance-chart:last-child { border-right: 0; }
+.coach-page--athlete-profile .lift-trends section { border-radius: 2px; background: var(--coach-panel-soft); }
+
+.coach-page--athlete-profile .coach-checkin-list { gap: 0; }
+.coach-page--athlete-profile .coach-checkin-card { border: 0; border-top: 1px solid var(--coach-border); padding: 1rem 0; background: transparent; }
+.coach-page--athlete-profile .coach-checkin-card__summary span { border: 0; border-right: 1px solid var(--coach-border); padding: 0 .7rem 0 0; }
+
+.coach-page--athlete-profile .client-services__grid { gap: 0; border-top: 1px solid var(--coach-border); border-bottom: 1px solid var(--coach-border); }
+.coach-page--athlete-profile .client-service { border: 0; border-right: 1px solid var(--coach-border); background: transparent; }
+.coach-page--athlete-profile .client-service:last-child { border-right: 0; }
+
 @media (max-width: 650px) {
   #performance-decisions .coach-panel__heading--split > form {
     width: 100%;
     flex-basis: auto;
   }
+
+  .athlete-profile-header { grid-template-columns: 1fr; }
+  .athlete-context { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .athlete-context div:nth-child(odd) { border-left: 0; }
+  .coach-page--athlete-profile .performance-chart { border-right: 0; border-bottom: 1px solid var(--coach-border); }
 }

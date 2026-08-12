@@ -308,7 +308,11 @@ def test_coach_performance_dashboard_uses_results_and_explains_decision(training
     assert "400 kg" in page
     assert "0%" in page
     assert "Epley" in page
-    assert "Training Log" in page
+    assert 'aria-label="Athlete context"' in page
+    assert "Open programme" in page
+    assert ">Programming</a>" in page
+    assert ">Training log</a>" in page
+    assert 'href="#client-services">Administration</a>' in page
     assert "How this decision is made" in page
 
 
