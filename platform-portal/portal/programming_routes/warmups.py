@@ -3,6 +3,7 @@ import re
 from flask import Blueprint, abort, flash, g, redirect, request, url_for
 
 from ..extensions import db
+from ..models.athlete_state import AthleteStateOverride
 from ..models.programming import TrainingSession
 from ..models.warmup import WarmupAssignment, WarmupOverride, WarmupPlanSnapshot, WarmupProtocol, WarmupProtocolStep
 from ..services.movement_warmup_candidates import find_candidate
@@ -101,6 +102,46 @@ def register_warmup_routes(blueprint: Blueprint) -> None:
         append_revision(session.week.block, change_type="warmup_candidate_accepted", summary="Accepted warm-up candidate", reason=reason)
         db.session.commit()
         flash("Coach accepted the warm-up candidate.", "success")
+        return redirect(url_for("programming.session", session_id=session.id))
+
+    @blueprint.post("/programming/sessions/<int:session_id>/warmup-candidates/override")
+    def override_warmup_candidate(session_id: int):
+        """Remove or explain a coach replacement for a current suggestion."""
+        session = _session(session_id)
+        athlete_id = session.week.block.athlete_id
+        candidate = find_candidate(
+            athlete_id, session, request.form.get("protocol_id", type=int)
+        )
+        action = request.form.get("action")
+        reason = request.form.get("reason", "").strip()
+        replacement = request.form.get("replacement", "").strip()
+        if candidate is None:
+            abort(409, description="This warm-up candidate is no longer applicable.")
+        if action not in {"remove", "override"} or not reason:
+            abort(400, description="A valid action and coach reason are required.")
+        if action == "override" and not replacement:
+            abort(400, description="Replacement guidance is required for an override.")
+        payload = {"action": action}
+        if replacement:
+            payload["recommendation"] = replacement
+        db.session.add(
+            AthleteStateOverride(
+                athlete_id=athlete_id,
+                target_type="warmup_selection_rule",
+                target_ref=candidate.rule_id,
+                override_json=payload,
+                reason=reason,
+                recorded_by=str(_actor_id() or "coach"),
+            )
+        )
+        append_revision(
+            session.week.block,
+            change_type="warmup_candidate_overridden",
+            summary=f"{action.title()}d warm-up candidate",
+            reason=reason,
+        )
+        db.session.commit()
+        flash("Warm-up candidate decision saved.", "success")
         return redirect(url_for("programming.session", session_id=session.id))
 
     @blueprint.post("/programming/sessions/<int:session_id>/warmup-overrides")

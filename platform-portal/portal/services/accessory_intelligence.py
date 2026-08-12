@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
 
@@ -33,6 +33,32 @@ class AccessoryEvaluation:
     excluded: tuple[ExcludedAccessory, ...]
 
 
+@dataclass(frozen=True)
+class AccessoryRankingContext:
+    """Explicit, caller-owned facts used by the deterministic ranking policy."""
+
+    block_type: str
+    goal: str
+    session_lift_exposure: frozenset[str]
+    fatigue_budget: int
+    athlete_constraint_tags: frozenset[str] = field(default_factory=frozenset)
+    technical_observation_tags: frozenset[str] = field(default_factory=frozenset)
+    available_equipment: frozenset[str] | None = None
+    pinned_exercise_ids: tuple[int, ...] = ()
+    recent_exercise_ids: frozenset[int] = field(default_factory=frozenset)
+    current_exercise_ids: frozenset[int] = field(default_factory=frozenset)
+
+
+@dataclass(frozen=True)
+class RankedAccessoryCandidate:
+    exercise: Exercise
+    status: str
+    fatigue_cost: int
+    rule_ids: tuple[str, ...]
+    evidence: tuple[str, ...]
+    reason: str
+
+
 def metadata_values(value: str | None) -> set[str]:
     """Read the catalogue's JSON-list representation without guessing values."""
     if not value:
@@ -58,6 +84,119 @@ class AccessoryIntelligence:
 
     def __init__(self, repository: AccessoryRepository | None = None) -> None:
         self.repository = repository or AccessoryRepository()
+
+    def ranked_candidates(
+        self, context: AccessoryRankingContext
+    ) -> list[RankedAccessoryCandidate]:
+        """Rank and select candidates while retaining every exclusion decision.
+
+        Pins are returned first, in coach order, and do not consume or obey the
+        automatic fatigue budget. Automatic rows are selected greedily by an
+        explainable score, then fatigue and stable catalogue identity. No count
+        target or ceiling is applied.
+        """
+        block_type = context.block_type.strip().casefold()
+        goal = context.goal.strip().casefold()
+        lifts = {value.casefold() for value in context.session_lift_exposure}
+        constraints = {value.casefold() for value in context.athlete_constraint_tags}
+        observations = {value.casefold() for value in context.technical_observation_tags}
+        equipment = (
+            {value.casefold() for value in context.available_equipment}
+            if context.available_equipment is not None else None
+        )
+        pin_order: dict[int, int] = {}
+        for exercise_id in context.pinned_exercise_ids:
+            pin_order.setdefault(exercise_id, len(pin_order))
+        scored: list[tuple[int, int, str, int, Exercise, list[str], list[str]]] = []
+        excluded: list[RankedAccessoryCandidate] = []
+
+        for exercise in self.repository.selection_candidates(include_ids=set(pin_order)):
+            cost = max(1, min(5, exercise.fatigue_rating or 3))
+            rules: list[str] = []
+            evidence: list[str] = []
+            is_pinned = exercise.id in pin_order
+            if is_pinned:
+                rules.append("PIN_AUTHORITATIVE")
+                evidence.append(f"coach pin position {pin_order[exercise.id] + 1}")
+                scored.append((1_000_000_000 - pin_order[exercise.id], cost, exercise.name.casefold(), exercise.id, exercise, rules, evidence))
+                continue
+
+            failures: list[tuple[str, str]] = []
+            if not exercise.active:
+                failures.append(("META_INACTIVE", "catalogue row is inactive"))
+            if not exercise.accessory_suitable:
+                failures.append(("META_NOT_ACCESSORY_SUITABLE", "not marked accessory suitable"))
+            if not exercise.auto_select:
+                failures.append(("META_NOT_ENABLED", "coach has not enabled automatic selection"))
+
+            phases = metadata_values(exercise.training_phases)
+            relevance = metadata_values(exercise.lift_relevance)
+            constraint_tags = metadata_values(exercise.constraint_tags)
+            purposes = metadata_values(exercise.technical_purposes)
+            options = metadata_values(exercise.equipment_options)
+            if exercise.equipment:
+                options.add(exercise.equipment.strip().casefold())
+            accepted_phases = {block_type, goal, "all"}
+            if phases and phases.isdisjoint(accepted_phases):
+                failures.append(("CONTEXT_BLOCK_GOAL_MISMATCH", f"phases {sorted(phases)} do not match block type/goal"))
+            matched_lifts = lifts.intersection(relevance)
+            if relevance and "all" not in relevance and not matched_lifts:
+                failures.append(("CONTEXT_LIFT_EXPOSURE_MISMATCH", f"lift relevance {sorted(relevance)} does not match session exposure"))
+            matched_constraints = constraints.intersection(constraint_tags)
+            if matched_constraints:
+                failures.append(("ATHLETE_CONSTRAINT_EXCLUDED", f"athlete constraint matched {sorted(matched_constraints)}"))
+            if equipment is not None and options and equipment.isdisjoint(options):
+                failures.append(("EQUIPMENT_UNAVAILABLE", f"requires one of {sorted(options)}"))
+            if exercise.id in context.current_exercise_ids:
+                failures.append(("STATE_ALREADY_CURRENT", "already present in current programming state"))
+            elif exercise.id in context.recent_exercise_ids:
+                failures.append(("STATE_RECENTLY_USED", "recently used; prefer a non-recent candidate"))
+
+            if failures:
+                excluded.append(RankedAccessoryCandidate(
+                    exercise, "excluded", cost,
+                    tuple(rule for rule, _ in failures),
+                    tuple(detail for _, detail in failures),
+                    "; ".join(detail for _, detail in failures),
+                ))
+                continue
+
+            score = exercise.coach_priority * 100
+            rules.extend(("META_ELIGIBLE", "FATIGUE_COST"))
+            evidence.extend(("active, accessory suitable, and coach enabled", f"fatigue cost {cost}"))
+            if matched_lifts or "all" in relevance:
+                score += 30
+                rules.append("CONTEXT_LIFT_EXPOSURE_MATCH")
+                evidence.append(f"matches session lift exposure {sorted(matched_lifts) or ['all']}")
+            if phases.intersection(accepted_phases):
+                score += 20
+                rules.append("CONTEXT_BLOCK_GOAL_MATCH")
+                evidence.append(f"matches {block_type} block / {goal} goal")
+            matched_observations = observations.intersection(purposes | metadata_values(exercise.compatibility_tags))
+            if matched_observations:
+                score += 40
+                rules.append("ATHLETE_TECHNICAL_OBSERVATION_MATCH")
+                evidence.append(f"addresses technical observation {sorted(matched_observations)}")
+            if equipment is not None and options:
+                rules.append("EQUIPMENT_AVAILABLE")
+                evidence.append(f"available equipment match {sorted(equipment.intersection(options))}")
+            scored.append((score, cost, exercise.name.casefold(), exercise.id, exercise, rules, evidence))
+
+        scored.sort(key=lambda item: (-item[0], item[1], item[2], item[3]))
+        remaining = max(0, context.fatigue_budget)
+        ranked: list[RankedAccessoryCandidate] = []
+        for _, cost, _, _, exercise, rules, evidence in scored:
+            if exercise.id in pin_order:
+                ranked.append(RankedAccessoryCandidate(exercise, "selected", cost, tuple(rules), tuple(evidence), "Coach-pinned choice is authoritative."))
+            elif cost <= remaining:
+                remaining -= cost
+                selected_evidence = (*evidence, f"fits remaining fatigue budget; {remaining} units remain")
+                ranked.append(RankedAccessoryCandidate(exercise, "selected", cost, (*rules, "FATIGUE_BUDGET_SELECTED"), selected_evidence, "; ".join(selected_evidence)))
+            else:
+                budget_evidence = (*evidence, f"fatigue cost {cost} exceeds remaining budget {remaining}")
+                ranked.append(RankedAccessoryCandidate(exercise, "excluded", cost, (*rules, "FATIGUE_BUDGET_EXCEEDED"), budget_evidence, "; ".join(budget_evidence)))
+        excluded.sort(key=lambda item: (item.exercise.name.casefold(), item.exercise.id))
+        return ranked + excluded
 
     def candidates(
         self,

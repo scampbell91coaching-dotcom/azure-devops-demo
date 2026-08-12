@@ -34,6 +34,8 @@ from .models.programming import (
 from .programming_services.revisions import append_revision
 from .services.weekly_programming_intelligence import WeeklyProgrammingIntelligence
 from .services.accessory_intelligence import AccessoryIntelligence
+from .services.programming_athlete_state import aggregate_programming_athlete_state
+from .services.proposal_explanations import ProposalExplanationService
 
 block_factory_bp = Blueprint("block_factory", __name__)
 
@@ -570,6 +572,15 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
 
     pool = _accessory_pool()
     intelligence = AccessoryIntelligence()
+    athlete = db.session.get(Athlete, factory.athlete_id)
+    programming_state = (
+        aggregate_programming_athlete_state(athlete) if athlete is not None else {}
+    )
+    excluded_constraint_tags = set(
+        programming_state.get("consumer_hints", {}).get(
+            "excluded_constraint_tags", []
+        )
+    )
     suggested_ids: set[int] = set()
     fatigue_budget = intelligence.VOLUME_FATIGUE_BUDGETS[factory.accessory_volume]
     for day_index, day_type in enumerate(days):
@@ -616,6 +627,7 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
             candidates = intelligence.candidates(
                 phase=factory.goal,
                 lift_families={family_by_code[code] for code in day_type},
+                excluded_constraint_tags=excluded_constraint_tags,
                 exclude_ids=suggested_ids,
                 athlete_id=factory.athlete_id,
             )
@@ -773,14 +785,73 @@ def _proposal_payload(
     factory: FactoryRequest,
     scheduled_preview: list[dict[str, Any]],
     intelligence: Any,
+    explanation: Any,
 ) -> dict[str, Any]:
     return {
         "factory": _json_value(asdict(factory)),
         "preview": _json_value(scheduled_preview),
         "source_context": _json_value(asdict(intelligence.data)),
         "volume_progression": _json_value(asdict(intelligence.volume)),
+        "explanation": _json_value(asdict(explanation)),
         "generator_version": PROPOSAL_VERSION,
     }
+
+
+def _reference_block(athlete_id: int) -> dict[str, Any] | None:
+    block = (
+        TrainingBlock.query.filter_by(athlete_id=athlete_id)
+        .order_by(TrainingBlock.created_at.desc(), TrainingBlock.id.desc())
+        .first()
+    )
+    if block is None:
+        return None
+    exercises = sorted(
+        {
+            prescription.exercise_name
+            for week in block.weeks
+            for session in week.sessions
+            for prescription in session.prescriptions
+            if prescription.lift_slot_id is not None
+        },
+        key=lambda value: (value.casefold(), value),
+    )
+    return {"id": block.id, "name": block.name, "exercises": exercises}
+
+
+def _proposal_explanation(
+    factory: FactoryRequest, scheduled_preview: list[dict[str, Any]], intelligence: Any
+) -> Any:
+    # The curve reports prescribed working sets, not tonnage (loads are RPE-led).
+    exercise_names = {
+        name for day in scheduled_preview for name in day["exercises"]
+    }
+    default_sets = {
+        exercise.name: exercise.default_sets
+        for exercise in Exercise.query.filter(Exercise.name.in_(exercise_names)).all()
+        if exercise.default_sets is not None
+    }
+    weekly_sets = sum(
+        default_sets.get(name, _sets_and_reps(factory, position)[0])
+        if position > int(day["main_count"])
+        else _sets_and_reps(factory, position)[0]
+        for day in scheduled_preview
+        for position, name in enumerate(day["exercises"], start=1)
+    )
+    return ProposalExplanationService().build(
+        factory=factory,
+        weekly_structure=intelligence.weekly_structure,
+        context=intelligence.data,
+        rpe_values=[
+            _week_rpe(factory, week) for week in range(1, factory.week_count + 1)
+        ],
+        volume_values=[weekly_sets] * factory.week_count,
+        reference_block=_reference_block(factory.athlete_id),
+        assistance_reasons={
+            item["name"]: tuple(item.get("reasons") or ())
+            for day in scheduled_preview
+            for item in day.get("accessories", ())
+        },
+    )
 
 
 def _factory_from_payload(payload: dict[str, Any]) -> FactoryRequest:
@@ -889,7 +960,12 @@ def preview():
     except ValueError as error:
         abort(400, description=str(error))
 
-    payload = _proposal_payload(factory, scheduled_preview, intelligence_preview)
+    explanation = _proposal_explanation(
+        factory, scheduled_preview, intelligence_preview
+    )
+    payload = _proposal_payload(
+        factory, scheduled_preview, intelligence_preview, explanation
+    )
     previous_id = request.form.get("proposal_id", type=int)
     proposal_override = None
     if previous_id is not None:
@@ -945,6 +1021,7 @@ def preview():
         athletes=athletes,
         preview=scheduled_preview,
         intelligence=intelligence_preview,
+        explanation=explanation,
         form=request.form,
         selected_athlete=athlete,
         accessory_exercises=accessory_exercises,
@@ -972,7 +1049,10 @@ def generate():
         )
     except ValueError as error:
         abort(409, description=f"Proposal is stale: {error}")
-    current_payload = _proposal_payload(factory, scheduled_preview, intelligence)
+    explanation = _proposal_explanation(factory, scheduled_preview, intelligence)
+    current_payload = _proposal_payload(
+        factory, scheduled_preview, intelligence, explanation
+    )
     if current_payload != payload:
         abort(
             409,

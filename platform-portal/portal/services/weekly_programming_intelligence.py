@@ -6,13 +6,12 @@ from datetime import UTC, datetime
 from typing import Any, Protocol
 
 from ..models.athlete_state import (
-    AthleteConstraintFlag,
     AthleteStateOverride,
-    CoachTechnicalObservation,
 )
 from ..models.exercise_library import Exercise
 from ..models.programming import TrainingBlock
 from .athlete_state import calculate_signals, latest_facts
+from .programming_athlete_state import aggregate_programming_athlete_state
 from .volume_progression import (
     ReferenceVolume,
     VolumeProgressionProposal,
@@ -44,6 +43,7 @@ class AthleteProgrammingContext:
     technical_observations: tuple[str, ...]
     active_overrides: tuple[dict[str, Any], ...]
     missing: tuple[str, ...]
+    programming_state: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -129,22 +129,13 @@ def map_athlete_programming_context(athlete: Any) -> AthleteProgrammingContext:
     signals = {
         signal.signal_type: signal.value for signal in calculate_signals(athlete)
     }
+    programming_state = aggregate_programming_athlete_state(athlete)
     active_constraints = tuple(
-        flag.label
-        for flag in AthleteConstraintFlag.query.filter_by(
-            athlete_id=athlete.id, resolved_on=None
-        ).order_by(
-            AthleteConstraintFlag.starts_on.asc(), AthleteConstraintFlag.id.asc()
-        )
+        item["label"] for item in programming_state["hard_constraints"]
     )
     technical_observations = tuple(
-        f"{item.lift}: {item.observation}"
-        for item in CoachTechnicalObservation.query.filter_by(
-            athlete_id=athlete.id, superseded_by_id=None
-        ).order_by(
-            CoachTechnicalObservation.observed_on.asc(),
-            CoachTechnicalObservation.id.asc(),
-        )
+        item["label"] for item in programming_state["soft_signals"]
+        if item["kind"] == "technical_observation"
     )
     now = datetime.now(UTC).replace(tzinfo=None)
     active_overrides = tuple(
@@ -188,6 +179,7 @@ def map_athlete_programming_context(athlete: Any) -> AthleteProgrammingContext:
         technical_observations=technical_observations,
         active_overrides=active_overrides,
         missing=tuple(missing),
+        programming_state=programming_state,
     )
 
 

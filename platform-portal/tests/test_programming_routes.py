@@ -84,6 +84,7 @@ EXPECTED_PROGRAMMING_ROUTES = {
     ("programming.create_warmup_protocol", "/programming/sessions/<int:session_id>/warmup-protocols", "POST"),
     ("programming.assign_warmup", "/programming/sessions/<int:session_id>/warmup-assignments", "POST"),
     ("programming.accept_warmup_candidate", "/programming/sessions/<int:session_id>/warmup-candidates/accept", "POST"),
+    ("programming.override_warmup_candidate", "/programming/sessions/<int:session_id>/warmup-candidates/override", "POST"),
     ("programming.override_warmup", "/programming/sessions/<int:session_id>/warmup-overrides", "POST"),
     (
         "programming.update_lift_slot",

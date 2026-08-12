@@ -97,6 +97,7 @@ def calculate_signals(athlete: Athlete, *, as_of: date | None = None,
 
     checkin = WeeklyCheckin.query.filter(
         WeeklyCheckin.athlete_id == athlete.id,
+        WeeklyCheckin.week_ending >= start,
         WeeklyCheckin.week_ending <= as_of,
     ).order_by(WeeklyCheckin.week_ending.desc(), WeeklyCheckin.id.desc()).first()
     if checkin is not None:

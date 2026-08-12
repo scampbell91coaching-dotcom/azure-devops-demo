@@ -222,3 +222,89 @@ def test_candidate_requires_explicit_coach_acceptance_and_persists_provenance(ap
         data={"protocol_id": protocol_id},
     )
     assert repeat.status_code == 409
+
+
+def test_left_sided_low_back_hip_observation_proposes_authored_drills_deterministically(app):
+    with app.app_context():
+        athlete, session = seed("deadlift")
+        session.week.block.objective = "Build strength through controlled volume"
+        observe(
+            athlete,
+            "Coach observed left-sided low-back and hip presentation",
+            date(2026, 8, 8),
+            lift="deadlift",
+        )
+        protocol("reverse-lunge", name="Reverse lunge")
+        protocol("wall-flamingo", name="Wall flamingo")
+        db.session.commit()
+
+        first = warmup_candidates(athlete.id, session, as_of=date(2026, 8, 9))
+        second = warmup_candidates(athlete.id, session, as_of=date(2026, 8, 9))
+
+        assert first == second
+        assert [item.protocol_key for item in first] == [
+            "reverse-lunge",
+            "wall-flamingo",
+        ]
+        assert {item.rule_id for item in first} == {
+            "warmup.observation.left_low_back_hip.v1"
+        }
+        assert all(item.action == "consider" for item in first)
+        assert all(item.block_intent == "strength" for item in first)
+        assert all(
+            item.source_ids == ("coach_technical_observation:1",) for item in first
+        )
+
+
+def test_sided_rule_requires_full_evidence_and_suitable_session_context(app):
+    with app.app_context():
+        athlete, session = seed("bench")
+        observe(
+            athlete,
+            "Left-sided low-back and hip presentation",
+            date(2026, 8, 8),
+            lift="squat",
+        )
+        protocol("wall-flamingo")
+        db.session.commit()
+        assert warmup_candidates(athlete.id, session, as_of=date(2026, 8, 9)) == ()
+
+        session.lift_slots[0].lift_family = "squat"
+        session.week.block.objective = "Competition peaking"
+        db.session.commit()
+        assert warmup_candidates(athlete.id, session, as_of=date(2026, 8, 9)) == ()
+
+
+def test_elbow_irritation_changes_bench_prep_and_coach_can_remove_suggestion(app):
+    with app.app_context():
+        athlete, session = seed("bench")
+        flag = AthleteConstraintFlag(
+            athlete=athlete,
+            flag_kind="irritation",
+            label="Elbow",
+            details="Irritable during pressing",
+            reported_by="coach",
+            starts_on=date(2026, 8, 8),
+        )
+        selected = protocol("bench-elbow-irritation-preparation")
+        db.session.add(flag)
+        db.session.commit()
+        candidate = warmup_candidates(athlete.id, session, as_of=date(2026, 8, 9))[0]
+        assert candidate.rule_id == "warmup.constraint.elbow_irritation.v1"
+        athlete_id, session_id, protocol_id = athlete.id, session.id, selected.id
+
+    response = app.test_client().post(
+        f"/programming/sessions/{session_id}/warmup-candidates/override",
+        data={
+            "protocol_id": protocol_id,
+            "action": "remove",
+            "reason": "Coach selected a different upper-body preparation",
+        },
+    )
+    assert response.status_code == 302
+    with app.app_context():
+        assert warmup_candidates(athlete_id, db.session.get(TrainingSession, session_id)) == ()
+        override = AthleteStateOverride.query.filter_by(
+            target_type="warmup_selection_rule"
+        ).one()
+        assert override.override_json == {"action": "remove"}

@@ -279,6 +279,26 @@
       </div>
       {% if intelligence %}
         <div class="factory-preview__intelligence">
+          <h3>Proposal explanation</h3>
+          <p data-testid="proposal-reference"><strong>Reference:</strong> {{ explanation.reference_block.label }} — {{ explanation.reference_block.reason }}</p>
+          <h4>What was kept</h4>
+          {% if explanation.kept %}<ul>{% for item in explanation.kept %}<li data-reason-id="{{ item.reason_id }}">{{ item.label }} — {{ item.reason }}</li>{% endfor %}</ul>{% else %}<p>No exposure was identified as unchanged.</p>{% endif %}
+          <h4>What changed</h4>
+          {% if explanation.changed %}<ul>{% for item in explanation.changed %}<li data-reason-id="{{ item.reason_id }}">{{ item.label }} — {{ item.reason }}</li>{% endfor %}</ul>{% else %}<p>No exposure change was identified.</p>{% endif %}
+          <h4>RPE curve</h4>
+          <p data-testid="proposal-rpe-curve">{% for point in explanation.rpe_curve %}W{{ point.week }}: {{ point.value }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
+          <h4>Volume curve</h4>
+          <p data-testid="proposal-volume-curve">{% for point in explanation.volume_curve %}W{{ point.week }}: {{ point.value | int }} working sets{% if not loop.last %} · {% endif %}{% endfor %}</p>
+          <h4>Athlete-state evidence used</h4>
+          {% if explanation.athlete_state_evidence %}<ul>{% for item in explanation.athlete_state_evidence %}<li data-provenance-id="{{ item.id }}">{{ item.label }}: {{ item.value }}</li>{% endfor %}</ul>{% else %}<p>No athlete-state evidence was available; none was inferred.</p>{% endif %}
+          <h4>Warm-ups</h4>
+          <ul>{% for item in explanation.warm_ups %}<li data-reason-id="{{ item.reason_id }}">{{ item.label }} — {{ item.reason }}</li>{% endfor %}</ul>
+          <h4>Assistance</h4>
+          <ul>{% for item in explanation.assistance %}<li data-reason-id="{{ item.reason_id }}">{{ item.label }} — {{ item.reason }}</li>{% endfor %}</ul>
+          <h4>Coach overrides</h4>
+          {% if explanation.coach_overrides %}<ul>{% for item in explanation.coach_overrides %}<li data-reason-id="{{ item.reason_id }}">{{ item.label }} — {{ item.reason }}</li>{% endfor %}</ul>{% else %}<p>No active coach overrides were applied.</p>{% endif %}
+          <h4>Ambiguity and warnings</h4>
+          {% if explanation.warnings %}<ul>{% for item in explanation.warnings %}<li data-reason-id="{{ item.reason_id }}">{{ item.label }} — {{ item.reason }}</li>{% endfor %}</ul>{% else %}<p>No unresolved input ambiguity was detected.</p>{% endif %}
           <h3>Weekly programming intelligence</h3>
           <p><strong>Exposures:</strong> {{ intelligence.exposures.squat }} squat · {{ intelligence.exposures.bench }} bench · {{ intelligence.exposures.deadlift }} deadlift</p>
           {% if intelligence.fatigue.status == 'reported' %}<p><strong>Reported fatigue:</strong> {{ intelligence.fatigue.detail }}</p>{% endif %}
