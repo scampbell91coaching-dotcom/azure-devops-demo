@@ -55,3 +55,17 @@ node_modules/
 playwright-report/
 test-results/
 evidence/credential-audit/
+
+# Local agent/swarm artefacts
+agent-runs/
+agent-worktrees/
+**/agent-runs/
+**/agent-worktrees/
+**/prompts/
+**/reports/
+*.agent.md
+*.prompt.md
+
+# Historical/local agent reports
+AGENT_REPORT_*.md
+**/AGENT_REPORT_*.md
