@@ -208,7 +208,7 @@
 .ts-field__error { font: 400 var(--ts-text-label)/1.4 var(--ts-font-sans); margin: 0; }
 .ts-field__help { color: var(--ts-color-text-muted); }
 .ts-field__error { color: var(--ts-color-danger); font-weight: 700; }
-.ts-field__error::before { content: "! "; }
+.ts-field__error::before { content: "Error: "; }
 .ts-choice { align-items: start; color: var(--ts-color-text-primary); cursor: pointer; display: inline-flex; font: 400 1rem/1.4 var(--ts-font-sans); gap: var(--ts-space-2); }
 .ts-choice input { accent-color: var(--ts-color-gold); inline-size: 1.125rem; block-size: 1.125rem; margin: 0.15rem 0 0; }
 .ts-choice input:disabled + span { color: var(--ts-color-disabled); cursor: not-allowed; }
@@ -230,13 +230,21 @@
 
 .ts-alert { background: var(--ts-color-info-soft); border: 1px solid var(--ts-color-info); border-inline-start-width: 0.35rem; border-radius: var(--ts-radius-md); color: #163d53; padding: var(--ts-space-4); }
 .ts-alert__title { font-weight: 700; margin: 0 0 var(--ts-space-1); }
+.ts-alert__title--standalone { margin-block-end: 0; }
 .ts-alert__body { margin: 0; }
 .ts-alert--success { background: var(--ts-color-success-soft); border-color: var(--ts-color-success); color: #19452a; }
 .ts-alert--warning { background: var(--ts-color-warning-soft); border-color: var(--ts-color-warning); color: #5e4105; }
 .ts-alert--danger { background: var(--ts-color-danger-soft); border-color: var(--ts-color-danger); color: #752020; }
 .ts-theme-dark .ts-alert { color: #171512; }
 
-.ts-empty-state { border: 1px dashed var(--ts-color-border-strong); border-radius: var(--ts-radius-lg); color: var(--ts-color-text-secondary); display: grid; gap: var(--ts-space-3); justify-items: start; padding: clamp(1.5rem, 5vw, 3rem); }
+.ts-error-summary { background: var(--ts-color-danger-soft); border-inline-start: 0.35rem solid var(--ts-color-danger); color: #752020; padding: var(--ts-space-4); }
+.ts-error-summary:focus { outline: 0; box-shadow: var(--ts-focus-ring); }
+.ts-error-summary__title { font-weight: 700; margin: 0 0 var(--ts-space-2); }
+.ts-error-summary__list { margin: 0; padding-inline-start: var(--ts-space-5); }
+.ts-error-summary a { color: inherit; font-weight: 700; }
+.ts-theme-dark .ts-error-summary { color: #171512; }
+
+.ts-empty-state { border-inline-start: var(--ts-border-thick) solid var(--ts-color-border-strong); color: var(--ts-color-text-secondary); display: grid; gap: var(--ts-space-2); justify-items: start; padding: var(--ts-space-4) var(--ts-space-5); }
 .ts-empty-state__title { color: var(--ts-color-text-primary); font: 700 var(--ts-text-h3)/1.2 var(--ts-font-sans); margin: 0; }
 .ts-empty-state__body { margin: 0; max-inline-size: var(--ts-width-reading); }
 

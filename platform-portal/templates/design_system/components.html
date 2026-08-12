@@ -5,7 +5,7 @@
   {% if href %}
     <a class="{{ classes }}" href="{{ href }}"{% if disabled %} aria-disabled="true" tabindex="-1"{% endif %}{% if loading %} aria-busy="true"{% endif %}>{{ label }}</a>
   {% else %}
-    <button class="{{ classes }}" type="{{ type }}"{% if disabled %} disabled{% endif %}{% if loading %} aria-busy="true"{% endif %}>{{ label }}</button>
+    <button class="{{ classes }}" type="{{ type }}"{% if disabled or loading %} disabled{% endif %}{% if loading %} aria-busy="true"{% endif %}>{{ label }}</button>
   {% endif %}
 {%- endmacro %}
 
@@ -13,13 +13,13 @@
   <button class="ts-icon-button" type="{{ type }}" aria-label="{{ label }}"{% if disabled %} disabled{% endif %}><span aria-hidden="true">{{ icon }}</span></button>
 {%- endmacro %}
 
-{% macro input_field(name, label, value='', type='text', help=none, error=none, required=false, disabled=false, placeholder=none, autocomplete=none) -%}
-  {% set help_id = name ~ '-help' %}{% set error_id = name ~ '-error' %}
+{% macro input_field(name, label, value='', type='text', help=none, error=none, required=false, disabled=false, placeholder=none, autocomplete=none, id=none) -%}
+  {% set field_id = id or name %}{% set help_id = field_id ~ '-help' %}{% set error_id = field_id ~ '-error' %}
   <div class="ts-field">
-    <label class="ts-field__label" for="{{ name }}">{{ label }}{% if required %} <span class="ts-field__required" aria-hidden="true">*</span><span class="ts-visually-hidden"> (required)</span>{% endif %}</label>
-    <input class="ts-input" id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}"{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if autocomplete %} autocomplete="{{ autocomplete }}"{% endif %}{% if required %} required{% endif %}{% if disabled %} disabled{% endif %}{% if error %} aria-invalid="true" aria-describedby="{{ error_id }}{% if help %} {{ help_id }}{% endif %}"{% elif help %} aria-describedby="{{ help_id }}"{% endif %}>
-    {% if help %}<p class="ts-field__help" id="{{ help_id }}">{{ help }}</p>{% endif %}
+    <label class="ts-field__label" for="{{ field_id }}">{{ label }}{% if required %} <span class="ts-field__required" aria-hidden="true">*</span><span class="ts-visually-hidden"> (required)</span>{% endif %}</label>
+    <input class="ts-input" id="{{ field_id }}" name="{{ name }}" type="{{ type }}" value="{{ value }}"{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if autocomplete %} autocomplete="{{ autocomplete }}"{% endif %}{% if required %} required{% endif %}{% if disabled %} disabled{% endif %}{% if error %} aria-invalid="true" aria-errormessage="{{ error_id }}" aria-describedby="{{ error_id }}{% if help %} {{ help_id }}{% endif %}"{% elif help %} aria-describedby="{{ help_id }}"{% endif %}>
     {% if error %}<p class="ts-field__error" id="{{ error_id }}">{{ error }}</p>{% endif %}
+    {% if help %}<p class="ts-field__help" id="{{ help_id }}">{{ help }}</p>{% endif %}
   </div>
 {%- endmacro %}
 
@@ -27,9 +27,9 @@
   {% set help_id = name ~ '-help' %}{% set error_id = name ~ '-error' %}
   <div class="ts-field">
     <label class="ts-field__label" for="{{ name }}">{{ label }}{% if required %} <span class="ts-field__required" aria-hidden="true">*</span><span class="ts-visually-hidden"> (required)</span>{% endif %}</label>
-    <textarea class="ts-textarea" id="{{ name }}" name="{{ name }}" rows="{{ rows }}"{% if required %} required{% endif %}{% if disabled %} disabled{% endif %}{% if error %} aria-invalid="true" aria-describedby="{{ error_id }}{% if help %} {{ help_id }}{% endif %}"{% elif help %} aria-describedby="{{ help_id }}"{% endif %}>{{ value }}</textarea>
-    {% if help %}<p class="ts-field__help" id="{{ help_id }}">{{ help }}</p>{% endif %}
+    <textarea class="ts-textarea" id="{{ name }}" name="{{ name }}" rows="{{ rows }}"{% if required %} required{% endif %}{% if disabled %} disabled{% endif %}{% if error %} aria-invalid="true" aria-errormessage="{{ error_id }}" aria-describedby="{{ error_id }}{% if help %} {{ help_id }}{% endif %}"{% elif help %} aria-describedby="{{ help_id }}"{% endif %}>{{ value }}</textarea>
     {% if error %}<p class="ts-field__error" id="{{ error_id }}">{{ error }}</p>{% endif %}
+    {% if help %}<p class="ts-field__help" id="{{ help_id }}">{{ help }}</p>{% endif %}
   </div>
 {%- endmacro %}
 
@@ -37,11 +37,11 @@
   {% set help_id = name ~ '-help' %}{% set error_id = name ~ '-error' %}
   <div class="ts-field">
     <label class="ts-field__label" for="{{ name }}">{{ label }}{% if required %} <span class="ts-field__required" aria-hidden="true">*</span><span class="ts-visually-hidden"> (required)</span>{% endif %}</label>
-    <select class="ts-select" id="{{ name }}" name="{{ name }}"{% if required %} required{% endif %}{% if disabled %} disabled{% endif %}{% if error %} aria-invalid="true" aria-describedby="{{ error_id }}{% if help %} {{ help_id }}{% endif %}"{% elif help %} aria-describedby="{{ help_id }}"{% endif %}>
+    <select class="ts-select" id="{{ name }}" name="{{ name }}"{% if required %} required{% endif %}{% if disabled %} disabled{% endif %}{% if error %} aria-invalid="true" aria-errormessage="{{ error_id }}" aria-describedby="{{ error_id }}{% if help %} {{ help_id }}{% endif %}"{% elif help %} aria-describedby="{{ help_id }}"{% endif %}>
       {% for value, text in options %}<option value="{{ value }}"{% if value == selected %} selected{% endif %}>{{ text }}</option>{% endfor %}
     </select>
-    {% if help %}<p class="ts-field__help" id="{{ help_id }}">{{ help }}</p>{% endif %}
     {% if error %}<p class="ts-field__error" id="{{ error_id }}">{{ error }}</p>{% endif %}
+    {% if help %}<p class="ts-field__help" id="{{ help_id }}">{{ help }}</p>{% endif %}
   </div>
 {%- endmacro %}
 
@@ -65,12 +65,16 @@
   <span class="ts-badge ts-badge--{{ status }}">{{ label }}</span>
 {%- endmacro %}
 
-{% macro alert(title, message, status='info', live=false) -%}
-  <div class="ts-alert ts-alert--{{ status }}" role="{{ 'alert' if status == 'danger' or live else 'status' }}"{% if not live and status != 'danger' %} aria-live="polite"{% endif %}><p class="ts-alert__title">{{ title }}</p><p class="ts-alert__body">{{ message }}</p></div>
+{% macro alert(title, message=none, status='info', live=false) -%}
+  <div class="ts-alert ts-alert--{{ status }}" role="{{ 'alert' if status == 'danger' or live else 'status' }}"{% if not live and status != 'danger' %} aria-live="polite"{% endif %}><p class="ts-alert__title{% if not message %} ts-alert__title--standalone{% endif %}">{{ title }}</p>{% if message %}<p class="ts-alert__body">{{ message }}</p>{% endif %}</div>
 {%- endmacro %}
 
-{% macro empty_state(title, message, action_label=none, action_href=none) -%}
-  <div class="ts-empty-state"><h3 class="ts-empty-state__title">{{ title }}</h3><p class="ts-empty-state__body">{{ message }}</p>{% if action_label and action_href %}{{ button(action_label, href=action_href) }}{% endif %}</div>
+{% macro form_errors(errors, title='Check these fields') -%}
+  {% if errors %}<div class="ts-error-summary" role="alert" tabindex="-1"><p class="ts-error-summary__title">{{ title }}</p><ul class="ts-error-summary__list">{% for field_id, message in errors %}<li><a href="#{{ field_id }}">{{ message }}</a></li>{% endfor %}</ul></div>{% endif %}
+{%- endmacro %}
+
+{% macro empty_state(title, message=none, action_label=none, action_href=none, heading_level=3) -%}
+  <div class="ts-empty-state"><h{{ heading_level }} class="ts-empty-state__title">{{ title }}</h{{ heading_level }}>{% if message %}<p class="ts-empty-state__body">{{ message }}</p>{% endif %}{% if action_label and action_href %}{{ button(action_label, href=action_href) }}{% endif %}</div>
 {%- endmacro %}
 
 {% macro table_wrapper(label) -%}
