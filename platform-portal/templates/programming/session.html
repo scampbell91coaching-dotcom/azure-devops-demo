@@ -43,13 +43,11 @@
 
   <section class="programming-template-strip">
   <div><span class="coach-eyebrow">Start faster</span><h2>Day templates</h2></div>
-  <div class="programming-template-grid">
+  <div class="programming-template-table" role="table" aria-label="Day templates">
+  <div class="programming-template-table__head" role="row"><span>Template</span><span>Structure</span><span>Description</span><span>Apply</span></div>
   {% for key, template in day_templates.items() %}
-    <form class="programming-template-card" method="post" action="{{ url_for('programming_templates.apply_day_template', session_id=session.id) }}">
-      <input type="hidden" name="template_key" value="{{ key }}">
-      <strong>{{ key }}</strong><span>{{ template.label }}</span><p>{{ template.description }}</p>
-      <label><input type="checkbox" name="replace_existing" value="1"> Replace current exercises</label>
-      <button class="coach-primary-button" type="submit">Use template</button>
+    <form class="programming-template-row" role="row" method="post" action="{{ url_for('programming_templates.apply_day_template', session_id=session.id) }}">
+      <input type="hidden" name="template_key" value="{{ key }}"><strong>{{ key }}</strong><span>{{ template.label }}</span><p>{{ template.description }}</p><div><label><input type="checkbox" name="replace_existing" value="1"> Replace existing</label><button class="coach-link-button" type="submit">Apply</button></div>
     </form>
   {% endfor %}
   </div>
@@ -64,7 +62,7 @@
 </section>
 <section class="coach-panel builder-panel">
     <div class="builder-toolbar"><div><span class="coach-eyebrow">Scheduled exposures</span><h2>Main lifts</h2></div><a class="coach-link-button" href="{{ url_for('programming.week', week_id=week.id, _anchor='session-' ~ session.id) }}">Edit lift slots</a></div>
-    <div class="session-lift-slots">{% for slot in session.lift_slots %}<article data-testid="lift-slot"><span class="lift-family-badge">{{ slot.lift_family[0]|upper }}</span><div><strong>{{ slot.lift_family|title }} exposure</strong>{% for item in slot.prescriptions %}<p><b>{{ 'Top set' if item.slot_role == 'top_set' else 'Back-off' }}</b> · {{ item.exercise_name }} · {{ item.summary }}</p>{% endfor %}</div></article>{% else %}<p>No S/B/D exposures scheduled.</p>{% endfor %}</div>
+    <div class="session-lift-table" role="table" aria-label="Main-lift prescriptions">{% for slot in session.lift_slots %}<div class="session-lift-row" role="row" data-testid="lift-slot"><span class="lift-family-badge">{{ slot.lift_family[0]|upper }}</span><strong>{{ slot.lift_family|title }}</strong><div>{% for item in slot.prescriptions %}<p><b>{{ 'Top set' if item.slot_role == 'top_set' else 'Back-off' }}</b><span>{{ item.exercise_name }}</span><span>{{ item.summary }}</span></p>{% endfor %}</div></div>{% else %}<p>No S/B/D exposures scheduled.</p>{% endfor %}</div>
   </section>
   <section class="coach-panel builder-panel">
     <div class="builder-toolbar">

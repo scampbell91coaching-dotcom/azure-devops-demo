@@ -10,9 +10,17 @@
   color: var(--coach-success);
   font-weight: 800;
 }
-.session-lift-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
-.session-lift-slots article { display: flex; gap: .75rem; min-width: 0; border: 1px solid var(--coach-border); border-left: 3px solid var(--coach-accent); padding: .85rem; background: var(--coach-panel-soft); }
-.session-lift-slots p { margin: .3rem 0 0; color: var(--coach-muted); font-size: .82rem; }
+.session-lift-table { border-block: 1px solid var(--coach-border-strong); }
+.session-lift-row { display: grid; grid-template-columns: 32px 110px 1fr; gap: .75rem; align-items: start; padding: .7rem .5rem; border-bottom: 1px solid var(--coach-border); border-left: 3px solid var(--coach-accent); }
+.session-lift-row:last-child { border-bottom: 0; }
+.session-lift-row > strong { padding-top: .25rem; color: var(--coach-heading); }
+.session-lift-row p { display: grid; grid-template-columns: 75px minmax(160px, 1fr) 1fr; gap: .75rem; margin: 0; padding: .25rem 0; color: var(--coach-muted); font-size: .82rem; }
+.session-lift-row p b { color: var(--coach-accent-soft); }
+.builder-panel ol.session-lift-slots { display: grid; margin: 0; padding: 0; list-style: none; }
+.builder-panel ol.session-lift-slots > li { display: grid; grid-template-columns: minmax(180px, .7fr) 1fr auto; gap: .75rem; align-items: center; padding: .7rem .5rem; border-top: 1px solid var(--coach-border); }
+.builder-panel ol.session-lift-slots > li:first-child { border-top-color: var(--coach-border-strong); }
+.builder-panel ol.session-lift-slots p { margin: 0; color: var(--coach-muted); font-size: .82rem; }
+.builder-panel ol.session-lift-slots form { display: flex; gap: .5rem; align-items: center; }
 .lift-family-badge { display: grid; flex: 0 0 auto; width: 1.6rem; height: 1.6rem; place-items: center; border-radius: 50%; background: var(--coach-accent); color: #0b0d0c; font-weight: 900; }
 .sheet-exercise-cell { position: relative; }.sheet-provenance { position: absolute; right: .35rem; bottom: .12rem; color: var(--coach-accent-soft); font-size: .58rem; font-weight: 900; pointer-events: none; text-transform: uppercase; }
 
@@ -26,12 +34,16 @@
 
 .programming-template-strip { display: grid; gap: 1rem; }
 .programming-template-strip h2 { margin: .2rem 0 0; color: var(--coach-heading); font-family: var(--coach-display); font-size: 1.75rem; }
-.programming-template-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
-.programming-template-card { display: grid; gap: .6rem; border: 1px solid var(--coach-border); padding: 1rem; background: var(--coach-panel); }
-.programming-template-card > strong { color: var(--coach-accent-soft); font-family: var(--coach-display); font-size: 1.55rem; }
-.programming-template-card > span, .programming-template-card p, .programming-template-card label { color: var(--coach-muted); }
-.programming-template-card p { margin: 0; }
-.programming-template-card label { font-size: .82rem; }
+.programming-template-table { border-block: 1px solid var(--coach-border-strong); }
+.programming-template-table__head, .programming-template-row { display: grid; grid-template-columns: 90px minmax(160px, .7fr) 1.5fr minmax(210px, auto); gap: .75rem; align-items: center; }
+.programming-template-table__head { padding: .5rem .65rem; color: var(--coach-muted); font-size: .68rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.programming-template-row { padding: .65rem; border-top: 1px solid var(--coach-border); }
+.programming-template-row:hover { background: var(--coach-panel-soft); }
+.programming-template-row > strong { color: var(--coach-accent-soft); font-family: var(--coach-display); font-size: 1.15rem; }
+.programming-template-row > span, .programming-template-row p, .programming-template-row label { color: var(--coach-muted); }
+.programming-template-row p { margin: 0; font-size: .82rem; }
+.programming-template-row > div { display: flex; gap: .65rem; align-items: center; justify-content: flex-end; }
+.programming-template-row label { font-size: .76rem; }
 
 .builder-toolbar {
   display: flex;
@@ -155,7 +167,8 @@
     flex-direction: column;
   }
 
-  .programming-template-grid { grid-template-columns: 1fr; }
-  .session-lift-slots { grid-template-columns: 1fr; }
+  .programming-template-table { overflow-x: auto; }
+  .programming-template-table__head, .programming-template-row { min-width: 760px; }
+  .builder-panel ol.session-lift-slots > li { grid-template-columns: 1fr; }
   .builder-shortcuts { display: none; }.future-action { align-items: stretch; flex-direction: column; }.future-action button { width: 100%; }
 }
