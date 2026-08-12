@@ -8,16 +8,13 @@
 <section class="coach-page">
   <header class="coach-page__header">
     <div>
-      <span class="coach-eyebrow">Athlete management</span>
       <h1>Athletes</h1>
-      <p>Manage athlete profiles, nutrition check-ins and coaching notes.</p>
     </div>
   </header>
 
   <section class="coach-panel">
     <div class="coach-panel__heading">
       <div>
-        <span class="coach-eyebrow">New athlete</span>
         <h2>Add athlete</h2>
       </div>
     </div>
@@ -40,8 +37,8 @@
 
       <label>
         <span>Email</span>
-        <input name="email" type="email" autocomplete="email" value="{{ form.get('email', '') }}" required>
-        {% if errors.email %}<small class="coach-form-error" role="alert">{{ errors.email }}</small>{% endif %}
+        <input name="email" type="email" autocomplete="email" value="{{ form.get('email', '') }}" required{% if errors.email %} aria-invalid="true" aria-describedby="email-error"{% endif %}>
+        {% if errors.email %}<small class="coach-form-error" id="email-error" role="alert">{{ errors.email }}</small>{% endif %}
       </label>
 
       <label>
@@ -80,7 +77,6 @@
   <section class="coach-panel">
     <div class="coach-panel__heading coach-panel__heading--split">
       <div>
-        <span class="coach-eyebrow">Roster</span>
         <h2>Current athletes</h2>
       </div>
 

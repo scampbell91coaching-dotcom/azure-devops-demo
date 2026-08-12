@@ -9,9 +9,7 @@
 {% block content %}
 <section class="coach-page coach-dashboard">
   <header class="coach-page__header">
-    <span class="coach-eyebrow">Coach workspace</span>
     <h1>Daily review</h1>
-    <p>Current coaching actions and the latest information already recorded in the platform.</p>
   </header>
 
   <div class="coach-dashboard__summary" aria-label="Daily review summary">
@@ -24,7 +22,7 @@
   <div class="coach-dashboard__grid">
     <section class="coach-panel coach-dashboard__wide">
       <div class="coach-panel__heading coach-panel__heading--split">
-        <div><span class="coach-eyebrow">Action queue</span><h2>Athletes requiring review</h2></div>
+        <h2>Athletes requiring review</h2>
         <span class="coach-count">{{ dashboard.requiring_review | length }}</span>
       </div>
       {% if dashboard.requiring_review %}
@@ -52,7 +50,7 @@
     </section>
 
     <section class="coach-panel">
-      <div class="coach-panel__heading"><span class="coach-eyebrow">Today</span><h2>Pending check-ins</h2></div>
+      <div class="coach-panel__heading"><h2>Pending check-ins <small>Today</small></h2></div>
       {% if dashboard.pending_checkins %}
         <div class="coach-dashboard-list">
           {% for item in dashboard.pending_checkins %}
@@ -65,7 +63,7 @@
     </section>
 
     <section class="coach-panel">
-      <div class="coach-panel__heading"><span class="coach-eyebrow">Last 14 days</span><h2>Recent check-ins</h2></div>
+      <div class="coach-panel__heading"><h2>Recent check-ins <small>Last 14 days</small></h2></div>
       {% if dashboard.recent_checkins %}
         <div class="coach-dashboard-list">
           {% for item in dashboard.recent_checkins %}
@@ -78,7 +76,7 @@
     </section>
 
     <section class="coach-panel coach-dashboard__wide">
-      <div class="coach-panel__heading"><span class="coach-eyebrow">Latest weekly check-in</span><h2>Pain and fatigue flags</h2></div>
+      <div class="coach-panel__heading"><h2>Pain and fatigue flags</h2></div>
       {% if dashboard.health_flags %}
         <div class="coach-dashboard-list">
           {% for item in dashboard.health_flags %}
@@ -91,7 +89,7 @@
     </section>
 
     <section class="coach-panel">
-      <div class="coach-panel__heading"><span class="coach-eyebrow">Programming</span><h2>Programmes ending soon</h2></div>
+      <div class="coach-panel__heading"><h2>Programmes ending soon</h2></div>
       {% if dashboard.programmes_ending_soon %}
         <div class="coach-dashboard-list">
           {% for block in dashboard.programmes_ending_soon %}
@@ -106,7 +104,7 @@
     </section>
 
     <section class="coach-panel">
-      <div class="coach-panel__heading"><span class="coach-eyebrow">Programming</span><h2>No current programme</h2></div>
+      <div class="coach-panel__heading"><h2>No current programme</h2></div>
       {% if dashboard.without_programme %}
         <div class="coach-dashboard-list">
           {% for athlete in dashboard.without_programme %}
@@ -119,7 +117,7 @@
     </section>
 
     <section class="coach-panel coach-dashboard__wide">
-      <div class="coach-panel__heading"><span class="coach-eyebrow">Latest available</span><h2>Bodyweight and nutrition</h2></div>
+      <div class="coach-panel__heading"><h2>Bodyweight and nutrition</h2></div>
       {% if dashboard.nutrition %}
         <div class="coach-table-wrap"><table class="coach-table"><thead><tr><th>Athlete</th><th>Bodyweight</th><th>Calories</th><th>Protein</th><th>Recorded</th></tr></thead><tbody>
           {% for item in dashboard.nutrition %}<tr><td>{{ athlete_link(item.athlete) }}</td><td>{{ "%.1f kg" | format(item.bodyweight_kg) if item.bodyweight_kg is not none else "Unavailable" }}</td><td>{{ item.calories if item.calories is not none else "Unavailable" }}</td><td>{{ (item.protein_g ~ " g") if item.protein_g is not none else "Unavailable" }}</td><td>{{ item.recorded_at.strftime("%d %b %Y") }}<small class="coach-dashboard__source">{{ item.source }}</small></td></tr>{% endfor %}

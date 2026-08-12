@@ -92,6 +92,7 @@ function renderPage(data) {
   const resilience = objectValue(data.resilience);
   const gitops = objectValue(data.gitops);
   const git = objectValue(data.git);
+  const database = objectValue(data.database);
   const checks = Array.isArray(data.checks) ? data.checks : [];
 
   if (page === "overview") {
@@ -131,7 +132,9 @@ function renderPage(data) {
     setField("sync", displayValue(gitops.sync_status));
     setField("argohealth", displayValue(gitops.health_status));
     setField("branch", displayValue(git.branch));
-    setField("revision", displayValue(git.revision));
+    setField("revision", displayValue(gitops.revision || git.revision));
+    setField("image", displayValue(workload.deployed_image, "Unavailable"));
+    setField("migrationhead", displayValue(database.migration_head, "Unavailable"));
     const details = document.getElementById("git-details");
     if (details) {
       details.replaceChildren();

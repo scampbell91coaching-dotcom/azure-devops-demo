@@ -131,16 +131,42 @@ def test_page_renders_safe_state_for_invalid_evidence(tmp_path):
     assert b"surprise" not in response.data
 
 
-def test_stale_evidence_fails_closed(tmp_path):
-    write_evidence(tmp_path, evidence_payload())
+def test_stale_evidence_fails_closed_but_remains_presentable(tmp_path):
+    payload = evidence_payload()
+    payload["generated_at"] = "2026-08-04T12:00:00Z"
+    write_evidence(tmp_path, payload)
 
     result = ReleaseEvidenceService(tmp_path, max_age_seconds=60).load(
         now=datetime(2026, 8, 4, 13, tzinfo=timezone.utc)
     )
 
     assert result.readiness == "not_ready"
-    assert not result.available
+    assert result.available
+    assert result.freshness == "stale"
+    assert result.evidence["repository"]["commit"] == "abc123"
     assert "stale" in result.error
+
+
+def test_current_evidence_reports_current_freshness(tmp_path):
+    payload = evidence_payload()
+    payload["generated_at"] = "2026-08-04T12:59:30Z"
+    write_evidence(tmp_path, payload)
+
+    result = ReleaseEvidenceService(tmp_path, max_age_seconds=60).load(
+        now=datetime(2026, 8, 4, 13, tzinfo=timezone.utc)
+    )
+
+    assert result.available
+    assert result.freshness == "current"
+    assert result.readiness == "ready"
+
+
+def test_unavailable_evidence_reports_unavailable_freshness(tmp_path):
+    result = ReleaseEvidenceService(tmp_path, tmp_path / "missing.json").load()
+
+    assert not result.available
+    assert result.freshness == "unavailable"
+    assert result.readiness == "not_ready"
 
 
 @pytest.mark.parametrize("state", ["ready", "not_ready", "malformed", "stale"])
@@ -173,3 +199,6 @@ def test_dashboard_pages_share_readiness_contract(tmp_path, state):
     assert expected_label in release_page.data
     expected_overview_label = b"Ready" if expected == "ready" else b"Not ready"
     assert expected_overview_label in engineering_page.data
+    if state == "stale":
+        assert b"STALE" in release_page.data
+        assert b"abc123" in release_page.data

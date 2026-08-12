@@ -100,3 +100,18 @@ def test_coach_workspace_avoids_duplicated_mobile_action_rule_and_decorative_gra
     assert css.count("@media (max-width: 360px)") == 1
     assert "radial-gradient" not in css
     assert "linear-gradient" not in css
+
+
+def test_coach_hardening_keeps_surfaces_flat_and_validation_associated():
+    css = (ROOT / "static" / "css" / "coach_workspace.css").read_text()
+    base = (ROOT / "templates" / "coach" / "base.html").read_text()
+    athletes = (ROOT / "templates" / "athletes" / "list.html").read_text()
+    dashboard = (ROOT / "templates" / "coach" / "dashboard.html").read_text()
+
+    assert 'id="coach-main" class="coach-main" tabindex="-1"' in base
+    assert 'aria-describedby="email-error"' in athletes
+    assert 'id="email-error" role="alert"' in athletes
+    assert "Coach workspace" not in dashboard
+    assert "Current coaching actions and the latest information" not in dashboard
+    assert "border-radius: 0;" in css
+    assert "  .coach-panel {\n    padding: 1rem;\n  }" not in css

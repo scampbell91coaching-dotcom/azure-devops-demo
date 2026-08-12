@@ -20,6 +20,7 @@ class ReleaseEvidenceError(ValueError):
 class ReleaseEvidenceResult:
     evidence: dict[str, Any] | None
     error: str | None
+    freshness: str = "unavailable"
 
     @property
     def available(self) -> bool:
@@ -28,6 +29,8 @@ class ReleaseEvidenceResult:
     @property
     def readiness(self) -> str:
         """Return the sole fail-closed readiness decision exposed to consumers."""
+        if self.freshness != "current":
+            return "not_ready"
         return self.evidence["status"] if self.evidence is not None else "not_ready"
 
 
@@ -154,6 +157,6 @@ class ReleaseEvidenceService:
         age = current_time.astimezone(timezone.utc) - generated_at
         if age < timedelta(0) or age > self.max_age:
             return ReleaseEvidenceResult(
-                None, "Release evidence is stale; readiness cannot be confirmed."
+                evidence, "Release evidence is stale; readiness cannot be confirmed.", "stale"
             )
-        return ReleaseEvidenceResult(evidence, None)
+        return ReleaseEvidenceResult(evidence, None, "current")

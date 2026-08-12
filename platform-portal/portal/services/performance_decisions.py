@@ -76,8 +76,8 @@ def build_performance_decisions(
     window_days: int = 42,
 ) -> PerformanceDecisionSummary | None:
     """Return explainable decisions scoped to one athlete and optional block."""
-    if window_days < 1:
-        raise ValueError("window_days must be at least 1")
+    if not 1 <= window_days <= 731:
+        raise ValueError("window_days must be between 1 and 731")
     athlete = db.session.get(Athlete, athlete_id)
     if athlete is None:
         return None
@@ -108,6 +108,13 @@ def build_performance_decisions(
         query = (query.join(TrainingSession, TrainingSessionLog.session_id == TrainingSession.id)
                  .join(TrainingWeek).filter(TrainingWeek.block_id == block.id))
     rows = query.order_by(TrainingSessionLog.completed_at.asc(), TrainingSetResult.id.asc()).all()
+    incomplete_log_ids = {
+        row.session_log_id for row in rows if not row.completed and not row.skipped
+    }
+    excluded_partial_results = sum(
+        row.session_log_id in incomplete_log_ids for row in rows
+    )
+    rows = [row for row in rows if row.session_log_id not in incomplete_log_ids]
 
     decided = [row for row in rows if row.completed or row.skipped]
     completed = [row for row in decided if row.completed]
@@ -146,6 +153,11 @@ def build_performance_decisions(
     limitations: list[str] = []
     if not rows:
         limitations.append("No completed set results were recorded in this window.")
+    if incomplete_log_ids:
+        limitations.append(
+            f"{len(incomplete_log_ids)} partially logged session(s) containing "
+            f"{excluded_partial_results} set result(s) were excluded from decision evidence."
+        )
     if rows and not comparable_rpe:
         limitations.append("RPE adherence is unavailable because no completed set has both prescribed and actual RPE.")
     if rows and not exact_rep_rows:
@@ -153,6 +165,17 @@ def build_performance_decisions(
     unsupported = sum(1 for row in completed if _lift_family(row) is None)
     if unsupported:
         limitations.append(f"{unsupported} completed sets lack persisted SBD lift-family provenance and are excluded from SBD metrics.")
+    invalid_loading = sum(
+        1 for row in completed
+        if _lift_family(row) is not None
+        and (row.actual_load_kg is None or row.actual_load_kg <= 0
+             or row.actual_reps is None or row.actual_reps <= 0)
+    )
+    if invalid_loading:
+        limitations.append(
+            f"{invalid_loading} completed SBD set(s) lacked positive actual load "
+            "or reps and were excluded from volume and e1RM evidence."
+        )
 
     return PerformanceDecisionSummary(
         athlete.id, block.id if block else None, block.name if block else None,
@@ -163,7 +186,11 @@ def build_performance_decisions(
 
 def _lift_performance(family: str, rows: list[TrainingSetResult]) -> LiftPerformance:
     applicable = [row for row in rows if row.completed and _lift_family(row) == family]
-    valid = [row for row in applicable if row.actual_load_kg is not None and row.actual_reps is not None]
+    valid = [
+        row for row in applicable
+        if row.actual_load_kg is not None and row.actual_load_kg > 0
+        and row.actual_reps is not None and row.actual_reps > 0
+    ]
     volume = sum(row.actual_load_kg * row.actual_reps for row in valid)
     estimates = [(row, _e1rm(row)) for row in valid if _e1rm(row) is not None]
     latest = estimates[-1][1] if estimates else None
@@ -173,7 +200,7 @@ def _lift_performance(family: str, rows: list[TrainingSetResult]) -> LiftPerform
            if row.prescription is not None and row.prescription.slot_role == "top_set"]
     return LiftPerformance(
         family, round(volume, 1), latest, previous, change,
-        top[-1][1] if top else None, _refs(applicable),
+        top[-1][1] if top else None, _refs(valid),
     )
 
 
@@ -209,7 +236,7 @@ def _decisions(metrics: list[MetricEvidence], lifts: tuple[LiftPerformance, ...]
         refs = tuple(ref for metric in metrics for ref in metric.source_refs)
         if refs:
             decisions.append(CoachDecision("no-threshold-triggered", "maintain", "Maintain and monitor",
-                "Recorded completion, RPE and e1RM comparisons did not cross a review threshold.",
+                "Available recorded comparisons did not cross a review threshold.",
                 "Keep the current prescription and reassess when more completed exposures are recorded.", refs))
     return tuple(decisions)
 
@@ -220,7 +247,8 @@ def _lift_family(row: TrainingSetResult) -> str | None:
 
 
 def _e1rm(row: TrainingSetResult) -> float | None:
-    if row.actual_load_kg is None or row.actual_reps is None or not 1 <= row.actual_reps <= 12:
+    if (row.actual_load_kg is None or row.actual_load_kg <= 0
+            or row.actual_reps is None or not 1 <= row.actual_reps <= 12):
         return None
     return round(row.actual_load_kg * (1 + row.actual_reps / 30), 1)
 

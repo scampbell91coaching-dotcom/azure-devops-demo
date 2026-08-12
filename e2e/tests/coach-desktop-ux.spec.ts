@@ -55,6 +55,9 @@ test.describe('coach desktop design-system guardrails', () => {
   test('coach home and athlete profile preserve navigation and primary actions', async ({ page }) => {
     await page.goto('/coach');
     await expect(page.getByRole('heading', { level: 1, name: 'Daily review' })).toBeVisible();
+    await expect(page.getByText('Coach workspace', { exact: true })).toHaveCount(0);
+    await expect(page.locator('.coach-panel').first()).toHaveCSS('border-radius', '0px');
+    await expect(page.locator('.coach-panel').first()).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await expectActionAvailable(
       page,
       page.getByRole('link', { name: 'View programme' }).first(),
@@ -67,6 +70,45 @@ test.describe('coach desktop design-system guardrails', () => {
     await expectActionAvailable(page, page.getByRole('link', { name: 'View programme' }));
     await expect(page.locator('#client-services')).toBeVisible();
     await expectCoachNavigation(page);
+    await expectNoPageOverflow(page);
+  });
+
+  test('coach shell and roster retain keyboard and validation affordances', async ({ page }) => {
+    await page.goto('/athletes');
+
+    await page.keyboard.press('Tab');
+    const skipLink = page.getByRole('link', { name: 'Skip to content' });
+    await expect(skipLink).toBeFocused();
+    await skipLink.press('Enter');
+    await expect(page.locator('#coach-main')).toBeFocused();
+
+    await page.locator('input[name="first_name"]').fill('Duplicate');
+    await page.locator('input[name="last_name"]').fill('Athlete');
+    await page.locator('input[name="email"]').fill('alex.e2e@example.test');
+    await page.getByRole('button', { name: 'Create athlete' }).click();
+
+    const email = page.locator('input[name="email"]');
+    await expect(email).toHaveAttribute('aria-invalid', 'true');
+    await expect(email).toHaveAttribute('aria-describedby', 'email-error');
+    await expect(page.locator('#email-error')).toHaveAttribute('role', 'alert');
+    await expectNoPageOverflow(page);
+  });
+
+  test('compact coach navigation and flat panels fit a phone viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await page.goto('/coach');
+
+    const menu = page.getByRole('button', { name: 'Menu' });
+    await expect(menu).toHaveAttribute('aria-expanded', 'false');
+    await menu.click();
+    await expect(menu).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('[data-coach-navigation]')).toBeVisible();
+
+    const panelPadding = await page.locator('.coach-panel').first().evaluate(element => {
+      const styles = getComputedStyle(element);
+      return { left: styles.paddingLeft, right: styles.paddingRight };
+    });
+    expect(panelPadding).toEqual({ left: '0px', right: '0px' });
     await expectNoPageOverflow(page);
   });
 

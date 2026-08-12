@@ -71,10 +71,45 @@ def _health(url: str, timeout: float) -> tuple[str | None, float | None]:
         return None, None
 
 
-def collect(client: KubernetesClient, *, namespace: str, deployment_name: str,
-            app_label: str, service_name: str, ingress_name: str,
-            argo_namespace: str, argo_app: str, health_url: str,
-            health_timeout: float = 5) -> dict[str, Any]:
+def database_migration_head(database_url: str | None) -> str | None:
+    """Read Alembic's deployed head without changing database state."""
+    if not database_url:
+        return None
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.exc import SQLAlchemyError
+
+    engine = create_engine(database_url, pool_pre_ping=True)
+    try:
+        with engine.connect() as connection:
+            heads = [
+                str(row[0])
+                for row in connection.execute(
+                    text(
+                        "SELECT version_num FROM alembic_version ORDER BY version_num"
+                    )
+                )
+            ]
+    except (OSError, SQLAlchemyError):
+        return None
+    finally:
+        engine.dispose()
+    return ", ".join(heads) if heads else None
+
+
+def collect(
+    client: KubernetesClient,
+    *,
+    namespace: str,
+    deployment_name: str,
+    app_label: str,
+    service_name: str,
+    ingress_name: str,
+    argo_namespace: str,
+    argo_app: str,
+    health_url: str,
+    health_timeout: float = 5,
+    migration_head: str | None = None,
+) -> dict[str, Any]:
     quoted_label = urllib.parse.quote(f"app={app_label}")
     nodes = _items(client, "/api/v1/nodes")
     deployment = client.get(f"/apis/apps/v1/namespaces/{namespace}/deployments/{deployment_name}")
@@ -104,6 +139,13 @@ def collect(client: KubernetesClient, *, namespace: str, deployment_name: str,
     http_code, latency = _health(health_url, health_timeout)
     argo_sync = argo.get("status", {}).get("sync", {}).get("status")
     argo_health = argo.get("status", {}).get("health", {}).get("status")
+    argo_revision = argo.get("status", {}).get("sync", {}).get("revision")
+    images = [
+        str(container.get("image"))
+        for container in containers
+        if isinstance(container, dict) and container.get("image")
+    ]
+    deployed_image = ", ".join(images) if images else None
 
     metrics_available: bool | None
     try:
@@ -140,10 +182,11 @@ def collect(client: KubernetesClient, *, namespace: str, deployment_name: str,
         "schema_version": 1,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "platform": {"kubernetes_api": True, "nodes_ready": ready_nodes, "nodes_total": len(nodes)},
-        "workload": {"ready_replicas": ready, "desired_replicas": desired, "container_restarts": restarts},
+        "workload": {"ready_replicas": ready, "desired_replicas": desired, "container_restarts": restarts, "deployed_image": deployed_image},
         "networking": {"service_type": service.get("spec", {}).get("type"), "ingress_exists": True, "network_policy_count": len(network_policies)},
         "availability": {"http_code": http_code, "health_latency_seconds": latency},
-        "gitops": {"sync_status": argo_sync, "health_status": argo_health},
+        "gitops": {"sync_status": argo_sync, "health_status": argo_health, "revision": argo_revision},
+        "database": {"migration_head": migration_head},
         "security": {"run_as_non_root": run_as_non_root, "privilege_escalation_disabled": no_privilege, "seccomp_runtime_default": seccomp},
         "observability": {"metrics_api_available": metrics_available, "service_monitor_present": monitor_present},
         "checks": checks,
@@ -179,9 +222,10 @@ def sample_snapshot(generated_at: str = "2026-08-09T12:00:00+00:00") -> dict[str
         "schema_version": 1,
         "generated_at": generated_at,
         "platform": {"kubernetes_api": True, "nodes_ready": 2, "nodes_total": 2},
-        "workload": {"ready_replicas": 2, "desired_replicas": 2, "container_restarts": 0},
+        "workload": {"ready_replicas": 2, "desired_replicas": 2, "container_restarts": 0, "deployed_image": "registry.example/traditional-strength@sha256:synthetic"},
         "availability": {"http_code": "200", "health_latency_seconds": 0.125},
-        "gitops": {"sync_status": "OutOfSync", "health_status": "Degraded"},
+        "gitops": {"sync_status": "OutOfSync", "health_status": "Degraded", "revision": "synthetic-revision"},
+        "database": {"migration_head": "synthetic-head"},
         "observability": {"metrics_api_available": True, "service_monitor_present": False},
         "checks": checks,
         "score": 88,
@@ -212,6 +256,7 @@ def main() -> None:
             ingress_name=os.environ["STATUS_INGRESS"], argo_namespace=os.getenv("STATUS_ARGO_NAMESPACE", "argocd"),
             argo_app=os.environ["STATUS_ARGO_APP"], health_url=os.environ["STATUS_HEALTH_URL"],
             health_timeout=float(os.getenv("STATUS_HEALTH_TIMEOUT_SECONDS", "5")),
+            migration_head=database_migration_head(os.getenv("DATABASE_URL")),
         )
     atomic_write(Path(args.output), payload)
     print(f"Wrote status snapshot to {args.output}")

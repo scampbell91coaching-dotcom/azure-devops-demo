@@ -101,6 +101,12 @@ def test_malformed_optional_fields_are_safe():
     ]
 
 
+def test_collector_freshness_is_exposed_for_current_stale_and_unavailable():
+    for state in ("current", "stale", "unavailable"):
+        service, _ = service_for({"freshness": {"state": state}})
+        assert service.observability_status()["freshness"]["state"] == state
+
+
 def test_repository_error_control_is_not_hidden():
     service, _ = service_for(
         {

@@ -71,6 +71,39 @@ def test_board_orders_platform_attempts_and_ignores_warmups(app):
         assert board.next_by_entry[later_entry.id].weight_kg == Decimal("200.00")
 
 
+def test_board_surfaces_timeline_context_and_incomplete_attempt_plan(app):
+    with app.app_context():
+        athlete = _athlete("Rae", "rae@example.test")
+        meet = Meet(
+            name="Qualifier",
+            meet_date=date(2026, 8, 20),
+            federation="GBPF",
+            weight_class="63 kg",
+        )
+        entry = MeetEntry(meet=meet, athlete=athlete, flight=1, platform_order=1)
+        db.session.add(entry)
+        db.session.commit()
+
+        board = build_board(meet, today=date(2026, 8, 12))
+
+        assert board.days_until_meet == 8
+        assert board.timeline_label == "D-8"
+        assert board.missing_context == ("official bodyweight",)
+        assert board.total_attempts == 0
+        assert board.entry_readiness[entry.id] == "Attempt plan not started"
+
+        entry.lifts.extend(
+            [
+                MeetLift(lift="squat", kind="attempt", sequence=1, weight_kg=120),
+                MeetLift(lift="bench", kind="attempt", sequence=1, weight_kg=70),
+            ]
+        )
+        db.session.flush()
+        board = build_board(meet, today=date(2026, 8, 20))
+        assert board.timeline_label == "Meet day"
+        assert board.entry_readiness[entry.id] == "Missing Deadlift opener"
+
+
 def test_routes_validate_create_entry_and_lift_payloads(app):
     client = app.test_client()
     with app.app_context():
@@ -231,7 +264,7 @@ def test_competition_workflow_records_weigh_in_attempts_notes_and_review(app):
     meet_response = client.post(
         f"/meet-day/{meet_id}/workflow",
         data={
-            "status": "complete", "bodyweight_kg": "82.45", "weight_class": "83 kg",
+            "status": "complete", "federation": "IPF", "bodyweight_kg": "82.45", "weight_class": "83 kg",
             "weigh_in_time": "08:30", "notes": "Bring ID", "review_went_well": "Attempt selection",
             "review_improve": "Start warm-ups earlier", "review_actions": "Practise commands",
         },
@@ -239,7 +272,7 @@ def test_competition_workflow_records_weigh_in_attempts_notes_and_review(app):
     assert meet_response.status_code == 302
     entry_response = client.post(
         f"/meet-day/{meet_id}/entries/{entry_id}/workflow",
-        data={"bodyweight_kg": "82.45", "weigh_in_time": "08:31", "warmup_notes": "Bar at 09:05", "notes": "Left rack 12"},
+        data={"bodyweight_kg": "82.45", "weigh_in_time": "08:31", "warmup_notes": "Bar at 09:05", "handler_notes": "Confirm rack 12 and commands", "notes": "Left rack 12"},
     )
     assert entry_response.status_code == 302
     attempt_response = client.post(
@@ -251,10 +284,12 @@ def test_competition_workflow_records_weigh_in_attempts_notes_and_review(app):
     with app.app_context():
         board = build_board(db.session.get(Meet, meet_id))
         assert board.meet.status == "complete"
+        assert board.meet.federation == "IPF"
         assert board.meet.bodyweight_kg == Decimal("82.45")
         assert board.meet_notes == "Bring ID"
         assert board.meet_workflow["review_actions"] == "Practise commands"
         assert board.entry_workflow[entry_id]["warmup_notes"] == "Bar at 09:05"
+        assert board.entry_workflow[entry_id]["handler_notes"] == "Confirm rack 12 and commands"
         assert board.lift_workflow[attempt_id] == {"actual_weight_kg": "182.50", "scheduled_time": "10:12"}
         assert board.lift_notes[attempt_id] == "Three whites"
         assert db.session.get(MeetLift, attempt_id).weight_kg == Decimal("180.00")
@@ -263,6 +298,24 @@ def test_competition_workflow_records_weigh_in_attempts_notes_and_review(app):
     assert b"Competition-day control" in page.data
     assert b"182.50 kg" in page.data
     assert b"Practise commands" in page.data
+    assert b"Confirm rack 12 and commands" in page.data
+
+
+def test_empty_meet_page_does_not_report_attempts_complete(app):
+    with app.app_context():
+        athlete = _athlete("Empty", "empty@example.test")
+        meet = Meet(name="Future Open", meet_date=date(2026, 12, 1))
+        db.session.add(MeetEntry(meet=meet, athlete=athlete, flight=1, platform_order=1))
+        db.session.commit()
+        meet_id = meet.id
+
+    page = app.test_client().get(f"/meet-day/{meet_id}")
+
+    assert page.status_code == 200
+    assert b"No platform attempts planned yet." in page.data
+    assert b"Attempt plan not started" in page.data
+    assert b"Competition context incomplete" in page.data
+    assert b"<strong>Next:</strong>" not in page.data
 
 
 def test_competition_workflow_rejects_invalid_status_and_actual_weight(app):

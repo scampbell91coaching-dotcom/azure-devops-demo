@@ -16,6 +16,7 @@
 .meet-day__card { display:grid; gap:.5rem; border-left:4px solid var(--coach-border); padding:.75rem; background:var(--coach-panel-soft); }
 .meet-day__card--good { border-color:#57b879; }.meet-day__card--miss { border-color:#e46f61; }.meet-day__card--skipped { opacity:.65; }
 .meet-day__error { border:1px solid #e46f61; padding:1rem; color:#ffd8d3; }
+.meet-day__notice { border-left:4px solid var(--coach-accent); padding:.65rem .8rem; background:var(--coach-panel-soft); }
 .meet-day__tools { display:grid; gap:1rem; }
 .meet-day__inventory { display:grid; grid-template-columns:repeat(auto-fit,minmax(6rem,1fr)); gap:.5rem; }
 .meet-day__inventory label { font-size:.8rem; }

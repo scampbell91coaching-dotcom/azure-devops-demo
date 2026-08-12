@@ -41,7 +41,8 @@ def charts(athlete_id: int):
     if user is None or not coach_owns_athlete(user.id, athlete_id):
         abort(404)
     end = _date_argument("to", date.today())
-    start = _date_argument("from", end - timedelta(days=89))
+    default_start = date.min if end < date.min + timedelta(days=89) else end - timedelta(days=89)
+    start = _date_argument("from", default_start)
     try:
         payload = service.build(
             athlete_id,

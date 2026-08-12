@@ -24,6 +24,7 @@ from portal.models.organisation import (
     OrganisationMembership,
     OrganisationRole,
 )
+from portal.models.meet_day import Meet, MeetEntry, MeetLift
 from portal.models.user import User, UserRole
 
 
@@ -129,7 +130,14 @@ def test_chart_api_returns_chart_ready_filtered_persisted_metrics(chart_app):
     }]
     assert payload["datasets"]["rpe"][0]["adherent"] is True
     assert payload["datasets"]["bodyweight"][0]["value_kg"] == 82.4
-    assert set(payload["availability"].values()) == {"available"}
+    assert payload["availability"] == {
+        "block_comparisons": "available", "bodyweight": "available", "e1rm": "available",
+        "meet_trends": "insufficient_data", "rpe": "available", "volume": "available",
+    }
+    assert payload["data_quality"]["excluded_partial_sessions"] == 0
+    assert payload["datasets"]["block_comparisons"][0]["volume_kg"] == {
+        "squat": 500.0, "bench": 0.0, "deadlift": 0.0,
+    }
 
 
 def test_chart_api_preserves_coach_only_and_cross_athlete_boundaries(chart_app):
@@ -147,7 +155,10 @@ def test_chart_api_preserves_coach_only_and_cross_athlete_boundaries(chart_app):
     ).status_code == 404
 
 
-@pytest.mark.parametrize("query", ["from=nope", "block_id=0", "from=2026-08-10&to=2026-08-01"])
+@pytest.mark.parametrize("query", [
+    "from=nope", "block_id=0", "from=2026-08-10&to=2026-08-01",
+    "from=2024-01-01&to=2026-08-01", "to=9999-12-31",
+])
 def test_chart_api_rejects_invalid_filters(chart_app, query):
     client = chart_app.test_client()
     _sign_in(client, chart_app.config["CHART_IDS"]["coach"])
@@ -166,5 +177,56 @@ def test_chart_api_marks_missing_history_instead_of_fabricating(chart_app):
     )
     assert response.status_code == 200
     payload = response.get_json()
-    assert payload["datasets"] == {"bodyweight": [], "e1rm": [], "rpe": [], "volume": []}
+    assert payload["datasets"] == {
+        "block_comparisons": [], "bodyweight": [], "e1rm": [],
+        "meet_trends": [], "rpe": [], "volume": []
+    }
     assert set(payload["availability"].values()) == {"insufficient_data"}
+
+
+def test_chart_api_excludes_entire_partially_logged_session(chart_app):
+    ids = chart_app.config["CHART_IDS"]
+    with chart_app.app_context():
+        log = TrainingSessionLog.query.filter_by(athlete_id=ids["alex"]).one()
+        db.session.add(TrainingSetResult(
+            session_log=log, exercise_name="Competition squat",
+            exercise_position=1, set_order=2, completed=False, skipped=False,
+        ))
+        db.session.commit()
+
+    client = chart_app.test_client()
+    _sign_in(client, ids["coach"])
+    payload = client.get(
+        f"/api/v1/athletes/{ids['alex']}/performance/charts?from=2026-08-01&to=2026-08-10"
+    ).get_json()
+
+    assert payload["datasets"]["e1rm"] == []
+    assert payload["datasets"]["volume"] == []
+    assert payload["datasets"]["rpe"] == []
+    assert payload["availability"]["e1rm"] == "insufficient_data"
+    assert payload["data_quality"]["excluded_partial_sessions"] == 1
+    assert payload["data_quality"]["excluded_set_results"] == 2
+
+
+def test_chart_api_meet_total_requires_good_attempt_for_each_sbd_lift(chart_app):
+    ids = chart_app.config["CHART_IDS"]
+    with chart_app.app_context():
+        meet = Meet(name="Summer Open", meet_date=date(2026, 8, 8), status="complete")
+        entry = MeetEntry(meet=meet, athlete_id=ids["alex"], flight=1, platform_order=1)
+        entry.lifts.extend([
+            MeetLift(lift="squat", kind="attempt", sequence=1, weight_kg=180, outcome="good"),
+            MeetLift(lift="bench", kind="attempt", sequence=1, weight_kg=120, outcome="good"),
+            MeetLift(lift="deadlift", kind="attempt", sequence=1, weight_kg=220, outcome="miss"),
+        ])
+        db.session.add(meet)
+        db.session.commit()
+
+    client = chart_app.test_client()
+    _sign_in(client, ids["coach"])
+    payload = client.get(
+        f"/api/v1/athletes/{ids['alex']}/performance/charts?from=2026-08-01&to=2026-08-10"
+    ).get_json()
+    trend = payload["datasets"]["meet_trends"][0]
+    assert trend["best_lifts_kg"] == {"squat": 180.0, "bench": 120.0, "deadlift": None}
+    assert trend["total_kg"] is None
+    assert trend["complete_total"] is False

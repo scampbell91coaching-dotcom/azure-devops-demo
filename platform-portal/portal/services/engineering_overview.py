@@ -68,8 +68,10 @@ class EngineeringOverviewService:
             "state": state,
             "label": label,
             "readiness": status,
-            "detail": "From the existing local release-evidence report; no checks were rerun.",
+            "detail": result.error
+            or "From the existing local release-evidence report; no checks were rerun.",
             "generated_at": evidence.get("generated_at"),
+            "freshness": result.freshness,
             "checks": evidence["checks"],
             "href": "/release-readiness",
         }
