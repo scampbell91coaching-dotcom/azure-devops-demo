@@ -134,6 +134,19 @@ def register_database_commands(app: Flask) -> None:
 
         click.echo(f"Schema verified: {len(expected_tables)} coaching tables.")
 
+    @app.cli.command("audit-exercise-catalogue")
+    def audit_exercise_catalogue_command() -> None:
+        """Print a read-only audit of automatic-selection catalogue metadata."""
+        from .models.exercise_library import Exercise
+        from .services.exercise_catalogue_diagnostic import (
+            build_exercise_catalogue_diagnostic,
+        )
+
+        report = build_exercise_catalogue_diagnostic(
+            Exercise.query.order_by(Exercise.id.asc()).all()
+        )
+        click.echo(json.dumps(report, indent=2, sort_keys=True))
+
     @app.cli.command("verify-production-db")
     def verify_production_db_command() -> None:
         """Safely verify the private portal's PostgreSQL schema and catalogue count."""
