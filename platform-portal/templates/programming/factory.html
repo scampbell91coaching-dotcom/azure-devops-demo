@@ -13,25 +13,27 @@
 {% block content %}
 <section class="coach-page block-factory-page">
   <header class="coach-page__header">
-    <span class="coach-eyebrow">Programming engine</span>
-    <h1>Block Factory</h1>
-    <p>
-      Build the first draft from your mined programming history,
-      then edit what is unique to the athlete.
-    </p>
+    <div>
+      <a class="coach-back-link" href="{{ url_for('programming.index') }}">← Programming</a>
+      <h1>Block Factory</h1>
+    </div>
+    <p>Set the block intent, shape the weekly structure, then review before accepting.</p>
   </header>
 
   <form
     id="block-factory-form"
-    class="coach-panel coach-form block-factory-form"
+    class="coach-form block-factory-form"
     method="post"
+    data-copilot-context="block-intent"
   >
-    <nav class="factory-steps" aria-label="Guided block flow"><ol><li>Athlete</li><li>Intent</li><li>Weekly structure</li><li>Main lifts</li><li>Assistance</li><li>Review</li><li>Accept / publish</li></ol></nav>
     {% if proposal %}
       <input type="hidden" name="proposal_id" value="{{ proposal.id }}">
       <input type="hidden" name="proposal_integrity" value="{{ proposal_integrity }}">
     {% endif %}
-    <label>
+    <section class="factory-context" aria-labelledby="factory-context-heading">
+      <h2 id="factory-context-heading">Block context</h2>
+      <div class="factory-context__fields">
+    <label class="factory-field--athlete">
       <span>Athlete</span>
       <select name="athlete_id" required>
         {% for athlete in athletes %}
@@ -107,7 +109,15 @@
         required
       >
     </label>
+      </div>
+    </section>
 
+    <section class="factory-intent" aria-labelledby="factory-intent-heading" data-copilot-region="structured-intent">
+      <div class="factory-section-heading">
+        <h2 id="factory-intent-heading">Weekly structure</h2>
+        <p>Exposure frequency, pulling setup and competition timing.</p>
+      </div>
+      <div class="factory-intent__fields">
     <label>
       <span>Training days</span>
       <input
@@ -203,10 +213,12 @@
         value="{{ form.get('meet_date', '') }}"
       >
     </label>
+      </div>
+    </section>
 
     <fieldset class="factory-accessories" data-factory-accessories>
-      <legend>Accessories</legend>
-      <p>Assistance is optional and never drives the weekly structure. Volume sets a deterministic fatigue budget per day, not an exercise-count ceiling. Pinned coach choices fully replace suggestions.</p>
+      <legend>Assistance</legend>
+      <p class="factory-section-note">Optional. Pinned choices replace automatic suggestions.</p>
       <label><span>Selection mode</span>
         <select name="accessory_mode">
           <option value="automatic" {% if form.get('accessory_mode', 'automatic') == 'automatic' %}selected{% endif %}>Suggest from enabled library metadata</option>
@@ -220,7 +232,7 @@
           {% endfor %}
         </select>
       </label>
-      <p class="factory-accessory-summary" data-accessory-summary aria-live="polite">No assistance selected. Zero assistance is valid.</p>
+      <p class="factory-accessory-summary" data-accessory-summary aria-live="polite">No assistance selected.</p>
       <label><span>Filter catalogue</span><input type="search" data-accessory-filter placeholder="Search by exercise, category or movement"></label>
       <div data-accessory-rows>
         {% set selected_ids = form.getlist('accessory_exercise_id') if form.getlist is defined else [] %}
@@ -235,7 +247,7 @@
           </div>
         {% endfor %}
       </div>
-      <button class="coach-link-button" type="button" data-add-accessory>Add accessory</button>
+      <button class="coach-link-button factory-add-accessory" type="button" data-add-accessory>Add accessory</button>
       <template data-accessory-template><div class="factory-accessory-row"><select name="accessory_exercise_id" aria-label="Accessory exercise" required>{% for exercise in accessory_exercises %}<option value="{{ exercise.id }}" data-search="{{ exercise.name }} {{ exercise.category }} {{ exercise.movement }}">{{ exercise.name }} · {{ exercise.category|title }}</option>{% endfor %}</select><button class="coach-link-button" type="button" data-move-up aria-label="Move accessory up">↑</button><button class="coach-link-button" type="button" data-move-down aria-label="Move accessory down">↓</button><button class="coach-link-button" type="button" data-remove-accessory>Remove</button></div></template>
     </fieldset>
 
@@ -245,17 +257,20 @@
         type="submit"
         formaction="{{ url_for('block_factory.preview') }}"
       >
-        Preview
+        Generate preview
       </button>
 
     </div>
   </form>
 
   {% if preview %}
-    <section class="coach-panel factory-preview">
-      <div class="coach-panel__heading">
-        <span class="coach-eyebrow">Preview</span>
-        <h2>{{ selected_athlete.full_name }}</h2>
+    <section class="factory-preview" aria-labelledby="factory-review-heading" data-copilot-region="review-evidence">
+      <div class="factory-review-heading">
+        <div>
+          <span>Proposal review</span>
+          <h2 id="factory-review-heading">{{ selected_athlete.full_name }}</h2>
+        </div>
+        <p>Confirm session structure and available athlete-state evidence.</p>
       </div>
 
       <div class="factory-preview__grid">
@@ -279,7 +294,10 @@
       </div>
       {% if intelligence %}
         <div class="factory-preview__intelligence">
-          <h3>Proposal explanation</h3>
+          <div class="factory-intelligence-heading">
+            <h3>Proposal explanation</h3>
+            <p><strong>Exposures</strong> {{ intelligence.exposures.squat }} squat · {{ intelligence.exposures.bench }} bench · {{ intelligence.exposures.deadlift }} deadlift</p>
+          </div>
           <p data-testid="proposal-reference"><strong>Reference:</strong> {{ explanation.reference_block.label }} — {{ explanation.reference_block.reason }}</p>
           <h4>What was kept</h4>
           {% if explanation.kept %}<ul>{% for item in explanation.kept %}<li data-reason-id="{{ item.reason_id }}">{{ item.label }} — {{ item.reason }}</li>{% endfor %}</ul>{% else %}<p>No exposure was identified as unchanged.</p>{% endif %}
@@ -299,8 +317,6 @@
           {% if explanation.coach_overrides %}<ul>{% for item in explanation.coach_overrides %}<li data-reason-id="{{ item.reason_id }}">{{ item.label }} — {{ item.reason }}</li>{% endfor %}</ul>{% else %}<p>No active coach overrides were applied.</p>{% endif %}
           <h4>Ambiguity and warnings</h4>
           {% if explanation.warnings %}<ul>{% for item in explanation.warnings %}<li data-reason-id="{{ item.reason_id }}">{{ item.label }} — {{ item.reason }}</li>{% endfor %}</ul>{% else %}<p>No unresolved input ambiguity was detected.</p>{% endif %}
-          <h3>Weekly programming intelligence</h3>
-          <p><strong>Exposures:</strong> {{ intelligence.exposures.squat }} squat · {{ intelligence.exposures.bench }} bench · {{ intelligence.exposures.deadlift }} deadlift</p>
           {% if intelligence.fatigue.status == 'reported' %}<p><strong>Reported fatigue:</strong> {{ intelligence.fatigue.detail }}</p>{% endif %}
           <p><strong>RPE adherence:</strong> {{ intelligence.fatigue.rpe_adherence }}</p>
           <h4>Volume progression proposal</h4>
@@ -319,17 +335,17 @@
           </div>
           <ul>{% for item in intelligence.volume.explanation %}<li>{{ item }}</li>{% endfor %}</ul>
           {% if intelligence.volume.overrides_applied %}<p><strong>Coach overrides applied:</strong></p><ul>{% for item in intelligence.volume.overrides_applied %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
-          <h4>Reasoning</h4>
-          <ul>{% for item in intelligence.reasoning %}<li>{{ item }}</li>{% endfor %}</ul>
-          <h4>Constraints and data safety</h4>
-          <ul>{% for item in intelligence.constraints %}<li>{{ item }}</li>{% endfor %}</ul>
+          <div class="factory-evidence-grid">
+            <section><h4>Reasoning</h4><ul>{% for item in intelligence.reasoning %}<li>{{ item }}</li>{% endfor %}</ul></section>
+            <section><h4>Constraints &amp; data safety</h4><ul>{% for item in intelligence.constraints %}<li>{{ item }}</li>{% endfor %}</ul></section>
+          </div>
           {% if proposal_override %}<p class="proposal-provenance" data-testid="coach-override-provenance"><strong>Coach override:</strong> {{ proposal_override.reason }} · {{ proposal_override.recorded_by }}</p>{% endif %}
           <label><span>Coach override reason (required after editing)</span><textarea name="override_reason" form="block-factory-form"></textarea></label>
           <div class="proposal-actions">
             <button class="coach-link-button" type="submit" form="block-factory-form" formmethod="post" formaction="{{ url_for('block_factory.dismiss_proposal') }}">Dismiss proposal</button>
             <button class="coach-primary-button" type="submit" form="block-factory-form" formmethod="post" formaction="{{ url_for('block_factory.generate') }}">Accept proposal</button>
           </div>
-          <p>To edit, change fields above, give a reason, and preview again. Acceptance writes the stored preview, not mutable form fields.</p>
+          <p class="factory-acceptance-note">Edits require a reason and a new preview. Acceptance writes the stored preview.</p>
         </div>
       {% endif %}
     </section>
