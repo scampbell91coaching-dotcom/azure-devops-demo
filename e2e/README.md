@@ -60,6 +60,30 @@ Fixture ownership is explicit:
 - athlete 303 owns the pilot invitation, publication, and completion money path;
 - athlete 808 owns the standalone one-time invitation workflow.
 
+## Future SaaS fixture contract
+
+`e2e/fixtures/saas.ts` adds two deterministic logical organizations. Each has
+an owner, a coach, and an athlete; the seed also provides distinct accounts for
+multiple coaches. Owners intentionally use the current coach-compatible login
+role because organization memberships do not exist yet. The logical tenant
+labels are test metadata only and are not evidence of authorization.
+
+Use `roleSession` or `roleRequestSession` for owner/coach/athlete sessions, and
+`directIdIsolationProbe` for a list of cross-tenant direct-ID URLs. The probe
+accepts only 403 or 404, with 404 preferred once tenant-qualified loading lands.
+
+Future contracts are opt-in so the current release suite stays green:
+
+- `E2E_ENABLE_TENANCY=1` enables direct-ID tenant isolation probes;
+- `E2E_ENABLE_ORG_INVITATIONS=1` exposes the invitation placeholder;
+- `E2E_ENABLE_ORG_ONBOARDING=1` exposes the onboarding placeholder.
+
+The latter two placeholders are expected failures until their provider
+adapters and product routes exist. They make no billing or email-provider calls.
+Do not enable the tenancy flag until organization membership and tenant-scoped
+queries are implemented; today's global coach role is intentionally not
+represented as secure multi-tenant behavior.
+
 For a new mutating workflow, prefer a dedicated athlete. Otherwise add a narrow,
 idempotent reset, prove an unrelated athlete is unchanged, and use a matching
 mutation scope. Never add an E2E reset route to a production blueprint.

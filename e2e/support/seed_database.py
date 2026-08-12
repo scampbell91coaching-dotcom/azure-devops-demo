@@ -50,6 +50,8 @@ SERVICE_ATHLETE_ID = 202
 INVITATION_ATHLETE_ID = 808
 PERFORMANCE_ATHLETE_ID = 404
 PERFORMANCE_EMPTY_ATHLETE_ID = 405
+TENANT_A_ATHLETE_ID = 1101
+TENANT_B_ATHLETE_ID = 2101
 
 
 def _delete_training_state(athlete_id: int) -> None:
@@ -256,6 +258,20 @@ def seed_database(app: Flask) -> None:
             email="casey.no-history@example.test",
             bodyweight_kg=None,
             weight_class="69 kg",
+        )
+        tenant_a_athlete = db.session.get(Athlete, TENANT_A_ATHLETE_ID) or Athlete(
+            id=TENANT_A_ATHLETE_ID,
+            first_name="Avery",
+            last_name="Tenant A",
+            email="athlete.a.e2e@example.test",
+            bodyweight_kg=80.0,
+        )
+        tenant_b_athlete = db.session.get(Athlete, TENANT_B_ATHLETE_ID) or Athlete(
+            id=TENANT_B_ATHLETE_ID,
+            first_name="Blake",
+            last_name="Tenant B",
+            email="athlete.b.e2e@example.test",
+            bodyweight_kg=70.0,
         )
         block = db.session.get(TrainingBlock, 301) or TrainingBlock(
             id=301,
@@ -545,6 +561,53 @@ def seed_database(app: Flask) -> None:
                 "Service Athlete password!", method="scrypt"
             ),
         )
+        tenant_a_coach = User.query.filter_by(
+            email="coach.a.e2e@example.test"
+        ).one_or_none() or User(
+            email="coach.a.e2e@example.test",
+            role=UserRole.COACH,
+            password_hash=generate_password_hash(
+                "Tenant A coach password!", method="scrypt"
+            ),
+        )
+        tenant_b_owner = User.query.filter_by(
+            email="owner.b.e2e@example.test"
+        ).one_or_none() or User(
+            email="owner.b.e2e@example.test",
+            role=UserRole.COACH,
+            password_hash=generate_password_hash(
+                "Tenant B owner password!", method="scrypt"
+            ),
+        )
+        tenant_b_coach = User.query.filter_by(
+            email="coach.b.e2e@example.test"
+        ).one_or_none() or User(
+            email="coach.b.e2e@example.test",
+            role=UserRole.COACH,
+            password_hash=generate_password_hash(
+                "Tenant B coach password!", method="scrypt"
+            ),
+        )
+        tenant_a_athlete_user = User.query.filter_by(
+            email=tenant_a_athlete.email
+        ).one_or_none() or User(
+            email=tenant_a_athlete.email,
+            role=UserRole.ATHLETE,
+            athlete_id=tenant_a_athlete.id,
+            password_hash=generate_password_hash(
+                "Tenant A athlete password!", method="scrypt"
+            ),
+        )
+        tenant_b_athlete_user = User.query.filter_by(
+            email=tenant_b_athlete.email
+        ).one_or_none() or User(
+            email=tenant_b_athlete.email,
+            role=UserRole.ATHLETE,
+            athlete_id=tenant_b_athlete.id,
+            password_hash=generate_password_hash(
+                "Tenant B athlete password!", method="scrypt"
+            ),
+        )
         db.session.add_all(
             [
                 alex,
@@ -553,6 +616,8 @@ def seed_database(app: Flask) -> None:
                 invitation,
                 performance_athlete,
                 performance_empty_athlete,
+                tenant_a_athlete,
+                tenant_b_athlete,
                 block,
                 week,
                 session,
@@ -579,6 +644,11 @@ def seed_database(app: Flask) -> None:
                 coach,
                 athlete_user,
                 service_user,
+                tenant_a_coach,
+                tenant_b_owner,
+                tenant_b_coach,
+                tenant_a_athlete_user,
+                tenant_b_athlete_user,
             ]
         )
         db.session.flush()

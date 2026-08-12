@@ -1,6 +1,15 @@
 import { test as base, expect, type APIRequestContext, type Page } from '@playwright/test';
 import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import {
+  probeDirectIdIsolation,
+  signInPage,
+  signInRequest,
+  tenants,
+  type E2EIdentity,
+  type TenantFixture,
+  type TenantKey,
+} from './saas';
 
 type Fixtures = {
   athleteIds: { primary: number; isolated: number };
@@ -9,6 +18,10 @@ type Fixtures = {
   resetE2EFixture: (request: APIRequestContext, name: string) => Promise<void>;
   mutationScope: string | undefined;
   mutationLease: void;
+  tenantFixtures: Readonly<Record<TenantKey, TenantFixture>>;
+  roleSession: (page: Page, identity: E2EIdentity) => Promise<void>;
+  roleRequestSession: (request: APIRequestContext, identity: E2EIdentity) => Promise<void>;
+  directIdIsolationProbe: (page: Page, paths: readonly string[]) => Promise<void>;
 };
 
 export const test = base.extend<Fixtures>({
@@ -37,6 +50,14 @@ export const test = base.extend<Fixtures>({
     }
   }, { auto: true }],
   athleteIds: async ({}, use) => use({ primary: 101, isolated: 202 }),
+  tenantFixtures: async ({}, use) => use(tenants),
+  roleSession: async ({}, use) => use(signInPage),
+  roleRequestSession: async ({}, use) => use(signInRequest),
+  directIdIsolationProbe: async ({}, use) => {
+    await use(async (page, paths) => {
+      await probeDirectIdIsolation(page, paths);
+    });
+  },
 
   authenticatedState: async ({}, use) => {
     await use(async (page: Page) => {

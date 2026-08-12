@@ -14,6 +14,7 @@ from .athlete_state import (
     AthleteStateSignal,
     CoachTechnicalObservation,
 )
+from .billing import BillingWebhookEvent, SubscriptionAccount
 from .checkins import AthleteCheckinSettings, WeeklyCheckin
 from .client_service import ClientServiceChange
 from .coaching_application import CoachingApplication
@@ -25,7 +26,23 @@ from .meal_plan import MealPlanAssignment, MealPlanTemplate
 from .nutrition_checkin import NutritionCheckIn
 from .nutrition_import import DailyNutrition, NutritionImportJob, NutritionProviderConnection
 from .nutrition_prescription import NutritionMacroPrescription
+from .organisation import (
+    CoachAthleteOwnership,
+    InvitationStatus,
+    MembershipStatus,
+    Organisation,
+    OrganisationInvitation,
+    OrganisationMembership,
+    OrganisationRole,
+    OwnershipStatus,
+)
 from .platform_snapshot import PlatformSnapshot
+from .support_admin import (
+    SupportAccessEvent,
+    SupportCapabilityGrant,
+    SupportDelegation,
+    SupportPrincipalRecord,
+)
 from .programming import (
     ExercisePrescription,
     ProgrammingLiftSlot,
@@ -49,6 +66,7 @@ __all__ = [
     "AthleteStateRecommendation",
     "AthleteStateSignal",
     "AthleteCheckinSettings",
+    "BillingWebhookEvent",
     "CoachingApplication",
     "CoachTechnicalObservation",
     "ClientServiceChange",
@@ -66,12 +84,25 @@ __all__ = [
     "MeetLift",
     "MealPlanAssignment",
     "MealPlanTemplate",
+    "InvitationStatus",
+    "Organisation",
     "NutritionCheckIn",
     "DailyNutrition",
     "NutritionImportJob",
     "NutritionProviderConnection",
     "NutritionMacroPrescription",
+    "CoachAthleteOwnership",
+    "MembershipStatus",
+    "OrganisationInvitation",
+    "OrganisationMembership",
+    "OrganisationRole",
+    "OwnershipStatus",
     "PlatformSnapshot",
+    "SubscriptionAccount",
+    "SupportAccessEvent",
+    "SupportCapabilityGrant",
+    "SupportDelegation",
+    "SupportPrincipalRecord",
     "TrainingBlock",
     "TrainingSession",
     "TrainingSessionLog",

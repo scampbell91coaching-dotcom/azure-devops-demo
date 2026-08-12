@@ -93,7 +93,25 @@ def test_fresh_e2e_database_seeds_once_and_safe_repeat_is_idempotent(
             "Standing Calf Raise",
         }
         assert len(exercises) == 18
-        assert Athlete.query.count() == 6
+        assert Athlete.query.count() == 8
+
+        tenant_a = db.session.get(Athlete, 1101)
+        tenant_b = db.session.get(Athlete, 2101)
+        assert tenant_a.email == "athlete.a.e2e@example.test"
+        assert tenant_b.email == "athlete.b.e2e@example.test"
+
+        from portal.models.user import User, UserRole
+
+        expected_accounts = {
+            "coach.e2e@example.test": UserRole.COACH,
+            "coach.a.e2e@example.test": UserRole.COACH,
+            "owner.b.e2e@example.test": UserRole.COACH,
+            "coach.b.e2e@example.test": UserRole.COACH,
+            "athlete.a.e2e@example.test": UserRole.ATHLETE,
+            "athlete.b.e2e@example.test": UserRole.ATHLETE,
+        }
+        for email, role in expected_accounts.items():
+            assert User.query.filter_by(email=email).one().user_role == role
 
 
 def test_service_reset_is_idempotent_and_leaves_unrelated_athletes_unchanged(

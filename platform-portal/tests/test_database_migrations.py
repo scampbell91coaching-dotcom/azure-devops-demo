@@ -20,9 +20,11 @@ EXPECTED_TABLES = {
     "athlete_state_recommendations",
     "athlete_state_signals",
     "athletes",
+    "billing_webhook_events",
     "coaching_applications",
     "client_service_changes",
     "coach_technical_observations",
+    "coach_athlete_ownerships",
     "day_template_exercises",
     "day_templates",
     "exercise_prescriptions",
@@ -34,10 +36,23 @@ EXPECTED_TABLES = {
     "meets",
     "meal_plan_assignments",
     "meal_plan_templates",
+    "organisations",
+    "organisation_athletes",
+    "memberships",
+    "membership_invitations",
+    "membership_invitation_audit",
     "nutrition_checkins",
     "nutrition_provider_connections",
     "nutrition_import_jobs",
     "nutrition_macro_prescriptions",
+    "organisation_invitations",
+    "organisation_memberships",
+    "organisations",
+    "organizations",
+    "organization_athletes",
+    "organization_invitations",
+    "organization_memberships",
+    "organization_onboarding",
     "daily_nutrition",
     "platform_snapshots",
     "programming_lift_slots",
@@ -47,6 +62,11 @@ EXPECTED_TABLES = {
     "training_session_logs",
     "training_set_results",
     "training_weeks",
+    "subscription_accounts",
+    "support_access_events",
+    "support_capability_grants",
+    "support_delegations",
+    "support_principals",
     "users",
     "weekly_checkins",
     "warmup_protocols",
@@ -121,6 +141,93 @@ def test_upgrade_and_schema_verification_on_empty_sqlite(tmp_path: Path):
             "compatibility_tags",
             "coach_priority",
         } <= exercise_columns
+
+
+def test_membership_migration_backfills_single_tenant_without_orphans(tmp_path: Path):
+    app = migration_app(f"sqlite:///{tmp_path / 'membership-backfill.db'}")
+    runner = app.test_cli_runner()
+    assert runner.invoke(args=["db", "upgrade", "0019_meal_plan_delivery"]).exit_code == 0
+    with app.app_context():
+        db.session.execute(text(
+            "INSERT INTO athletes "
+            "(id, created_at, updated_at, first_name, last_name, email, status) "
+            "VALUES (7, '2026-01-01', '2026-01-01', 'Legacy', 'Athlete', "
+            "'legacy-member@example.test', 'active')"
+        ))
+        db.session.execute(text(
+            "INSERT INTO users (id, email, role, athlete_id, active, created_at) VALUES "
+            "(8, 'legacy-coach@example.test', 'coach', NULL, 1, '2026-01-01'), "
+            "(9, 'legacy-member@example.test', 'athlete', 7, 1, '2026-01-01')"
+        ))
+        db.session.commit()
+    upgrade = runner.invoke(args=["db", "upgrade"])
+    assert upgrade.exit_code == 0, upgrade.output
+    with app.app_context():
+        organisations = db.session.execute(text("SELECT id FROM organisations")).scalars().all()
+        ownership = db.session.execute(text(
+            "SELECT organisation_id, athlete_id FROM organisation_athletes"
+        )).one()
+        memberships = db.session.execute(text(
+            "SELECT user_id, athlete_id, role FROM memberships ORDER BY user_id"
+        )).all()
+        assert len(organisations) == 1
+        assert tuple(ownership) == (organisations[0], 7)
+        assert [tuple(row) for row in memberships] == [
+            (8, None, "coach"), (9, 7, "athlete")
+        ]
+
+
+def test_saas_onboarding_migration_backfills_legacy_tenant_ready(tmp_path: Path):
+    app = migration_app(f"sqlite:///{tmp_path / 'legacy-saas.db'}")
+    runner = app.test_cli_runner()
+    assert runner.invoke(args=["db", "upgrade", "0019_meal_plan_delivery"]).exit_code == 0
+    with app.app_context():
+        db.session.execute(text(
+            "INSERT INTO athletes "
+            "(id, created_at, updated_at, first_name, last_name, email, status) "
+            "VALUES (1, '2026-01-01', '2026-01-01', 'Legacy', 'Athlete', "
+            "'legacy-athlete@example.test', 'active')"
+        ))
+        db.session.execute(text(
+            "INSERT INTO users (id, email, role, active, created_at) "
+            "VALUES (1, 'legacy-coach@example.test', 'coach', 1, '2026-01-01')"
+        ))
+        db.session.commit()
+
+    upgrade = runner.invoke(args=["db", "upgrade"])
+    assert upgrade.exit_code == 0, upgrade.output
+    with app.app_context():
+        organization = db.session.execute(text(
+            "SELECT legacy, slug FROM organizations"
+        )).one()
+        owner = db.session.execute(text(
+            "SELECT user_id, role FROM organization_memberships"
+        )).one()
+        athlete_owner = db.session.execute(text(
+            "SELECT organization_id, athlete_id FROM organization_athletes"
+        )).one()
+        onboarding = db.session.execute(text(
+            "SELECT coach_invite_step, plan_code, ready_at FROM organization_onboarding"
+        )).one()
+        assert organization == (1, "traditional-strength-legacy")
+        assert owner == (1, "owner")
+        assert athlete_owner == (1, 1)
+        assert onboarding[0:2] == ("skipped", "starter")
+        assert onboarding.ready_at is not None
+
+
+def test_billing_migration_uses_legacy_organisation_without_enabling_subscription(tmp_path: Path):
+    app = migration_app(f"sqlite:///{tmp_path / 'billing.db'}")
+    assert app.test_cli_runner().invoke(args=["db", "upgrade"]).exit_code == 0
+
+    with app.app_context():
+        organisation = db.session.execute(text(
+            "SELECT id, slug FROM organisations"
+        )).one()
+        assert tuple(organisation) == (1, "traditional-strength-legacy")
+        assert db.session.execute(text(
+            "SELECT COUNT(*) FROM subscription_accounts"
+        )).scalar_one() == 0
 
 
 def test_nutrition_macro_migration_enforces_overlap_and_append_only(tmp_path: Path):
