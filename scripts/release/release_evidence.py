@@ -19,6 +19,7 @@ EXIT_READY = 0
 EXIT_NOT_READY = 1
 EXIT_ERROR = 2
 MAX_OUTPUT = 4_000
+EXPECTED_ALEMBIC_HEAD = "0022_support_admin_foundation"
 
 SECRET_PATTERNS = (
     (re.compile(r"(?i)(password|passwd|token|secret|api[_-]?key)(\s*[=:]\s*)\S+"), r"\1\2[REDACTED]"),
@@ -110,7 +111,9 @@ def document_check(root: Path, expected: Sequence[str]) -> Check:
     )
 
 
-def migration_heads_check(portal: Path, python: str) -> Check:
+def migration_heads_check(
+    portal: Path, python: str, expected_head: str = EXPECTED_ALEMBIC_HEAD
+) -> Check:
     check = run_command(
         "migration_heads",
         [python, "-m", "alembic", "-c", "migrations/alembic.ini", "heads"],
@@ -118,11 +121,17 @@ def migration_heads_check(portal: Path, python: str) -> Check:
     )
     if check.status == "pass":
         heads = [line for line in check.output.splitlines() if line.strip()]
+        revisions = [line.split()[0] for line in heads]
         if len(heads) != 1:
             check.status = "fail"
             check.summary = f"expected exactly one migration head, found {len(heads)}"
+        elif revisions[0] != expected_head:
+            check.status = "fail"
+            check.summary = (
+                f"expected migration head {expected_head}, found {revisions[0]}"
+            )
         else:
-            check.summary = f"one migration head: {heads[0]}"
+            check.summary = f"expected migration head: {heads[0]}"
     return check
 
 

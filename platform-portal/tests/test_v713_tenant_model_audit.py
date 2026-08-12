@@ -1,9 +1,4 @@
-"""Executable assertions for the V7.13 pre-tenant schema baseline.
-
-These are diagnostics, not the desired SaaS end state. They make a future migration
-explicit: when tenant ownership is added, update this audit and replace these assertions
-with positive and negative two-tenant isolation tests.
-"""
+"""Executable assertions for the reconciled V7.13 canonical tenant schema."""
 
 import pytest
 
@@ -38,11 +33,17 @@ ATHLETE_OWNED_TABLES = {
     "weekly_checkins",
 }
 
-UNOWNED_BUSINESS_ROOTS = {
-    "athletes",
-    "coaching_applications",
-    "lead_captures",
-    "meets",
+CANONICAL_TENANT_TABLES = {
+    "organisations",
+    "organisation_memberships",
+    "coach_athlete_ownerships",
+    "organisation_invitations",
+}
+
+REMOVED_SCHEMA_FAMILIES = {
+    "organizations", "organization_memberships", "organization_athletes",
+    "organization_invitations", "organization_onboarding", "memberships",
+    "membership_invitations", "membership_invitation_audit", "organisation_athletes",
 }
 
 
@@ -61,18 +62,9 @@ def test_v713_audit_gap_is_closed_by_integrated_tenant_schema(app):
     with app.app_context():
         assert "tenants" not in db.metadata.tables
         assert "tenant_memberships" not in db.metadata.tables
-        tenant_columns = {
-            table.name: column.name
-            for table in db.metadata.tables.values()
-            for column in table.columns
-            if column.name in {"tenant_id", "organisation_id", "organization_id"}
-        }
-        assert {
-            "organisation_memberships",
-            "coach_athlete_ownerships",
-            "membership_invitations",
-            "subscription_accounts",
-        } <= set(tenant_columns)
+        assert CANONICAL_TENANT_TABLES <= set(db.metadata.tables)
+        assert REMOVED_SCHEMA_FAMILIES.isdisjoint(db.metadata.tables)
+        assert "organisation_id" in db.metadata.tables["subscription_accounts"].c
 
 
 def test_v713_athlete_owned_rows_have_an_athlete_foreign_key(app):
@@ -87,14 +79,14 @@ def test_v713_athlete_owned_rows_have_an_athlete_foreign_key(app):
             ), table_name
 
 
-def test_v713_business_roots_cannot_express_tenant_ownership(app):
+def test_v713_ownership_edges_use_canonical_organisation_foreign_keys(app):
     with app.app_context():
-        for table_name in UNOWNED_BUSINESS_ROOTS:
+        for table_name in CANONICAL_TENANT_TABLES - {"organisations"}:
             table = db.metadata.tables[table_name]
-            assert not any(
-                foreign_key.target_fullname.startswith("tenants.")
-                for column in table.columns
-                for foreign_key in column.foreign_keys
+            assert "organisation_id" in table.c
+            assert any(
+                foreign_key.target_fullname == "organisations.id"
+                for foreign_key in table.c.organisation_id.foreign_keys
             ), table_name
 
 

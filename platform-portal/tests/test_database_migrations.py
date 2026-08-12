@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import IntegrityError
 
@@ -37,22 +39,12 @@ EXPECTED_TABLES = {
     "meal_plan_assignments",
     "meal_plan_templates",
     "organisations",
-    "organisation_athletes",
-    "memberships",
-    "membership_invitations",
-    "membership_invitation_audit",
     "nutrition_checkins",
     "nutrition_provider_connections",
     "nutrition_import_jobs",
     "nutrition_macro_prescriptions",
     "organisation_invitations",
     "organisation_memberships",
-    "organisations",
-    "organizations",
-    "organization_athletes",
-    "organization_invitations",
-    "organization_memberships",
-    "organization_onboarding",
     "daily_nutrition",
     "platform_snapshots",
     "programming_lift_slots",
@@ -109,6 +101,11 @@ def test_migration_cli_can_inspect_heads_with_local_validation_config(tmp_path: 
     result = app.test_cli_runner().invoke(args=["db", "heads"])
 
     assert result.exit_code == 0, result.output
+    config = Config(str(Path(__file__).parents[1] / "migrations" / "alembic.ini"))
+    config.set_main_option("script_location", str(Path(__file__).parents[1] / "migrations"))
+    assert ScriptDirectory.from_config(config).get_heads() == [
+        "0022_support_admin_foundation"
+    ]
 
 
 def test_upgrade_and_schema_verification_on_empty_sqlite(tmp_path: Path):
@@ -143,8 +140,8 @@ def test_upgrade_and_schema_verification_on_empty_sqlite(tmp_path: Path):
         } <= exercise_columns
 
 
-def test_membership_migration_backfills_single_tenant_without_orphans(tmp_path: Path):
-    app = migration_app(f"sqlite:///{tmp_path / 'membership-backfill.db'}")
+def test_canonical_tenancy_migration_does_not_automatically_backfill_legacy_rows(tmp_path: Path):
+    app = migration_app(f"sqlite:///{tmp_path / 'no-automatic-backfill.db'}")
     runner = app.test_cli_runner()
     assert runner.invoke(args=["db", "upgrade", "0019_meal_plan_delivery"]).exit_code == 0
     with app.app_context():
@@ -163,68 +160,19 @@ def test_membership_migration_backfills_single_tenant_without_orphans(tmp_path: 
     upgrade = runner.invoke(args=["db", "upgrade"])
     assert upgrade.exit_code == 0, upgrade.output
     with app.app_context():
-        organisations = db.session.execute(text("SELECT id FROM organisations")).scalars().all()
-        ownership = db.session.execute(text(
-            "SELECT organisation_id, athlete_id FROM organisation_athletes"
-        )).one()
-        memberships = db.session.execute(text(
-            "SELECT user_id, athlete_id, role FROM memberships ORDER BY user_id"
-        )).all()
-        assert len(organisations) == 1
-        assert tuple(ownership) == (organisations[0], 7)
-        assert [tuple(row) for row in memberships] == [
-            (8, None, "coach"), (9, 7, "athlete")
-        ]
+        assert db.session.execute(text("SELECT COUNT(*) FROM organisations")).scalar_one() == 0
+        assert db.session.execute(text("SELECT COUNT(*) FROM organisation_memberships")).scalar_one() == 0
+        assert db.session.execute(text("SELECT COUNT(*) FROM coach_athlete_ownerships")).scalar_one() == 0
 
 
-def test_saas_onboarding_migration_backfills_legacy_tenant_ready(tmp_path: Path):
-    app = migration_app(f"sqlite:///{tmp_path / 'legacy-saas.db'}")
-    runner = app.test_cli_runner()
-    assert runner.invoke(args=["db", "upgrade", "0019_meal_plan_delivery"]).exit_code == 0
-    with app.app_context():
-        db.session.execute(text(
-            "INSERT INTO athletes "
-            "(id, created_at, updated_at, first_name, last_name, email, status) "
-            "VALUES (1, '2026-01-01', '2026-01-01', 'Legacy', 'Athlete', "
-            "'legacy-athlete@example.test', 'active')"
-        ))
-        db.session.execute(text(
-            "INSERT INTO users (id, email, role, active, created_at) "
-            "VALUES (1, 'legacy-coach@example.test', 'coach', 1, '2026-01-01')"
-        ))
-        db.session.commit()
-
-    upgrade = runner.invoke(args=["db", "upgrade"])
-    assert upgrade.exit_code == 0, upgrade.output
-    with app.app_context():
-        organization = db.session.execute(text(
-            "SELECT legacy, slug FROM organizations"
-        )).one()
-        owner = db.session.execute(text(
-            "SELECT user_id, role FROM organization_memberships"
-        )).one()
-        athlete_owner = db.session.execute(text(
-            "SELECT organization_id, athlete_id FROM organization_athletes"
-        )).one()
-        onboarding = db.session.execute(text(
-            "SELECT coach_invite_step, plan_code, ready_at FROM organization_onboarding"
-        )).one()
-        assert organization == (1, "traditional-strength-legacy")
-        assert owner == (1, "owner")
-        assert athlete_owner == (1, 1)
-        assert onboarding[0:2] == ("skipped", "starter")
-        assert onboarding.ready_at is not None
-
-
-def test_billing_migration_uses_legacy_organisation_without_enabling_subscription(tmp_path: Path):
+def test_billing_migration_does_not_create_a_legacy_organisation_or_subscription(tmp_path: Path):
     app = migration_app(f"sqlite:///{tmp_path / 'billing.db'}")
     assert app.test_cli_runner().invoke(args=["db", "upgrade"]).exit_code == 0
 
     with app.app_context():
-        organisation = db.session.execute(text(
-            "SELECT id, slug FROM organisations"
-        )).one()
-        assert tuple(organisation) == (1, "traditional-strength-legacy")
+        assert db.session.execute(text(
+            "SELECT COUNT(*) FROM organisations"
+        )).scalar_one() == 0
         assert db.session.execute(text(
             "SELECT COUNT(*) FROM subscription_accounts"
         )).scalar_one() == 0
@@ -402,3 +350,8 @@ def test_upgrade_on_empty_postgresql_when_available(monkeypatch):
     assert upgrade.exit_code == 0, upgrade.output
     verification = runner.invoke(args=["verify-schema"])
     assert verification.exit_code == 0, verification.output
+    with app.app_context():
+        inspector = inspect(db.engine)
+        assert set(inspector.get_table_names()) == EXPECTED_TABLES | {"alembic_version"}
+        heads = db.session.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
+        assert heads == ["0022_support_admin_foundation"]

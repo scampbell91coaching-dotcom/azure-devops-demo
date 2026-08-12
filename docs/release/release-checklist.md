@@ -1,5 +1,7 @@
 # Release checklist
 
+- [ ] The affected rows in the [powerlifting regression matrix](pl-regression-matrix.md) pass.
+- [ ] Ordered Playwright smoke passes before the full desktop/mobile browser regression.
 - [ ] Generated evidence status is `ready` for the intended commit.
 - [ ] The commit and branch in evidence match the release candidate.
 - [ ] Any dirty worktree state is understood and excluded from the release.

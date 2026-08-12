@@ -49,6 +49,15 @@ class ReleaseEvidenceTests(unittest.TestCase):
         self.assertEqual(result.status, "fail")
         self.assertIn("exactly one", result.summary)
 
+    @mock.patch.object(release_evidence, "run_command")
+    def test_unexpected_single_migration_head_fails(self, run_command):
+        run_command.return_value = release_evidence.Check(
+            "migration_heads", "pass", True, "ok", output="0021_saas_billing_foundation (head)"
+        )
+        result = release_evidence.migration_heads_check(Path("."), "python3")
+        self.assertEqual(result.status, "fail")
+        self.assertIn("expected migration head", result.summary)
+
     def test_markdown_contains_machine_status_and_checks(self):
         evidence = {
             "status": "ready", "generated_at": "2026-01-01T00:00:00Z",
