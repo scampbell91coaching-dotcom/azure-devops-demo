@@ -18,6 +18,12 @@ from portal.models.programming import (
     TrainingSetResult,
     TrainingWeek,
 )
+from portal.models.organisation import (
+    CoachAthleteOwnership,
+    Organisation,
+    OrganisationMembership,
+    OrganisationRole,
+)
 from portal.models.user import User, UserRole
 
 
@@ -68,6 +74,25 @@ def chart_app():
             User(email=alex.email, role=UserRole.ATHLETE, athlete_id=alex.id, password_hash="unused"),
         ]
         db.session.add_all(users)
+        db.session.flush()
+        organisation = Organisation(name="Chart Strength", slug="chart-strength")
+        db.session.add(organisation)
+        db.session.flush()
+        membership = OrganisationMembership(
+            organisation_id=organisation.id,
+            user_id=users[0].id,
+            role=OrganisationRole.COACH,
+        )
+        db.session.add(membership)
+        db.session.flush()
+        db.session.add_all([
+            CoachAthleteOwnership(
+                organisation_id=organisation.id,
+                coach_membership_id=membership.id,
+                athlete_id=athlete.id,
+            )
+            for athlete in (alex, sam)
+        ])
         db.session.commit()
         app.config["CHART_IDS"] = {
             "alex": alex.id, "sam": sam.id, "block": block.id,

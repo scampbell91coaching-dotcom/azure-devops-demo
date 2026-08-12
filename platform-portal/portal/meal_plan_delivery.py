@@ -12,10 +12,12 @@ from .extensions import db
 from .models.athlete import Athlete
 from .models.user import UserRole
 from .repositories.nutrition_prescriptions import SqlAlchemyMacroPrescriptionRepository
+from .repositories.meal_plans import SqlAlchemyMealPlanRepository
 from .services.client_service_profiles import Service
 from .services.client_services import may_start_client_service
 from .services.meal_plans import DayMode, DraftStatus, FoodSnapshot, MacroTotals, Meal, MealItem, MealPlanDay, MealPlanDraft, MealPlanWorkflow, PrescriptionSnapshot, PublicationError, WorkflowConflictError
 from .services.nutrition_prescriptions import MacroPrescriptionService
+from .tenancy import coach_owns_athlete, owned_athlete_ids, require_tenancy_context
 
 meal_plan_delivery_bp = Blueprint("meal_plan_delivery", __name__)
 
@@ -28,6 +30,7 @@ def _workflow() -> MealPlanWorkflow:
 
 
 def _draft(template_id: str, *, editable: bool = False) -> MealPlanDraft:
+    require_tenancy_context()
     draft = _workflow().repository.get_draft(template_id)
     if draft is None:
         abort(404)
@@ -57,15 +60,36 @@ def _number(name: str, *, positive: bool = False) -> Decimal:
 @meal_plan_delivery_bp.get("/coach/meal-plans")
 @roles_required(UserRole.COACH)
 def coach_index():
+    require_tenancy_context()
     repository = _workflow().repository
-    drafts = repository.list_drafts() if hasattr(repository, "list_drafts") else ()
-    assignments = repository.list_assignments() if hasattr(repository, "list_assignments") else ()
+    if isinstance(repository, SqlAlchemyMealPlanRepository):
+        drafts = repository.list_drafts(g.current_user.id)
+    elif hasattr(repository, "list_drafts"):
+        drafts = tuple(
+            draft
+            for draft in repository.list_drafts()
+            if draft.coach_id == str(g.current_user.id)
+        )
+    else:
+        drafts = ()
+    athlete_ids = owned_athlete_ids(g.current_user.id)
+    if isinstance(repository, SqlAlchemyMealPlanRepository):
+        assignments = repository.list_assignments(athlete_ids)
+    elif hasattr(repository, "list_assignments"):
+        assignments = tuple(
+            item
+            for item in repository.list_assignments()
+            if item.athlete_id in athlete_ids
+        )
+    else:
+        assignments = ()
     return render_template("meal_plans/coach_index.html", drafts=drafts, assignments=assignments)
 
 
 @meal_plan_delivery_bp.post("/coach/meal-plans")
 @roles_required(UserRole.COACH)
 def create_template():
+    require_tenancy_context()
     name = request.form.get("name", "").strip()
     if not name:
         abort(400, description="Meal-plan name is required.")
@@ -149,10 +173,19 @@ def coach_preview(template_id: str):
     draft = _draft(template_id)
     athlete_id = request.args.get("athlete_id", type=int)
     effective = request.args.get("effective_from", type=date.fromisoformat) or datetime.now(UTC).date()
+    if athlete_id and not coach_owns_athlete(g.current_user.id, athlete_id):
+        abort(404)
     athlete = db.session.get(Athlete, athlete_id) if athlete_id else None
     prescription = _prescription(athlete_id, effective) if athlete_id else None
     preview = _workflow().preview(draft, prescription) if prescription else None
-    athletes = Athlete.query.order_by(Athlete.last_name, Athlete.first_name).all()
+    athlete_ids = owned_athlete_ids(g.current_user.id)
+    athletes = (
+        Athlete.query.filter(Athlete.id.in_(athlete_ids))
+        .order_by(Athlete.last_name, Athlete.first_name)
+        .all()
+        if athlete_ids
+        else []
+    )
     return render_template("meal_plans/coach_preview.html", draft=draft, athlete=athlete, athletes=athletes, effective_from=effective, prescription=prescription, preview=preview, entitled=bool(athlete_id and may_start_client_service(athlete_id, Service.NUTRITION_COACHING)))
 
 
@@ -162,6 +195,8 @@ def publish(template_id: str):
     draft = _draft(template_id, editable=True)
     try:
         athlete_id = int(request.form["athlete_id"])
+        if not coach_owns_athlete(g.current_user.id, athlete_id):
+            abort(404)
         effective = date.fromisoformat(request.form["effective_from"])
         until_raw = request.form.get("effective_until", "").strip()
         prescription = _prescription(athlete_id, effective)
@@ -189,7 +224,10 @@ def revise(template_id: str):
 @roles_required(UserRole.COACH)
 def coach_assignment(assignment_id: str):
     assignment = _workflow().repository.get_assignment(assignment_id)
-    if assignment is None: abort(404)
+    if assignment is None or not coach_owns_athlete(
+        g.current_user.id, assignment.athlete_id
+    ):
+        abort(404)
     return render_template("meal_plans/athlete_view.html", assignment=assignment, coach_view=True)
 
 

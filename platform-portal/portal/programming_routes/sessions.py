@@ -14,6 +14,7 @@ from ..services.weekly_programming_intelligence import map_athlete_programming_c
 from ..models.warmup import WarmupAssignment, WarmupProtocol
 from ..services.persisted_warmups import resolve_warmup
 from ..services.movement_warmup_candidates import warmup_candidates
+from ..tenancy import require_programming_access
 
 
 def _redirect_after_edit(session: TrainingSession):
@@ -32,8 +33,7 @@ def register_session_routes(blueprint: Blueprint) -> None:
     @blueprint.post("/programming/weeks/<int:week_id>/sessions")
     def create_session(week_id: int):
         week = db.session.get(TrainingWeek, week_id)
-        if week is None:
-            abort(404)
+        require_programming_access(week)
         session = create(
             week,
             name=request.form.get("name", "").strip(),
@@ -44,16 +44,14 @@ def register_session_routes(blueprint: Blueprint) -> None:
     @blueprint.post("/programming/sessions/<int:session_id>/insert-before")
     def insert_session_before(session_id: int):
         source = db.session.get(TrainingSession, session_id)
-        if source is None:
-            abort(404)
+        require_programming_access(source)
         target = insert_blank(source, after=False)
         return _redirect_after_edit(target)
 
     @blueprint.post("/programming/sessions/<int:session_id>/insert-after")
     def insert_session_after(session_id: int):
         source = db.session.get(TrainingSession, session_id)
-        if source is None:
-            abort(404)
+        require_programming_access(source)
         target = insert_blank(source, after=True)
         return _redirect_after_edit(target)
 
@@ -74,6 +72,7 @@ def register_session_routes(blueprint: Blueprint) -> None:
         )
         if item is None:
             abort(404)
+        require_programming_access(item)
         week = item.week
         block = week.block
         return render_template(
@@ -92,15 +91,13 @@ def register_session_routes(blueprint: Blueprint) -> None:
     @blueprint.post("/programming/sessions/<int:session_id>/duplicate")
     def duplicate_session(session_id: int):
         source = db.session.get(TrainingSession, session_id)
-        if source is None:
-            abort(404)
+        require_programming_access(source)
         target = duplicate(source)
         return _redirect_after_edit(target)
 
     @blueprint.post("/programming/sessions/<int:session_id>/delete")
     def delete_session(session_id: int):
         item = db.session.get(TrainingSession, session_id)
-        if item is None:
-            abort(404)
+        require_programming_access(item)
         week_id = delete(item)
         return redirect(url_for("programming.week", week_id=week_id))

@@ -9,6 +9,7 @@ from portal import create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.nutrition_import import DailyNutrition, NutritionImportJob
+from portal.models.organisation import CoachAthleteOwnership, Organisation, OrganisationMembership, OrganisationRole
 from portal.models.user import User, UserRole
 from portal.services.nutrition_import.myfitnesspal import ImportFormatError, MyFitnessPalFileProvider
 
@@ -31,7 +32,13 @@ def secured_app():
         db.session.add_all([first, second]); db.session.flush()
         athlete_user = User(email=first.email, role=UserRole.ATHLETE, athlete_id=first.id); athlete_user.set_password("athlete password long")
         coach = User(email="coach@example.test", role=UserRole.COACH); coach.set_password("coach password long")
-        db.session.add_all([athlete_user, coach]); db.session.commit()
+        db.session.add_all([athlete_user, coach]); db.session.flush()
+        organisation = Organisation(name="Import Strength", slug="import-strength")
+        db.session.add(organisation); db.session.flush()
+        membership = OrganisationMembership(organisation=organisation, user=coach, role=OrganisationRole.COACH)
+        db.session.add(membership); db.session.flush()
+        db.session.add(CoachAthleteOwnership(organisation=organisation, coach_membership=membership, athlete=second))
+        db.session.commit()
         app.config["IMPORT_IDS"] = (first.id, second.id)
     return app
 

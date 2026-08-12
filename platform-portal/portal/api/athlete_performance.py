@@ -1,11 +1,12 @@
 from datetime import date, timedelta
 
-from flask import Blueprint, abort, jsonify, request
+from flask import Blueprint, abort, g, jsonify, request
 
 from ..services.performance_charts import (
     AthletePerformanceChartService,
     PerformanceChartFilter,
 )
+from ..tenancy import coach_owns_athlete
 
 athlete_performance_bp = Blueprint("athlete_performance_api", __name__)
 service = AthletePerformanceChartService()
@@ -36,6 +37,9 @@ def _block_argument() -> int | None:
 
 @athlete_performance_bp.get("/athletes/<int:athlete_id>/performance/charts")
 def charts(athlete_id: int):
+    user = g.get("current_user")
+    if user is None or not coach_owns_athlete(user.id, athlete_id):
+        abort(404)
     end = _date_argument("to", date.today())
     start = _date_argument("from", end - timedelta(days=89))
     try:

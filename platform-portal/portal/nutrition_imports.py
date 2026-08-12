@@ -3,28 +3,20 @@ from __future__ import annotations
 import json
 from datetime import UTC, date, datetime, timedelta
 
-from flask import Blueprint, abort, current_app, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, redirect, render_template, request, url_for
 
 from .extensions import db
 from .models.athlete import Athlete
 from .models.nutrition_import import DailyNutrition, NutritionImportJob, NutritionProviderConnection
-from .models.user import UserRole
 from .services.nutrition_import.myfitnesspal import ImportFormatError, MyFitnessPalFileProvider
 from .services.nutrition_entitlements import nutrition_coaching_enabled
+from .tenancy import require_athlete_access
 
 nutrition_imports_bp = Blueprint("nutrition_imports", __name__)
 
 
 def _athlete_access(athlete_id: int) -> Athlete:
-    athlete = db.session.get(Athlete, athlete_id)
-    if athlete is None:
-        abort(404)
-    user = g.get("current_user")
-    if user is not None and user.user_role == UserRole.ATHLETE and user.athlete_id != athlete_id:
-        abort(404)
-    if user is None and not current_app.config["AUTHENTICATION_DISABLED"]:
-        abort(401)
-    return athlete
+    return require_athlete_access(athlete_id)
 
 
 def _active_nutrition_access(athlete_id: int) -> Athlete:

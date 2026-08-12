@@ -1,17 +1,14 @@
 """Cross-tenant authorization contracts for the multi-coach rollout.
 
-The production schema does not yet have organisations or coach-to-athlete
-membership.  ``TenantSeed`` therefore describes the intended ownership graph
-alongside real database rows.  Tests marked with ``TENANCY_GAP`` are strict:
-they document today's known exposure and become failures (XPASS) when a route
-starts enforcing the contract, prompting removal of the mark.
+The fixture persists the canonical Organisation membership and coach ownership
+graph alongside the powerlifting workflow records.
 """
 
 from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime
 
 import pytest
 
@@ -19,31 +16,21 @@ from portal import create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.checkins import AthleteCheckinSettings, WeeklyCheckin
-from portal.models.meal_plan import MealPlanTemplate
+from portal.models.meal_plan import MealPlanAssignment, MealPlanTemplate
 from portal.models.nutrition_prescription import NutritionMacroPrescription
 from portal.models.programming import TrainingBlock, TrainingSession, TrainingWeek
 from portal.models.user import User, UserRole
-
-
-TENANCY_GAP = pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "organisation and coach-to-athlete membership do not exist yet; "
-        "authenticated coaches currently have global athlete access"
-    ),
-)
-FILE_ACCESS_GAP = pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "meal-plan PDF metadata and tenant-aware file-store abstraction do not "
-        "exist yet; define both before adding file delivery"
-    ),
+from portal.models.organisation import (
+    CoachAthleteOwnership,
+    Organisation,
+    OrganisationMembership,
+    OrganisationRole,
 )
 
 
 @dataclass(frozen=True)
 class OrganisationSeed:
-    id: str
+    id: int
     name: str
     coach_id: int
     athlete_id: int
@@ -92,6 +79,31 @@ def tenant_app():
         db.session.add_all([coach_a, coach_b, athlete_a, athlete_b])
         db.session.flush()
 
+        organisation_a = Organisation(name="North Strength", slug="north-strength")
+        organisation_b = Organisation(name="South Strength", slug="south-strength")
+        db.session.add_all([organisation_a, organisation_b])
+        db.session.flush()
+        membership_a = OrganisationMembership(
+            organisation_id=organisation_a.id, user_id=coach_a.id, role=OrganisationRole.COACH
+        )
+        membership_b = OrganisationMembership(
+            organisation_id=organisation_b.id, user_id=coach_b.id, role=OrganisationRole.COACH
+        )
+        db.session.add_all([membership_a, membership_b])
+        db.session.flush()
+        db.session.add_all([
+            CoachAthleteOwnership(
+                organisation_id=organisation_a.id,
+                coach_membership_id=membership_a.id,
+                athlete_id=athlete_a.id,
+            ),
+            CoachAthleteOwnership(
+                organisation_id=organisation_b.id,
+                coach_membership_id=membership_b.id,
+                athlete_id=athlete_b.id,
+            ),
+        ])
+
         block_b = TrainingBlock(athlete=athlete_b, name="South private block")
         week_b = TrainingWeek(block=block_b, name="South private week", position=1)
         session_b = TrainingSession(
@@ -121,12 +133,29 @@ def tenant_app():
             name="South PDF metadata PRIVATE",
             payload={"days": [], "substitutions": [], "notes": "private"},
         )
+        assignment_b = MealPlanAssignment(
+            id="assignment-south-private",
+            athlete_id=athlete_b.id,
+            template_id=template_b.id,
+            template_revision=1,
+            effective_from=date(2026, 8, 1),
+            published_by_user_id=coach_b.id,
+            published_at=datetime(2026, 8, 1, tzinfo=UTC),
+            snapshot={
+                "template_name": "South assignment PRIVATE",
+                "days": [],
+                "substitutions": [],
+                "prescription": {"id": macro_b.id, "revision": 1, "targets": {}},
+                "tolerance": {},
+            },
+        )
         db.session.add_all(
             [
                 block_b,
                 checkin_b,
                 macro_b,
                 template_b,
+                assignment_b,
                 AthleteCheckinSettings(
                     athlete=athlete_a,
                     training_enabled=True,
@@ -142,10 +171,10 @@ def tenant_app():
         db.session.commit()
         app.config["TENANT_SEED"] = TenantSeed(
             organisation_a=OrganisationSeed(
-                "org-north", "North Strength", coach_a.id, athlete_a.id
+                organisation_a.id, "North Strength", coach_a.id, athlete_a.id
             ),
             organisation_b=OrganisationSeed(
-                "org-south", "South Strength", coach_b.id, athlete_b.id
+                organisation_b.id, "South Strength", coach_b.id, athlete_b.id
             ),
             block_b=block_b.id,
             week_b=week_b.id,
@@ -167,7 +196,6 @@ def _coach_a_client(app):
     return client
 
 
-@TENANCY_GAP
 def test_coach_list_does_not_disclose_similarly_named_athlete_from_other_org(
     tenant_app,
 ):
@@ -176,7 +204,6 @@ def test_coach_list_does_not_disclose_similarly_named_athlete_from_other_org(
     assert b"alex@south.test" not in response.data
 
 
-@TENANCY_GAP
 def test_coach_cannot_read_other_org_athlete_profile_competition_or_bodyweight(
     tenant_app,
 ):
@@ -187,7 +214,6 @@ def test_coach_cannot_read_other_org_athlete_profile_competition_or_bodyweight(
     assert response.status_code == 404
 
 
-@TENANCY_GAP
 def test_coach_cannot_mutate_other_org_athlete_profile_by_direct_id(tenant_app):
     seed = tenant_app.config["TENANT_SEED"]
     response = _coach_a_client(tenant_app).post(
@@ -205,7 +231,6 @@ def test_coach_cannot_mutate_other_org_athlete_profile_by_direct_id(tenant_app):
         ("session", "/programming/sessions/{session_b}"),
     ],
 )
-@TENANCY_GAP
 def test_coach_cannot_read_other_org_programming_direct_ids(
     tenant_app, resource, path
 ):
@@ -215,7 +240,6 @@ def test_coach_cannot_read_other_org_programming_direct_ids(
     assert response.status_code == 404
 
 
-@TENANCY_GAP
 def test_coach_cannot_mutate_other_org_programming_block_direct_id(tenant_app):
     seed = tenant_app.config["TENANT_SEED"]
     response = _coach_a_client(tenant_app).post(
@@ -225,14 +249,12 @@ def test_coach_cannot_mutate_other_org_programming_block_direct_id(tenant_app):
     assert response.status_code == 404
 
 
-@TENANCY_GAP
 def test_coach_cannot_read_other_org_checkin_direct_id(tenant_app):
     seed = tenant_app.config["TENANT_SEED"]
     response = _coach_a_client(tenant_app).get(f"/check-ins/{seed.checkin_b}")
     assert response.status_code == 404
 
 
-@TENANCY_GAP
 def test_coach_cannot_mutate_other_org_checkin_direct_id(tenant_app):
     seed = tenant_app.config["TENANT_SEED"]
     response = _coach_a_client(tenant_app).post(
@@ -242,7 +264,12 @@ def test_coach_cannot_mutate_other_org_checkin_direct_id(tenant_app):
     assert response.status_code == 404
 
 
-@TENANCY_GAP
+def test_coach_checkin_list_excludes_other_org_checkins(tenant_app):
+    response = _coach_a_client(tenant_app).get("/check-ins")
+    assert response.status_code == 200
+    assert b"South private check-in" not in response.data
+
+
 def test_coach_cannot_read_other_org_macro_history(tenant_app):
     seed = tenant_app.config["TENANT_SEED"]
     response = _coach_a_client(tenant_app).get(
@@ -251,7 +278,6 @@ def test_coach_cannot_read_other_org_macro_history(tenant_app):
     assert response.status_code == 404
 
 
-@TENANCY_GAP
 def test_coach_cannot_create_other_org_macro_prescription(tenant_app):
     seed = tenant_app.config["TENANT_SEED"]
     response = _coach_a_client(tenant_app).post(
@@ -268,6 +294,24 @@ def test_coach_cannot_create_other_org_macro_prescription(tenant_app):
     assert response.status_code == 404
 
 
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        ("get", "/athletes/{athlete_id}/nutrition-import"),
+        ("post", "/athletes/{athlete_id}/nutrition-import/preview"),
+        ("post", "/athletes/{athlete_id}/nutrition-import/999/commit"),
+        ("post", "/athletes/{athlete_id}/nutrition-import/disconnect"),
+    ],
+)
+def test_coach_cannot_access_other_org_nutrition_imports(tenant_app, method, path):
+    seed = tenant_app.config["TENANT_SEED"]
+    response = getattr(_coach_a_client(tenant_app), method)(
+        path.format(athlete_id=seed.organisation_b.athlete_id),
+        data={"csrf_token": "tenant-a-csrf"},
+    )
+    assert response.status_code == 404
+
+
 def test_meal_plan_template_direct_id_is_scoped_to_owning_coach(tenant_app):
     seed = tenant_app.config["TENANT_SEED"]
     response = _coach_a_client(tenant_app).get(
@@ -276,21 +320,25 @@ def test_meal_plan_template_direct_id_is_scoped_to_owning_coach(tenant_app):
     assert response.status_code == 404
 
 
-@TENANCY_GAP
+def test_meal_plan_assignment_direct_id_is_scoped_to_owned_athlete(tenant_app):
+    response = _coach_a_client(tenant_app).get(
+        "/coach/meal-plan-assignments/assignment-south-private"
+    )
+    assert response.status_code == 404
+
+
 def test_meal_plan_list_does_not_disclose_other_org_pdf_metadata(tenant_app):
     response = _coach_a_client(tenant_app).get("/coach/meal-plans")
     assert response.status_code == 200
     assert b"South PDF metadata PRIVATE" not in response.data
 
 
-@FILE_ACCESS_GAP
 def test_meal_plan_file_store_requires_tenant_scoped_metadata_contract(tenant_app):
     store = tenant_app.extensions["meal_plan_file_store"]
     assert callable(store.open_for_coach)
     assert callable(store.open_for_athlete)
 
 
-@TENANCY_GAP
 def test_performance_api_conceals_other_org_athlete_direct_id(tenant_app):
     seed = tenant_app.config["TENANT_SEED"]
     response = _coach_a_client(tenant_app).get(

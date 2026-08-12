@@ -39,6 +39,7 @@ from .security import init_security_headers
 from .services.release_readiness import ReleaseEvidenceService
 from .repositories.meal_plans import SqlAlchemyMealPlanRepository
 from .services.meal_plans import MealPlanWorkflow
+from .services.meal_plan_files import MealPlanFileStore
 from .services.nutrition_entitlements import nutrition_coaching_enabled
 from .views import views_bp
 
@@ -113,6 +114,9 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     )
     app.extensions["meal_plan_workflow"] = MealPlanWorkflow(
         SqlAlchemyMealPlanRepository(), nutrition_coaching_enabled
+    )
+    app.extensions["meal_plan_file_store"] = MealPlanFileStore(
+        Path(app.config.get("MEAL_PLAN_FILE_ROOT", portal_root / "instance" / "meal-plans"))
     )
     init_security_headers(app, prevent_caching=True)
     migrate.init_app(

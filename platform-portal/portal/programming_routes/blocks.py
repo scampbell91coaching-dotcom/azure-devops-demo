@@ -2,7 +2,6 @@ from flask import Blueprint, abort, redirect, render_template, request, url_for
 from sqlalchemy.orm import joinedload, selectinload
 
 from ..extensions import db
-from ..models.athlete import Athlete
 from ..models.programming import TrainingBlock, TrainingSession, TrainingWeek
 from ..programming_services.blocks import (
     BlockActivationError,
@@ -13,6 +12,7 @@ from ..programming_services.blocks import (
     duplicate,
 )
 from ..programming_services.presentation import week_exposure_summary
+from ..tenancy import require_athlete_access, require_programming_access
 
 
 def register_block_routes(blueprint: Blueprint) -> None:
@@ -20,7 +20,7 @@ def register_block_routes(blueprint: Blueprint) -> None:
     def create_block():
         athlete_id = request.form.get("athlete_id", type=int)
         name = request.form.get("name", "").strip()
-        athlete = db.session.get(Athlete, athlete_id) if athlete_id else None
+        athlete = require_athlete_access(athlete_id) if athlete_id else None
         if athlete is None or not name:
             abort(400)
         block = create(
@@ -33,16 +33,14 @@ def register_block_routes(blueprint: Blueprint) -> None:
     @blueprint.post("/programming/blocks/<int:block_id>/duplicate")
     def duplicate_block(block_id: int):
         source = db.session.get(TrainingBlock, block_id)
-        if source is None:
-            abort(404)
+        require_programming_access(source)
         target = duplicate(source)
         return redirect(url_for("programming.block", block_id=target.id))
 
     @blueprint.post("/programming/blocks/<int:block_id>/activate")
     def activate_block(block_id: int):
         item = db.session.get(TrainingBlock, block_id)
-        if item is None:
-            abort(404)
+        require_programming_access(item)
         try:
             activate(item)
         except BlockActivationError as error:
@@ -52,8 +50,7 @@ def register_block_routes(blueprint: Blueprint) -> None:
     @blueprint.post("/programming/blocks/<int:block_id>/archive")
     def archive_block(block_id: int):
         item = db.session.get(TrainingBlock, block_id)
-        if item is None:
-            abort(404)
+        require_programming_access(item)
         archive(item)
         return redirect(
             url_for("programming.athlete_program", athlete_id=item.athlete_id)
@@ -62,8 +59,7 @@ def register_block_routes(blueprint: Blueprint) -> None:
     @blueprint.post("/programming/blocks/<int:block_id>/delete")
     def delete_draft_block(block_id: int):
         item = db.session.get(TrainingBlock, block_id)
-        if item is None:
-            abort(404)
+        require_programming_access(item)
         if item.status != "draft":
             abort(409)
         athlete_id = delete_draft(item)
@@ -83,6 +79,7 @@ def register_block_routes(blueprint: Blueprint) -> None:
         )
         if item is None:
             abort(404)
+        require_programming_access(item)
         return render_template(
             "programming/block.html",
             block=item,

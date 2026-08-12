@@ -7,12 +7,12 @@ from flask import Blueprint, abort, flash, g, redirect, render_template, request
 
 from .auth import roles_required
 from .extensions import db
-from .models.athlete import Athlete
 from .models.user import UserRole
 from .repositories.nutrition_prescriptions import SqlAlchemyMacroPrescriptionRepository
 from .services.client_service_profiles import Service
 from .services.client_services import may_start_client_service
 from .services.nutrition_prescriptions import MacroPrescription, MacroPrescriptionService, MacroTargets, PrescriptionConflictError, PrescriptionProvenance
+from .tenancy import require_athlete_access
 
 nutrition_prescriptions_bp = Blueprint("nutrition_prescriptions", __name__)
 
@@ -35,9 +35,7 @@ def _targets(prefix: str = "") -> MacroTargets | None:
 @nutrition_prescriptions_bp.get("/athletes/<int:athlete_id>/nutrition-prescriptions")
 @roles_required(UserRole.COACH)
 def coach_index(athlete_id: int):
-    athlete = db.session.get(Athlete, athlete_id)
-    if athlete is None:
-        abort(404)
+    athlete = require_athlete_access(athlete_id)
     today = datetime.now(UTC).date()
     service = _service()
     return render_template("nutrition_prescriptions/coach.html", athlete=athlete,
@@ -49,9 +47,7 @@ def coach_index(athlete_id: int):
 @nutrition_prescriptions_bp.post("/athletes/<int:athlete_id>/nutrition-prescriptions")
 @roles_required(UserRole.COACH)
 def create(athlete_id: int):
-    athlete = db.session.get(Athlete, athlete_id)
-    if athlete is None:
-        abort(404)
+    athlete = require_athlete_access(athlete_id)
     if not may_start_client_service(athlete_id, Service.NUTRITION_COACHING):
         abort(403, description="Nutrition coaching must be enabled before assigning targets.")
     try:
