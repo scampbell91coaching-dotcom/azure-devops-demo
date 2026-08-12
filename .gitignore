@@ -69,3 +69,4 @@ agent-worktrees/
 # Historical/local agent reports
 AGENT_REPORT_*.md
 **/AGENT_REPORT_*.md
+AGENT_REPORT.md
