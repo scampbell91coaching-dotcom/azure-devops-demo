@@ -4,9 +4,15 @@
 
 {% block title %}{{ athlete.full_name }} | Traditional Strength{% endblock %}
 
+<<<<<<< HEAD
 {% block coach_context %}
   <span><b>Athlete</b> {{ athlete.full_name }}</span>
   {% if performance.selected_block %}<span><b>Block</b> {{ performance.selected_block.name }}</span>{% endif %}
+||||||| parent of f565e66 (feat: preserve css-debt-audit output)
+=======
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/athlete_performance.css') }}">
+>>>>>>> f565e66 (feat: preserve css-debt-audit output)
 {% endblock %}
 
 {% block content %}
@@ -190,7 +196,69 @@
     {% if delivery %}<p>Latest delivery: <strong>{{ delivery.delivery_state | replace('_', ' ') | title }}</strong>{% if delivery.delivered_at %} · {{ delivery.delivered_at.strftime('%d %b %Y, %H:%M') }}{% endif %}</p>{% endif %}
   </section>
 
+<<<<<<< HEAD
   <section class="coach-panel" id="performance-decisions">
+||||||| parent of f565e66 (feat: preserve css-debt-audit output)
+  <section class="coach-metric-grid">
+    <article class="coach-metric">
+      <span>Bodyweight</span>
+      <strong>
+        {% if athlete.bodyweight_kg %}
+          {{ athlete.bodyweight_kg }} kg
+        {% else %}
+          —
+        {% endif %}
+      </strong>
+    </article>
+
+    <article class="coach-metric">
+      <span>Weight class</span>
+      <strong>{{ athlete.weight_class or "—" }}</strong>
+    </article>
+
+    <article class="coach-metric">
+      <span>Federation</span>
+      <strong>{{ athlete.federation or "—" }}</strong>
+    </article>
+
+    <article class="coach-metric">
+      <span>Next competition</span>
+      <strong>{{ athlete.next_competition or "—" }}</strong>
+    </article>
+  </section>
+
+  <section class="coach-panel" id="performance-decisions">
+=======
+  <section class="coach-metric-grid">
+    <article class="coach-metric">
+      <span>Bodyweight</span>
+      <strong>
+        {% if athlete.bodyweight_kg %}
+          {{ athlete.bodyweight_kg }} kg
+        {% else %}
+          —
+        {% endif %}
+      </strong>
+    </article>
+
+    <article class="coach-metric">
+      <span>Weight class</span>
+      <strong>{{ athlete.weight_class or "—" }}</strong>
+    </article>
+
+    <article class="coach-metric">
+      <span>Federation</span>
+      <strong>{{ athlete.federation or "—" }}</strong>
+    </article>
+
+    <article class="coach-metric">
+      <span>Next competition</span>
+      <strong>{{ athlete.next_competition or "—" }}</strong>
+    </article>
+  </section>
+
+  <section class="coach-panel performance-decisions" id="performance-decisions">
+>>>>>>> f565e66 (feat: preserve css-debt-audit output)
     <div class="coach-panel__heading coach-panel__heading--split">
       <div><span class="coach-eyebrow">Deterministic review</span><h2>Performance decisions</h2></div>
       <form method="get">

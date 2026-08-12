@@ -59,6 +59,7 @@ def test_coach_workspace_has_mobile_navigation():
     assert 'classList.toggle("is-open")' in javascript
 
 
+<<<<<<< HEAD
 def test_coach_navigation_has_clear_active_and_persistent_context_styles():
     css = (ROOT / "static" / "css" / "coach_workspace.css").read_text()
 
@@ -78,3 +79,26 @@ def test_programming_context_persists_operational_hierarchy():
         assert f"<b>{label}</b>" in week
     assert 'class="programme-crumbs"' not in session
     assert 'class="programme-crumbs"' not in week
+||||||| parent of f565e66 (feat: preserve css-debt-audit output)
+=======
+def test_athlete_performance_styles_are_page_scoped_and_use_coach_tokens():
+    base_css = (ROOT / "static" / "css" / "coach_workspace.css").read_text()
+    performance_css = (ROOT / "static" / "css" / "athlete_performance.css").read_text()
+    dashboard = (ROOT / "templates" / "athletes" / "dashboard.html").read_text()
+
+    assert ".athlete-performance-nav" not in base_css
+    assert "css/athlete_performance.css" in dashboard
+    assert 'class="coach-panel performance-decisions"' in dashboard
+    assert "#performance-decisions" not in performance_css
+    assert "999px" not in performance_css
+    assert "#d8ff3e" not in performance_css
+    assert "var(--coach-accent)" in performance_css
+
+
+def test_coach_workspace_avoids_duplicated_mobile_action_rule_and_decorative_gradients():
+    css = (ROOT / "static" / "css" / "coach_workspace.css").read_text()
+
+    assert css.count("@media (max-width: 360px)") == 1
+    assert "radial-gradient" not in css
+    assert "linear-gradient" not in css
+>>>>>>> f565e66 (feat: preserve css-debt-audit output)
