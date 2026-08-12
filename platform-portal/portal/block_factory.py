@@ -617,6 +617,7 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                 phase=factory.goal,
                 lift_families={family_by_code[code] for code in day_type},
                 exclude_ids=suggested_ids,
+                athlete_id=factory.athlete_id,
             )
             if "D" in day_type and factory.grip_work_priority != "none":
                 grip = intelligence.grip_candidates(
@@ -625,6 +626,7 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                     strap_usage=factory.training_strap_usage,
                     priority=factory.grip_work_priority,
                     exclude_ids=suggested_ids,
+                    athlete_id=factory.athlete_id,
                 )
                 grip_ids = {item.exercise.id for item in grip}
                 candidates = grip + [
@@ -649,6 +651,8 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                         "source": "Library suggestion",
                         "provenance": "generated",
                         "reasons": suggestion.reasons,
+                        "state_score": suggestion.state_score,
+                        "state_provenance": suggestion.provenance,
                     }
                 )
 

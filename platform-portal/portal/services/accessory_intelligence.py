@@ -4,15 +4,33 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import date
+from typing import Any
 
 from ..models.exercise_library import Exercise
 from ..repositories.accessory_repository import AccessoryRepository
+from .accessory_state_rules import AssistanceStateContext, active_assistance_rules
 
 
 @dataclass(frozen=True)
 class AccessorySuggestion:
     exercise: Exercise
     reasons: tuple[str, ...]
+    state_score: int = 0
+    provenance: tuple[dict[str, Any], ...] = ()
+
+
+@dataclass(frozen=True)
+class ExcludedAccessory:
+    exercise: Exercise
+    reasons: tuple[str, ...]
+    provenance: tuple[dict[str, Any], ...]
+
+
+@dataclass(frozen=True)
+class AccessoryEvaluation:
+    candidates: tuple[AccessorySuggestion, ...]
+    excluded: tuple[ExcludedAccessory, ...]
 
 
 def metadata_values(value: str | None) -> set[str]:
@@ -49,6 +67,9 @@ class AccessoryIntelligence:
         required_compatibility_tags: set[str] | None = None,
         excluded_constraint_tags: set[str] | None = None,
         exclude_ids: set[int] | None = None,
+        athlete_id: int | None = None,
+        session_tags: set[str] | None = None,
+        as_of: date | None = None,
     ) -> list[AccessorySuggestion]:
         """Return eligible records in an inspectable coach-priority order.
 
@@ -57,12 +78,44 @@ class AccessoryIntelligence:
         catalogue empty. Empty phase/relevance metadata means unrestricted.
         Constraint tags are exact tags; they are not athlete-state diagnoses.
         """
+        return list(self.evaluate_candidates(
+            phase=phase,
+            lift_families=lift_families,
+            required_compatibility_tags=required_compatibility_tags,
+            excluded_constraint_tags=excluded_constraint_tags,
+            exclude_ids=exclude_ids,
+            athlete_id=athlete_id,
+            session_tags=session_tags,
+            as_of=as_of,
+        ).candidates)
+
+    def evaluate_candidates(
+        self,
+        *,
+        phase: str,
+        lift_families: set[str],
+        required_compatibility_tags: set[str] | None = None,
+        excluded_constraint_tags: set[str] | None = None,
+        exclude_ids: set[int] | None = None,
+        athlete_id: int | None = None,
+        session_tags: set[str] | None = None,
+        as_of: date | None = None,
+    ) -> AccessoryEvaluation:
+        """Evaluate eligible and excluded candidates with state provenance."""
         phase = phase.casefold()
         lift_families = {item.casefold() for item in lift_families}
         required = {item.casefold() for item in required_compatibility_tags or set()}
-        excluded = {item.casefold() for item in excluded_constraint_tags or set()}
+        excluded_tags = {item.casefold() for item in excluded_constraint_tags or set()}
         excluded_ids = exclude_ids or set()
+        state_rules = active_assistance_rules(AssistanceStateContext(
+            athlete_id=athlete_id,
+            phase=phase,
+            lift_families=frozenset(lift_families),
+            session_tags=frozenset(item.casefold() for item in session_tags or set()),
+            as_of=as_of,
+        )) if athlete_id is not None else ()
         results: list[AccessorySuggestion] = []
+        state_excluded: list[ExcludedAccessory] = []
 
         for exercise in self.repository.automatic_candidates():
             if exercise.id in excluded_ids:
@@ -78,7 +131,7 @@ class AccessoryIntelligence:
                 continue
             if required and not required.issubset(compatibility):
                 continue
-            if excluded.intersection(constraints):
+            if excluded_tags.intersection(constraints):
                 continue
 
             reasons = [
@@ -96,9 +149,35 @@ class AccessoryIntelligence:
                 reasons.append("suitable for all training phases")
             reasons.append(f"coach priority {exercise.coach_priority}")
             reasons.append(f"fatigue cost {exercise.fatigue_rating}/5")
-            results.append(AccessorySuggestion(exercise, tuple(reasons)))
+            candidate_tags = constraints | compatibility | metadata_values(exercise.technical_purposes)
+            matched_rules = [rule for rule in state_rules if rule.candidate_tags.intersection(candidate_tags)]
+            hard_rules = [rule for rule in matched_rules if rule.effect == "exclude"]
+            if hard_rules:
+                state_excluded.append(ExcludedAccessory(
+                    exercise,
+                    tuple(f"excluded: {rule.reason}" for rule in hard_rules),
+                    tuple(rule.provenance for rule in hard_rules),
+                ))
+                continue
+            score = sum(
+                rule.weight if rule.effect == "preference" else -rule.weight
+                for rule in matched_rules
+            )
+            for rule in matched_rules:
+                signed_weight = rule.weight if rule.effect == "preference" else -rule.weight
+                reasons.append(f"{rule.effect}: {rule.reason} ({signed_weight:+d})")
+            results.append(AccessorySuggestion(
+                exercise, tuple(reasons), score,
+                tuple(rule.provenance for rule in matched_rules),
+            ))
 
-        return results
+        results.sort(key=lambda item: (
+            -item.state_score,
+            -item.exercise.coach_priority,
+            item.exercise.fatigue_rating,
+            item.exercise.name,
+        ))
+        return AccessoryEvaluation(tuple(results), tuple(state_excluded))
 
     def select_for_volume(
         self,
@@ -126,7 +205,9 @@ class AccessoryIntelligence:
                 *suggestion.reasons,
                 f"fits {volume} fatigue budget ({fatigue_cost}/{budget})",
             )
-            selected.append(AccessorySuggestion(suggestion.exercise, reasons))
+            selected.append(AccessorySuggestion(
+                suggestion.exercise, reasons, suggestion.state_score, suggestion.provenance
+            ))
             remaining -= fatigue_cost
             if remaining == 0:
                 break
@@ -140,6 +221,9 @@ class AccessoryIntelligence:
         strap_usage: str,
         priority: str,
         exclude_ids: set[int] | None = None,
+        athlete_id: int | None = None,
+        session_tags: set[str] | None = None,
+        as_of: date | None = None,
     ) -> list[AccessorySuggestion]:
         """Return a conservative deadlift-grip shortlist.
 
@@ -154,6 +238,9 @@ class AccessoryIntelligence:
             phase=phase,
             lift_families={"deadlift"},
             exclude_ids=exclude_ids,
+            athlete_id=athlete_id,
+            session_tags=session_tags,
+            as_of=as_of,
         ):
             exercise = suggestion.exercise
             purposes = metadata_values(exercise.technical_purposes)
