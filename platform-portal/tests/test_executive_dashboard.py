@@ -53,3 +53,32 @@ def test_overview_page_contains_executive_dashboard():
     response = app.test_client().get("/")
     assert response.status_code == 200
     assert b"executive-score" in response.data
+
+
+class Snapshot:
+    def __init__(self, score, latency, restarts):
+        self.platform_score = score
+        self.health_latency_seconds = latency
+        self.container_restarts = restarts
+
+
+class SnapshotRepository:
+    def list_since(self, hours=24):
+        assert hours == 24
+        return [
+            Snapshot(88, 0.2200, 1),
+            Snapshot(91, 0.0895, 0),
+        ]
+
+
+def test_executive_service_calculates_trends_from_history():
+    dashboard = ExecutiveDashboardService(
+        Repository(current_snapshot()),
+        snapshot_repository=SnapshotRepository(),
+    ).build(hours=24)
+
+    assert dashboard["trend"] == {
+        "score_change": 3,
+        "latency_change": -0.1305,
+        "restart_change": -1,
+    }
