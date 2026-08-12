@@ -29,6 +29,14 @@ class InvitationStatus(StrEnum):
     ACCEPTED = "accepted"
     REVOKED = "revoked"
     EXPIRED = "expired"
+    SUPERSEDED = "superseded"
+
+
+class InvitationDeliveryState(StrEnum):
+    PENDING = "pending"
+    SENT = "sent"
+    NOT_CONFIGURED = "not_configured"
+    FAILED = "failed"
 
 
 class OwnershipStatus(StrEnum):
@@ -145,8 +153,12 @@ class OrganisationInvitation(db.Model):  # type: ignore[name-defined]
             name="ck_organisation_invitations_role",
         ),
         db.CheckConstraint(
-            "status IN ('pending', 'accepted', 'revoked', 'expired')",
+            "status IN ('pending', 'accepted', 'revoked', 'expired', 'superseded')",
             name="ck_organisation_invitations_status",
+        ),
+        db.CheckConstraint(
+            "delivery_state IN ('pending', 'sent', 'not_configured', 'failed')",
+            name="ck_organisation_invitations_delivery_state",
         ),
         db.CheckConstraint(
             "(status = 'accepted' AND accepted_at IS NOT NULL AND accepted_by_user_id IS NOT NULL) "
@@ -180,6 +192,11 @@ class OrganisationInvitation(db.Model):  # type: ignore[name-defined]
     role = db.Column(db.String(20), nullable=False)
     status = db.Column(db.String(20), nullable=False, default=InvitationStatus.PENDING)
     token_digest = db.Column(db.String(64), nullable=False, unique=True)
+    delivery_state = db.Column(
+        db.String(20), nullable=False, default=InvitationDeliveryState.PENDING
+    )
+    delivery_detail = db.Column(db.String(500), nullable=True)
+    delivered_at = db.Column(db.DateTime, nullable=True)
     invited_by_membership_id = db.Column(db.Integer, nullable=False)
     accepted_by_user_id = db.Column(
         db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
@@ -228,3 +245,8 @@ class OrganisationInvitation(db.Model):  # type: ignore[name-defined]
         if (at or _now()) < self.expires_at.replace(tzinfo=self.expires_at.tzinfo or UTC):
             raise ValueError("Invitation has not expired yet.")
         self.status = InvitationStatus.EXPIRED
+
+    def supersede(self) -> None:
+        if self.status not in (None, InvitationStatus.PENDING):
+            raise ValueError("Only pending invitations can be superseded.")
+        self.status = InvitationStatus.SUPERSEDED

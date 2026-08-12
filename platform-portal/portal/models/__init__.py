@@ -28,6 +28,7 @@ from .nutrition_import import DailyNutrition, NutritionImportJob, NutritionProvi
 from .nutrition_prescription import NutritionMacroPrescription
 from .organisation import (
     CoachAthleteOwnership,
+    InvitationDeliveryState,
     InvitationStatus,
     MembershipStatus,
     Organisation,
@@ -85,6 +86,7 @@ __all__ = [
     "MealPlanAssignment",
     "MealPlanTemplate",
     "InvitationStatus",
+    "InvitationDeliveryState",
     "Organisation",
     "NutritionCheckIn",
     "DailyNutrition",
