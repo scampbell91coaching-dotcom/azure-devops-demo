@@ -420,6 +420,7 @@ def seed_database(app: Flask) -> None:
         misleading_assistance.category = "upper body"
         misleading_assistance.fatigue_rating = 2
         misleading_assistance.accessory_suitable = True
+        misleading_assistance.auto_select = False
         misleading_assistance.lift_family = None
 
         extra_prescriptions = []
@@ -485,6 +486,10 @@ def seed_database(app: Flask) -> None:
             fatigue_rating=2,
             accessory_suitable=True,
         )
+        for exercise in (pulldown, row, split_squat, plank):
+            exercise.active = True
+            exercise.accessory_suitable = True
+            exercise.auto_select = False
         extra_accessory_specs = (
             ("Leg Extension", "lower body", 2),
             ("Leg Curl", "lower body", 2),
@@ -509,6 +514,7 @@ def seed_database(app: Flask) -> None:
             exercise.category = category
             exercise.fatigue_rating = fatigue_rating
             exercise.accessory_suitable = True
+            exercise.auto_select = False
             exercise.lift_family = None
             extra_accessories.append(exercise)
 
