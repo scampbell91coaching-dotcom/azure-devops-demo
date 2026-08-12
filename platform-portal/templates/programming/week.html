@@ -1,6 +1,11 @@
 {% extends "coach/base.html" %}
 {% set coach_section = "programming" %}
 {% block title %}{{ week.name }} | Traditional Strength{% endblock %}
+{% block coach_context %}
+  <span><b>Athlete</b> <a href="{{ url_for('programming.athlete_program', athlete_id=week.block.athlete.id) }}">{{ week.block.athlete.full_name }}</a></span>
+  <span><b>Block</b> <a href="{{ url_for('programming.block', block_id=week.block.id) }}">{{ week.block.name }}</a></span>
+  <span><b>Week</b> {{ week.position }} · {{ week.name }}</span>
+{% endblock %}
 
 {% macro value(item, field) -%}{{- item|attr(field) if item|attr(field) is not none else '' -}}{%- endmacro %}
 {% macro prescription_fields(item=none) %}
@@ -51,7 +56,6 @@
 
 {% block content %}
 <section class="coach-page week-editor">
-  <nav class="programme-crumbs" aria-label="Programme hierarchy"><a href="{{ url_for('programming.athlete_program', athlete_id=week.block.athlete.id) }}">{{ week.block.athlete.full_name }}</a><span aria-hidden="true">/</span><a href="{{ url_for('programming.block', block_id=week.block.id) }}">{{ week.block.name }}</a><span aria-hidden="true">/</span><span aria-current="page">Week {{ week.position }}</span></nav>
   <header class="coach-page__header coach-page__header--split">
     <div><a class="coach-back-link" href="{{ url_for('programming.block', block_id=week.block.id) }}">← {{ week.block.name }}</a><span class="coach-eyebrow">{{ week.block.athlete.full_name }} · Week {{ week.position }}</span><h1>{{ week.name }}</h1>{% if week.notes %}<p>{{ week.notes }}</p>{% endif %}</div>
     <div class="week-lifecycle" aria-label="Week controls">

@@ -4,6 +4,11 @@
 
 {% block title %}{{ athlete.full_name }} | Traditional Strength{% endblock %}
 
+{% block coach_context %}
+  <span><b>Athlete</b> {{ athlete.full_name }}</span>
+  {% if performance.selected_block %}<span><b>Block</b> {{ performance.selected_block.name }}</span>{% endif %}
+{% endblock %}
+
 {% block content %}
 <section class="coach-page">
   <header class="coach-page__header coach-page__header--split">

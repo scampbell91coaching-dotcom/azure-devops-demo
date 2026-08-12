@@ -5,6 +5,12 @@
 {{ athlete.full_name }} Programme | Traditional Strength
 {% endblock %}
 
+{% block coach_context %}
+  <span><b>Athlete</b> {{ athlete.full_name }}</span>
+  <span><b>Block</b> {{ current_block.name if current_block else 'None published' }}</span>
+  {% if current_week %}<span><b>Week</b> {{ current_week.position }}</span>{% endif %}
+{% endblock %}
+
 {% block content %}
 <section class="coach-page">
   <header class="coach-page__header">

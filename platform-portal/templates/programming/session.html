@@ -3,6 +3,13 @@
 
 {% block title %}{{ session.name }} | Traditional Strength{% endblock %}
 
+{% block coach_context %}
+  <span><b>Athlete</b> <a href="{{ url_for('programming.athlete_program', athlete_id=block.athlete.id) }}">{{ block.athlete.full_name }}</a></span>
+  <span><b>Block</b> <a href="{{ url_for('programming.block', block_id=block.id) }}">{{ block.name }}</a></span>
+  <span><b>Week</b> <a href="{{ url_for('programming.week', week_id=week.id) }}">{{ week.position }}</a></span>
+  <span><b>Session</b> {{ session.name }}</span>
+{% endblock %}
+
 {% block head %}
 <link
   rel="stylesheet"
@@ -16,7 +23,6 @@
   data-session-builder
   data-session-id="{{ session.id }}"
 >
-  <nav class="programme-crumbs" aria-label="Programme hierarchy"><a href="{{ url_for('programming.athlete_program', athlete_id=block.athlete.id) }}">{{ block.athlete.full_name }}</a><span aria-hidden="true">/</span><a href="{{ url_for('programming.block', block_id=block.id) }}">{{ block.name }}</a><span aria-hidden="true">/</span><a href="{{ url_for('programming.week', week_id=week.id) }}">Week {{ week.position }}</a><span aria-hidden="true">/</span><span aria-current="page">{{ session.name }}</span></nav>
   <header class="coach-page__header coach-page__header--split">
     <div>
       <a

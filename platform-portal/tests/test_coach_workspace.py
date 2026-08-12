@@ -16,6 +16,9 @@ def test_coach_base_has_dedicated_navigation():
     assert "traditionalstrength.co.uk/apply" not in text
     assert "css/design-system.css" in text
     assert 'class="coach-workspace ts-theme-coach"' in text
+    assert 'aria-label="Current workspace context"' in text
+    assert "{% block coach_context %}" in text
+    assert 'class="coach-navigation__divider" aria-hidden="true"' in text
 
 
 def test_coach_workspace_uses_shared_foundation_without_dashboard_effects():
@@ -54,3 +57,24 @@ def test_coach_workspace_has_mobile_navigation():
     assert ".coach-menu-button" in css
     assert ".coach-navigation.is-open" in css
     assert 'classList.toggle("is-open")' in javascript
+
+
+def test_coach_navigation_has_clear_active_and_persistent_context_styles():
+    css = (ROOT / "static" / "css" / "coach_workspace.css").read_text()
+
+    assert '.coach-navigation a[aria-current="page"]' in css
+    assert "border-bottom-color: var(--coach-accent)" in css
+    assert ".coach-context" in css
+    assert "position: sticky" in css
+
+
+def test_programming_context_persists_operational_hierarchy():
+    session = (ROOT / "templates" / "programming" / "session.html").read_text()
+    week = (ROOT / "templates" / "programming" / "week.html").read_text()
+
+    for label in ("Athlete", "Block", "Week", "Session"):
+        assert f"<b>{label}</b>" in session
+    for label in ("Athlete", "Block", "Week"):
+        assert f"<b>{label}</b>" in week
+    assert 'class="programme-crumbs"' not in session
+    assert 'class="programme-crumbs"' not in week

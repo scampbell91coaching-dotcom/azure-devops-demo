@@ -42,7 +42,7 @@
 
         <span class="coach-brand__copy">
           <strong>Traditional Strength Platform</strong>
-          <small>Coaching</small>
+          <small>Coach console</small>
         </span>
       </a>
 
@@ -62,7 +62,6 @@
         aria-label="Traditional Strength Platform"
         data-coach-navigation
       >
-        <span class="coach-navigation__group">Coaching</span>
         <a
           href="{{ url_for('coach_dashboard.index') }}"
           {% if coach_section == "dashboard" %}aria-current="page"{% endif %}
@@ -92,7 +91,7 @@
         </a>
 
         <a href="/programming" {% if coach_section == "programming" %}aria-current="page"{% endif %}>Programming</a>
-        <span class="coach-navigation__group">Operations</span>
+        <span class="coach-navigation__divider" aria-hidden="true"></span>
         <a
           href="{{ url_for('checkins.index') }}"
           {% if coach_section == "checkins" %}aria-current="page"{% endif %}
@@ -132,6 +131,13 @@
       </div>
     </div>
   </header>
+
+  <div class="coach-context" aria-label="Current workspace context">
+    <div class="coach-context__inner">
+      <span class="coach-context__section">{{ coach_section | default("dashboard") | replace("_", " ") | title }}</span>
+      {% block coach_context %}{% endblock %}
+    </div>
+  </div>
 
   <main id="coach-main" class="coach-main">
     <div class="coach-shell">
