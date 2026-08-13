@@ -13,6 +13,7 @@ from portal.models.programming import TrainingBlock
 from portal.models.user import User, UserRole
 from portal.services.transactional_email import MemoryEmailTransport
 from portal.services.client_onboarding import build_client_onboarding
+from tenancy_factories import grant_coach_athlete_access
 
 
 @pytest.fixture
@@ -32,6 +33,9 @@ def onboarding_app():
         coach.set_password("correct horse battery staple")
         athlete = Athlete(first_name="Sam", last_name="Strong", email="sam@example.test")
         db.session.add_all([coach, athlete])
+        grant_coach_athlete_access(
+            coach, [athlete], name="Onboarding Strength", slug="onboarding-strength"
+        )
         db.session.commit()
         app.config["ATHLETE_ID"] = athlete.id
     app.config["TEST_TRANSPORT"] = transport

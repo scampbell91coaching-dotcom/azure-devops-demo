@@ -8,6 +8,7 @@ from portal.models.athlete import Athlete
 from portal.models.client_service import ClientServiceChange
 from portal.models.user import User, UserRole
 from portal.services.client_services import resolved_client_services
+from tenancy_factories import grant_coach_athlete_access
 
 
 @pytest.fixture
@@ -26,6 +27,9 @@ def services_app():
         coach = User(email="coach@example.test", role=UserRole.COACH)
         coach.set_password("correct horse battery staple")
         db.session.add_all([athlete, coach])
+        grant_coach_athlete_access(
+            coach, [athlete], name="Client Services Strength", slug="client-services-strength"
+        )
         db.session.commit()
         app.config["ATHLETE_ID"] = athlete.id
     return app

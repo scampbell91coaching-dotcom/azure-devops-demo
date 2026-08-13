@@ -7,6 +7,7 @@ from portal import create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.user import User
+from tenancy_factories import grant_coach_athlete_access
 from portal.services.meal_plans import MacroTotals, MealPlanWorkflow, InMemoryMealPlanRepository, PrescriptionSnapshot
 from test_meal_plan_workflow import plan
 
@@ -19,6 +20,9 @@ def test_coach_preview_and_read_only_athlete_snapshot(tmp_path):
         coach_user = User(email="coach-meals@example.com", role="coach", active=True)
         db.session.add_all([athlete_row, coach_user])
         db.session.flush()
+        grant_coach_athlete_access(
+            coach_user, [athlete_row], name="Meal Plan Strength", slug="meal-plan-strength"
+        )
         athlete_user = User(email="athlete-meals@example.com", role="athlete", athlete_id=7, active=True)
         db.session.add(athlete_user)
         db.session.commit()
@@ -59,6 +63,9 @@ def test_coach_meal_plan_index_separates_templates_from_assignment_history(tmp_p
     with app.app_context():
         coach_user = User(email="coach-index@example.com", role="coach", active=True)
         db.session.add(coach_user)
+        grant_coach_athlete_access(
+            coach_user, name="Meal Plan Index Strength", slug="meal-plan-index-strength"
+        )
         db.session.commit()
         coach_id = coach_user.id
     client = app.test_client()

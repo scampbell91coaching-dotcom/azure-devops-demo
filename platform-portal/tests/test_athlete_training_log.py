@@ -17,6 +17,7 @@ from portal.models.programming import (
 )
 from portal.models.user import User, UserRole
 from portal.services.coach_athlete_performance import get_coach_athlete_performance
+from tenancy_factories import grant_coach_athlete_access
 
 
 @pytest.fixture()
@@ -68,6 +69,9 @@ def training_app():
             ),
         ]
         db.session.add_all(users)
+        grant_coach_athlete_access(
+            users[0], [alex], name="Training Log Strength", slug="training-log-strength"
+        )
         db.session.commit()
         app.config["TRAINING_IDS"] = {
             "alex": alex.id,

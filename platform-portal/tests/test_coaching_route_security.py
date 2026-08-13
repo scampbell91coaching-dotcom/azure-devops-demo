@@ -10,6 +10,7 @@ from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.meet_day import Meet, MeetEntry, MeetLift
 from portal.models.user import User, UserRole
+from tenancy_factories import grant_coach_athlete_access
 
 
 @pytest.fixture
@@ -54,6 +55,12 @@ def secured_coaching_app():
             athlete_id=athlete.id,
         )
         db.session.add_all([coach, athlete_user])
+        grant_coach_athlete_access(
+            coach,
+            [athlete, other_athlete],
+            name="Coaching Security Strength",
+            slug="coaching-security-strength",
+        )
         db.session.commit()
         app.config["SECURITY_TEST_IDS"] = {
             "athlete": athlete.id,

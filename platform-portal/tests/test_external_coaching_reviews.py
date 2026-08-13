@@ -9,6 +9,7 @@ from portal.models.athlete_state import CoachTechnicalObservation
 from portal.models.external_coaching_review import ExternalCoachingReview
 from portal.models.programming import TrainingSessionLog, TrainingSetResult
 from portal.models.user import User, UserRole
+from tenancy_factories import grant_coach_athlete_access
 
 
 @pytest.fixture
@@ -44,6 +45,9 @@ def review_app():
             status="completed", completed_at=datetime(2026, 8, 10, 13, 0),
         )
         db.session.add_all([athlete, other, coach, athlete_user, log, result, observation, other_log])
+        grant_coach_athlete_access(
+            coach, [athlete], name="External Review Strength", slug="external-review-strength"
+        )
         db.session.commit()
         app.config.update(
             ATHLETE_ID=athlete.id, LOG_ID=log.id, SET_ID=result.id,
