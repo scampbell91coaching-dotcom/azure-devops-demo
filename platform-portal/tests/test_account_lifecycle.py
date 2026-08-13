@@ -8,6 +8,12 @@ from portal import create_app
 from portal.extensions import db
 from portal.models.account_token import AccountToken, AccountTokenPurpose
 from portal.models.athlete import Athlete
+from portal.models.organisation import (
+    CoachAthleteOwnership,
+    Organisation,
+    OrganisationMembership,
+    OrganisationRole,
+)
 from portal.models.user import User, UserRole
 from portal.services.account_lifecycle import digest_token
 from portal.services.transactional_email import MemoryEmailTransport
@@ -37,7 +43,30 @@ def lifecycle_app():
         other = Athlete(first_name="Other", last_name="Athlete", email="other@example.test")
         coach = User(email="coach@example.test", role=UserRole.COACH)
         coach.set_password("correct horse battery staple")
-        db.session.add_all([athlete, other, coach])
+        organisation = Organisation(name="Lifecycle Strength", slug="lifecycle-strength")
+        db.session.add_all([athlete, other, coach, organisation])
+        db.session.flush()
+        membership = OrganisationMembership(
+            organisation=organisation,
+            user=coach,
+            role=OrganisationRole.COACH,
+        )
+        db.session.add(membership)
+        db.session.flush()
+        db.session.add_all(
+            [
+                CoachAthleteOwnership(
+                    organisation=organisation,
+                    coach_membership=membership,
+                    athlete=athlete,
+                ),
+                CoachAthleteOwnership(
+                    organisation=organisation,
+                    coach_membership=membership,
+                    athlete=other,
+                ),
+            ]
+        )
         db.session.commit()
         app.config["IDS"] = {"athlete": athlete.id, "other": other.id}
     app.config["TEST_TRANSPORT"] = transport
