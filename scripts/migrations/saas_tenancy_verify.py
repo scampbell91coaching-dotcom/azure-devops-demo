@@ -195,7 +195,11 @@ def main(argv: list[str] | None = None) -> int:
 
     import psycopg
 
-    with psycopg.connect(args.database_url) as connection:
+    database_url = args.database_url
+    if database_url.startswith("postgresql+psycopg://"):
+        database_url = "postgresql://" + database_url.removeprefix("postgresql+psycopg://")
+
+    with psycopg.connect(database_url) as connection:
         with connection.cursor() as cursor:
             cursor.execute("SET TRANSACTION READ ONLY")
             cursor.execute("SET LOCAL statement_timeout = '30s'")
