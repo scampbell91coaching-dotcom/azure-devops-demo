@@ -10,6 +10,10 @@ import pytest
 
 from portal import create_app
 from portal.auth import _safe_redirect_target
+from portal.models.organisation import (
+    CoachAthleteOwnership,
+    OrganisationMembership,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -25,7 +29,11 @@ def test_threat_model_keeps_every_release_blocker_machine_visible():
         assert text.count(f"| TM-{threat:02d} |") == 1
 
 
-def test_production_auth_configuration_fails_closed_and_sets_cookie_contract():
+def test_production_auth_configuration_fails_closed_and_sets_cookie_contract(
+    monkeypatch,
+):
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+
     with pytest.raises(RuntimeError, match="SECRET_KEY must be set"):
         create_app({"SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
 
@@ -55,13 +63,20 @@ def test_redirect_boundary_rejects_authority_confusion_and_encoded_controls(targ
     assert _safe_redirect_target(target) is False
 
 
-def test_security_model_does_not_misrepresent_known_tenant_gaps_as_passing():
-    contracts = (ROOT / "platform-portal/tests/test_cross_tenant_security.py").read_text(
-        encoding="utf-8"
-    )
+def test_security_model_tracks_canonical_tenancy_and_remaining_storage_gap():
     model = THREAT_MODEL.read_text(encoding="utf-8")
 
-    assert "strict=True" in contracts
-    assert "@TENANCY_GAP" in contracts
+    membership_columns = set(OrganisationMembership.__table__.columns.keys())
+    ownership_columns = set(CoachAthleteOwnership.__table__.columns.keys())
+
+    assert {"organisation_id", "user_id", "role", "status"} <= membership_columns
+    assert {
+        "organisation_id",
+        "coach_membership_id",
+        "athlete_id",
+        "status",
+    } <= ownership_columns
+    assert "OrganisationMembership" in model
+    assert "CoachAthleteOwnership" in model
     assert "not releasable as a multi-tenant SaaS" in model
-    assert "expected failures is acceptance" not in model
+    assert "PostgreSQL row-level enforcement is not yet evidenced" in model

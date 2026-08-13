@@ -10,18 +10,17 @@ database changes.
 ## Decision summary
 
 The current snapshot is **not releasable as a multi-tenant SaaS**. The central
-request guard in `portal/auth.py` permits every authenticated `coach` to every
-protected coach route. Most existing rows and queries are not organisation
-qualified. `tests/test_cross_tenant_security.py` demonstrates the resulting
-cross-coach IDORs with strict expected failures.
+request guard resolves an active `OrganisationMembership`, and coach access to
+an athlete is constrained through `CoachAthleteOwnership`. The focused
+cross-tenant route contracts pass for the currently covered data paths.
 
-Organisation, invitation, billing, and support tables are useful structural
-work, but schema presence is not authorization evidence. They are not yet
-wired into a validated request context, tenant-qualified repositories, or
-database enforcement. Release must preserve the current single-tenant posture
-until blockers RB-01 through RB-06 are closed. Forward repair means adding
-scoped paths and backfills before enabling SaaS traffic; it does not mean
-weakening the negative contracts or treating expected failures as acceptance.
+That application behavior does not close the storage-enforcement gate:
+PostgreSQL row-level enforcement is not yet evidenced, and the route matrix
+must expand with every new tenant-owned surface. Release must preserve the
+current single-tenant posture until the applicable blockers RB-01 through
+RB-06 are closed. Forward repair means completing storage and operational
+evidence before enabling SaaS traffic; it does not mean weakening negative
+contracts or treating schema presence alone as authorization evidence.
 
 ## Method and classification
 
@@ -60,8 +59,8 @@ is never proof of authority.
 | ID | Area / STRIDE | Threat and impact | Current evidence | Required mitigation / release status |
 | --- | --- | --- | --- | --- |
 | TM-01 | Auth/session S,E | Stolen, fixed, stale, or disabled-user sessions grant coach or athlete access. | **implemented/partial:** login clears prior session state, checks active users, enforces an eight-hour absolute age, and sets Secure/HttpOnly/SameSite=Lax cookies. No inactivity timeout, server-side revocation/version, or MFA evidence. | Rotate the signing secret safely; invalidate sessions on credential, membership, and support changes; define idle timeout and re-authentication for destructive actions. MFA/IdP assurance decision remains open. |
-| TM-02 | Tenant IDOR I,T,E | Any coach enumerates or mutates another organisation's athletes, programming, check-ins, nutrition, performance, or assignments. | **gap:** coach role is globally allowed; strict-xfail route tests expose reads and writes. Organisation tables are **schema only**. | RB-01/RB-02: validated active membership context, tenant-qualified resource loads, assignment policy, non-disclosing 404s, PostgreSQL enforcement, and passing negative matrix. |
-| TM-03 | Invitation/token S,I,E | Token leakage, replay, wrong-recipient acceptance, or concurrent consumption activates an account. | **implemented/partial:** 256-bit URL-safe raw token, SHA-256 digest at rest, expiry/revoke/single-use atomic update, email-account binding, fragments keep tokens out of the initial HTTP request, and responses are `no-store`. Organisation invitation acceptance rules are model-only. | Bind organisation invites to active inviter capability and intended normalized email; never log raw tokens; redact mail diagnostics; rate-limit issuance and redemption; test concurrency on PostgreSQL. RB-03 until organisation invite workflow is enforced. |
+| TM-02 | Tenant IDOR I,T,E | A coach enumerates or mutates another organisation's athletes, programming, check-ins, nutrition, performance, or assignments if a route bypasses canonical tenancy. | **implemented/partial:** active `OrganisationMembership` context and `CoachAthleteOwnership` constrain covered coach routes; the focused cross-tenant matrix passes with non-disclosing 404s. PostgreSQL row-level enforcement and exhaustive future-route coverage remain open. | RB-01/RB-02: retain the passing negative matrix, require canonical loaders for every tenant-owned route/job, and demonstrate PostgreSQL enforcement under the runtime role. |
+| TM-03 | Invitation/token S,I,E | Token leakage, replay, wrong-recipient acceptance, or concurrent consumption activates an account. | **implemented/partial:** canonical `OrganisationInvitation` issue/revoke/accept services bind the organisation, active issuer membership, normalized recipient email, hashed token, expiry, and one-time consumption. PostgreSQL concurrency and delivery-boundary evidence remain required. | Never log raw tokens; redact mail diagnostics; rate-limit issuance and redemption; test concurrent consumption on PostgreSQL. RB-03 remains open until that evidence is complete. |
 | TM-04 | Meal plan/file I,T | Direct template/assignment/file IDs disclose another tenant's diet or generated PDF; predictable object keys bypass Flask. | **partial/gap:** draft lookup checks owning coach and athlete history checks athlete ID, but coach list and coach assignment queries are global. No PDF metadata/file-store delivery boundary exists; an expected-failure contract records this. | Tenant-qualified metadata and object keys; authorization before signed URL creation; short-lived download URLs; private storage; content disposition/type controls; deletion propagation. RB-01 and RB-04 before file delivery. |
 | TM-05 | Webhook S,T,R | Forged, stale, replayed, or event-ID-colliding webhooks alter subscriptions and entitlements. | **partial/design only:** provider port accepts payload plus signature; domain processor hashes payload and deduplicates `(provider,event_id)`, rejects changed-payload reuse, and retries failed handlers. No HTTP endpoint, real signature verifier/timestamp tolerance, persistent atomic store adapter, body limit, or audit mapping is wired. | RB-05: verify signature over exact raw bounded body before decoding/claiming; reject missing/stale signatures; persistent atomic claim; tenant/customer binding; safe duplicate response; metrics and redacted audit. Never exempt a future endpoint from signature verification merely because CSRF is inapplicable. |
 | TM-06 | Support/admin E,R,I | Support self-grants access, selects arbitrary tenant/account, extends delegation, or acts without attributable audit. | **design/schema only:** inactive-by-default principals, capability grants, access events, and expiring delegations exist as models only. Append-only behavior is documentary, not DB-enforced. | RB-06: separate strongly authenticated support identity, approved reason/ticket, least-privilege capability, tenant-visible start/end events, short expiry, no silent renewal, immutable storage enforcement, and prohibition on credential/billing/export impersonation by default. |
@@ -99,11 +98,10 @@ pytest -q tests/test_auth.py tests/test_account_lifecycle.py \
   tests/test_billing_webhooks.py tests/test_cross_tenant_security.py
 ```
 
-`test_security_assurance.py` protects stable, non-tenancy invariants and keeps
-the blocker register machine-readable. The cross-tenant suite intentionally
-retains strict expected failures until implementation closes them. A green run
-that reports those expected failures is evidence that the gaps remain
-accurately recorded, not evidence of SaaS release readiness.
+`test_security_assurance.py` protects stable configuration and model invariants
+and keeps the blocker register machine-readable. The passing cross-tenant suite
+is application-layer evidence for the covered routes; it is not evidence of
+PostgreSQL row-level enforcement or automatic coverage of future routes.
 
 ## Open decisions and review cadence
 
