@@ -1,21 +1,19 @@
 from datetime import UTC, datetime
 
-from flask import Blueprint, abort, render_template
+from flask import Blueprint, render_template
 from sqlalchemy.orm import selectinload
 
-from ..extensions import db
 from ..models.athlete import Athlete
 from ..models.programming import TrainingBlock, TrainingSessionLog, TrainingWeek
 from ..services.training_schedule import project_training_schedule
 from ..services.weekly_programming_intelligence import map_athlete_programming_context
+from ..tenancy import athlete_query_for_request, require_athlete_access
 
 
 def register_athlete_routes(blueprint: Blueprint) -> None:
     @blueprint.get("/athletes/<int:athlete_id>/programming")
     def athlete_program(athlete_id: int):
-        athlete = db.session.get(Athlete, athlete_id)
-        if athlete is None:
-            abort(404)
+        athlete = require_athlete_access(athlete_id)
 
         blocks = (
             TrainingBlock.query.options(
@@ -48,8 +46,13 @@ def register_athlete_routes(blueprint: Blueprint) -> None:
 
     @blueprint.get("/programming")
     def index():
-        athletes = Athlete.query.order_by(Athlete.last_name.asc()).all()
-        blocks = TrainingBlock.query.order_by(TrainingBlock.id.desc()).all()
+        athletes = athlete_query_for_request().order_by(Athlete.last_name.asc()).all()
+        athlete_ids = [athlete.id for athlete in athletes]
+        blocks = (
+            TrainingBlock.query.filter(TrainingBlock.athlete_id.in_(athlete_ids))
+            .order_by(TrainingBlock.id.desc())
+            .all()
+        )
         active_by_athlete = {}
         for block in blocks:
             if block.status == "active" and block.athlete_id not in active_by_athlete:

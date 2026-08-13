@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 
 from ..models.meet_day import Meet, MeetLift
 from .competition_day import unpack_notes
@@ -19,6 +20,11 @@ class MeetDayBoard:
     entry_workflow: dict[int, dict]
     lift_notes: dict[int, str | None]
     lift_workflow: dict[int, dict]
+    days_until_meet: int
+    timeline_label: str
+    missing_context: tuple[str, ...]
+    total_attempts: int
+    entry_readiness: dict[int, str]
 
 
 def _attempt_key(item: MeetLift) -> tuple[int, int, int, int]:
@@ -26,7 +32,30 @@ def _attempt_key(item: MeetLift) -> tuple[int, int, int, int]:
     return (LIFT_ORDER[item.lift], entry.flight, item.sequence, entry.platform_order)
 
 
-def build_board(meet: Meet) -> MeetDayBoard:
+def _timeline_label(days_until_meet: int) -> str:
+    if days_until_meet == 0:
+        return "Meet day"
+    if days_until_meet > 0:
+        return f"D-{days_until_meet}"
+    days_ago = abs(days_until_meet)
+    return f"{days_ago} day{'s' if days_ago != 1 else ''} ago"
+
+
+def _entry_readiness(entry) -> str:
+    attempts = [item for item in entry.lifts if item.kind == "attempt"]
+    if not attempts:
+        return "Attempt plan not started"
+    pending = [item for item in attempts if item.outcome == "pending"]
+    if not pending:
+        return "All planned attempts resolved"
+    opener_lifts = {item.lift for item in attempts if item.sequence == 1 and item.weight_kg}
+    missing_openers = [lift.title() for lift in LIFT_ORDER if lift not in opener_lifts]
+    if missing_openers:
+        return f"Missing {' / '.join(missing_openers)} opener"
+    return f"Openers set · {len(attempts)} attempt{'s' if len(attempts) != 1 else ''} planned"
+
+
+def build_board(meet: Meet, *, today: date | None = None) -> MeetDayBoard:
     meet_notes, meet_workflow = unpack_notes(meet.notes)
     entry_payloads = {entry.id: unpack_notes(entry.notes) for entry in meet.entries}
     lift_payloads = {
@@ -41,6 +70,22 @@ def build_board(meet: Meet) -> MeetDayBoard:
         if item.kind == "attempt" and item.outcome == "pending"
     ]
     pending.sort(key=_attempt_key)
+    attempts = [
+        item
+        for entry in meet.entries
+        for item in entry.lifts
+        if item.kind == "attempt"
+    ]
+    days_until_meet = (meet.meet_date - (today or date.today())).days
+    missing_context = tuple(
+        label
+        for value, label in (
+            (meet.federation, "federation"),
+            (meet.weight_class, "weight class"),
+            (meet.bodyweight_kg, "official bodyweight"),
+        )
+        if value in (None, "")
+    )
     next_by_entry = {
         entry.id: next(
             (
@@ -64,4 +109,9 @@ def build_board(meet: Meet) -> MeetDayBoard:
         entry_workflow={key: value[1] for key, value in entry_payloads.items()},
         lift_notes={key: value[0] for key, value in lift_payloads.items()},
         lift_workflow={key: value[1] for key, value in lift_payloads.items()},
+        days_until_meet=days_until_meet,
+        timeline_label=_timeline_label(days_until_meet),
+        missing_context=missing_context,
+        total_attempts=len(attempts),
+        entry_readiness={entry.id: _entry_readiness(entry) for entry in meet.entries},
     )

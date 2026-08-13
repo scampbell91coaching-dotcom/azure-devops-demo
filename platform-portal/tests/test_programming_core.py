@@ -238,8 +238,7 @@ def test_activation_rejects_missing_athlete_association():
 
     response = app.test_client().post(f"/programming/blocks/{block_id}/activate")
 
-    assert response.status_code == 409
-    assert b"not associated with a valid athlete" in response.data
+    assert response.status_code == 404
 
 
 def test_duplicate_block_copies_full_programme_as_a_draft():

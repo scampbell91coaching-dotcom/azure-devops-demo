@@ -54,6 +54,12 @@ from .models.athlete_state import AthleteStateFact
 from .services.athlete_state import record_fact
 from .services.client_onboarding import build_client_onboarding, require_current
 from .programming_services.blocks import BlockActivationError, activate
+from .tenancy import (
+    athlete_query_for_request,
+    require_athlete_access,
+    require_single_coach_membership,
+)
+from .models.organisation import CoachAthleteOwnership
 
 athletes_bp = Blueprint("athletes", __name__)
 
@@ -179,7 +185,7 @@ def coach_training_session(athlete_id: int, log_id: int):
     user = g.get("current_user")
     if user is not None and getattr(user, "role", None) == "athlete":
         abort(403)
-    athlete = db.session.get(Athlete, athlete_id)
+    athlete = require_athlete_access(athlete_id)
     log = db.session.get(TrainingSessionLog, log_id)
     if athlete is None or log is None or log.athlete_id != athlete.id:
         abort(404)
@@ -272,7 +278,7 @@ def _nutrition_form_values() -> tuple[dict, dict[str, str]]:
 
 @athletes_bp.get("/athletes")
 def athlete_list():
-    athletes = Athlete.query.order_by(
+    athletes = athlete_query_for_request().order_by(
         Athlete.status.asc(),
         Athlete.last_name.asc(),
         Athlete.first_name.asc(),
@@ -288,13 +294,14 @@ def athlete_list():
 
 @athletes_bp.post("/athletes")
 def create_athlete():
+    membership = require_single_coach_membership()
     first_name = request.form.get("first_name", "").strip()
     last_name = request.form.get("last_name", "").strip()
     email = request.form.get("email", "").strip().lower()
 
     form = request.form
     if not first_name or not last_name or not email:
-        athletes = Athlete.query.order_by(
+        athletes = athlete_query_for_request().order_by(
             Athlete.status.asc(), Athlete.last_name.asc(), Athlete.first_name.asc()
         ).all()
         return render_template(
@@ -303,7 +310,7 @@ def create_athlete():
         ), 400
 
     if Athlete.query.filter(db.func.lower(Athlete.email) == email).first() is not None:
-        athletes = Athlete.query.order_by(
+        athletes = athlete_query_for_request().order_by(
             Athlete.status.asc(), Athlete.last_name.asc(), Athlete.first_name.asc()
         ).all()
         return render_template(
@@ -323,6 +330,14 @@ def create_athlete():
     )
 
     db.session.add(athlete)
+    if membership is not None:
+        db.session.add(
+            CoachAthleteOwnership(
+                organisation_id=membership.organisation_id,
+                coach_membership_id=membership.id,
+                athlete=athlete,
+            )
+        )
     db.session.add(
         AthleteCheckinSettings(
             athlete=athlete,
@@ -367,7 +382,7 @@ def create_athlete():
     except IntegrityError:
         # The unique constraint closes the race after the friendly pre-check.
         db.session.rollback()
-        athletes = Athlete.query.order_by(
+        athletes = athlete_query_for_request().order_by(
             Athlete.status.asc(), Athlete.last_name.asc(), Athlete.first_name.asc()
         ).all()
         return render_template(
@@ -384,10 +399,7 @@ def create_athlete():
 
 
 def _onboarding_athlete(athlete_id: int) -> Athlete:
-    athlete = db.session.get(Athlete, athlete_id)
-    if athlete is None:
-        abort(404)
-    return athlete
+    return require_athlete_access(athlete_id)
 
 
 @athletes_bp.get("/athletes/<int:athlete_id>/onboarding")
@@ -536,10 +548,7 @@ def onboarding_checkin(athlete_id: int):
 
 @athletes_bp.get("/athletes/<int:athlete_id>")
 def athlete_dashboard(athlete_id: int):
-    athlete = db.session.get(Athlete, athlete_id)
-
-    if athlete is None:
-        abort(404)
+    athlete = require_athlete_access(athlete_id)
 
     raw_block_id = request.args.get("block") or request.args.get("block_id")
     block_id = None
@@ -637,9 +646,7 @@ def athlete_dashboard(athlete_id: int):
 @athletes_bp.post("/athletes/<int:athlete_id>/services")
 @roles_required(UserRole.COACH)
 def update_client_services(athlete_id: int):
-    athlete = db.session.get(Athlete, athlete_id)
-    if athlete is None:
-        abort(404)
+    athlete = require_athlete_access(athlete_id)
 
     effective_date = request.form.get("effective_date", "").strip()
     try:
@@ -705,9 +712,7 @@ def _account_action_result(athlete: Athlete, issued):
 @athletes_bp.post("/athletes/<int:athlete_id>/account/invite")
 @roles_required(UserRole.COACH)
 def invite_account(athlete_id: int):
-    athlete = db.session.get(Athlete, athlete_id)
-    if athlete is None:
-        abort(404)
+    athlete = require_athlete_access(athlete_id)
     if request.form.get("email", "").strip().casefold() != athlete.email.casefold():
         abort(400, description="Confirm the athlete email before sending an invitation.")
     try:
@@ -724,9 +729,7 @@ def invite_account(athlete_id: int):
 @athletes_bp.post("/athletes/<int:athlete_id>/account/password-reset")
 @roles_required(UserRole.COACH)
 def create_account_password_reset(athlete_id: int):
-    athlete = db.session.get(Athlete, athlete_id)
-    if athlete is None:
-        abort(404)
+    athlete = require_athlete_access(athlete_id)
     try:
         issued = create_password_reset(
             athlete,
@@ -741,9 +744,7 @@ def create_account_password_reset(athlete_id: int):
 @athletes_bp.post("/athletes/<int:athlete_id>/account/<purpose>/revoke")
 @roles_required(UserRole.COACH)
 def revoke_account_token(athlete_id: int, purpose: str):
-    athlete = db.session.get(Athlete, athlete_id)
-    if athlete is None:
-        abort(404)
+    athlete = require_athlete_access(athlete_id)
     try:
         token_purpose = AccountTokenPurpose(purpose)
     except ValueError:
@@ -758,10 +759,7 @@ def nutrition_checkin_form(athlete_id: int):
     if g.get("current_user") is not None and g.current_user.role == "athlete":
         if not athlete_services(athlete_id).nutrition:
             abort(404)
-    athlete = db.session.get(Athlete, athlete_id)
-
-    if athlete is None:
-        abort(404)
+    athlete = require_athlete_access(athlete_id)
     if not nutrition_coaching_enabled(athlete):
         abort(403)
 
@@ -779,10 +777,7 @@ def create_nutrition_checkin(athlete_id: int):
     if g.get("current_user") is not None and g.current_user.role == "athlete":
         if not athlete_services(athlete_id).nutrition:
             abort(404)
-    athlete = db.session.get(Athlete, athlete_id)
-
-    if athlete is None:
-        abort(404)
+    athlete = require_athlete_access(athlete_id)
     if not nutrition_coaching_enabled(athlete):
         abort(403)
 
@@ -828,6 +823,7 @@ def create_nutrition_checkin(athlete_id: int):
     "/athletes/<int:athlete_id>/nutrition-checkins/<int:checkin_id>/review"
 )
 def review_nutrition_checkin(athlete_id: int, checkin_id: int):
+    require_athlete_access(athlete_id)
     if not nutrition_coaching_enabled(athlete_id):
         abort(403)
     checkin = NutritionCheckIn.query.filter_by(

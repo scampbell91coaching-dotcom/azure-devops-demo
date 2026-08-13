@@ -9,6 +9,7 @@ from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.programming import (
     ExercisePrescription,
+    ProgrammingLiftSlot,
     TrainingBlock,
     TrainingSession,
     TrainingSessionLog,
@@ -17,6 +18,7 @@ from portal.models.programming import (
 )
 from portal.models.user import User, UserRole
 from portal.services.coach_athlete_performance import get_coach_athlete_performance
+from tenancy_factories import grant_coach_athlete_access
 
 
 @pytest.fixture()
@@ -36,6 +38,11 @@ def training_app():
         block = TrainingBlock(athlete=alex, name="Meet prep", status="active")
         week = TrainingWeek(block=block, name="Week 1", position=1)
         session = TrainingSession(week=week, name="Squat day", position=1)
+        squat_slot = ProgrammingLiftSlot(
+            session=session,
+            position=1,
+            lift_family="squat",
+        )
         squat = ExercisePrescription(
             session=session,
             exercise_name="Competition squat",
@@ -45,8 +52,10 @@ def training_app():
             load_kg=100,
             rpe=7,
             notes="Stay balanced.",
+            lift_slot=squat_slot,
+            slot_role="top_set",
         )
-        db.session.add_all([alex, sam, block, squat])
+        db.session.add_all([alex, sam, block, squat_slot, squat])
         db.session.flush()
         users = [
             User(
@@ -68,6 +77,9 @@ def training_app():
             ),
         ]
         db.session.add_all(users)
+        grant_coach_athlete_access(
+            users[0], [alex], name="Training Log Strength", slug="training-log-strength"
+        )
         db.session.commit()
         app.config["TRAINING_IDS"] = {
             "alex": alex.id,
@@ -308,8 +320,15 @@ def test_coach_performance_dashboard_uses_results_and_explains_decision(training
     assert "400 kg" in page
     assert "0%" in page
     assert "Epley" in page
-    assert "Training Log" in page
+    assert 'aria-label="Athlete context"' in page
+    assert "Open programme" in page
+    assert ">Programming</a>" in page
+    assert ">Training log</a>" in page
+    assert 'href="#client-services">Administration</a>' in page
     assert "How this decision is made" in page
+    assert 'aria-label="Primary training metrics"' in page
+    assert 'aria-label="Supporting training metrics"' in page
+    assert "Supporting context" in page
 
 
 def test_performance_filter_rejects_another_athletes_block(training_app):

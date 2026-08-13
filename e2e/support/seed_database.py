@@ -21,6 +21,14 @@ from portal.models.nutrition_import import (
 )
 from portal.models.meal_plan import MealPlanAssignment, MealPlanTemplate
 from portal.models.nutrition_prescription import NutritionMacroPrescription
+from portal.models.organisation import (
+    CoachAthleteOwnership,
+    MembershipStatus,
+    Organisation,
+    OrganisationMembership,
+    OrganisationRole,
+    OwnershipStatus,
+)
 from portal.models.programming import (
     ExercisePrescription,
     ProgrammingLiftSlot,
@@ -38,8 +46,8 @@ from portal.models.warmup import (
     WarmupProtocol,
     WarmupProtocolStep,
 )
-from portal.programming_services.lift_slots import create as create_lift_slot
 from portal.models.user import User, UserRole
+from portal.programming_services.lift_slots import create as create_lift_slot
 from werkzeug.security import generate_password_hash
 
 
@@ -50,6 +58,8 @@ SERVICE_ATHLETE_ID = 202
 INVITATION_ATHLETE_ID = 808
 PERFORMANCE_ATHLETE_ID = 404
 PERFORMANCE_EMPTY_ATHLETE_ID = 405
+TENANT_A_ATHLETE_ID = 1101
+TENANT_B_ATHLETE_ID = 2101
 
 
 def _delete_training_state(athlete_id: int) -> None:
@@ -257,6 +267,20 @@ def seed_database(app: Flask) -> None:
             bodyweight_kg=None,
             weight_class="69 kg",
         )
+        tenant_a_athlete = db.session.get(Athlete, TENANT_A_ATHLETE_ID) or Athlete(
+            id=TENANT_A_ATHLETE_ID,
+            first_name="Avery",
+            last_name="Tenant A",
+            email="athlete.a.e2e@example.test",
+            bodyweight_kg=80.0,
+        )
+        tenant_b_athlete = db.session.get(Athlete, TENANT_B_ATHLETE_ID) or Athlete(
+            id=TENANT_B_ATHLETE_ID,
+            first_name="Blake",
+            last_name="Tenant B",
+            email="athlete.b.e2e@example.test",
+            bodyweight_kg=70.0,
+        )
         block = db.session.get(TrainingBlock, 301) or TrainingBlock(
             id=301,
             athlete=alex,
@@ -420,6 +444,7 @@ def seed_database(app: Flask) -> None:
         misleading_assistance.category = "upper body"
         misleading_assistance.fatigue_rating = 2
         misleading_assistance.accessory_suitable = True
+        misleading_assistance.auto_select = False
         misleading_assistance.lift_family = None
 
         extra_prescriptions = []
@@ -485,6 +510,10 @@ def seed_database(app: Flask) -> None:
             fatigue_rating=2,
             accessory_suitable=True,
         )
+        for exercise in (pulldown, row, split_squat, plank):
+            exercise.active = True
+            exercise.accessory_suitable = True
+            exercise.auto_select = False
         extra_accessory_specs = (
             ("Leg Extension", "lower body", 2),
             ("Leg Curl", "lower body", 2),
@@ -509,6 +538,7 @@ def seed_database(app: Flask) -> None:
             exercise.category = category
             exercise.fatigue_rating = fatigue_rating
             exercise.accessory_suitable = True
+            exercise.auto_select = False
             exercise.lift_family = None
             extra_accessories.append(exercise)
 
@@ -539,6 +569,53 @@ def seed_database(app: Flask) -> None:
                 "Service Athlete password!", method="scrypt"
             ),
         )
+        tenant_a_coach = User.query.filter_by(
+            email="coach.a.e2e@example.test"
+        ).one_or_none() or User(
+            email="coach.a.e2e@example.test",
+            role=UserRole.COACH,
+            password_hash=generate_password_hash(
+                "Tenant A coach password!", method="scrypt"
+            ),
+        )
+        tenant_b_owner = User.query.filter_by(
+            email="owner.b.e2e@example.test"
+        ).one_or_none() or User(
+            email="owner.b.e2e@example.test",
+            role=UserRole.COACH,
+            password_hash=generate_password_hash(
+                "Tenant B owner password!", method="scrypt"
+            ),
+        )
+        tenant_b_coach = User.query.filter_by(
+            email="coach.b.e2e@example.test"
+        ).one_or_none() or User(
+            email="coach.b.e2e@example.test",
+            role=UserRole.COACH,
+            password_hash=generate_password_hash(
+                "Tenant B coach password!", method="scrypt"
+            ),
+        )
+        tenant_a_athlete_user = User.query.filter_by(
+            email=tenant_a_athlete.email
+        ).one_or_none() or User(
+            email=tenant_a_athlete.email,
+            role=UserRole.ATHLETE,
+            athlete_id=tenant_a_athlete.id,
+            password_hash=generate_password_hash(
+                "Tenant A athlete password!", method="scrypt"
+            ),
+        )
+        tenant_b_athlete_user = User.query.filter_by(
+            email=tenant_b_athlete.email
+        ).one_or_none() or User(
+            email=tenant_b_athlete.email,
+            role=UserRole.ATHLETE,
+            athlete_id=tenant_b_athlete.id,
+            password_hash=generate_password_hash(
+                "Tenant B athlete password!", method="scrypt"
+            ),
+        )
         db.session.add_all(
             [
                 alex,
@@ -547,6 +624,8 @@ def seed_database(app: Flask) -> None:
                 invitation,
                 performance_athlete,
                 performance_empty_athlete,
+                tenant_a_athlete,
+                tenant_b_athlete,
                 block,
                 week,
                 session,
@@ -573,9 +652,97 @@ def seed_database(app: Flask) -> None:
                 coach,
                 athlete_user,
                 service_user,
+                tenant_a_coach,
+                tenant_b_owner,
+                tenant_b_coach,
+                tenant_a_athlete_user,
+                tenant_b_athlete_user,
             ]
         )
         db.session.flush()
+
+        tenant_a_org = Organisation.query.filter_by(
+            slug="traditional-strength-e2e-a"
+        ).one_or_none() or Organisation(
+            name="Traditional Strength E2E A", slug="traditional-strength-e2e-a"
+        )
+        tenant_b_org = Organisation.query.filter_by(
+            slug="traditional-strength-e2e-b"
+        ).one_or_none() or Organisation(
+            name="Traditional Strength E2E B", slug="traditional-strength-e2e-b"
+        )
+        db.session.add_all([tenant_a_org, tenant_b_org])
+        db.session.flush()
+
+        def membership(organisation, user, role):
+            with db.session.no_autoflush:
+                existing = OrganisationMembership.query.filter_by(
+                    organisation_id=organisation.id, user_id=user.id
+                ).one_or_none()
+            record = existing or OrganisationMembership(
+                organisation_id=organisation.id, user_id=user.id, role=role
+            )
+            record.role = role
+            record.status = MembershipStatus.ACTIVE
+            return record
+
+        tenant_a_owner_membership = membership(
+            tenant_a_org, coach, OrganisationRole.OWNER
+        )
+        tenant_a_coach_membership = membership(
+            tenant_a_org, tenant_a_coach, OrganisationRole.COACH
+        )
+        tenant_b_owner_membership = membership(
+            tenant_b_org, tenant_b_owner, OrganisationRole.OWNER
+        )
+        tenant_b_coach_membership = membership(
+            tenant_b_org, tenant_b_coach, OrganisationRole.COACH
+        )
+        db.session.add_all(
+            [
+                tenant_a_owner_membership,
+                tenant_a_coach_membership,
+                tenant_b_owner_membership,
+                tenant_b_coach_membership,
+            ]
+        )
+        db.session.flush()
+
+        def ownership(organisation, coach_membership, athlete):
+            with db.session.no_autoflush:
+                existing = CoachAthleteOwnership.query.filter_by(
+                    organisation_id=organisation.id, athlete_id=athlete.id
+                ).one_or_none()
+            record = existing or CoachAthleteOwnership(
+                organisation_id=organisation.id, athlete_id=athlete.id
+            )
+            record.coach_membership_id = coach_membership.id
+            record.status = OwnershipStatus.ACTIVE
+            return record
+
+        db.session.add_all(
+            [
+                # The primary coach login resolves tenant A through its sole
+                # active membership. All legacy workflow athletes therefore
+                # need canonical ownership by that same membership.
+                ownership(tenant_a_org, tenant_a_owner_membership, alex),
+                ownership(tenant_a_org, tenant_a_owner_membership, sam),
+                ownership(tenant_a_org, tenant_a_owner_membership, pilot),
+                ownership(tenant_a_org, tenant_a_owner_membership, invitation),
+                ownership(
+                    tenant_a_org,
+                    tenant_a_owner_membership,
+                    performance_athlete,
+                ),
+                ownership(
+                    tenant_a_org,
+                    tenant_a_owner_membership,
+                    performance_empty_athlete,
+                ),
+                ownership(tenant_a_org, tenant_a_coach_membership, tenant_a_athlete),
+                ownership(tenant_b_org, tenant_b_coach_membership, tenant_b_athlete),
+            ]
+        )
 
         # Dedicated, immutable performance-dashboard data. Keeping these rows on
         # their own athletes means mutable training E2E workflows cannot make

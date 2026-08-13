@@ -19,6 +19,17 @@ def test_updates_only_helm_image_tag(tmp_path, monkeypatch):
     assert path.read_text() == "other:\n  tag: keep\nimage:\n  repository: example\n  tag: new\ntail: true\n"
 
 
+def test_updates_helm_image_digest_without_rewriting_tag(tmp_path, monkeypatch):
+    path = tmp_path / "values.yaml"
+    path.write_text("image:\n  repository: example\n  tag: old\n  digest: ''\n")
+    monkeypatch.setitem(MODULE.TARGETS, "flask", (path, "helm"))
+    digest = "sha256:" + "a" * 64
+    MODULE.update("flask", digest)
+    assert path.read_text() == (
+        f"image:\n  repository: example\n  tag: old\n  digest: {digest}\n"
+    )
+
+
 def test_private_update_requires_all_workload_references(tmp_path, monkeypatch):
     path = tmp_path / "manifest.yaml"
     collector = tmp_path / "collector.yaml"

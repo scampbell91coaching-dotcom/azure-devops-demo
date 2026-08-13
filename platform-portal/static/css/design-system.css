@@ -1,5 +1,6 @@
-/* Traditional Strength Design System V1
- * Opt-in primitives. Load this file after legacy page CSS during migration.
+/* Traditional Strength coach UI foundation
+ * Opt-in primitives. Load before feature CSS when features consume its tokens;
+ * load after legacy CSS for isolated component migrations.
  * Public tokens are prefixed --ts-; component selectors are prefixed .ts-.
  */
 
@@ -82,6 +83,23 @@
   --ts-width-wide: 80rem;
   --ts-gutter: clamp(1rem, 4vw, 2rem);
   --ts-section-rhythm: clamp(2.5rem, 7vw, 5rem);
+
+  /* Dense coach workspace. Keep these semantic so features do not invent
+   * page-specific measurements or surface colours. */
+  --ts-workspace-bg: #0b0d0c;
+  --ts-workspace-surface: #111512;
+  --ts-workspace-surface-subtle: #0e110f;
+  --ts-workspace-text: #eee9dc;
+  --ts-workspace-heading: #f5efdf;
+  --ts-workspace-muted: #aaa99e;
+  --ts-workspace-border: #303832;
+  --ts-workspace-border-strong: #4a554d;
+  --ts-workspace-accent: #c49a5c;
+  --ts-workspace-accent-strong: #d8ba88;
+  --ts-workspace-max: 86.25rem;
+  --ts-workspace-gutter: clamp(0.75rem, 2vw, 2rem);
+  --ts-workspace-section: clamp(1rem, 2vw, 1.5rem);
+  --ts-control-height: 2.5rem;
 }
 
 .ts-theme-dark {
@@ -99,6 +117,23 @@
   --ts-focus-ring: 0 0 0 3px #171512, 0 0 0 6px #e1b45e;
   background: var(--ts-color-brand-black);
   color: var(--ts-color-text-primary);
+}
+
+.ts-theme-coach {
+  color-scheme: dark;
+  --ts-color-text-primary: var(--ts-workspace-text);
+  --ts-color-text-secondary: var(--ts-workspace-muted);
+  --ts-color-text-muted: #82877f;
+  --ts-color-border: var(--ts-workspace-border);
+  --ts-color-border-strong: var(--ts-workspace-border-strong);
+  --ts-color-surface: var(--ts-workspace-surface);
+  --ts-color-interactive: var(--ts-workspace-accent);
+  --ts-color-interactive-hover: var(--ts-workspace-accent-strong);
+  --ts-radius-md: var(--ts-radius-sm);
+  --ts-radius-lg: var(--ts-radius-sm);
+  --ts-section-rhythm: var(--ts-workspace-section);
+  background: var(--ts-workspace-bg);
+  color: var(--ts-workspace-text);
 }
 
 .ts-type-display,
@@ -173,7 +208,7 @@
 .ts-field__error { font: 400 var(--ts-text-label)/1.4 var(--ts-font-sans); margin: 0; }
 .ts-field__help { color: var(--ts-color-text-muted); }
 .ts-field__error { color: var(--ts-color-danger); font-weight: 700; }
-.ts-field__error::before { content: "! "; }
+.ts-field__error::before { content: "Error: "; }
 .ts-choice { align-items: start; color: var(--ts-color-text-primary); cursor: pointer; display: inline-flex; font: 400 1rem/1.4 var(--ts-font-sans); gap: var(--ts-space-2); }
 .ts-choice input { accent-color: var(--ts-color-gold); inline-size: 1.125rem; block-size: 1.125rem; margin: 0.15rem 0 0; }
 .ts-choice input:disabled + span { color: var(--ts-color-disabled); cursor: not-allowed; }
@@ -195,13 +230,21 @@
 
 .ts-alert { background: var(--ts-color-info-soft); border: 1px solid var(--ts-color-info); border-inline-start-width: 0.35rem; border-radius: var(--ts-radius-md); color: #163d53; padding: var(--ts-space-4); }
 .ts-alert__title { font-weight: 700; margin: 0 0 var(--ts-space-1); }
+.ts-alert__title--standalone { margin-block-end: 0; }
 .ts-alert__body { margin: 0; }
 .ts-alert--success { background: var(--ts-color-success-soft); border-color: var(--ts-color-success); color: #19452a; }
 .ts-alert--warning { background: var(--ts-color-warning-soft); border-color: var(--ts-color-warning); color: #5e4105; }
 .ts-alert--danger { background: var(--ts-color-danger-soft); border-color: var(--ts-color-danger); color: #752020; }
 .ts-theme-dark .ts-alert { color: #171512; }
 
-.ts-empty-state { border: 1px dashed var(--ts-color-border-strong); border-radius: var(--ts-radius-lg); color: var(--ts-color-text-secondary); display: grid; gap: var(--ts-space-3); justify-items: start; padding: clamp(1.5rem, 5vw, 3rem); }
+.ts-error-summary { background: var(--ts-color-danger-soft); border-inline-start: 0.35rem solid var(--ts-color-danger); color: #752020; padding: var(--ts-space-4); }
+.ts-error-summary:focus { outline: 0; box-shadow: var(--ts-focus-ring); }
+.ts-error-summary__title { font-weight: 700; margin: 0 0 var(--ts-space-2); }
+.ts-error-summary__list { margin: 0; padding-inline-start: var(--ts-space-5); }
+.ts-error-summary a { color: inherit; font-weight: 700; }
+.ts-theme-dark .ts-error-summary { color: #171512; }
+
+.ts-empty-state { border-inline-start: var(--ts-border-thick) solid var(--ts-color-border-strong); color: var(--ts-color-text-secondary); display: grid; gap: var(--ts-space-2); justify-items: start; padding: var(--ts-space-4) var(--ts-space-5); }
 .ts-empty-state__title { color: var(--ts-color-text-primary); font: 700 var(--ts-text-h3)/1.2 var(--ts-font-sans); margin: 0; }
 .ts-empty-state__body { margin: 0; max-inline-size: var(--ts-width-reading); }
 
@@ -245,6 +288,18 @@
 
 .ts-container { inline-size: min(100% - (2 * var(--ts-gutter)), var(--ts-width-content)); margin-inline: auto; }
 .ts-container--wide { max-inline-size: var(--ts-width-wide); }
+.ts-workspace { inline-size: min(100% - (2 * var(--ts-workspace-gutter)), var(--ts-workspace-max)); margin-inline: auto; }
+.ts-workspace-grid { display: grid; gap: var(--ts-space-4); grid-template-columns: repeat(12, minmax(0, 1fr)); }
+.ts-workspace-main { grid-column: span 8; min-inline-size: 0; }
+.ts-workspace-aside { border-inline-start: 1px solid var(--ts-color-border); grid-column: span 4; min-inline-size: 0; padding-inline-start: var(--ts-space-5); }
+.ts-context-bar { align-items: end; border-block: 1px solid var(--ts-color-border); display: grid; gap: var(--ts-space-3); grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); padding-block: var(--ts-space-3); }
+.ts-context-item { display: grid; gap: var(--ts-space-1); min-inline-size: 0; }
+.ts-context-item__label { color: var(--ts-color-text-muted); font: 700 var(--ts-text-caption)/1.3 var(--ts-font-sans); letter-spacing: 0.06em; text-transform: uppercase; }
+.ts-context-item__value { color: var(--ts-color-text-primary); font: 600 var(--ts-text-label)/1.3 var(--ts-font-sans); overflow-wrap: anywhere; }
+.ts-section-divider { border: 0; border-block-start: 1px solid var(--ts-color-border); margin: var(--ts-space-6) 0; }
+.ts-control-row { align-items: end; display: flex; flex-wrap: wrap; gap: var(--ts-space-3); }
+.ts-control-row > .ts-field { flex: 1 1 11rem; }
+.ts-control-row__actions { display: flex; flex-wrap: wrap; gap: var(--ts-space-2); margin-inline-start: auto; }
 .ts-section { padding-block: var(--ts-section-rhythm); }
 .ts-stack { display: flex; flex-direction: column; gap: var(--ts-stack-space, var(--ts-space-4)); }
 .ts-stack--tight { --ts-stack-space: var(--ts-space-2); }
@@ -263,6 +318,12 @@
   .ts-page-header__actions,
   .ts-section-header__actions { display: grid; }
   .ts-dialog__footer > * { flex: 1 1 auto; }
+}
+
+@media (max-width: 64rem) {
+  .ts-workspace-main,
+  .ts-workspace-aside { grid-column: 1 / -1; }
+  .ts-workspace-aside { border-block-start: 1px solid var(--ts-color-border); border-inline-start: 0; padding-block-start: var(--ts-space-5); padding-inline-start: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -38,8 +38,9 @@ def update(target: str, image: str) -> tuple[Path, ...]:
     for path in paths:
         text = path.read_text()
         if kind == "helm":
+            field = "digest" if image.startswith("sha256:") else "tag"
             updated, count = re.subn(
-                r"(?m)^(image:\s*\n(?:^[ \t]+.*\n)*?^[ \t]+tag:)\s*.*$",
+                rf"(?m)^(image:\s*\n(?:^[ \t]+.*\n)*?^[ \t]+{field}:)\s*.*$",
                 rf"\g<1> {image}",
                 text,
                 count=1,

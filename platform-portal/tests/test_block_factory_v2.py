@@ -34,6 +34,32 @@ def test_factory_page_loads():
     assert b"Block Factory" in response.data
 
 
+def test_factory_page_exposes_dense_intent_workflow_without_fake_copilot_fields():
+    app = create_test_app()
+
+    with app.app_context():
+        db.session.add(
+            Athlete(
+                first_name="Alex",
+                last_name="Lifter",
+                email="alex@example.com",
+            )
+        )
+        db.session.commit()
+
+    response = app.test_client().get("/programming/factory")
+
+    assert response.status_code == 200
+    assert b'data-copilot-context="block-intent"' in response.data
+    assert b'data-copilot-region="structured-intent"' in response.data
+    assert b'data-copilot-region="review-evidence"' not in response.data
+    assert b'id="factory-context-heading"' in response.data
+    assert b'id="factory-intent-heading"' in response.data
+    assert b'name="target_rpe"' not in response.data
+    assert b'name="reference_block"' not in response.data
+    assert b"Guided block flow" not in response.data
+
+
 def test_factory_generates_complete_block():
     app = create_test_app()
 

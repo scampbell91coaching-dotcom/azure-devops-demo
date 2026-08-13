@@ -320,14 +320,49 @@ test('Block Factory persists more than three coach-selected accessories per sess
   }
 });
 
+test('Block Factory automatic assistance falls back to suitable library metadata and persists', async ({ page }) => {
+  await page.goto('/programming/factory');
+  await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
+  await page.getByLabel('Block name').fill('Automatic accessory fallback block');
+  await page.getByLabel('Split').selectOption('POWERLIFTING_3');
+  await page.getByLabel('Training days').fill('3');
+  await page.getByLabel('Selection mode').selectOption('automatic');
+  await page.getByLabel('Accessory volume').selectOption('medium');
+  await expect(page.getByLabel('Selection mode')).toHaveValue('automatic');
+
+  await page.getByRole('button', { name: 'Preview' }).click();
+
+  const previewCounts = await page.locator('.factory-preview__count').allTextContents();
+  const assistanceTotal = previewCounts.reduce((total, text) => {
+    const match = text.match(/(\d+) assistance exercises?/);
+    return total + Number(match?.[1] ?? 0);
+  }, 0);
+  expect(assistanceTotal).toBeGreaterThan(0);
+
+  await page.getByRole('button', { name: 'Accept proposal' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Automatic accessory fallback block' })
+  ).toBeVisible();
+  await page.getByRole('link', { name: /Week 1/ }).click();
+
+  const persistedAssistance = page.getByTestId('assistance-provenance');
+  await expect(persistedAssistance.first()).toBeVisible();
+  const persistedCount = await persistedAssistance.count();
+  expect(persistedCount).toBeGreaterThan(0);
+
+  await page.reload();
+  await expect(page.getByTestId('assistance-provenance')).toHaveCount(persistedCount);
+});
+
 test('Block Factory previews taxonomy-backed exposures with zero assistance and incomplete state', async ({ page }) => {
   await page.goto('/programming/factory');
   await page.getByLabel('Athlete').selectOption({ label: 'Sam Morgan' });
-  await expect(page.getByText('Zero assistance is valid')).toBeVisible();
+  await expect(page.getByText('No assistance selected.')).toBeVisible();
+  await page.getByLabel('Selection mode').selectOption('none');
   await page.getByRole('button', { name: 'Preview' }).click();
-  await expect(page.getByRole('heading', { name: 'Weekly programming intelligence' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Proposal explanation' })).toBeVisible();
   await expect(
-    page.locator('.factory-preview__intelligence p').filter({ hasText: 'Exposures:' })
+    page.locator('.factory-preview__intelligence p').filter({ hasText: 'Exposures' })
   ).toContainText('2 squat · 3 bench · 1 deadlift');
   await expect(page.getByText(/Incomplete data:/)).toBeVisible();
   await expect(page.getByText('Reported fatigue:', { exact: false })).toHaveCount(0);

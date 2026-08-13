@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy import event
 
@@ -11,12 +11,19 @@ from portal.models.programming import (
     TrainingBlock,
     TrainingSession,
     TrainingSessionLog,
+    TrainingSetResult,
     TrainingWeek,
 )
 from portal.models.user import User, UserRole
 from portal.models.warmup import WarmupAssignment, WarmupProtocol, WarmupProtocolStep
+from portal.models.nutrition_checkin import NutritionCheckIn
 from portal.services.athlete_dashboard import _current_block_logs
 from portal.services.client_services import resolved_client_services
+from portal.services.nutrition_dashboard import get_nutrition_dashboard
+from portal.services.performance_charts import (
+    AthletePerformanceChartService,
+    PerformanceChartFilter,
+)
 from portal.services.persisted_warmups import resolve_warmup
 
 
@@ -239,3 +246,66 @@ def test_dashboard_schedule_skips_log_query_without_active_block():
 
         assert count == 0
         assert logs == {}
+
+
+def test_nutrition_dashboard_select_count_does_not_grow_with_athletes():
+    app = _app()
+    with app.app_context():
+        for number in range(20):
+            athlete = Athlete(
+                first_name=f"Athlete {number}", last_name="Lifter",
+                email=f"nutrition-{number}@test",
+            )
+            db.session.add(athlete)
+            db.session.add(NutritionCheckIn(
+                athlete=athlete, nutrition_adherence=8, hunger=5, energy=7,
+                sleep_quality=7, stress=4, digestion=8,
+                training_performance=7,
+            ))
+        db.session.commit()
+        db.session.expire_all()
+
+        count, dashboard = _select_count(get_nutrition_dashboard)
+
+        assert len(dashboard.athletes) == 20
+        assert count == 3
+
+
+def test_performance_chart_select_count_does_not_grow_with_set_history():
+    app = _app()
+    with app.app_context():
+        athlete = Athlete(first_name="Alex", last_name="Lifter", email="chart@test")
+        empty = Athlete(first_name="Sam", last_name="Lifter", email="empty-chart@test")
+        block = _programme(athlete, weeks=1, sessions_per_week=1)
+        session = block.weeks[0].sessions[0]
+        log = TrainingSessionLog(
+            athlete=athlete, session=session, session_name="SBD",
+            block_name=block.name, week_name="Week 1", status="completed",
+            completed_at=datetime(2026, 8, 1, 12, tzinfo=UTC),
+        )
+        db.session.add_all([log, empty])
+        db.session.flush()
+        db.session.add_all([
+            TrainingSetResult(
+                session_log=log, exercise_name="Squat", exercise_position=1,
+                set_order=number + 1, completed=True, actual_load_kg=100,
+                actual_reps=5, actual_rpe=8,
+            )
+            for number in range(100)
+        ])
+        db.session.commit()
+        athlete_id = athlete.id
+        empty_id = empty.id
+        filters = PerformanceChartFilter(date(2026, 7, 1), date(2026, 8, 2))
+        db.session.expire_all()
+
+        empty_count, _ = _select_count(
+            lambda: AthletePerformanceChartService().build(empty_id, filters)
+        )
+        db.session.expire_all()
+        history_count, payload = _select_count(
+            lambda: AthletePerformanceChartService().build(athlete_id, filters)
+        )
+
+        assert len(payload["datasets"]["rpe"]) == 0
+        assert history_count == empty_count

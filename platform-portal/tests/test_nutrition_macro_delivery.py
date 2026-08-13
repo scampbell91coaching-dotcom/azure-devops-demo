@@ -7,6 +7,7 @@ from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.client_service import ClientServiceChange
 from portal.models.nutrition_prescription import NutritionMacroPrescription
+from portal.models.organisation import CoachAthleteOwnership, Organisation, OrganisationMembership, OrganisationRole
 from portal.models.user import User, UserRole
 
 
@@ -19,6 +20,11 @@ def macro_app():
         other = Athlete(first_name="Other", last_name="Athlete", email="other@example.test")
         coach = User(email="coach@example.test", role=UserRole.COACH); coach.set_password("coach password long enough")
         db.session.add_all([athlete, other, coach]); db.session.flush()
+        organisation = Organisation(name="Test Strength", slug="test-strength")
+        db.session.add(organisation); db.session.flush()
+        membership = OrganisationMembership(organisation=organisation, user=coach, role=OrganisationRole.COACH)
+        db.session.add(membership); db.session.flush()
+        db.session.add(CoachAthleteOwnership(organisation=organisation, coach_membership=membership, athlete=athlete))
         athlete_user = User(email=athlete.email, role=UserRole.ATHLETE, athlete_id=athlete.id); athlete_user.set_password("athlete password long enough")
         db.session.add_all([athlete_user, ClientServiceChange(athlete_id=athlete.id, service="nutrition", value="yes", effective_at=datetime(2026, 1, 1))])
         db.session.commit()

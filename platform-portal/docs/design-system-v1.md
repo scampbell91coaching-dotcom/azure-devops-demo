@@ -47,17 +47,29 @@ Interactive primitives share `--ts-focus-ring`, timings and easing. The reduced-
 - `.ts-stack`, `.ts-cluster`, and `.ts-grid` cover the common vertical, wrapping horizontal, and responsive grid arrangements. Tight/loose and compact variants are intentionally few.
 - Contracts are documented in CSS at 40rem compact, 64rem wide, and 80rem maximum content. V1 currently needs a compact media query only.
 
+### Coach workspace foundation
+
+Coach templates load this stylesheet before `coach_workspace.css` and apply `.ts-theme-coach` to the body. The theme exposes a near-black, cream and restrained-gold semantic palette while the legacy `coach-` selectors consume the same tokens during incremental migration. It deliberately removes decorative gradients and raised dashboard surfaces.
+
+- `.ts-workspace` is the desktop-first 86.25rem shell with a shared responsive gutter.
+- `.ts-workspace-grid`, `.ts-workspace-main`, and `.ts-workspace-aside` create a 12-column authoring surface that collapses below 64rem. The aside uses a divider, not a nested card.
+- `ds.context_bar()` renders persistent term/value context such as athlete, block, week and status as a semantic description list.
+- `.ts-control-row` and `.ts-control-row__actions` keep related controls and verb-led actions together.
+- `.ts-section-divider` separates workflow stages without introducing another container.
+
+Coach surfaces should prefer these flat structures, native tables and inline editing. Use `.ts-card` only when the content is genuinely a self-contained object; do not use it as a default page-section wrapper.
+
 ## Components
 
 ### Actions
 
-`ds.button()` supports `primary`, `secondary`, `tertiary`, and `danger`, native disabled buttons, link actions with `aria-disabled`, and `aria-busy` loading state. Use primary once per decision area. Secondary is for alternatives, tertiary for low emphasis, and danger only for destructive actions. `ds.icon_button()` requires a human-readable label; its icon is hidden from assistive technology.
+`ds.button()` supports `primary`, `secondary`, `tertiary`, and `danger`, native disabled buttons, link actions with `aria-disabled`, and `aria-busy` loading state. A loading native button is disabled to prevent repeat submission. Use primary once per decision area. Secondary is for alternatives, tertiary for low emphasis, and danger only for destructive actions. `ds.icon_button()` requires a human-readable label; its icon is hidden from assistive technology.
 
 Do not use an anchor for an action that changes state. Do not visually disable an element without the native `disabled` attribute or the macro's link treatment. Loading labels should describe the ongoing action, for example “Saving”.
 
 ### Forms
 
-`input_field`, `textarea_field`, and `select_field` connect labels, help, errors, required state and `aria-describedby`. `choice` uses native checkbox and radio inputs and browser focus/keyboard behaviour. Options passed to `select_field` are `(value, label)` pairs.
+`input_field`, `textarea_field`, and `select_field` connect labels, help, errors, required state, `aria-errormessage` and `aria-describedby`. `input_field` accepts a separate `id` when several controls submit under the same name. Error text precedes optional help so the corrective action is read first. `choice` uses native checkbox and radio inputs and browser focus/keyboard behaviour. Options passed to `select_field` are `(value, label)` pairs.
 
 ```jinja
 {{ ds.input_field(
@@ -69,13 +81,15 @@ Do not use an anchor for an action that changes state. Do not visually disable a
 
 Do not put placeholder text in place of a label. Do not create a `div` checkbox, custom select, or click-only radio. On server validation, pass the error back to the macro so `aria-invalid` and the error ID remain associated.
 
+For forms with more than one error, render `form_errors` before the fields. Pass `(field_id, message)` pairs so each summary link moves focus to the relevant control. Move focus to the summary after a client-side validation response; server-rendered pages should place it at the start of the form. Use direct corrections such as “Enter an email address”, not “Invalid input” or a second explanatory paragraph.
+
 ### Content and feedback
 
 - `card` is a shadowed grouping and `panel` is a quieter bordered section. Both are call blocks.
 - `metric_card` pairs a metric with a mandatory label and optional context.
 - `badge` communicates `success`, `warning`, `danger`, or `info` with text, a dot and a border.
-- `alert` uses `role="alert"` for danger or explicitly live feedback, otherwise polite `role="status"`.
-- `empty_state` explains why a collection is empty and may include one recovery action.
+- `alert` uses `role="alert"` for danger or explicitly live feedback, otherwise polite `role="status"`. Its message is optional when the title already communicates the outcome.
+- `empty_state` names the empty collection and may include one useful explanation and one recovery action. Its message is optional; select `heading_level` to preserve the page outline.
 - `table_wrapper` gives wide tables a named, keyboard-scrollable region. Tables still need a caption or region label and scoped header cells.
 - `pagination` exposes current and unavailable states. Keep page counts modest; a future ranged variant should be introduced before using hundreds of links.
 - `tabs` is for navigation and renders links. For in-page JavaScript tab panels, implement the full ARIA tabs keyboard pattern rather than relabelling this navigation macro.

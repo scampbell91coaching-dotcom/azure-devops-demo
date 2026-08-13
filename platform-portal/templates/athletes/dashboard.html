@@ -4,21 +4,37 @@
 
 {% block title %}{{ athlete.full_name }} | Traditional Strength{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/athlete_performance.css') }}">
+{% endblock %}
+
+{% block coach_context %}
+  <span><b>Athlete</b> {{ athlete.full_name }}</span>
+  {% if performance.selected_block %}<span><b>Block</b> {{ performance.selected_block.name }}</span>{% endif %}
+{% endblock %}
+
 {% block content %}
-<section class="coach-page">
-  <header class="coach-page__header coach-page__header--split">
-    <div>
+<section class="coach-page coach-page--athlete-profile">
+  <header class="coach-page__header athlete-profile-header">
+    <div class="athlete-profile-header__identity">
       <a class="coach-back-link" href="/athletes">← Athletes</a>
-      <span class="coach-eyebrow">Athlete dashboard</span>
       <h1>{{ athlete.full_name }}</h1>
-      <p>{{ athlete.email }}</p>
+      <p>{{ athlete.email }} · {{ account_state | replace('_', ' ') | title }}</p>
     </div>
 
-    <div class="coach-page__actions">
-      <a class="coach-primary-button" href="{{ url_for('nutrition_prescriptions.coach_index', athlete_id=athlete.id) }}">Nutrition targets</a>
-      <a class="coach-primary-button" href="{{ url_for('athletes.client_onboarding', athlete_id=athlete.id) }}">Guided onboarding</a>
+    <dl class="athlete-context" aria-label="Athlete context">
+      <div><dt>Bodyweight</dt><dd>{{ athlete.bodyweight_kg ~ ' kg' if athlete.bodyweight_kg else '—' }}</dd></div>
+      <div><dt>Class</dt><dd>{{ athlete.weight_class or '—' }}</dd></div>
+      <div><dt>Federation</dt><dd>{{ athlete.federation or '—' }}</dd></div>
+      <div><dt>Next competition</dt><dd>{{ athlete.next_competition or '—' }}</dd></div>
+    </dl>
+
+    <div class="coach-page__actions athlete-profile-header__actions">
+      <a class="coach-primary-button" href="{{ url_for('programming.athlete_program', athlete_id=athlete.id) }}">Open programme</a>
+      <a class="coach-link-button" href="{{ url_for('nutrition_prescriptions.coach_index', athlete_id=athlete.id) }}">Nutrition targets</a>
+      <a class="coach-link-button" href="{{ url_for('athletes.client_onboarding', athlete_id=athlete.id) }}">Onboarding</a>
       {% if nutrition_coaching_enabled %}<a
-        class="coach-primary-button"
+        class="coach-link-button"
         href="{{ url_for(
           'athletes.nutrition_checkin_form',
           athlete_id=athlete.id
@@ -47,28 +63,23 @@
       <span class="coach-status coach-status--active">No weekly check-in due</span>
     {% endif %}
   
-      <a
-        class="coach-link-button"
-        href="{{ url_for('programming.athlete_program', athlete_id=athlete.id) }}"
-      >
-        View programme
-      </a>
-
     </div>
 
   </header>
 
   <nav class="athlete-performance-nav" aria-label="{{ athlete.full_name }} workspace">
-    <a href="#performance-dashboard" aria-current="page">Dashboard</a>
-    <a href="#training-sessions">Training Log</a>
-    <a href="#personal-records">PRs</a>
-    <a href="#nutrition-checkins">Nutrition</a>
+    <a href="#performance-dashboard" aria-current="page">Performance</a>
+    <a href="{{ url_for('programming.athlete_program', athlete_id=athlete.id) }}">Programming</a>
+    <a href="#training-sessions">Training log</a>
+    <a href="#imported-nutrition">Nutrition</a>
+    <a href="#nutrition-checkins">Nutrition check-ins</a>
     <a href="{{ url_for('checkins.index', athlete_id=athlete.id) }}">Check-ins</a>
+    <a href="#client-services">Administration</a>
   </nav>
 
   <section class="performance-dashboard" id="performance-dashboard">
     <div class="performance-toolbar">
-      <div><span class="coach-eyebrow">Decision view</span><h2>Performance dashboard</h2></div>
+      <div><h2>Performance dashboard</h2><p>Training evidence and prescription signals</p></div>
       <form method="get" class="performance-filter">
         <label for="performance-block">Training block</label>
         <select id="performance-block" name="block" data-auto-submit>
@@ -80,21 +91,26 @@
     </div>
 
     <article class="decision-panel decision-panel--{{ performance.decision.status }}" aria-labelledby="coach-decision-title">
-      <div><span class="coach-eyebrow">Deterministic coach summary</span><h3 id="coach-decision-title">{{ performance.decision.headline }}</h3></div>
+      <div><h3 id="coach-decision-title">{{ performance.decision.headline }}</h3><span class="decision-panel__label">Coach decision</span></div>
       <p>{{ performance.decision.explanation }}</p>
       <details><summary>How this decision is made</summary><p>Rules check completed sessions in order: missed exact-prescription reps, average RPE overshoot of at least 1.0, then RPE adherence. Adherence means actual RPE is within 0.5 of prescribed RPE. No AI or inferred data is used.</p></details>
     </article>
 
-    <div class="performance-summary-grid" aria-label="Training summary">
-      <article><span>SBD volume</span><strong>{{ '{:,.0f}'.format(performance.volume_kg) ~ ' kg' if performance.volume_kg is not none else 'Not available' }}</strong><small>Completed load × reps</small></article>
-      <article><span>RPE adherence</span><strong>{{ performance.rpe_adherence_percent ~ '%' if performance.rpe_adherence_percent is not none else 'Not available' }}</strong><small>Within ±0.5 RPE</small></article>
-      <article><span>Completed / missed reps</span><strong>{{ performance.completed_reps }} / {{ performance.missed_reps if performance.missed_reps is not none else '—' }}</strong><small>{% if performance.missed_reps is none %}Exact prescribed reps unavailable{% else %}Across comparable sets{% endif %}</small></article>
-      <article><span>Top sets recorded</span><strong>{{ performance.top_set_count }}</strong><small>{% if performance.top_set_count %}Tagged programme top sets{% else %}No tagged top-set history{% endif %}</small></article>
-    </div>
+    <section class="performance-summary" aria-labelledby="training-summary-title">
+      <h3 class="sr-only" id="training-summary-title">Training summary</h3>
+      <div class="performance-primary-metrics" aria-label="Primary training metrics">
+        <div><span>SBD volume</span><strong>{{ '{:,.0f}'.format(performance.volume_kg) ~ ' kg' if performance.volume_kg is not none else 'Not available' }}</strong><small>Completed load × reps</small></div>
+        <div><span>RPE adherence</span><strong>{{ performance.rpe_adherence_percent ~ '%' if performance.rpe_adherence_percent is not none else 'Not available' }}</strong><small>Within ±0.5 RPE</small></div>
+      </div>
+      <dl class="performance-supporting-metrics" aria-label="Supporting training metrics">
+        <div><dt>Completed / missed reps</dt><dd><strong>{{ performance.completed_reps }} / {{ performance.missed_reps if performance.missed_reps is not none else '—' }}</strong><small>{% if performance.missed_reps is none %}Exact prescribed reps unavailable{% else %}Across comparable sets{% endif %}</small></dd></div>
+        <div><dt>Top sets recorded</dt><dd><strong>{{ performance.top_set_count }}</strong><small>{% if performance.top_set_count %}Tagged programme top sets{% else %}No tagged top-set history{% endif %}</small></dd></div>
+      </dl>
+    </section>
 
     <div class="performance-chart-grid">
       <article class="performance-chart" id="personal-records">
-        <header><div><span class="coach-eyebrow">Strength trend</span><h3>Squat / bench / deadlift e1RM</h3></div><span>{{ performance.session_count }} sessions</span></header>
+        <header><div><h3>Squat / bench / deadlift e1RM</h3><span>Strength trend</span></div><span>{{ performance.session_count }} sessions</span></header>
         {% if performance.e1rm_trends | selectattr('points') | list %}
           <div class="lift-trends">
           {% for trend in performance.e1rm_trends %}
@@ -109,17 +125,20 @@
       </article>
 
       <article class="performance-chart">
-        <header><div><span class="coach-eyebrow">Workload</span><h3>SBD training volume</h3></div></header>
+        <header><div><h3>SBD training volume</h3><span>Workload</span></div></header>
         {% if performance.volume_trend %}<ol class="volume-chart" aria-label="SBD volume by training date">{% set max_volume = performance.volume_trend | map(attribute='value') | max %}{% for point in performance.volume_trend %}<li><span>{{ point.recorded_on.strftime('%d %b') }}</span><i style="--volume: {{ (point.value / max_volume * 100) | round if max_volume else 0 }}%"></i><strong>{{ '{:,.0f}'.format(point.value) }} kg</strong></li>{% endfor %}</ol>
         {% else %}<div class="coach-empty-state"><h4>No SBD volume yet</h4><p>Completed SBD sets need load and reps before volume can be shown.</p></div>{% endif %}
       </article>
     </div>
 
-    <div class="performance-context-grid">
-      <article><span>Prescribed vs actual RPE</span><strong>{% if performance.average_prescribed_rpe is not none %}{{ performance.average_prescribed_rpe }} → {{ performance.average_actual_rpe }}{% else %}Not available{% endif %}</strong><small>Averages for paired set records</small></article>
-      <article><span>Bodyweight</span><strong>{{ athlete.bodyweight_kg ~ ' kg' if athlete.bodyweight_kg is not none else 'Not recorded' }}</strong><small>Current athlete profile; trend remains in nutrition history</small></article>
-      <article><span>Meet / weight class</span><strong>{{ athlete.weight_class or 'No class recorded' }}</strong><small>{% if athlete.next_competition %}{{ athlete.next_competition }} · countdown unavailable without a structured meet date{% else %}No upcoming meet recorded{% endif %}</small></article>
-    </div>
+    <section class="performance-context" aria-labelledby="performance-context-title">
+      <h3 id="performance-context-title">Supporting context</h3>
+      <dl>
+        <div><dt>Prescribed vs actual RPE</dt><dd><strong>{% if performance.average_prescribed_rpe is not none %}{{ performance.average_prescribed_rpe }} → {{ performance.average_actual_rpe }}{% else %}Not available{% endif %}</strong><small>Averages for paired set records</small></dd></div>
+        <div><dt>Bodyweight</dt><dd><strong>{{ athlete.bodyweight_kg ~ ' kg' if athlete.bodyweight_kg is not none else 'Not recorded' }}</strong><small>Current athlete profile</small></dd></div>
+        <div><dt>Meet / weight class</dt><dd><strong>{{ athlete.weight_class or 'No class recorded' }}</strong><small>{% if athlete.next_competition %}{{ athlete.next_competition }} · countdown unavailable without a structured meet date{% else %}No upcoming meet recorded{% endif %}</small></dd></div>
+      </dl>
+    </section>
   </section>
 
   <section class="coach-panel client-services" id="client-services">
@@ -175,35 +194,7 @@
     {% if delivery %}<p>Latest delivery: <strong>{{ delivery.delivery_state | replace('_', ' ') | title }}</strong>{% if delivery.delivered_at %} · {{ delivery.delivered_at.strftime('%d %b %Y, %H:%M') }}{% endif %}</p>{% endif %}
   </section>
 
-  <section class="coach-metric-grid">
-    <article class="coach-metric">
-      <span>Bodyweight</span>
-      <strong>
-        {% if athlete.bodyweight_kg %}
-          {{ athlete.bodyweight_kg }} kg
-        {% else %}
-          —
-        {% endif %}
-      </strong>
-    </article>
-
-    <article class="coach-metric">
-      <span>Weight class</span>
-      <strong>{{ athlete.weight_class or "—" }}</strong>
-    </article>
-
-    <article class="coach-metric">
-      <span>Federation</span>
-      <strong>{{ athlete.federation or "—" }}</strong>
-    </article>
-
-    <article class="coach-metric">
-      <span>Next competition</span>
-      <strong>{{ athlete.next_competition or "—" }}</strong>
-    </article>
-  </section>
-
-  <section class="coach-panel" id="performance-decisions">
+  <section class="coach-panel performance-decisions" id="performance-decisions">
     <div class="coach-panel__heading coach-panel__heading--split">
       <div><span class="coach-eyebrow">Deterministic review</span><h2>Performance decisions</h2></div>
       <form method="get">
@@ -242,6 +233,7 @@
     <div class="coach-panel__heading coach-panel__heading--split"><div><span class="coach-eyebrow">Last seven days</span><h2>Imported nutrition</h2></div>{% if nutrition_coaching_enabled %}<a class="coach-link-button" href="{{ url_for('nutrition_imports.index', athlete_id=athlete.id) }}">Manage import</a>{% else %}<span class="coach-status coach-status--pending">History only</span>{% endif %}</div>
     <p>{{ imported_nutrition.rows|length }} of {{ imported_nutrition.expected_days }} days present; {{ imported_nutrition.complete_days }} complete. Source: MyFitnessPal file upload.</p>
     <div class="coach-score-grid">{% for key, label in [('calories','Calories'),('protein_g','Protein (g)'),('carbohydrate_g','Carbohydrate (g)'),('fat_g','Fat (g)'),('fibre_g','Fibre (g)'),('bodyweight_kg','Bodyweight (kg)')] %}<article><span>{{ label }}</span><strong>{{ imported_nutrition.averages[key] if imported_nutrition.averages[key] is not none else '—' }}</strong></article>{% endfor %}</div>
+  </section>
 
   <section class="coach-panel" id="training-sessions">
     <div class="coach-panel__heading coach-panel__heading--split">
@@ -305,7 +297,7 @@
   </section>
 
   {% if latest_checkin %}
-    <section class="coach-panel">
+    <section class="coach-panel" id="latest-nutrition-checkin">
       <div class="coach-panel__heading coach-panel__heading--split">
         <div>
           <span class="coach-eyebrow">Latest submission</span>

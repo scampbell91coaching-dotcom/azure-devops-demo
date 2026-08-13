@@ -3,6 +3,13 @@
 
 {% block title %}{{ session.name }} | Traditional Strength{% endblock %}
 
+{% block coach_context %}
+  <span><b>Athlete</b> <a href="{{ url_for('programming.athlete_program', athlete_id=block.athlete.id) }}">{{ block.athlete.full_name }}</a></span>
+  <span><b>Block</b> <a href="{{ url_for('programming.block', block_id=block.id) }}">{{ block.name }}</a></span>
+  <span><b>Week</b> <a href="{{ url_for('programming.week', week_id=week.id) }}">{{ week.position }}</a></span>
+  <span><b>Session</b> {{ session.name }}</span>
+{% endblock %}
+
 {% block head %}
 <link
   rel="stylesheet"
@@ -16,7 +23,6 @@
   data-session-builder
   data-session-id="{{ session.id }}"
 >
-  <nav class="programme-crumbs" aria-label="Programme hierarchy"><a href="{{ url_for('programming.athlete_program', athlete_id=block.athlete.id) }}">{{ block.athlete.full_name }}</a><span aria-hidden="true">/</span><a href="{{ url_for('programming.block', block_id=block.id) }}">{{ block.name }}</a><span aria-hidden="true">/</span><a href="{{ url_for('programming.week', week_id=week.id) }}">Week {{ week.position }}</a><span aria-hidden="true">/</span><span aria-current="page">{{ session.name }}</span></nav>
   <header class="coach-page__header coach-page__header--split">
     <div>
       <a
@@ -37,13 +43,11 @@
 
   <section class="programming-template-strip">
   <div><span class="coach-eyebrow">Start faster</span><h2>Day templates</h2></div>
-  <div class="programming-template-grid">
+  <div class="programming-template-table" role="table" aria-label="Day templates">
+  <div class="programming-template-table__head" role="row"><span>Template</span><span>Structure</span><span>Description</span><span>Apply</span></div>
   {% for key, template in day_templates.items() %}
-    <form class="programming-template-card" method="post" action="{{ url_for('programming_templates.apply_day_template', session_id=session.id) }}">
-      <input type="hidden" name="template_key" value="{{ key }}">
-      <strong>{{ key }}</strong><span>{{ template.label }}</span><p>{{ template.description }}</p>
-      <label><input type="checkbox" name="replace_existing" value="1"> Replace current exercises</label>
-      <button class="coach-primary-button" type="submit">Use template</button>
+    <form class="programming-template-row" role="row" method="post" action="{{ url_for('programming_templates.apply_day_template', session_id=session.id) }}">
+      <input type="hidden" name="template_key" value="{{ key }}"><strong>{{ key }}</strong><span>{{ template.label }}</span><p>{{ template.description }}</p><div><label><input type="checkbox" name="replace_existing" value="1"> Replace existing</label><button class="coach-link-button" type="submit">Apply</button></div>
     </form>
   {% endfor %}
   </div>
@@ -51,14 +55,14 @@
 <section class="coach-panel builder-panel" data-testid="warmup-editor">
   <div class="builder-toolbar"><div><span class="coach-eyebrow">Before work sets</span><h2>Warm-up plan</h2></div><span>{{ warmup_steps|length }} ordered steps</span></div>
   {% if warmup_steps %}<ol class="session-lift-slots">{% for step in warmup_steps %}<li><strong>{{ step.phase_label }} · {{ step.name }}</strong><p>{{ step.instruction }}{% if step.notes %} · {{ step.notes }}{% endif %}</p><form method="post" action="{{ url_for('programming.override_warmup', session_id=session.id) }}"><input type="hidden" name="action" value="remove"><input type="hidden" name="target_key" value="{{ step.key }}"><label>Override reason <input name="reason" required maxlength="500"></label><button type="submit">Remove step</button></form></li>{% endfor %}</ol>{% else %}<p>No warm-up has been assigned.</p>{% endif %}
-  {% if warmup_candidates %}<aside aria-label="Movement warm-up candidates"><h3>Movement-need candidates</h3><p>Suggestions only. They do not diagnose a cause or prescribe rehabilitation; a coach must accept one before it is assigned.</p><ol class="session-lift-slots">{% for candidate in warmup_candidates %}<li><strong>{{ candidate.protocol_name }} · v{{ candidate.protocol_version }}</strong><p>{{ candidate.reason }}</p><small>{{ candidate.rule_id }} · {{ candidate.rule_version }} · sources {{ candidate.source_ids|join(', ') }}{% if candidate.coach_override %} · coach override applied: {{ candidate.coach_override.reason }}{% endif %}</small><form method="post" action="{{ url_for('programming.accept_warmup_candidate', session_id=session.id) }}"><input type="hidden" name="protocol_id" value="{{ candidate.protocol_id }}"><button type="submit">Accept and assign</button></form></li>{% endfor %}</ol></aside>{% endif %}
+  {% if warmup_candidates %}<aside aria-label="Movement warm-up candidates"><h3>Movement-need candidates</h3><p>Suggestions only. They do not diagnose a cause or prescribe rehabilitation; a coach must accept one before it is assigned.</p><ol class="session-lift-slots">{% for candidate in warmup_candidates %}<li><strong>{{ candidate.action|title }} · {{ candidate.protocol_name }} · v{{ candidate.protocol_version }}</strong><p>{{ candidate.reason }}</p><small>{{ candidate.rule_id }} · {{ candidate.rule_version }} · block intent {{ candidate.block_intent }} · sources {{ candidate.source_ids|join(', ') }}{% if candidate.coach_override %} · coach override applied: {{ candidate.coach_override.reason }}{% endif %}</small><form method="post" action="{{ url_for('programming.accept_warmup_candidate', session_id=session.id) }}"><input type="hidden" name="protocol_id" value="{{ candidate.protocol_id }}"><button type="submit">Accept and assign</button></form><details><summary>Remove or override suggestion</summary><form method="post" action="{{ url_for('programming.override_warmup_candidate', session_id=session.id) }}"><input type="hidden" name="protocol_id" value="{{ candidate.protocol_id }}"><label>Decision <select name="action"><option value="remove">Remove suggestion</option><option value="override">Override guidance</option></select></label><label>Replacement guidance (required for override) <input name="replacement" maxlength="500"></label><label>Coach reason <input name="reason" required maxlength="500"></label><button type="submit">Save decision</button></form></details></li>{% endfor %}</ol></aside>{% endif %}
   <details><summary>Assign an existing reusable plan</summary><form method="post" action="{{ url_for('programming.assign_warmup', session_id=session.id) }}"><label>Plan <select name="protocol_id" required>{% for protocol in warmup_protocols %}<option value="{{ protocol.id }}">{{ protocol.name }} · v{{ protocol.version }}</option>{% endfor %}</select></label><label>Reason <input name="reason" required maxlength="500"></label><button type="submit">Assign plan</button></form></details>
   <details><summary>Create and assign a reusable plan</summary><form method="post" action="{{ url_for('programming.create_warmup_protocol', session_id=session.id) }}"><label>Plan name <input name="name" required maxlength="160"></label><label>Assignment reason <input name="reason" required maxlength="500"></label><label>Ordered steps <textarea name="steps" required rows="5" placeholder="general | Bike | duration | 180 | 1 | 30 | Easy pace&#10;lift | Goblet squat | reps | 8 | 2 | 30&#10;barbell | Empty bar squat | barbell | 5@20kg | 2 | 60"></textarea></label><small>One per line: phase | name | reps/duration/barbell | value | sets | rest seconds | notes. Phases: general, athlete, lift, barbell.</small><button type="submit">Create and assign</button></form></details>
   <details><summary>Add a manual coach override</summary><form method="post" action="{{ url_for('programming.override_warmup', session_id=session.id) }}"><input type="hidden" name="action" value="append"><label>Phase <select name="phase"><option value="10">General preparation</option><option value="20">Athlete preparation</option><option value="30">Lift preparation</option><option value="40">Barbell ramp</option></select></label><label>Name <input name="name" required></label><label>Dosage <select name="kind"><option value="reps">Reps</option><option value="duration">Seconds</option></select><input name="value" type="number" min="1" required></label><label>Sets <input name="sets" type="number" min="1" value="1"></label><label>Rest seconds <input name="rest_seconds" type="number" min="0"></label><label>Coach notes <input name="notes"></label><label>Override reason <input name="reason" required maxlength="500"></label><button type="submit">Add override</button></form></details>
 </section>
 <section class="coach-panel builder-panel">
     <div class="builder-toolbar"><div><span class="coach-eyebrow">Scheduled exposures</span><h2>Main lifts</h2></div><a class="coach-link-button" href="{{ url_for('programming.week', week_id=week.id, _anchor='session-' ~ session.id) }}">Edit lift slots</a></div>
-    <div class="session-lift-slots">{% for slot in session.lift_slots %}<article data-testid="lift-slot"><span class="lift-family-badge">{{ slot.lift_family[0]|upper }}</span><div><strong>{{ slot.lift_family|title }} exposure</strong>{% for item in slot.prescriptions %}<p><b>{{ 'Top set' if item.slot_role == 'top_set' else 'Back-off' }}</b> · {{ item.exercise_name }} · {{ item.summary }}</p>{% endfor %}</div></article>{% else %}<p>No S/B/D exposures scheduled.</p>{% endfor %}</div>
+    <div class="session-lift-table" role="table" aria-label="Main-lift prescriptions">{% for slot in session.lift_slots %}<div class="session-lift-row" role="row" data-testid="lift-slot"><span class="lift-family-badge">{{ slot.lift_family[0]|upper }}</span><strong>{{ slot.lift_family|title }}</strong><div>{% for item in slot.prescriptions %}<p><b>{{ 'Top set' if item.slot_role == 'top_set' else 'Back-off' }}</b><span>{{ item.exercise_name }}</span><span>{{ item.summary }}</span></p>{% endfor %}</div></div>{% else %}<p>No S/B/D exposures scheduled.</p>{% endfor %}</div>
   </section>
   <section class="coach-panel builder-panel">
     <div class="builder-toolbar">

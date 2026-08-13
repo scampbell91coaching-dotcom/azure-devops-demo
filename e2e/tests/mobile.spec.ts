@@ -1,9 +1,9 @@
 import { test, expect } from '../fixtures/test';
 
-async function expectNoHorizontalOverflow(page: import('@playwright/test').Page) {
+async function expectNoHorizontalOverflow(page: Page) {
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      () => document.body.scrollWidth <= document.documentElement.clientWidth,
     ),
   ).toBeTruthy();
 }
@@ -124,12 +124,12 @@ for (const width of [320, 390, 430]) {
     await expect(week.getByLabel('Week 1 taxonomy-backed lift exposures')).toContainText('Bench 1');
     await expect(week.getByLabel('Week 1 taxonomy-backed lift exposures')).toContainText('Deadlift 1');
     await expectNoHorizontalOverflow(page);
-    await week.getByRole('link').click();
+    await week.getByRole('link', { name: /Foundation week/ }).click();
     await expect(page.getByLabel('Taxonomy-backed competition lift exposures')).toBeVisible();
     await expectNoHorizontalOverflow(page);
     const session = page.getByTestId('programming-session').filter({ hasText: 'Squat day' });
     await session.getByRole('link', { name: 'Open session' }).click();
-    await expect(page.getByTestId('lift-slot').filter({ hasText: 'Squat exposure' })).toBeVisible();
+    await expect(page.getByTestId('lift-slot').filter({ hasText: 'Competition Squat' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Edit lift slots' })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });

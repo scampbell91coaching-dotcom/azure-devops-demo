@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const count = rows.querySelectorAll(".factory-accessory-row").length;
     summary.textContent = count
       ? `${count} coach-selected assistance exercise${count === 1 ? "" : "s"}; manual choices replace automatic suggestions.`
-      : "No assistance selected. Zero assistance is valid.";
+      : "No assistance selected.";
   };
   const bind = (row) => {
     row.querySelector("[data-remove-accessory]").onclick = () => { row.remove(); updateSummary(); };

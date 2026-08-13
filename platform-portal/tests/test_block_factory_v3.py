@@ -330,9 +330,15 @@ def test_factory_suggests_enabled_metadata_and_manual_selection_overrides_it():
         db.session.commit()
         automatic = _preview(factory_request(3, 1, 1, 1))
         automatic_accessories = [item for day in automatic for item in day["accessories"]]
-        assert [item["name"] for item in automatic_accessories] == ["Development Row"]
-        assert automatic_accessories[0]["source"] == "Library suggestion"
-        assert any("relevant to bench" in reason for reason in automatic_accessories[0]["reasons"])
+        assert [item["name"] for item in automatic_accessories] == [
+            "Development Row", "Coach Pin"
+        ]
+        suggested_accessory = automatic_accessories[0]
+        assert suggested_accessory["source"] == "Library suggestion"
+        assert any(
+            "relevant to bench" in reason
+            for reason in suggested_accessory["reasons"]
+        )
 
         request = factory_request(3, 1, 1, 1)
         request = request.__class__(
@@ -342,6 +348,37 @@ def test_factory_suggests_enabled_metadata_and_manual_selection_overrides_it():
         assert [item["name"] for day in manual for item in day["accessories"]] == [
             "Coach Pin"
         ]
+        assert all(day["accessory_outcome"] == "coach_selected" for day in manual)
+
+
+def test_factory_automatic_falls_back_and_explains_zero_outcomes():
+    app = create_test_app()
+    with app.app_context():
+        fallback = Exercise(
+            name="Fallback Row", movement="accessory", category="balancing",
+            accessory_suitable=True, auto_select=False,
+            lift_relevance='["bench"]', fatigue_rating=3,
+        )
+        db.session.add(fallback)
+        db.session.commit()
+
+        automatic = _preview(factory_request(3, 1, 1, 1))
+        selected = [item for day in automatic for item in day["accessories"]]
+        assert [item["name"] for item in selected] == ["Fallback Row"]
+        assert "eligible accessory fallback" in selected[0]["reasons"]
+        assert any(
+            day["accessory_outcome"] == "no_eligible_candidates"
+            for day in automatic
+        )
+
+        intentional_none = _preview(replace(
+            factory_request(3, 1, 1, 1), accessory_mode="none"
+        ))
+        assert all(not day["accessories"] for day in intentional_none)
+        assert all(
+            day["accessory_outcome"] == "intentional_none"
+            for day in intentional_none
+        )
 
 
 def test_accessory_volume_produces_deterministic_default_metadata_recommendations():
@@ -551,6 +588,40 @@ def test_active_coach_override_is_surfaced_as_authoritative():
     assert b"Active coach overrides are authoritative" in response.data
     assert b"Coach-selected recovery week" in response.data
     assert b"2 bench" in response.data
+
+
+def test_reviewed_volume_proposal_is_stored_and_allocated_only_on_acceptance():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    client = app.test_client()
+    response = client.post(
+        "/programming/factory/preview",
+        data={
+            **base_form(athlete_id),
+            "week_count": 4,
+            "goal": "peaking",
+            "meet_date": "2026-10-24",
+        },
+    )
+    assert response.status_code == 200
+    assert b"Volume progression proposal" in response.data
+    assert b"Taper" in response.data
+    with app.app_context():
+        assert TrainingBlock.query.count() == 0
+        stored = AthleteStateRecommendation.query.one().recommendation_json
+        assert stored["volume_progression"]["weeks"][-1]["phase"] == "taper"
+
+    accepted = client.post("/programming/factory", data=preview_fields(response))
+    assert accepted.status_code == 302
+    with app.app_context():
+        block = TrainingBlock.query.one()
+        final_week = block.weeks[-1]
+        totals = {"squat": 0, "bench": 0, "deadlift": 0}
+        for session in final_week.sessions:
+            for item in session.prescriptions:
+                if item.lift_slot is not None:
+                    totals[item.lift_slot.lift_family] += item.sets
+        assert totals == {"squat": 1, "bench": 1, "deadlift": 1}
 
 
 def test_exposure_metadata_uses_exact_taxonomy_not_name_substrings():

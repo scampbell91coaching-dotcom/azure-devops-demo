@@ -18,6 +18,7 @@ test('coach builds, previews, publishes and revises a meal plan that the athlete
   await page.getByRole('button', { name: 'Assign nutrition targets' }).click();
 
   await page.goto('/coach/meal-plans');
+  await page.getByRole('button', { name: 'New meal plan' }).click();
   await page.locator('input[name="name"]').fill('Competition week meals');
   await page.getByRole('button', { name: 'Create meal plan' }).click();
   await page.locator('input[name="name"]').fill('Training day');

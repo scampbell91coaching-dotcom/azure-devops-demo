@@ -6,6 +6,7 @@ from pathlib import Path
 
 from flask import Flask, g, render_template
 
+from .api.athlete_app import athlete_app_bp
 from .api.athlete_performance import athlete_performance_bp
 from .api.engineering import engineering_bp
 from .api.executive import executive_bp
@@ -30,6 +31,7 @@ from .meet_day import meet_day_bp
 from .meal_plan_delivery import meal_plan_delivery_bp
 from .nutrition_imports import nutrition_imports_bp
 from .nutrition_prescriptions import nutrition_prescriptions_bp
+from .organisation_onboarding import organisation_onboarding_bp
 from .programming import programming_bp
 from .programming_engine import programming_engine_bp
 from .programming_pack2 import programming_pack2_bp
@@ -39,6 +41,7 @@ from .security import init_security_headers
 from .services.release_readiness import ReleaseEvidenceService
 from .repositories.meal_plans import SqlAlchemyMealPlanRepository
 from .services.meal_plans import MealPlanWorkflow
+from .services.meal_plan_files import MealPlanFileStore
 from .services.nutrition_entitlements import nutrition_coaching_enabled
 from .views import views_bp
 
@@ -114,6 +117,9 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.extensions["meal_plan_workflow"] = MealPlanWorkflow(
         SqlAlchemyMealPlanRepository(), nutrition_coaching_enabled
     )
+    app.extensions["meal_plan_file_store"] = MealPlanFileStore(
+        Path(app.config.get("MEAL_PLAN_FILE_ROOT", portal_root / "instance" / "meal-plans"))
+    )
     init_security_headers(app, prevent_caching=True)
     migrate.init_app(
         app,
@@ -135,6 +141,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(platform_bp, url_prefix="/api/v1")
     app.register_blueprint(recommendations_bp, url_prefix="/api/v1")
     app.register_blueprint(athlete_performance_bp, url_prefix="/api/v1")
+    app.register_blueprint(athlete_app_bp, url_prefix="/api/athlete/v1")
     app.register_blueprint(views_bp)
     app.register_blueprint(release_readiness_bp)
     app.register_blueprint(lead_magnets_bp)
@@ -154,6 +161,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(meal_plan_delivery_bp)
     app.register_blueprint(nutrition_imports_bp)
     app.register_blueprint(nutrition_prescriptions_bp)
+    app.register_blueprint(organisation_onboarding_bp)
 
     if app.config["LEGACY_STARTUP_INITIALIZATION"]:
         with app.app_context():

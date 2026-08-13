@@ -9,6 +9,7 @@ from portal.models.athlete_state import CoachTechnicalObservation
 from portal.models.external_coaching_review import ExternalCoachingReview
 from portal.models.programming import TrainingSessionLog, TrainingSetResult
 from portal.models.user import User, UserRole
+from tenancy_factories import grant_coach_athlete_access
 
 
 @pytest.fixture
@@ -25,6 +26,8 @@ def review_app():
         other = Athlete(first_name="Sam", last_name="Lifter", email="sam@review.test")
         coach = User(email="coach@review.test", role=UserRole.COACH)
         coach.set_password("correct horse battery staple")
+        other_coach = User(email="other-coach@review.test", role=UserRole.COACH)
+        other_coach.set_password("correct horse battery staple")
         athlete_user = User(email=athlete.email, role=UserRole.ATHLETE, athlete=athlete)
         athlete_user.set_password("correct horse battery staple")
         log = TrainingSessionLog(
@@ -43,11 +46,30 @@ def review_app():
             athlete=other, session_name="Bench day", block_name="Base", week_name="Week 1",
             status="completed", completed_at=datetime(2026, 8, 10, 13, 0),
         )
-        db.session.add_all([athlete, other, coach, athlete_user, log, result, observation, other_log])
+        db.session.add_all([
+            athlete, other, coach, other_coach, athlete_user,
+            log, result, observation, other_log,
+        ])
+        grant_coach_athlete_access(
+            coach,
+            [athlete],
+            name="External Review Strength",
+            slug="external-review-strength",
+        )
+        grant_coach_athlete_access(
+            other_coach,
+            [other],
+            name="Other Review Strength",
+            slug="other-review-strength",
+        )
         db.session.commit()
         app.config.update(
-            ATHLETE_ID=athlete.id, LOG_ID=log.id, SET_ID=result.id,
-            OBSERVATION_ID=observation.id, OTHER_LOG_ID=other_log.id,
+            ATHLETE_ID=athlete.id,
+            OTHER_ATHLETE_ID=other.id,
+            LOG_ID=log.id,
+            SET_ID=result.id,
+            OBSERVATION_ID=observation.id,
+            OTHER_LOG_ID=other_log.id,
         )
     return app
 
@@ -154,3 +176,57 @@ def test_athlete_cannot_create_or_resolve_external_review(review_app):
         "coach_summary": "Summary", "action": "Action",
     })
     assert response.status_code == 403
+
+
+def test_coach_cannot_create_external_review_for_other_organisation_athlete(review_app):
+    client = review_app.test_client()
+    token = _login(client)
+
+    response = client.post(
+        f"/athletes/{review_app.config['OTHER_ATHLETE_ID']}/external-reviews",
+        data={
+            "csrf_token": token,
+            "reviewed_at": "2026-08-11T09:30",
+            "coach_summary": "Should never be stored.",
+            "action": "Should never be stored.",
+        },
+    )
+
+    assert response.status_code == 404
+
+    with review_app.app_context():
+        assert ExternalCoachingReview.query.filter_by(
+            athlete_id=review_app.config["OTHER_ATHLETE_ID"]
+        ).count() == 0
+
+
+def test_coach_cannot_resolve_other_organisation_external_review(review_app):
+    with review_app.app_context():
+        review = ExternalCoachingReview(
+            athlete_id=review_app.config["OTHER_ATHLETE_ID"],
+            channel="whatsapp",
+            reviewed_at=datetime(2026, 8, 11, 9, 30),
+            coach_summary="Other organisation private review.",
+            action="Remain unresolved.",
+            follow_up_required=True,
+            resolved=False,
+        )
+        db.session.add(review)
+        db.session.commit()
+        review_id = review.id
+
+    client = review_app.test_client()
+    token = _login(client)
+
+    response = client.post(
+        f"/athletes/{review_app.config['OTHER_ATHLETE_ID']}"
+        f"/external-reviews/{review_id}/resolve",
+        data={"csrf_token": token},
+    )
+
+    assert response.status_code == 404
+
+    with review_app.app_context():
+        review = db.session.get(ExternalCoachingReview, review_id)
+        assert review is not None
+        assert review.resolved is False

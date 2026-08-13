@@ -65,6 +65,33 @@ def test_week_page_renders_ordered_editor_and_lifecycle_controls():
         assert label in html
 
 
+def test_programming_hierarchy_uses_flat_tables_and_preserves_editor_hooks():
+    app = _app()
+    week_id, session_id, _ = _week(app)
+
+    with app.app_context():
+        block_id = db.session.get(TrainingWeek, week_id).block_id
+
+    block_html = app.test_client().get(
+        f"/programming/blocks/{block_id}"
+    ).get_data(as_text=True)
+    week_html = app.test_client().get(
+        f"/programming/weeks/{week_id}"
+    ).get_data(as_text=True)
+    session_html = app.test_client().get(
+        f"/programming/sessions/{session_id}"
+    ).get_data(as_text=True)
+
+    assert 'class="programme-week-table" role="table"' in block_html
+    assert 'data-testid="programming-week"' in block_html
+    assert 'class="week-session"' in week_html
+    assert 'data-testid="programming-session"' in week_html
+    assert 'class="programming-template-table" role="table"' in session_html
+    assert 'data-prescription-list' in session_html
+    assert "Main lifts" in session_html
+    assert "Assistance" in session_html
+
+
 @pytest.mark.parametrize(
     ("mode", "data", "field", "expected"),
     [

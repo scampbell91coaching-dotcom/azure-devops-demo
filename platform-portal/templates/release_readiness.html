@@ -11,13 +11,16 @@
 <section class="release-summary" aria-labelledby="release-status">
   {% if result.available %}
     {% set evidence = result.evidence %}
-    <div class="release-status release-status--{{ evidence.status }}" id="release-status">
-      {{ evidence.status | upper }}
+    <div class="release-status release-status--{{ result.readiness }}" id="release-status">
+      {{ result.readiness | upper }}
     </div>
+    {% if result.error %}<p class="release-warning" role="status">{{ result.error }}</p>{% endif %}
     <dl class="release-metadata">
+      <div><dt>Evidence freshness</dt><dd>{{ result.freshness | upper }}</dd></div>
       <div><dt>Branch</dt><dd>{{ evidence.repository.branch }}</dd></div>
       <div><dt>Commit</dt><dd><code>{{ evidence.repository.commit }}</code></dd></div>
       <div><dt>Generated</dt><dd><time>{{ evidence.generated_at }}</time></dd></div>
+      {% for check in evidence.checks if check.name == 'migration_heads' %}<div><dt>DB migration head evidence</dt><dd>{{ check.summary }}</dd></div>{% endfor %}
     </dl>
   {% else %}
     <div class="release-status release-status--not_ready" id="release-status">NOT_READY</div>

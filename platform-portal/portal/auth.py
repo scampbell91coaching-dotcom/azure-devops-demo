@@ -204,7 +204,10 @@ def _authorize_request() -> Response | None:
         return redirect(url_for("auth.login", **login_args))
     if user.role == UserRole.COACH:
         return None
-    if user.role != UserRole.ATHLETE or endpoint not in _ATHLETE_ENDPOINTS:
+    athlete_api = endpoint.startswith("athlete_app_api.")
+    if user.role != UserRole.ATHLETE or (
+        endpoint not in _ATHLETE_ENDPOINTS and not athlete_api
+    ):
         abort(403)
     athlete_id = _requested_athlete_id()
     if athlete_id is not None and athlete_id != user.athlete_id:

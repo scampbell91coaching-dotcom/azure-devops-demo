@@ -39,6 +39,9 @@ def test_design_system_stylesheet_is_available(app, client):
     assert response.mimetype == "text/css"
     assert b"--ts-color-brand-black" in response.data
     assert b"prefers-reduced-motion: reduce" in response.data
+    assert b"--ts-workspace-bg" in response.data
+    assert b".ts-context-bar" in response.data
+    assert b".ts-workspace-grid" in response.data
 
 
 def test_button_variants_disabled_and_loading_states_render(app):
@@ -55,6 +58,7 @@ def test_button_variants_disabled_and_loading_states_render(app):
     assert 'class="ts-button ts-button--secondary"' in html
     assert " disabled" in html
     assert 'aria-busy="true"' in html
+    assert 'aria-busy="true"' in html and html.count(" disabled") == 2
     assert 'class="ts-button ts-button--danger"' in html
 
 
@@ -75,10 +79,46 @@ def test_form_error_is_associated_with_native_input(app):
     assert '<label class="ts-field__label" for="email">' in html
     assert 'id="email" name="email" type="text"' in html
     assert 'aria-invalid="true"' in html
+    assert 'aria-errormessage="email-error"' in html
     assert 'aria-describedby="email-error email-help"' in html
     assert 'id="email-help"' in html
     assert 'id="email-error"' in html
     assert " required" in html
+    assert html.index('id="email-error"') < html.index('id="email-help"')
+
+
+def test_field_id_can_differ_from_submission_name(app):
+    html = render_component(
+        app,
+        "{{ ds.input_field('amount', 'Opening attempt', id='squat-amount') }}",
+    )
+
+    assert 'for="squat-amount"' in html
+    assert 'id="squat-amount" name="amount"' in html
+
+
+def test_error_summary_links_to_fields_and_can_receive_focus(app):
+    html = render_component(
+        app,
+        "{{ ds.form_errors([('email', 'Enter an email'), "
+        "('notes', 'Add coach notes')]) }}",
+    )
+
+    assert 'class="ts-error-summary" role="alert" tabindex="-1"' in html
+    assert '<a href="#email">Enter an email</a>' in html
+    assert '<a href="#notes">Add coach notes</a>' in html
+
+
+def test_optional_feedback_copy_does_not_render_empty_paragraphs(app):
+    html = render_component(
+        app,
+        "{{ ds.alert('Programme saved', status='success') }}"
+        "{{ ds.empty_state('No check-ins', heading_level=2) }}",
+    )
+
+    assert "ts-alert__body" not in html
+    assert "ts-empty-state__body" not in html
+    assert '<h2 class="ts-empty-state__title">No check-ins</h2>' in html
 
 
 def test_choices_remain_native_and_disabled(app):
@@ -129,6 +169,17 @@ def test_dialog_uses_native_element_and_accessible_relationships(app):
     assert 'aria-label="Close dialog"' in html
 
 
+def test_context_bar_preserves_term_value_relationships(app):
+    html = render_component(
+        app,
+        "{{ ds.context_bar([('Athlete', 'Alex Morgan'), ('Week', '3 of 8')]) }}",
+    )
+
+    assert '<dl class="ts-context-bar" aria-label="Current workspace context">' in html
+    assert '<dt class="ts-context-item__label">Athlete</dt>' in html
+    assert '<dd class="ts-context-item__value">Alex Morgan</dd>' in html
+
+
 def test_showcase_renders_all_foundational_sections(app):
     with app.test_request_context("/"):
         html = render_template("design_system/showcase.html")
@@ -137,5 +188,6 @@ def test_showcase_renders_all_foundational_sections(app):
     assert "Forms" in html
     assert "Feedback and data" in html
     assert "Dark context" in html
+    assert "Coach workspace" in html
     assert 'css/design-system.css' in html
     assert '<dialog class="ts-dialog"' not in html  # documented, not demo-opened

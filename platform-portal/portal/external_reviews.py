@@ -7,11 +7,11 @@ from flask import Blueprint, abort, flash, redirect, request, url_for
 
 from .auth import roles_required
 from .extensions import db
-from .models.athlete import Athlete
 from .models.athlete_state import CoachTechnicalObservation
 from .models.external_coaching_review import ExternalCoachingReview
 from .models.programming import TrainingSessionLog, TrainingSetResult
 from .models.user import UserRole
+from .tenancy import require_athlete_access
 
 external_reviews_bp = Blueprint("external_reviews", __name__)
 
@@ -42,9 +42,7 @@ def _external_url() -> str | None:
 @external_reviews_bp.post("/athletes/<int:athlete_id>/external-reviews")
 @roles_required(UserRole.COACH)
 def create(athlete_id: int):
-    athlete = db.session.get(Athlete, athlete_id)
-    if athlete is None:
-        abort(404)
+    athlete = require_athlete_access(athlete_id)
 
     summary = request.form.get("coach_summary", "").strip()
     action = request.form.get("action", "").strip()
@@ -97,8 +95,9 @@ def create(athlete_id: int):
 @external_reviews_bp.post("/athletes/<int:athlete_id>/external-reviews/<int:review_id>/resolve")
 @roles_required(UserRole.COACH)
 def resolve(athlete_id: int, review_id: int):
+    athlete = require_athlete_access(athlete_id)
     review = db.session.get(ExternalCoachingReview, review_id)
-    if review is None or review.athlete_id != athlete_id:
+    if review is None or review.athlete_id != athlete.id:
         abort(404)
     review.resolved = True
     db.session.commit()

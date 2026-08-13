@@ -6,22 +6,28 @@ from datetime import UTC, datetime
 from typing import Any, Protocol
 
 from ..models.athlete_state import (
-    AthleteConstraintFlag,
     AthleteStateOverride,
-    CoachTechnicalObservation,
 )
 from ..models.exercise_library import Exercise
 from ..models.programming import TrainingBlock
 from .athlete_state import calculate_signals, latest_facts
+from .programming_athlete_state import aggregate_programming_athlete_state
+from .volume_progression import (
+    ReferenceVolume,
+    VolumeProgressionProposal,
+    VolumeProgressionService,
+)
 
 
 class FactoryInputs(Protocol):
     athlete_id: int
+    week_count: int
     training_days: int
     squat_frequency: int
     bench_frequency: int
     deadlift_frequency: int
     goal: str
+    meet_date: Any
 
 
 @dataclass(frozen=True)
@@ -37,6 +43,7 @@ class AthleteProgrammingContext:
     technical_observations: tuple[str, ...]
     active_overrides: tuple[dict[str, Any], ...]
     missing: tuple[str, ...]
+    programming_state: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -45,8 +52,74 @@ class WeeklyIntelligencePreview:
     exposures: dict[str, int]
     reasoning: tuple[str, ...]
     fatigue: dict[str, Any]
+    volume: VolumeProgressionProposal
     constraints: tuple[str, ...]
     data: AthleteProgrammingContext
+
+
+def _reference_volume(athlete_id: int) -> ReferenceVolume | None:
+    block = (
+        TrainingBlock.query.filter_by(athlete_id=athlete_id)
+        .order_by(TrainingBlock.created_at.desc(), TrainingBlock.id.desc())
+        .first()
+    )
+    if block is None or not block.weeks:
+        return None
+    totals = {family: 0 for family in ("squat", "bench", "deadlift")}
+    assistance_fatigue = 0
+    for week in block.weeks:
+        for session in week.sessions:
+            for item in session.prescriptions:
+                sets = item.sets or 0
+                if item.lift_slot is not None:
+                    totals[item.lift_slot.lift_family] += sets
+                else:
+                    assistance_fatigue += max(
+                        1, min(5, item.exercise.fatigue_rating if item.exercise else 3)
+                    )
+    count = len(block.weeks)
+    return ReferenceVolume(
+        sbd_sets={family: round(value / count) for family, value in totals.items()},
+        assistance_fatigue_budget=round(assistance_fatigue / count),
+        label=block.name,
+    )
+
+
+def _rpe_curve(factory: FactoryInputs) -> tuple[float, ...]:
+    bounds = {
+        "hypertrophy": (6.0, 7.5),
+        "development": (6.0, 8.0),
+        "strength": (6.5, 8.5),
+        "peaking": (7.0, 9.0),
+        "offseason": (6.0, 7.5),
+    }
+    start, end = bounds[factory.goal]
+    if factory.week_count == 1:
+        return (start,)
+    values = []
+    for week in range(1, factory.week_count + 1):
+        progress = (week - 1) / (factory.week_count - 1)
+        value = start + ((end - start) * progress)
+        if factory.goal != "peaking" and week == factory.week_count:
+            value = max(start, value - 1.0)
+        values.append(round(value * 2) / 2)
+    return tuple(values)
+
+
+def _requested_split_baseline(
+    factory: FactoryInputs, days: Sequence[dict[str, Any]]
+) -> ReferenceVolume:
+    totals = {family: 0 for family in ("squat", "bench", "deadlift")}
+    family_by_code = {"S": "squat", "B": "bench", "D": "deadlift"}
+    for day in days:
+        for position, code in enumerate(day["day_type"], start=1):
+            sets = 3
+            if factory.goal == "strength" and position == 1:
+                sets = 4
+            elif factory.goal == "peaking" and position == 1:
+                sets = 1
+            totals[family_by_code[code]] += sets
+    return ReferenceVolume(totals, label="the requested split's V7.10 baseline")
 
 
 def map_athlete_programming_context(athlete: Any) -> AthleteProgrammingContext:
@@ -56,22 +129,13 @@ def map_athlete_programming_context(athlete: Any) -> AthleteProgrammingContext:
     signals = {
         signal.signal_type: signal.value for signal in calculate_signals(athlete)
     }
+    programming_state = aggregate_programming_athlete_state(athlete)
     active_constraints = tuple(
-        flag.label
-        for flag in AthleteConstraintFlag.query.filter_by(
-            athlete_id=athlete.id, resolved_on=None
-        ).order_by(
-            AthleteConstraintFlag.starts_on.asc(), AthleteConstraintFlag.id.asc()
-        )
+        item["label"] for item in programming_state["hard_constraints"]
     )
     technical_observations = tuple(
-        f"{item.lift}: {item.observation}"
-        for item in CoachTechnicalObservation.query.filter_by(
-            athlete_id=athlete.id, superseded_by_id=None
-        ).order_by(
-            CoachTechnicalObservation.observed_on.asc(),
-            CoachTechnicalObservation.id.asc(),
-        )
+        item["label"] for item in programming_state["soft_signals"]
+        if item["kind"] == "technical_observation"
     )
     now = datetime.now(UTC).replace(tzinfo=None)
     active_overrides = tuple(
@@ -115,6 +179,7 @@ def map_athlete_programming_context(athlete: Any) -> AthleteProgrammingContext:
         technical_observations=technical_observations,
         active_overrides=active_overrides,
         missing=tuple(missing),
+        programming_state=programming_state,
     )
 
 
@@ -233,6 +298,22 @@ class WeeklyProgrammingIntelligence:
                 else "No RPE-adherence signal exists for the current window."
             ),
         }
+        volume = VolumeProgressionService().propose(
+            block_type=factory.goal,
+            duration=factory.week_count,
+            rpe_curve=_rpe_curve(factory),
+            training_days=factory.training_days,
+            frequencies={
+                "squat": factory.squat_frequency,
+                "bench": factory.bench_frequency,
+                "deadlift": factory.deadlift_frequency,
+            },
+            meet_date=factory.meet_date,
+            constraints=context.active_constraints,
+            overrides=context.active_overrides,
+            reference=_reference_volume(athlete.id)
+            or _requested_split_baseline(factory, days),
+        )
 
         reasoning = [
             "Squat, bench, and deadlift exposures were established before assistance.",
@@ -272,6 +353,7 @@ class WeeklyProgrammingIntelligence:
             },
             reasoning=tuple(reasoning),
             fatigue=fatigue,
+            volume=volume,
             constraints=tuple(constraints),
             data=context,
         )

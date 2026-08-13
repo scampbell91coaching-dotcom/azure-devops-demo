@@ -132,3 +132,40 @@ def test_incomplete_history_is_not_fabricated(app):
         assert result.decisions == ()
         assert all(lift.latest_e1rm_kg is None and lift.volume_kg == 0 for lift in result.lifts)
         assert "No completed set results" in result.limitations[0]
+
+
+def test_partial_session_and_invalid_loading_cannot_trigger_decisions(app):
+    with app.app_context():
+        athlete = _athlete("partial@performance.test")
+        _, completed = _result(athlete, load=100, reps=5, actual_rpe=10)
+        db.session.add(TrainingSetResult(
+            session_log=completed.session_log, prescription=completed.prescription,
+            exercise_name="squat", exercise_position=1, set_order=2,
+            prescribed_reps="5", prescribed_rpe=8, completed=False, skipped=False,
+        ))
+        _result(
+            athlete, block_name="Invalid", load=0, reps=5,
+            completed_at=datetime(2026, 8, 11, 12),
+        )
+        db.session.commit()
+
+        result = build_performance_decisions(athlete.id, as_of=date(2026, 8, 11))
+
+        assert result is not None
+        assert result.lifts[0].volume_kg == 0
+        assert result.lifts[0].latest_e1rm_kg is None
+        assert {item.rule_id for item in result.decisions} == {"no-threshold-triggered"}
+        assert "e1RM comparisons" not in result.decisions[0].evidence
+        assert any("partially logged session" in note for note in result.limitations)
+        assert any("positive actual load" in note for note in result.limitations)
+
+
+@pytest.mark.parametrize("window_days", [0, 732])
+def test_decision_window_is_bounded(app, window_days):
+    with app.app_context():
+        athlete = _athlete(f"bounds-{window_days}@performance.test")
+        db.session.commit()
+        with pytest.raises(ValueError, match="between 1 and 731"):
+            build_performance_decisions(
+                athlete.id, as_of=date(2026, 8, 11), window_days=window_days
+            )

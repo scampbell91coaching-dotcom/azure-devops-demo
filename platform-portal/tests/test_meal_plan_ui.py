@@ -7,6 +7,7 @@ from portal import create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.user import User
+from tenancy_factories import grant_coach_athlete_access
 from portal.services.meal_plans import MacroTotals, MealPlanWorkflow, InMemoryMealPlanRepository, PrescriptionSnapshot
 from test_meal_plan_workflow import plan
 
@@ -19,6 +20,9 @@ def test_coach_preview_and_read_only_athlete_snapshot(tmp_path):
         coach_user = User(email="coach-meals@example.com", role="coach", active=True)
         db.session.add_all([athlete_row, coach_user])
         db.session.flush()
+        grant_coach_athlete_access(
+            coach_user, [athlete_row], name="Meal Plan Strength", slug="meal-plan-strength"
+        )
         athlete_user = User(email="athlete-meals@example.com", role="athlete", athlete_id=7, active=True)
         db.session.add(athlete_user)
         db.session.commit()
@@ -36,6 +40,9 @@ def test_coach_preview_and_read_only_athlete_snapshot(tmp_path):
     coach = client.get("/coach/meal-plan-templates/template-1/preview")
     assert coach.status_code == 200
     assert b"Performance plan" in coach.data and b"Rice" in coach.data
+    assert b"Assignment context" in coach.data
+    assert b"Plan and target reconciliation" in coach.data
+    assert b"Traditional Strength Platform" in coach.data
 
     with client.session_transaction() as session:
         session.clear()
@@ -47,3 +54,30 @@ def test_coach_preview_and_read_only_athlete_snapshot(tmp_path):
     assert b"prescription macro-1 revision 3" in athlete.data
     assert b"Save meal plan" not in athlete.data
     assert b"Potato" not in athlete.data
+
+
+def test_coach_meal_plan_index_separates_templates_from_assignment_history(tmp_path):
+    app = create_app({"TESTING": True, "AUTHENTICATION_DISABLED": False, "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'index.db'}"})
+    repository = InMemoryMealPlanRepository()
+    app.extensions["meal_plan_workflow"] = MealPlanWorkflow(repository, lambda _: True)
+    with app.app_context():
+        coach_user = User(email="coach-index@example.com", role="coach", active=True)
+        db.session.add(coach_user)
+        grant_coach_athlete_access(
+            coach_user, name="Meal Plan Index Strength", slug="meal-plan-index-strength"
+        )
+        db.session.commit()
+        coach_id = coach_user.id
+    client = app.test_client()
+    with client.session_transaction() as auth_session:
+        auth_session["user_id"] = coach_id
+        auth_session["authenticated_at"] = time.time()
+
+    response = client.get("/coach/meal-plans")
+    page = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert 'id="templates"' in page
+    assert 'id="assignment-history"' in page
+    assert 'aria-controls="create-meal-plan"' in page
+    assert "No meal plans yet. Create a template to begin." in page

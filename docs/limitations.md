@@ -36,7 +36,7 @@ Production desired state is protected through Git and Argo CD, but the repositor
 
 ### Monitoring is incomplete
 
-The application exposes health and metrics and the Azure monitoring foundation exists. Proposed ServiceMonitor, PrometheusRule, and Grafana dashboard resources are disabled in production until real labels, storage, authentication, notification routing, and failure behavior are validated. There is no formal SLO or error budget.
+The application exposes health and metrics and the Azure monitoring foundation exists. Proposed ServiceMonitor, PrometheusRule, and Grafana dashboard resources are disabled in production until real labels, storage, authentication, notification routing, and failure behavior are validated. Paid-beta SLOs and an error budget are now defined in [paid-beta-slos-and-python-skips.md](paid-beta-slos-and-python-skips.md), but they are entry criteria rather than achieved SLOs until measurement and alert delivery are proven.
 
 ### Supply-chain enforcement is incomplete
 

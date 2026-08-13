@@ -9,6 +9,7 @@ from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.checkins import AthleteCheckinSettings
 from portal.models.user import User, UserRole
+from tenancy_factories import grant_coach_athlete_access
 
 
 @pytest.fixture
@@ -42,6 +43,9 @@ def secured_app():
                     workflow_active=True,
                 ),
             ]
+        )
+        grant_coach_athlete_access(
+            coach, [first], name="Auth Test Strength", slug="auth-test-strength"
         )
         db.session.commit()
         ids = {

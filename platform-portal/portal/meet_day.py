@@ -143,6 +143,10 @@ def update_workflow(meet_id: int):
         return "Invalid meet status.", 400
     try:
         meet.bodyweight_kg = _weight(request.form.get("bodyweight_kg"))
+        if "federation" in request.form:
+            meet.federation = _optional_text(
+                request.form.get("federation"), "Federation", 80
+            )
         meet.weight_class = _optional_text(
             request.form.get("weight_class"), "Weight class", 40
         )
@@ -187,6 +191,9 @@ def update_entry_workflow(meet_id: int, entry_id: int):
             ),
             "warmup_notes": _optional_text(
                 request.form.get("warmup_notes"), "Warm-up notes"
+            ),
+            "handler_notes": _optional_text(
+                request.form.get("handler_notes"), "Handler notes"
             ),
         }
     except ValueError as exc:

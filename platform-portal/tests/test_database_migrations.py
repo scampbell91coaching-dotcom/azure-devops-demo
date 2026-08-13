@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import IntegrityError
 
@@ -20,9 +22,11 @@ EXPECTED_TABLES = {
     "athlete_state_recommendations",
     "athlete_state_signals",
     "athletes",
+    "billing_webhook_events",
     "coaching_applications",
     "client_service_changes",
     "coach_technical_observations",
+    "coach_athlete_ownerships",
     "day_template_exercises",
     "day_templates",
     "exercise_prescriptions",
@@ -34,10 +38,13 @@ EXPECTED_TABLES = {
     "meets",
     "meal_plan_assignments",
     "meal_plan_templates",
+    "organisations",
     "nutrition_checkins",
     "nutrition_provider_connections",
     "nutrition_import_jobs",
     "nutrition_macro_prescriptions",
+    "organisation_invitations",
+    "organisation_memberships",
     "daily_nutrition",
     "platform_snapshots",
     "programming_lift_slots",
@@ -47,6 +54,11 @@ EXPECTED_TABLES = {
     "training_session_logs",
     "training_set_results",
     "training_weeks",
+    "subscription_accounts",
+    "support_access_events",
+    "support_capability_grants",
+    "support_delegations",
+    "support_principals",
     "users",
     "weekly_checkins",
     "warmup_protocols",
@@ -89,6 +101,11 @@ def test_migration_cli_can_inspect_heads_with_local_validation_config(tmp_path: 
     result = app.test_cli_runner().invoke(args=["db", "heads"])
 
     assert result.exit_code == 0, result.output
+    config = Config(str(Path(__file__).parents[1] / "migrations" / "alembic.ini"))
+    config.set_main_option("script_location", str(Path(__file__).parents[1] / "migrations"))
+    assert ScriptDirectory.from_config(config).get_heads() == [
+        "0023_organisation_invitation_delivery"
+    ]
 
 
 def test_upgrade_and_schema_verification_on_empty_sqlite(tmp_path: Path):
@@ -121,6 +138,44 @@ def test_upgrade_and_schema_verification_on_empty_sqlite(tmp_path: Path):
             "compatibility_tags",
             "coach_priority",
         } <= exercise_columns
+
+
+def test_canonical_tenancy_migration_does_not_automatically_backfill_legacy_rows(tmp_path: Path):
+    app = migration_app(f"sqlite:///{tmp_path / 'no-automatic-backfill.db'}")
+    runner = app.test_cli_runner()
+    assert runner.invoke(args=["db", "upgrade", "0019_meal_plan_delivery"]).exit_code == 0
+    with app.app_context():
+        db.session.execute(text(
+            "INSERT INTO athletes "
+            "(id, created_at, updated_at, first_name, last_name, email, status) "
+            "VALUES (7, '2026-01-01', '2026-01-01', 'Legacy', 'Athlete', "
+            "'legacy-member@example.test', 'active')"
+        ))
+        db.session.execute(text(
+            "INSERT INTO users (id, email, role, athlete_id, active, created_at) VALUES "
+            "(8, 'legacy-coach@example.test', 'coach', NULL, 1, '2026-01-01'), "
+            "(9, 'legacy-member@example.test', 'athlete', 7, 1, '2026-01-01')"
+        ))
+        db.session.commit()
+    upgrade = runner.invoke(args=["db", "upgrade"])
+    assert upgrade.exit_code == 0, upgrade.output
+    with app.app_context():
+        assert db.session.execute(text("SELECT COUNT(*) FROM organisations")).scalar_one() == 0
+        assert db.session.execute(text("SELECT COUNT(*) FROM organisation_memberships")).scalar_one() == 0
+        assert db.session.execute(text("SELECT COUNT(*) FROM coach_athlete_ownerships")).scalar_one() == 0
+
+
+def test_billing_migration_does_not_create_a_legacy_organisation_or_subscription(tmp_path: Path):
+    app = migration_app(f"sqlite:///{tmp_path / 'billing.db'}")
+    assert app.test_cli_runner().invoke(args=["db", "upgrade"]).exit_code == 0
+
+    with app.app_context():
+        assert db.session.execute(text(
+            "SELECT COUNT(*) FROM organisations"
+        )).scalar_one() == 0
+        assert db.session.execute(text(
+            "SELECT COUNT(*) FROM subscription_accounts"
+        )).scalar_one() == 0
 
 
 def test_nutrition_macro_migration_enforces_overlap_and_append_only(tmp_path: Path):
@@ -295,3 +350,8 @@ def test_upgrade_on_empty_postgresql_when_available(monkeypatch):
     assert upgrade.exit_code == 0, upgrade.output
     verification = runner.invoke(args=["verify-schema"])
     assert verification.exit_code == 0, verification.output
+    with app.app_context():
+        inspector = inspect(db.engine)
+        assert set(inspector.get_table_names()) == EXPECTED_TABLES | {"alembic_version"}
+        heads = db.session.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
+        assert heads == ["0023_organisation_invitation_delivery"]

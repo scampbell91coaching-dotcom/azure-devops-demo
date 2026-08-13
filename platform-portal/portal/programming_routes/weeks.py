@@ -14,14 +14,14 @@ from ..programming_services.weeks import (
     extend,
 )
 from ..services.weekly_programming_intelligence import map_athlete_programming_context
+from ..tenancy import require_programming_access
 
 
 def register_week_routes(blueprint: Blueprint) -> None:
     @blueprint.post("/programming/blocks/<int:block_id>/weeks")
     def create_week(block_id: int):
         block = db.session.get(TrainingBlock, block_id)
-        if block is None:
-            abort(404)
+        require_programming_access(block)
         week = create(
             block,
             name=request.form.get("name", "").strip(),
@@ -46,6 +46,7 @@ def register_week_routes(blueprint: Blueprint) -> None:
         )
         if item is None:
             abort(404)
+        require_programming_access(item)
         return render_template(
             "programming/week.html",
             week=item,
@@ -60,16 +61,14 @@ def register_week_routes(blueprint: Blueprint) -> None:
     @blueprint.post("/programming/weeks/<int:week_id>/duplicate")
     def duplicate_week(week_id: int):
         source = db.session.get(TrainingWeek, week_id)
-        if source is None:
-            abort(404)
+        require_programming_access(source)
         target = duplicate(source)
         return redirect(url_for("programming.week", week_id=target.id))
 
     @blueprint.post("/programming/blocks/<int:block_id>/extend")
     def extend_block(block_id: int):
         block = db.session.get(TrainingBlock, block_id)
-        if block is None:
-            abort(404)
+        require_programming_access(block)
         raw_count = (
             request.form.get("weeks")
             or request.form.get("week_count")
@@ -90,8 +89,7 @@ def register_week_routes(blueprint: Blueprint) -> None:
     @blueprint.post("/programming/weeks/<int:week_id>/delete")
     def delete_week(week_id: int):
         item = db.session.get(TrainingWeek, week_id)
-        if item is None:
-            abort(404)
+        require_programming_access(item)
         try:
             block_id = delete(item)
         except FinalWeekDeletionError:

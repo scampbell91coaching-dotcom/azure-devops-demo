@@ -89,6 +89,13 @@ def get_coach_athlete_performance(
             if log.session is not None and log.session.week.block_id == selected.id
         ]
 
+    # A log marked completed can still contain undecided set rows. Do not let
+    # its completed fragments silently drive coaching evidence.
+    logs = [
+        log for log in logs
+        if log.results and all(result.completed or result.skipped for result in log.results)
+    ]
+
     results = [result for log in logs for result in log.results]
     completed = [result for result in results if result.completed and not result.skipped]
     completed_reps = sum(result.actual_reps or 0 for result in completed)
@@ -114,10 +121,12 @@ def get_coach_athlete_performance(
     volume = sum(
         result.actual_load_kg * result.actual_reps
         for result in sbd_results
-        if result.actual_load_kg is not None and result.actual_reps is not None
+        if result.actual_load_kg is not None and result.actual_load_kg > 0
+        and result.actual_reps is not None and result.actual_reps > 0
     )
     volume_has_data = any(
-        result.actual_load_kg is not None and result.actual_reps is not None
+        result.actual_load_kg is not None and result.actual_load_kg > 0
+        and result.actual_reps is not None and result.actual_reps > 0
         for result in sbd_results
     )
 
@@ -135,9 +144,20 @@ def get_coach_athlete_performance(
                 continue
             if result.prescription and result.prescription.slot_role == "top_set":
                 top_sets += 1
-            if result.actual_load_kg is not None and result.actual_reps:
+            if (
+                result.actual_load_kg is not None
+                and result.actual_load_kg > 0
+                and result.actual_reps is not None
+                and 0 < result.actual_reps <= 12
+            ):
                 estimate = result.actual_load_kg * (1 + result.actual_reps / 30)
                 daily_best[lift] = max(daily_best.get(lift, 0), estimate)
+            if (
+                result.actual_load_kg is not None
+                and result.actual_load_kg > 0
+                and result.actual_reps is not None
+                and result.actual_reps > 0
+            ):
                 daily_volume[day] = daily_volume.get(day, 0) + (
                     result.actual_load_kg * result.actual_reps
                 )
@@ -196,9 +216,9 @@ def _exact_reps(value: str | None) -> int | None:
 
 def _lift_family(result: TrainingSetResult) -> str | None:
     if result.prescription and result.prescription.lift_slot:
-        return result.prescription.lift_slot.lift_family
-    name = result.exercise_name.lower()
-    return next((lift for lift in LIFTS if lift in name), None)
+        family = result.prescription.lift_slot.lift_family
+        return family if family in LIFTS else None
+    return None
 
 
 def _decision(

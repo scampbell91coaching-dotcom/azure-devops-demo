@@ -1,7 +1,11 @@
 import json
 import os
 
-from portal.collectors.platform_status import atomic_write, sample_snapshot
+from portal.collectors.platform_status import (
+    atomic_write,
+    database_migration_head,
+    sample_snapshot,
+)
 
 
 def test_sample_collector_output_contract():
@@ -10,6 +14,13 @@ def test_sample_collector_output_contract():
     assert set(data["summary"]) == {"pass", "warn", "fail"}
     assert isinstance(data["checks"], list)
     assert data["observability"]["metrics_api_available"] is True
+    assert data["workload"]["deployed_image"].startswith("registry.example/")
+    assert data["gitops"]["revision"] == "synthetic-revision"
+    assert data["database"]["migration_head"] == "synthetic-head"
+
+
+def test_database_migration_head_is_unavailable_without_connection_details():
+    assert database_migration_head(None) is None
 
 
 def test_atomic_write_replaces_complete_document(tmp_path, monkeypatch):

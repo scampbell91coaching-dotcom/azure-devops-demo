@@ -1,0 +1,103 @@
+/* Coach-only athlete performance workspace. Shared values come from coach_workspace.css. */
+
+.athlete-performance-nav {
+  display: flex;
+  gap: var(--coach-space-md);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--coach-border);
+  scrollbar-width: thin;
+}
+
+.athlete-performance-nav a {
+  flex: 0 0 auto;
+  border-bottom: 3px solid transparent;
+  padding: var(--coach-space-sm) 0;
+  color: var(--coach-muted);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.athlete-performance-nav a[aria-current="page"] {
+  border-color: var(--coach-accent);
+  color: var(--coach-heading);
+}
+
+.performance-dashboard { display: grid; gap: var(--coach-space-md); margin-bottom: var(--coach-space-lg); }
+.performance-toolbar { display: flex; align-items: end; justify-content: space-between; gap: var(--coach-space-md); }
+.performance-toolbar h2,
+.decision-panel h3,
+.performance-chart h3 { margin: .2rem 0 0; }
+
+.performance-filter { min-width: min(100%, 19rem); }
+.performance-filter label { display: block; margin-bottom: var(--coach-space-xs); color: var(--coach-muted); font-size: .8rem; }
+.performance-filter select { width: 100%; border: 1px solid var(--coach-border-strong); border-radius: var(--coach-radius); padding: .7rem; background: var(--coach-panel-soft); color: var(--coach-text); }
+
+.decision-panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 1fr); gap: var(--coach-space-md); border-left: 3px solid var(--coach-accent); padding: var(--coach-space-md); background: var(--coach-panel-soft); }
+.decision-panel--review { border-left-color: var(--coach-danger); }
+.decision-panel--insufficient { border-left-color: var(--coach-muted-low); }
+.decision-panel p { margin: var(--coach-space-xs) 0; }
+.decision-panel details { grid-column: 1 / -1; color: var(--coach-muted); font-size: .85rem; }
+
+.performance-summary-grid,
+.performance-context-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-block: 1px solid var(--coach-border); }
+.performance-summary-grid article,
+.performance-context-grid article { display: grid; gap: var(--coach-space-xs); padding: var(--coach-space-md); border-right: 1px solid var(--coach-border); }
+.performance-summary-grid article:last-child,
+.performance-context-grid article:last-child { border-right: 0; }
+.performance-summary-grid span,
+.performance-context-grid span { color: var(--coach-muted); font-size: .8rem; }
+.performance-summary-grid strong,
+.performance-context-grid strong { font-size: 1.35rem; }
+.performance-summary-grid small,
+.performance-context-grid small { color: var(--coach-muted-low); line-height: 1.35; }
+
+.performance-chart-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: var(--coach-space-sm); }
+.performance-chart { min-width: 0; border-top: 1px solid var(--coach-border); padding: var(--coach-space-md) 0; }
+.performance-chart header { display: flex; justify-content: space-between; gap: var(--coach-space-md); color: var(--coach-muted); }
+.lift-trends { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--coach-space-sm); margin-top: var(--coach-space-md); }
+.lift-trends section { min-width: 0; padding: var(--coach-space-sm); background: var(--coach-panel-soft); }
+.lift-trends h4 { margin: 0 0 .5rem; }
+.lift-trends ol,
+.volume-chart { margin: 0; padding: 0; list-style: none; }
+.lift-trends li { display: flex; justify-content: space-between; gap: .5rem; border-top: 1px solid var(--coach-border); padding: var(--coach-space-xs) 0; font-size: .82rem; }
+.performance-method { color: var(--coach-muted-low); font-size: .78rem; line-height: 1.4; }
+.volume-chart { margin-top: var(--coach-space-md); }
+.volume-chart li { display: grid; grid-template-columns: 3.5rem minmax(2rem, 1fr) 5.5rem; align-items: center; gap: .5rem; margin: .6rem 0; font-size: .8rem; }
+.volume-chart i { display: block; width: var(--volume); min-width: 2px; height: .7rem; background: var(--coach-accent); }
+.volume-chart strong { text-align: right; }
+.performance-context-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.performance-filter,
+.performance-decisions .coach-panel__heading--split > form,
+.performance-decisions .coach-panel__heading--split > form label,
+.performance-decisions .coach-panel__heading--split select { min-width: 0; max-width: 100%; }
+.performance-decisions .coach-panel__heading--split > form { flex: 0 1 19rem; }
+.performance-decisions .coach-panel__heading--split select { box-sizing: border-box; width: 100%; }
+
+@media (max-width: 760px) {
+  .performance-toolbar,
+  .decision-panel { display: grid; grid-template-columns: 1fr; align-items: stretch; }
+  .performance-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .performance-summary-grid article:nth-child(2) { border-right: 0; }
+  .performance-summary-grid article:nth-child(-n + 2) { border-bottom: 1px solid var(--coach-border); }
+  .performance-chart-grid,
+  .performance-context-grid,
+  .lift-trends { grid-template-columns: 1fr; }
+  .performance-context-grid article { border-right: 0; border-bottom: 1px solid var(--coach-border); }
+  .performance-context-grid article:last-child { border-bottom: 0; }
+  .performance-filter { min-width: 0; }
+  .performance-summary-grid strong { font-size: 1.1rem; }
+}
+
+@media (max-width: 650px) {
+  .performance-decisions .coach-panel__heading--split > form { width: 100%; flex-basis: auto; }
+}
+
+@media (max-width: 410px) {
+  .performance-summary-grid { grid-template-columns: 1fr; }
+  .performance-summary-grid article { border-right: 0; border-bottom: 1px solid var(--coach-border); }
+  .performance-summary-grid article:last-child { border-bottom: 0; }
+  .performance-chart { padding: .8rem 0; }
+  .volume-chart li { grid-template-columns: 3.2rem minmax(1.5rem, 1fr) 4.8rem; }
+}

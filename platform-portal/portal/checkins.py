@@ -5,6 +5,7 @@ from datetime import UTC, date, datetime, timedelta
 from flask import (
     Blueprint,
     abort,
+    current_app,
     g,
     redirect,
     render_template,
@@ -19,6 +20,7 @@ from .models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from .services.checkins import athlete_checkins, due_message, validate_submission
 from .services.athlete_services import athlete_services
 from .nutrition_imports import _summary
+from .tenancy import coach_athlete_ids_query, require_athlete_access
 
 checkins_bp = Blueprint("checkins", __name__)
 
@@ -56,15 +58,19 @@ def _session_athlete() -> Athlete:
 
 @checkins_bp.get("/check-ins")
 def index():
-    items = WeeklyCheckin.query.order_by(WeeklyCheckin.submitted_at.desc()).all()
+    query = WeeklyCheckin.query
+    if not current_app.config["AUTHENTICATION_DISABLED"]:
+        user = g.get("current_user")
+        if user is None:
+            abort(401)
+        query = query.filter(WeeklyCheckin.athlete_id.in_(coach_athlete_ids_query(user.id)))
+    items = query.order_by(WeeklyCheckin.submitted_at.desc()).all()
     return render_template("checkins/index.html", checkins=items)
 
 
 @checkins_bp.get("/athletes/<int:athlete_id>/check-in-settings")
 def settings(athlete_id: int):
-    athlete = db.session.get(Athlete, athlete_id)
-    if athlete is None:
-        abort(404)
+    athlete = require_athlete_access(athlete_id)
     return render_template(
         "checkins/settings.html",
         athlete=athlete,
@@ -74,9 +80,7 @@ def settings(athlete_id: int):
 
 @checkins_bp.post("/athletes/<int:athlete_id>/check-in-settings")
 def update_settings(athlete_id: int):
-    athlete = db.session.get(Athlete, athlete_id)
-    if athlete is None:
-        abort(404)
+    athlete = require_athlete_access(athlete_id)
 
     settings = _settings_for(athlete)
     settings.training_enabled = request.form.get("training_enabled") == "1"
@@ -215,7 +219,13 @@ def athlete_detail(checkin_id: int):
 
 @checkins_bp.get("/check-ins/<int:checkin_id>")
 def detail(checkin_id: int):
-    item = db.session.get(WeeklyCheckin, checkin_id)
+    query = WeeklyCheckin.query.filter_by(id=checkin_id)
+    if not current_app.config["AUTHENTICATION_DISABLED"]:
+        user = g.get("current_user")
+        if user is None:
+            abort(401)
+        query = query.filter(WeeklyCheckin.athlete_id.in_(coach_athlete_ids_query(user.id)))
+    item = query.first()
     if item is None:
         abort(404)
     return render_template("checkins/detail.html", checkin=item)
@@ -223,7 +233,13 @@ def detail(checkin_id: int):
 
 @checkins_bp.post("/check-ins/<int:checkin_id>/review")
 def review(checkin_id: int):
-    item = db.session.get(WeeklyCheckin, checkin_id)
+    query = WeeklyCheckin.query.filter_by(id=checkin_id)
+    if not current_app.config["AUTHENTICATION_DISABLED"]:
+        user = g.get("current_user")
+        if user is None:
+            abort(401)
+        query = query.filter(WeeklyCheckin.athlete_id.in_(coach_athlete_ids_query(user.id)))
+    item = query.first()
     if item is None:
         abort(404)
 

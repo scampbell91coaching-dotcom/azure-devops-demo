@@ -128,6 +128,10 @@ def test_athlete_cannot_access_another_athletes_nutrition_import_mutations(
             "/programming/sessions/{session}/warmup-overrides",
             {"action": "remove", "target_key": "x", "reason": "test"},
         ),
+        (
+            "/programming/sessions/{session}/warmup-candidates/override",
+            {"protocol_id": "1", "action": "remove", "reason": "test"},
+        ),
         ("/programming/factory/preview", {"athlete_id": "1"}),
         (
             "/programming/factory",
@@ -163,6 +167,7 @@ def test_athlete_nutrition_read_is_owned_and_does_not_trust_path_identity(
     [
         "/athletes/{owner}/nutrition-import/preview",
         "/programming/sessions/{session}/warmup-assignments",
+        "/programming/sessions/{session}/warmup-candidates/override",
         "/programming/factory/preview",
     ],
 )

@@ -61,8 +61,11 @@ class SqlAlchemyMealPlanRepository:
             return None
         return MealPlanDraft(row.id, row.revision, str(row.coach_id), row.name, _days(row.payload["days"]), _subs(row.payload.get("substitutions", [])), row.payload.get("notes"), DraftStatus(row.status))
 
-    def list_drafts(self):
-        return tuple(self.get_draft(row.id) for row in MealPlanTemplate.query.order_by(MealPlanTemplate.updated_at.desc()).all())
+    def list_drafts(self, coach_id=None):
+        query = MealPlanTemplate.query
+        if coach_id is not None:
+            query = query.filter_by(coach_id=coach_id)
+        return tuple(self.get_draft(row.id) for row in query.order_by(MealPlanTemplate.updated_at.desc()).all())
 
     def save_draft(self, draft, expected_revision=None):
         row = db.session.get(MealPlanTemplate, draft.template_id)
@@ -96,8 +99,13 @@ class SqlAlchemyMealPlanRepository:
         rows = MealPlanAssignment.query.filter_by(athlete_id=athlete_id).order_by(MealPlanAssignment.effective_from.desc(), MealPlanAssignment.published_at.desc()).all()
         return tuple(self._assignment(row) for row in rows)
 
-    def list_assignments(self):
-        rows = MealPlanAssignment.query.order_by(MealPlanAssignment.published_at.desc()).all()
+    def list_assignments(self, athlete_ids=None):
+        query = MealPlanAssignment.query
+        if athlete_ids is not None:
+            if not athlete_ids:
+                return ()
+            query = query.filter(MealPlanAssignment.athlete_id.in_(athlete_ids))
+        rows = query.order_by(MealPlanAssignment.published_at.desc()).all()
         return tuple(self._assignment(row) for row in rows)
 
     def get_assignment(self, assignment_id):
