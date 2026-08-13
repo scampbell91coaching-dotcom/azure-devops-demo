@@ -3,13 +3,16 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
+from hashlib import sha256
+from io import BytesIO
 from uuid import uuid4
 
-from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, send_file, session, url_for
 
 from .auth import roles_required
 from .extensions import db
 from .models.athlete import Athlete
+from .models.meal_plan import PdfMealPlan
 from .models.user import UserRole
 from .repositories.nutrition_prescriptions import SqlAlchemyMacroPrescriptionRepository
 from .repositories.meal_plans import SqlAlchemyMealPlanRepository
@@ -60,7 +63,7 @@ def _number(name: str, *, positive: bool = False) -> Decimal:
 @meal_plan_delivery_bp.get("/coach/meal-plans")
 @roles_required(UserRole.COACH)
 def coach_index():
-    require_tenancy_context()
+    context = require_tenancy_context()
     repository = _workflow().repository
     if isinstance(repository, SqlAlchemyMealPlanRepository):
         drafts = repository.list_drafts(g.current_user.id)
@@ -83,7 +86,126 @@ def coach_index():
         )
     else:
         assignments = ()
-    return render_template("meal_plans/coach_index.html", drafts=drafts, assignments=assignments)
+    pdf_plans = PdfMealPlan.query.filter_by(
+        organisation_id=context.organisation_id
+    ).order_by(PdfMealPlan.created_at.desc()).all()
+    athletes = (
+        Athlete.query.filter(Athlete.id.in_(athlete_ids))
+        .order_by(Athlete.last_name, Athlete.first_name).all()
+        if athlete_ids else []
+    )
+    return render_template(
+        "meal_plans/coach_index.html", drafts=drafts, assignments=assignments,
+        pdf_plans=pdf_plans, athletes=athletes,
+    )
+
+
+def _pdf_upload() -> tuple[bytes, str]:
+    upload = request.files.get("pdf")
+    if upload is None or not upload.filename:
+        raise ValueError("Choose a PDF meal plan.")
+    limit = int(current_app.config["MEAL_PLAN_PDF_MAX_BYTES"])
+    payload = upload.stream.read(limit + 1)
+    if len(payload) > limit:
+        abort(413, description="PDF meal plan exceeds the upload limit.")
+    if (
+        not upload.filename.casefold().endswith(".pdf")
+        or not payload.startswith(b"%PDF-")
+        or b"%%EOF" not in payload[-1024:]
+        or len(payload) < 12
+    ):
+        raise ValueError("Upload a valid PDF file.")
+    filename = upload.filename.rsplit("/", 1)[-1].rsplit("\\", 1)[-1].strip()
+    return payload, (filename[:255] or "meal-plan.pdf")
+
+
+@meal_plan_delivery_bp.post("/coach/pdf-meal-plans")
+@roles_required(UserRole.COACH)
+def upload_pdf_plan():
+    context = require_tenancy_context()
+    try:
+        athlete_id = int(request.form["athlete_id"])
+        if not coach_owns_athlete(g.current_user.id, athlete_id):
+            abort(404)
+        title = request.form.get("title", "").strip()
+        notes = request.form.get("notes", "").strip() or None
+        effective_from = date.fromisoformat(request.form.get("effective_from", ""))
+        if not title or len(title) > 200 or any(ord(char) < 32 for char in title):
+            raise ValueError("Title is required and must be 200 characters or fewer.")
+        if notes and len(notes) > 5000:
+            raise ValueError("Notes must be 5,000 characters or fewer.")
+        if not may_start_client_service(athlete_id, Service.NUTRITION_COACHING):
+            raise PermissionError("nutrition coaching is not currently enabled")
+        payload, filename = _pdf_upload()
+        latest = (
+            db.session.query(db.func.max(PdfMealPlan.revision))
+            .filter_by(organisation_id=context.organisation_id, athlete_id=athlete_id)
+            .scalar() or 0
+        )
+        db.session.add(PdfMealPlan(
+            id=str(uuid4()), organisation_id=context.organisation_id,
+            athlete_id=athlete_id, coach_id=g.current_user.id,
+            revision=latest + 1, status="draft", title=title, notes=notes,
+            effective_from=effective_from, original_filename=filename,
+            content_sha256=sha256(payload).hexdigest(), content_length=len(payload),
+            pdf_bytes=payload,
+        ))
+        db.session.commit()
+    except (KeyError, ValueError, PermissionError) as exc:
+        db.session.rollback()
+        abort(400, description=str(exc))
+    flash("PDF meal plan saved as a draft.", "success")
+    return redirect(url_for("meal_plan_delivery.coach_index", _anchor="pdf-delivery"))
+
+
+@meal_plan_delivery_bp.post("/coach/pdf-meal-plans/<plan_id>/publish")
+@roles_required(UserRole.COACH)
+def publish_pdf_plan(plan_id: str):
+    context = require_tenancy_context()
+    plan = PdfMealPlan.query.filter_by(
+        id=plan_id, organisation_id=context.organisation_id
+    ).one_or_none()
+    if plan is None or not coach_owns_athlete(g.current_user.id, plan.athlete_id):
+        abort(404)
+    if plan.status != "draft":
+        abort(409, description="Published PDF revisions are immutable.")
+    plan.status = "published"
+    plan.published_at = datetime.now(UTC)
+    db.session.commit()
+    flash("PDF meal plan published to the athlete.", "success")
+    return redirect(url_for("meal_plan_delivery.coach_index", _anchor="pdf-delivery"))
+
+
+def _published_pdf_for_athlete(plan_id: str, athlete_id: int) -> PdfMealPlan:
+    plan = PdfMealPlan.query.filter_by(
+        id=plan_id, athlete_id=athlete_id, status="published"
+    ).one_or_none()
+    if plan is None:
+        abort(404)
+    return plan
+
+
+@meal_plan_delivery_bp.get("/athlete/pdf-meal-plan")
+def athlete_pdf_plan():
+    athlete_id = _athlete_id()
+    today = datetime.now(UTC).date()
+    plans = PdfMealPlan.query.filter_by(
+        athlete_id=athlete_id, status="published"
+    ).order_by(PdfMealPlan.effective_from.desc(), PdfMealPlan.revision.desc()).all()
+    current = next((plan for plan in plans if plan.effective_from <= today), None)
+    if current is None:
+        abort(404)
+    return render_template("meal_plans/athlete_pdf.html", plan=current, history=plans)
+
+
+@meal_plan_delivery_bp.get("/athlete/pdf-meal-plans/<plan_id>/download")
+def athlete_pdf_download(plan_id: str):
+    plan = _published_pdf_for_athlete(plan_id, _athlete_id())
+    return send_file(
+        BytesIO(plan.pdf_bytes), mimetype="application/pdf", as_attachment=True,
+        download_name=f"meal-plan-revision-{plan.revision}.pdf", max_age=0,
+        etag=plan.content_sha256, conditional=True,
+    )
 
 
 @meal_plan_delivery_bp.post("/coach/meal-plans")

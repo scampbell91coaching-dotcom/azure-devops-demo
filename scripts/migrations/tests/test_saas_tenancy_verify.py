@@ -20,7 +20,7 @@ def test_identifier_quoting_is_safe_for_catalog_values():
 
 def test_rollout_phases_are_ordered_and_explicit():
     assert verify.PHASES == ("expand", "backfill", "constrain")
-    assert verify.EXPECTED_HEAD == "0023_organisation_invitation_delivery"
+    assert verify.EXPECTED_HEAD == "0024_pdf_meal_plan_delivery"
     assert "organisations" in verify.CONTROL_TABLES
     assert "organisation_memberships" in verify.CONTROL_TABLES
     assert "coach_athlete_ownerships" in verify.CONTROL_TABLES

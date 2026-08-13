@@ -33,3 +33,34 @@ class MealPlanAssignment(db.Model):  # type: ignore[name-defined]
     published_at = db.Column(db.DateTime, nullable=False)
     snapshot = db.Column(db.JSON, nullable=False)
 
+
+class PdfMealPlan(db.Model):  # type: ignore[name-defined]
+    """Immutable-on-publication PDF bytes delivered within an Organisation."""
+
+    __tablename__ = "pdf_meal_plans"
+    __table_args__ = (
+        db.CheckConstraint("status IN ('draft', 'published')", name="ck_pdf_meal_plan_status"),
+        db.UniqueConstraint(
+            "organisation_id", "athlete_id", "revision",
+            name="uq_pdf_meal_plan_org_athlete_revision",
+        ),
+    )
+
+    id = db.Column(db.String(36), primary_key=True)
+    organisation_id = db.Column(
+        db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"),
+        nullable=False, index=True,
+    )
+    athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="RESTRICT"), nullable=False, index=True)
+    coach_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
+    revision = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(20), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    notes = db.Column(db.Text)
+    effective_from = db.Column(db.Date, nullable=False, index=True)
+    original_filename = db.Column(db.String(255), nullable=False)
+    content_sha256 = db.Column(db.String(64), nullable=False)
+    content_length = db.Column(db.Integer, nullable=False)
+    pdf_bytes = db.Column(db.LargeBinary, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(UTC))
+    published_at = db.Column(db.DateTime)

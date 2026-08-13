@@ -15,7 +15,7 @@ from dataclasses import asdict, dataclass
 from typing import Any, Iterable
 
 
-EXPECTED_HEAD = "0023_organisation_invitation_delivery"
+EXPECTED_HEAD = "0024_pdf_meal_plan_delivery"
 CONTROL_TABLES = (
     "organisations",
     "organisation_memberships",
