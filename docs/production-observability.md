@@ -4,6 +4,10 @@ This document distinguishes the current production portal from repository-only
 reference instrumentation and future observability work. Nothing described here
 was deployed and no live alert was created.
 
+The measurable paid-beta objectives, skip evidence requirements and alert
+severities are defined in
+[paid-beta-slos-and-python-skips.md](paid-beta-slos-and-python-skips.md).
+
 ## Current versus proposed
 
 | Resource | Repository state | Runtime state |
@@ -37,6 +41,9 @@ Prometheus scrapes are excluded from its request metrics. These metrics and its
 `/ready` and `/metrics` routes are not claims about the production portal.
 
 ## Coverage and practical starting thresholds
+
+These older resource-oriented thresholds are implementation guidance. Where a
+threshold differs, the paid-beta contract linked above is authoritative.
 
 | Signal | Source | Proposed threshold |
 |---|---|---|
