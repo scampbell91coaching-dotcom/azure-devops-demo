@@ -9,6 +9,7 @@ from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.programming import (
     ExercisePrescription,
+    ProgrammingLiftSlot,
     TrainingBlock,
     TrainingSession,
     TrainingSessionLog,
@@ -37,6 +38,11 @@ def training_app():
         block = TrainingBlock(athlete=alex, name="Meet prep", status="active")
         week = TrainingWeek(block=block, name="Week 1", position=1)
         session = TrainingSession(week=week, name="Squat day", position=1)
+        squat_slot = ProgrammingLiftSlot(
+            session=session,
+            position=1,
+            lift_family="squat",
+        )
         squat = ExercisePrescription(
             session=session,
             exercise_name="Competition squat",
@@ -46,8 +52,10 @@ def training_app():
             load_kg=100,
             rpe=7,
             notes="Stay balanced.",
+            lift_slot=squat_slot,
+            slot_role="top_set",
         )
-        db.session.add_all([alex, sam, block, squat])
+        db.session.add_all([alex, sam, block, squat_slot, squat])
         db.session.flush()
         users = [
             User(
