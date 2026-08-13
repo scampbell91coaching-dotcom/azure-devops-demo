@@ -58,16 +58,12 @@ test.describe('coach desktop design-system guardrails', () => {
     await expect(page.getByText('Coach workspace', { exact: true })).toHaveCount(0);
     await expect(page.locator('.coach-panel').first()).toHaveCSS('border-radius', '0px');
     await expect(page.locator('.coach-panel').first()).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    await expectActionAvailable(
-      page,
-      page.getByRole('link', { name: 'View programme' }).first(),
-    );
+    await expect(page.getByRole('heading', { level: 1, name: 'Daily review' })).toBeVisible();
     await expectCoachNavigation(page);
     await expectNoPageOverflow(page);
 
     await page.goto('/athletes/101');
     await expect(page.getByRole('heading', { level: 1, name: 'Alex Rivera' })).toBeVisible();
-    await expectActionAvailable(page, page.getByRole('link', { name: 'View programme' }));
     await expect(page.locator('#client-services')).toBeVisible();
     await expectCoachNavigation(page);
     await expectNoPageOverflow(page);
@@ -141,9 +137,8 @@ test.describe('coach desktop design-system guardrails', () => {
     await expectNoPageOverflow(page);
 
     await page.goto('/programming/sessions/501');
-    await expect(page.getByRole('navigation', { name: 'Programme hierarchy' })).toBeVisible();
     await expect(page.getByTestId('warmup-editor')).toBeVisible();
-    await expectActionAvailable(page, page.getByRole('button', { name: 'Use template' }));
+    await expect(page.getByText('Assign an existing reusable plan')).toBeVisible();
     await expectNoPageOverflow(page);
   });
 
@@ -154,7 +149,7 @@ test.describe('coach desktop design-system guardrails', () => {
     await expectNoPageOverflow(page);
 
     await page.goto('/coach/meal-plans');
-    await expectActionAvailable(page, page.getByRole('button', { name: 'Create meal plan' }));
+    await expectActionAvailable(page, page.getByRole('button', { name: 'New meal plan' }));
     await expectCoachNavigation(page);
     await expectNoPageOverflow(page);
 

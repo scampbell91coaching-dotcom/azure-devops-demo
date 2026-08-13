@@ -172,3 +172,40 @@
   .builder-panel ol.session-lift-slots > li { grid-template-columns: 1fr; }
   .builder-shortcuts { display: none; }.future-action { align-items: stretch; flex-direction: column; }.future-action button { width: 100%; }
 }
+
+/* Keep spreadsheet-width programming content inside its own scroller. */
+.programming-sheet {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  contain: inline-size;
+}
+
+.programming-sheet__body {
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .session-lift-row {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  .session-lift-row > div {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .session-lift-row p {
+    grid-template-columns: 70px minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  .session-lift-row p > span:last-child {
+    grid-column: 2;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
