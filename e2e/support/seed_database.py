@@ -23,9 +23,11 @@ from portal.models.meal_plan import MealPlanAssignment, MealPlanTemplate
 from portal.models.nutrition_prescription import NutritionMacroPrescription
 from portal.models.organisation import (
     CoachAthleteOwnership,
+    MembershipStatus,
     Organisation,
     OrganisationMembership,
     OrganisationRole,
+    OwnershipStatus,
 )
 from portal.models.programming import (
     ExercisePrescription,
@@ -677,9 +679,12 @@ def seed_database(app: Flask) -> None:
                 existing = OrganisationMembership.query.filter_by(
                     organisation_id=organisation.id, user_id=user.id
                 ).one_or_none()
-            return existing or OrganisationMembership(
+            record = existing or OrganisationMembership(
                 organisation_id=organisation.id, user_id=user.id, role=role
             )
+            record.role = role
+            record.status = MembershipStatus.ACTIVE
+            return record
 
         tenant_a_owner_membership = membership(
             tenant_a_org, coach, OrganisationRole.OWNER
@@ -708,14 +713,32 @@ def seed_database(app: Flask) -> None:
                 existing = CoachAthleteOwnership.query.filter_by(
                     organisation_id=organisation.id, athlete_id=athlete.id
                 ).one_or_none()
-            return existing or CoachAthleteOwnership(
-                organisation_id=organisation.id,
-                coach_membership_id=coach_membership.id,
-                athlete_id=athlete.id,
+            record = existing or CoachAthleteOwnership(
+                organisation_id=organisation.id, athlete_id=athlete.id
             )
+            record.coach_membership_id = coach_membership.id
+            record.status = OwnershipStatus.ACTIVE
+            return record
 
         db.session.add_all(
             [
+                # The primary coach login resolves tenant A through its sole
+                # active membership. All legacy workflow athletes therefore
+                # need canonical ownership by that same membership.
+                ownership(tenant_a_org, tenant_a_owner_membership, alex),
+                ownership(tenant_a_org, tenant_a_owner_membership, sam),
+                ownership(tenant_a_org, tenant_a_owner_membership, pilot),
+                ownership(tenant_a_org, tenant_a_owner_membership, invitation),
+                ownership(
+                    tenant_a_org,
+                    tenant_a_owner_membership,
+                    performance_athlete,
+                ),
+                ownership(
+                    tenant_a_org,
+                    tenant_a_owner_membership,
+                    performance_empty_athlete,
+                ),
                 ownership(tenant_a_org, tenant_a_coach_membership, tenant_a_athlete),
                 ownership(tenant_b_org, tenant_b_coach_membership, tenant_b_athlete),
             ]

@@ -122,7 +122,7 @@ def test_fresh_e2e_database_seeds_once_and_safe_repeat_is_idempotent(
 
         assert Organisation.query.count() == 2
         assert OrganisationMembership.query.count() == 4
-        assert CoachAthleteOwnership.query.count() == 2
+        assert CoachAthleteOwnership.query.count() == 8
         tenant_a_org = Organisation.query.filter_by(
             slug="traditional-strength-e2e-a"
         ).one()
@@ -132,6 +132,30 @@ def test_fresh_e2e_database_seeds_once_and_safe_repeat_is_idempotent(
             user_id=tenant_a_owner.id,
             role=OrganisationRole.OWNER,
         ).one()
+        primary_memberships = OrganisationMembership.query.filter_by(
+            user_id=tenant_a_owner.id,
+            status="active",
+        ).all()
+        assert len(primary_memberships) == 1
+        primary_membership = primary_memberships[0]
+        alex_ownership = CoachAthleteOwnership.query.filter_by(
+            athlete_id=101,
+            status="active",
+        ).one()
+        assert alex_ownership.organisation_id == tenant_a_org.id
+        assert alex_ownership.coach_membership_id == primary_membership.id
+
+        tenant_b_org = Organisation.query.filter_by(
+            slug="traditional-strength-e2e-b"
+        ).one()
+        assert CoachAthleteOwnership.query.filter_by(
+            organisation_id=tenant_b_org.id,
+            athlete_id=101,
+        ).count() == 0
+        assert CoachAthleteOwnership.query.filter_by(
+            organisation_id=tenant_a_org.id,
+            athlete_id=2101,
+        ).count() == 0
 
 
 def test_service_reset_is_idempotent_and_leaves_unrelated_athletes_unchanged(
@@ -145,6 +169,10 @@ def test_service_reset_is_idempotent_and_leaves_unrelated_athletes_unchanged(
     from portal.models.athlete import Athlete
     from portal.models.client_service import ClientServiceChange
     from portal.models.checkins import AthleteCheckinSettings
+    from portal.models.organisation import (
+        CoachAthleteOwnership,
+        OrganisationMembership,
+    )
 
     database = tmp_path / "reset.sqlite"
     app = create_app(
@@ -161,6 +189,13 @@ def test_service_reset_is_idempotent_and_leaves_unrelated_athletes_unchanged(
     with app.app_context():
         alex = db.session.get(Athlete, 101)
         alex_before = (alex.email, alex.bodyweight_kg)
+        graph_before = (
+            OrganisationMembership.query.count(),
+            CoachAthleteOwnership.query.count(),
+            CoachAthleteOwnership.query.filter_by(athlete_id=101)
+            .one()
+            .coach_membership_id,
+        )
         settings = AthleteCheckinSettings.query.filter_by(athlete_id=202).one()
         settings.nutrition_enabled = False
         db.session.add(
@@ -182,3 +217,10 @@ def test_service_reset_is_idempotent_and_leaves_unrelated_athletes_unchanged(
         ).one().nutrition_enabled
         alex = db.session.get(Athlete, 101)
         assert (alex.email, alex.bodyweight_kg) == alex_before
+        assert (
+            OrganisationMembership.query.count(),
+            CoachAthleteOwnership.query.count(),
+            CoachAthleteOwnership.query.filter_by(athlete_id=101)
+            .one()
+            .coach_membership_id,
+        ) == graph_before
