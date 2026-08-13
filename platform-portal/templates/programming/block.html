@@ -27,7 +27,7 @@
     <div class="programme-week-table__head" role="row"><span role="columnheader">Week</span><span role="columnheader">Focus</span><span role="columnheader">Sessions</span><span role="columnheader">Lift exposure</span><span role="columnheader">Actions</span></div>
     {% for week in block.weeks %}{% set exposure = week_exposures[week.id] %}
     <div class="programme-week-row" role="row" data-testid="programming-week">
-      <a class="programme-week-row__name" role="cell" href="{{ url_for('programming.week', week_id=week.id) }}"><span>Week {{ week.position }}</span><strong>{{ week.name }}</strong></a>
+      <div role="cell"><a class="programme-week-row__name" href="{{ url_for('programming.week', week_id=week.id) }}"><span>Week {{ week.position }}</span><strong>{{ week.name }}</strong></a></div>
       <span class="programme-week-row__focus" role="cell">{{ week.notes or 'No focus recorded' }}</span>
       <span role="cell">{{ week.sessions|length }}</span>
       <div class="exposure-strip" aria-label="Week {{ week.position }} taxonomy-backed lift exposures"><span><b>S</b> Squat <strong>{{ exposure.squat }}</strong></span><span><b>B</b> Bench <strong>{{ exposure.bench }}</strong></span><span><b>D</b> Deadlift <strong>{{ exposure.deadlift }}</strong></span></div>
