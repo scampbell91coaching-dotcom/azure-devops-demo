@@ -104,7 +104,7 @@ def test_migration_cli_can_inspect_heads_with_local_validation_config(tmp_path: 
     config = Config(str(Path(__file__).parents[1] / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(Path(__file__).parents[1] / "migrations"))
     assert ScriptDirectory.from_config(config).get_heads() == [
-        "0022_support_admin_foundation"
+        "0023_organisation_invitation_delivery"
     ]
 
 
@@ -354,4 +354,4 @@ def test_upgrade_on_empty_postgresql_when_available(monkeypatch):
         inspector = inspect(db.engine)
         assert set(inspector.get_table_names()) == EXPECTED_TABLES | {"alembic_version"}
         heads = db.session.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
-        assert heads == ["0022_support_admin_foundation"]
+        assert heads == ["0023_organisation_invitation_delivery"]
