@@ -35,3 +35,5 @@ def test_verifier_source_enforces_read_only_transaction():
     assert "DELETE " not in source
     assert "INSERT " not in source
     assert "alembic_version SET" not in source
+    assert '"transaction_is_read_only"' in source
+    assert '"SHOW transaction_read_only"' in source

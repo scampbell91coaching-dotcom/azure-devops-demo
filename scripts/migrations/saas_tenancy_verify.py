@@ -62,6 +62,12 @@ def _ident(value: str) -> str:
 
 def run_checks(cursor: Any, phase: str, expected_head: str = EXPECTED_HEAD) -> list[CheckResult]:
     results: list[CheckResult] = []
+    transaction_read_only = _scalar(cursor, "SHOW transaction_read_only")
+    results.append(CheckResult(
+        "transaction_is_read_only",
+        transaction_read_only == "on",
+        f"transaction_read_only={transaction_read_only!r}",
+    ))
     heads = _scalar(cursor, "SELECT count(*) FROM alembic_version")
     results.append(CheckResult("single_alembic_head", heads == 1, f"rows={heads}"))
     actual = _scalar(cursor, "SELECT version_num FROM alembic_version") if heads == 1 else None
