@@ -21,6 +21,12 @@ from portal.models.nutrition_import import (
 )
 from portal.models.meal_plan import MealPlanAssignment, MealPlanTemplate
 from portal.models.nutrition_prescription import NutritionMacroPrescription
+from portal.models.organisation import (
+    CoachAthleteOwnership,
+    Organisation,
+    OrganisationMembership,
+    OrganisationRole,
+)
 from portal.models.programming import (
     ExercisePrescription,
     ProgrammingLiftSlot,
@@ -38,8 +44,8 @@ from portal.models.warmup import (
     WarmupProtocol,
     WarmupProtocolStep,
 )
-from portal.programming_services.lift_slots import create as create_lift_slot
 from portal.models.user import User, UserRole
+from portal.programming_services.lift_slots import create as create_lift_slot
 from werkzeug.security import generate_password_hash
 
 
@@ -652,6 +658,68 @@ def seed_database(app: Flask) -> None:
             ]
         )
         db.session.flush()
+
+        tenant_a_org = Organisation.query.filter_by(
+            slug="traditional-strength-e2e-a"
+        ).one_or_none() or Organisation(
+            name="Traditional Strength E2E A", slug="traditional-strength-e2e-a"
+        )
+        tenant_b_org = Organisation.query.filter_by(
+            slug="traditional-strength-e2e-b"
+        ).one_or_none() or Organisation(
+            name="Traditional Strength E2E B", slug="traditional-strength-e2e-b"
+        )
+        db.session.add_all([tenant_a_org, tenant_b_org])
+        db.session.flush()
+
+        def membership(organisation, user, role):
+            with db.session.no_autoflush:
+                existing = OrganisationMembership.query.filter_by(
+                    organisation_id=organisation.id, user_id=user.id
+                ).one_or_none()
+            return existing or OrganisationMembership(
+                organisation_id=organisation.id, user_id=user.id, role=role
+            )
+
+        tenant_a_owner_membership = membership(
+            tenant_a_org, coach, OrganisationRole.OWNER
+        )
+        tenant_a_coach_membership = membership(
+            tenant_a_org, tenant_a_coach, OrganisationRole.COACH
+        )
+        tenant_b_owner_membership = membership(
+            tenant_b_org, tenant_b_owner, OrganisationRole.OWNER
+        )
+        tenant_b_coach_membership = membership(
+            tenant_b_org, tenant_b_coach, OrganisationRole.COACH
+        )
+        db.session.add_all(
+            [
+                tenant_a_owner_membership,
+                tenant_a_coach_membership,
+                tenant_b_owner_membership,
+                tenant_b_coach_membership,
+            ]
+        )
+        db.session.flush()
+
+        def ownership(organisation, coach_membership, athlete):
+            with db.session.no_autoflush:
+                existing = CoachAthleteOwnership.query.filter_by(
+                    organisation_id=organisation.id, athlete_id=athlete.id
+                ).one_or_none()
+            return existing or CoachAthleteOwnership(
+                organisation_id=organisation.id,
+                coach_membership_id=coach_membership.id,
+                athlete_id=athlete.id,
+            )
+
+        db.session.add_all(
+            [
+                ownership(tenant_a_org, tenant_a_coach_membership, tenant_a_athlete),
+                ownership(tenant_b_org, tenant_b_coach_membership, tenant_b_athlete),
+            ]
+        )
 
         # Dedicated, immutable performance-dashboard data. Keeping these rows on
         # their own athletes means mutable training E2E workflows cannot make

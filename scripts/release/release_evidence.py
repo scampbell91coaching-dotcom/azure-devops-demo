@@ -19,7 +19,7 @@ EXIT_READY = 0
 EXIT_NOT_READY = 1
 EXIT_ERROR = 2
 MAX_OUTPUT = 4_000
-EXPECTED_ALEMBIC_HEAD = "0022_support_admin_foundation"
+EXPECTED_ALEMBIC_HEAD = "0023_organisation_invitation_delivery"
 
 SECRET_PATTERNS = (
     (re.compile(r"(?i)(password|passwd|token|secret|api[_-]?key)(\s*[=:]\s*)\S+"), r"\1\2[REDACTED]"),

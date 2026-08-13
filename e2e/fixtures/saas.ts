@@ -23,9 +23,9 @@ export type TenantFixture = Readonly<{
 
 const identity = (value: E2EIdentity): E2EIdentity => Object.freeze(value);
 
-// These are logical tenant fixtures until the additive organization and
-// membership schema lands. `owner` deliberately signs in through today's
-// coach-compatible role; this file must not be treated as authorization proof.
+// These identities map to canonical Organisation, OrganisationMembership and
+// CoachAthleteOwnership rows in the disposable seed. The global User role stays
+// coach-compatible while the membership role distinguishes owner from coach.
 export const tenants: Readonly<Record<TenantKey, TenantFixture>> = Object.freeze({
   tenantA: Object.freeze({
     key: 'tenantA',

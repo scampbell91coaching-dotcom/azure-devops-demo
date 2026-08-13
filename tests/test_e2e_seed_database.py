@@ -113,6 +113,26 @@ def test_fresh_e2e_database_seeds_once_and_safe_repeat_is_idempotent(
         for email, role in expected_accounts.items():
             assert User.query.filter_by(email=email).one().user_role == role
 
+        from portal.models.organisation import (
+            CoachAthleteOwnership,
+            Organisation,
+            OrganisationMembership,
+            OrganisationRole,
+        )
+
+        assert Organisation.query.count() == 2
+        assert OrganisationMembership.query.count() == 4
+        assert CoachAthleteOwnership.query.count() == 2
+        tenant_a_org = Organisation.query.filter_by(
+            slug="traditional-strength-e2e-a"
+        ).one()
+        tenant_a_owner = User.query.filter_by(email="coach.e2e@example.test").one()
+        assert OrganisationMembership.query.filter_by(
+            organisation_id=tenant_a_org.id,
+            user_id=tenant_a_owner.id,
+            role=OrganisationRole.OWNER,
+        ).one()
+
 
 def test_service_reset_is_idempotent_and_leaves_unrelated_athletes_unchanged(
     isolated_portal_import, tmp_path
