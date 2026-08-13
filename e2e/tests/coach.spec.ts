@@ -357,11 +357,12 @@ test('Block Factory automatic assistance falls back to suitable library metadata
 test('Block Factory previews taxonomy-backed exposures with zero assistance and incomplete state', async ({ page }) => {
   await page.goto('/programming/factory');
   await page.getByLabel('Athlete').selectOption({ label: 'Sam Morgan' });
-  await expect(page.getByText('Zero assistance is valid')).toBeVisible();
+  await expect(page.getByText('No assistance selected.')).toBeVisible();
+  await page.getByLabel('Selection mode').selectOption('none');
   await page.getByRole('button', { name: 'Preview' }).click();
-  await expect(page.getByRole('heading', { name: 'Weekly programming intelligence' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Proposal explanation' })).toBeVisible();
   await expect(
-    page.locator('.factory-preview__intelligence p').filter({ hasText: 'Exposures:' })
+    page.locator('.factory-preview__intelligence p').filter({ hasText: 'Exposures' })
   ).toContainText('2 squat · 3 bench · 1 deadlift');
   await expect(page.getByText(/Incomplete data:/)).toBeVisible();
   await expect(page.getByText('Reported fatigue:', { exact: false })).toHaveCount(0);

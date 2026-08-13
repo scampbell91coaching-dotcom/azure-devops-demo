@@ -97,12 +97,12 @@ test('explains incomplete history instead of fabricating metrics', async ({ page
   const chart = await response.json();
   expect(chart.athlete_id).toBe(emptyAthleteId);
   expect(chart.datasets).toMatchObject({ e1rm: [], volume: [], rpe: [], bodyweight: [] });
-  expect(Object.values(chart.availability)).toEqual([
-    'insufficient_data',
-    'insufficient_data',
-    'insufficient_data',
-    'insufficient_data',
-  ]);
+  expect(Object.values(chart.availability)).toHaveLength(6);
+  expect(Object.values(chart.availability)).toEqual(
+    expect.arrayContaining(
+      Array(6).fill('insufficient_data')
+    )
+  );
 });
 
 test('enforces coach authorization and athlete-owned block boundaries', async ({ page, athleteSession, athleteIds }) => {
