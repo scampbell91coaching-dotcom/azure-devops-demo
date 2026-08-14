@@ -12,6 +12,29 @@ from .extensions import db
 
 
 def register_database_commands(app: Flask) -> None:
+    @app.cli.command("reconcile-canonical-tenancy")
+    @click.option(
+        "--apply",
+        is_flag=True,
+        help="Apply the reported safe single-tenant repairs. Defaults to dry-run.",
+    )
+    def reconcile_canonical_tenancy_command(apply: bool) -> None:
+        """Audit or repair canonical access rows for a legacy installation."""
+        from .services.canonical_tenancy_reconciliation import (
+            reconcile_canonical_tenancy,
+        )
+
+        try:
+            report = reconcile_canonical_tenancy(apply=apply)
+        except SQLAlchemyError as exc:
+            db.session.rollback()
+            raise click.ClickException(f"Reconciliation failed: {exc}") from exc
+        click.echo(json.dumps(report.as_dict(), indent=2, sort_keys=True))
+        if report.status == "refused":
+            raise click.ClickException(
+                "Canonical tenancy reconciliation refused; review blockers above."
+            )
+
     @app.cli.command("migrate-sqlite-data")
     @click.option("--source", type=click.Path(path_type=Path), required=True)
     @click.option("--target", envvar="TARGET_DATABASE_URL", required=True)
