@@ -56,6 +56,7 @@ from .services.client_onboarding import build_client_onboarding, require_current
 from .programming_services.blocks import BlockActivationError, activate
 from .tenancy import (
     athlete_query_for_request,
+    organisation_membership_required,
     require_athlete_access,
     require_single_coach_membership,
 )
@@ -65,6 +66,7 @@ athletes_bp = Blueprint("athletes", __name__)
 
 
 @athletes_bp.get("/nutrition")
+@organisation_membership_required
 def nutrition_dashboard():
     return render_template(
         "nutrition/index.html",

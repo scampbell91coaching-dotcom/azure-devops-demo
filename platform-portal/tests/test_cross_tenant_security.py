@@ -214,6 +214,38 @@ def test_coach_cannot_read_other_org_athlete_profile_competition_or_bodyweight(
     assert response.status_code == 404
 
 
+@pytest.mark.parametrize("path", ["/nutrition", "/coach"])
+def test_dashboard_excludes_athlete_whose_detail_route_denies_access(tenant_app, path):
+    seed = tenant_app.config["TENANT_SEED"]
+    client = _coach_a_client(tenant_app)
+
+    denied = client.get(f"/athletes/{seed.organisation_b.athlete_id}")
+    dashboard = client.get(path)
+
+    assert denied.status_code == 404
+    assert dashboard.status_code == 200
+    own_link = f'href="/athletes/{seed.organisation_a.athlete_id}"'.encode()
+    other_link = f'href="/athletes/{seed.organisation_b.athlete_id}"'.encode()
+    assert own_link in dashboard.data
+    assert other_link not in dashboard.data
+    assert b"South private check-in" not in dashboard.data
+    assert b"South private block" not in dashboard.data
+
+
+@pytest.mark.parametrize("path", ["/nutrition", "/coach"])
+def test_dashboard_rejects_coach_when_tenancy_context_is_unresolved(
+    tenant_app, path
+):
+    seed = tenant_app.config["TENANT_SEED"]
+    client = tenant_app.test_client()
+    with client.session_transaction() as signed_in:
+        signed_in["user_id"] = seed.organisation_a.coach_id
+        signed_in["authenticated_at"] = time.time()
+        signed_in["organisation_id"] = seed.organisation_b.id
+
+    assert client.get(path).status_code == 403
+
+
 def test_coach_cannot_mutate_other_org_athlete_profile_by_direct_id(tenant_app):
     seed = tenant_app.config["TENANT_SEED"]
     response = _coach_a_client(tenant_app).post(

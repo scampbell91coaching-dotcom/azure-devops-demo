@@ -5,9 +5,9 @@ from datetime import date, datetime
 
 from sqlalchemy.orm import joinedload
 
-from ..models.athlete import Athlete
 from ..models.checkins import WeeklyCheckin
 from ..models.nutrition_checkin import NutritionCheckIn
+from ..tenancy import athlete_query_for_request
 
 
 @dataclass(frozen=True)
@@ -68,7 +68,11 @@ def _weekly_record(item: WeeklyCheckin) -> NutritionRecord:
 
 
 def get_nutrition_dashboard() -> NutritionDashboard:
-    athletes = Athlete.query.order_by(Athlete.last_name, Athlete.first_name).all()
+    from ..models.athlete import Athlete
+
+    athletes = athlete_query_for_request().order_by(
+        Athlete.last_name, Athlete.first_name
+    ).all()
     athlete_ids = [athlete.id for athlete in athletes]
 
     dedicated = (

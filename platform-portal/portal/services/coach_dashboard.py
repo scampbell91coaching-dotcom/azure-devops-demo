@@ -9,6 +9,7 @@ from ..models.athlete import Athlete
 from ..models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from ..models.nutrition_checkin import NutritionCheckIn
 from ..models.programming import TrainingBlock, TrainingSessionLog
+from ..tenancy import athlete_query_for_request
 from .client_services import nutrition_enabled_athlete_ids
 
 
@@ -65,31 +66,43 @@ class CoachDashboardService:
 
     def build(self, *, today: date | None = None) -> CoachDashboard:
         today = today or datetime.now(UTC).date()
-        athletes = Athlete.query.order_by(Athlete.last_name, Athlete.first_name).all()
-        weekly = WeeklyCheckin.query.order_by(
+        athletes = athlete_query_for_request().order_by(
+            Athlete.last_name, Athlete.first_name
+        ).all()
+        athlete_ids = [athlete.id for athlete in athletes]
+        weekly = WeeklyCheckin.query.filter(
+            WeeklyCheckin.athlete_id.in_(athlete_ids)
+        ).order_by(
             WeeklyCheckin.submitted_at.desc(), WeeklyCheckin.id.desc()
         ).all()
-        nutrition = NutritionCheckIn.query.order_by(
+        nutrition = NutritionCheckIn.query.filter(
+            NutritionCheckIn.athlete_id.in_(athlete_ids)
+        ).order_by(
             NutritionCheckIn.submitted_at.desc(), NutritionCheckIn.id.desc()
         ).all()
         training_logs = (
             TrainingSessionLog.query.options(selectinload(TrainingSessionLog.results))
+            .filter(TrainingSessionLog.athlete_id.in_(athlete_ids))
             .filter_by(status="completed")
             .filter(TrainingSessionLog.completed_at.is_not(None))
             .order_by(TrainingSessionLog.completed_at.asc(), TrainingSessionLog.id.asc())
             .all()
         )
-        settings = AthleteCheckinSettings.query.order_by(
+        settings = AthleteCheckinSettings.query.filter(
+            AthleteCheckinSettings.athlete_id.in_(athlete_ids)
+        ).order_by(
             AthleteCheckinSettings.athlete_id
         ).all()
-        blocks = TrainingBlock.query.order_by(
+        blocks = TrainingBlock.query.filter(
+            TrainingBlock.athlete_id.in_(athlete_ids)
+        ).order_by(
             TrainingBlock.created_at.desc(), TrainingBlock.id.desc()
         ).all()
 
         athlete_by_id = {athlete.id: athlete for athlete in athletes}
         explicit_settings = {item.athlete_id: item for item in settings}
         nutrition_enabled_ids = nutrition_enabled_athlete_ids(
-            [athlete.id for athlete in athletes]
+            athlete_ids
         )
         recent_cutoff = today - timedelta(days=self.RECENT_DAYS - 1)
         recent = tuple(item for item in weekly if item.week_ending >= recent_cutoff)

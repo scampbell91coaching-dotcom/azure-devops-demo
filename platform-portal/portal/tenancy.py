@@ -273,6 +273,8 @@ def organisation_membership_required(view):
     """Require active Organisation authority for a coach-facing request."""
     @wraps(view)
     def wrapped(*args, **kwargs):
+        if current_app.config["AUTHENTICATION_DISABLED"]:
+            return view(*args, **kwargs)
         if g.get("current_user") is None:
             abort(401)
         try:
