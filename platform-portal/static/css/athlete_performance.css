@@ -101,3 +101,107 @@
   .performance-chart { padding: .8rem 0; }
   .volume-chart li { grid-template-columns: 3.2rem minmax(1.5rem, 1fr) 4.8rem; }
 }
+
+/* Performance summary metrics */
+.performance-primary-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-block: 1px solid var(--coach-border);
+}
+
+.performance-primary-metrics > div {
+  display: grid;
+  align-content: start;
+  gap: var(--coach-space-xs);
+  min-width: 0;
+  padding: var(--coach-space-md);
+  border-right: 1px solid var(--coach-border);
+}
+
+.performance-primary-metrics > div:last-child {
+  border-right: 0;
+}
+
+.performance-primary-metrics span,
+.performance-supporting-metrics dt {
+  color: var(--coach-muted);
+  font-size: .8rem;
+}
+
+.performance-primary-metrics strong,
+.performance-supporting-metrics strong {
+  display: block;
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.performance-primary-metrics small,
+.performance-supporting-metrics small {
+  display: block;
+  margin-top: .2rem;
+  color: var(--coach-muted-low);
+  line-height: 1.35;
+}
+
+.performance-supporting-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  border-bottom: 1px solid var(--coach-border);
+}
+
+.performance-supporting-metrics > div {
+  display: grid;
+  grid-template-columns: minmax(9rem, .8fr) minmax(0, 1.2fr);
+  gap: var(--coach-space-sm);
+  align-items: start;
+  min-width: 0;
+  padding: var(--coach-space-md);
+  border-right: 1px solid var(--coach-border);
+}
+
+.performance-supporting-metrics > div:last-child {
+  border-right: 0;
+}
+
+.performance-supporting-metrics dt,
+.performance-supporting-metrics dd {
+  margin: 0;
+}
+
+.performance-supporting-metrics dd {
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .performance-primary-metrics,
+  .performance-supporting-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .performance-primary-metrics > div,
+  .performance-supporting-metrics > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--coach-border);
+  }
+
+  .performance-primary-metrics > div:last-child,
+  .performance-supporting-metrics > div:last-child {
+    border-bottom: 0;
+  }
+
+  .performance-supporting-metrics > div {
+    grid-template-columns: minmax(7rem, .8fr) minmax(0, 1.2fr);
+  }
+
+  .performance-primary-metrics strong,
+  .performance-supporting-metrics strong {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 410px) {
+  .performance-supporting-metrics > div {
+    grid-template-columns: 1fr;
+  }
+}
