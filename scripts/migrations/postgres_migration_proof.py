@@ -31,6 +31,7 @@ EXPECTED_CHAIN = (
     "0021_saas_billing_foundation",
     "0022_support_admin_foundation",
     "0023_organisation_invitation_delivery",
+    "0024_pdf_meal_plan_delivery",
 )
 EXPECTED_HEAD = EXPECTED_CHAIN[-1]
 

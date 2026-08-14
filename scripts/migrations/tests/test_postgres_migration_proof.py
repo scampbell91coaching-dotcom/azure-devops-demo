@@ -19,7 +19,7 @@ def test_repository_has_one_canonical_head_and_exact_tail_chain():
     result = proof.migration_graph()
 
     assert result["ok"] is True
-    assert result["heads"] == ["0023_organisation_invitation_delivery"]
+    assert result["heads"] == ["0024_pdf_meal_plan_delivery"]
     assert [(item["from"], item["to"]) for item in result["transitions"]] == list(
         zip(proof.EXPECTED_CHAIN, proof.EXPECTED_CHAIN[1:])
     )

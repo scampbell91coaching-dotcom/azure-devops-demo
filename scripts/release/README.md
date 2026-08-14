@@ -43,7 +43,7 @@ jobs or deployment evidence. In particular:
   root `pytest` invocation, which also discovers repository-level suites and
   requires their own environment;
 - it verifies that the sole Alembic head is exactly
-  `0023_organisation_invitation_delivery`;
+  `0024_pdf_meal_plan_delivery`;
 - PostgreSQL coverage is optional locally and requires both
   `POSTGRES_TEST_DATABASE_URL` and a reachable, disposable local PostgreSQL
   service with the reset command's local roles and passwordless `sudo` access;
