@@ -56,6 +56,8 @@ _ATHLETE_ENDPOINTS = {
     "nutrition_prescriptions.athlete_current",
     "meal_plan_delivery.athlete_plan",
     "meal_plan_delivery.athlete_historical_plan",
+    "meal_plan_delivery.athlete_pdf_plan",
+    "meal_plan_delivery.athlete_pdf_download",
 }
 _SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
 _DUMMY_PASSWORD_HASH = generate_password_hash("not-a-real-password", method="scrypt")

@@ -75,6 +75,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
             "EDGE_AUTH_EMAIL_HEADER", "X-Auth-Request-Email"
         ),
         NUTRITION_UPLOAD_MAX_BYTES=10 * 1024 * 1024,
+        MEAL_PLAN_PDF_MAX_BYTES=10 * 1024 * 1024,
         MFP_API_ENABLED=False,
         SMTP_HOST=os.environ.get("SMTP_HOST"),
         SMTP_PORT=int(os.environ.get("SMTP_PORT", "587")),
