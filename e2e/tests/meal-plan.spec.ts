@@ -12,8 +12,8 @@ test('coach builds, previews, publishes and revises a meal plan that the athlete
   await page.locator('input[name="effective_from"]').fill('2026-08-01');
   await page.locator('input[name="calories"]').fill('2000');
   await page.locator('input[name="protein_g"]').fill('150');
-  await page.locator('input[name="carbohydrate_g"]').fill('250');
-  await page.locator('input[name="fat_g"]').fill('60');
+  await page.locator('input[name="carbohydrate_g"]').fill('230');
+  await page.locator('input[name="fat_g"]').fill('53');
   await page.locator('input[name="fibre_g"]').fill('25');
   await page.getByRole('button', { name: 'Assign nutrition targets' }).click();
 
@@ -31,8 +31,8 @@ test('coach builds, previews, publishes and revises a meal plan that the athlete
   await component.locator('input[name="amount"]').fill('100');
   await component.locator('input[name="calories"]').fill('2000');
   await component.locator('input[name="protein_g"]').fill('150');
-  await component.locator('input[name="carbohydrate_g"]').fill('250');
-  await component.locator('input[name="fat_g"]').fill('60');
+  await component.locator('input[name="carbohydrate_g"]').fill('230');
+  await component.locator('input[name="fat_g"]').fill('53');
   await component.locator('input[name="fibre_g"]').fill('25');
   await component.getByRole('button', { name: 'Add component' }).click();
   await page.locator('form').filter({ hasText: 'Update portion' }).locator('input[name="amount"]').fill('100');
