@@ -158,3 +158,68 @@ def test_domain_contains_targets_not_actual_intake_or_adherence():
     assert "actual_calories" not in fields
     assert "adherence" not in fields
     assert "average_calories" not in fields
+
+
+def test_macro_calories_exactly_match_energy_target():
+    item = MacroTargets(
+        calories=2_505,
+        protein_g=180,
+        carbohydrate_g=300,
+        fat_g=65,
+        fibre_g=30,
+    )
+
+    assert item.macro_calories == 2_505
+    assert item.calorie_delta == 0
+    item.validate_calorie_alignment()
+
+
+@pytest.mark.parametrize("calories", [2_455, 2_555])
+def test_macro_calorie_difference_allows_exactly_fifty_kcal(calories):
+    item = MacroTargets(
+        calories=calories,
+        protein_g=180,
+        carbohydrate_g=300,
+        fat_g=65,
+        fibre_g=30,
+    )
+
+    assert abs(item.calorie_delta) == 50
+    item.validate_calorie_alignment()
+
+
+@pytest.mark.parametrize("calories", [2_454, 2_556])
+def test_macro_calorie_difference_rejects_more_than_fifty_kcal(calories):
+    item = MacroTargets(
+        calories=calories,
+        protein_g=180,
+        carbohydrate_g=300,
+        fat_g=65,
+        fibre_g=30,
+    )
+
+    assert abs(item.calorie_delta) == 51
+
+    with pytest.raises(ValueError, match=r"51 kcal .* the .* kcal target"):
+        item.validate_calorie_alignment()
+
+
+def test_training_and_rest_targets_use_same_calorie_alignment_rule():
+    training = MacroTargets(
+        calories=2_805,
+        protein_g=180,
+        carbohydrate_g=375,
+        fat_g=65,
+    )
+    rest = MacroTargets(
+        calories=2_105,
+        protein_g=180,
+        carbohydrate_g=200,
+        fat_g=65,
+    )
+
+    assert training.macro_calories == 2_805
+    assert rest.macro_calories == 2_105
+
+    training.validate_calorie_alignment()
+    rest.validate_calorie_alignment()

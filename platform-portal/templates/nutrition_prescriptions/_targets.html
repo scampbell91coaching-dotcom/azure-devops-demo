@@ -3,5 +3,7 @@
   <div><dt>Protein</dt><dd>{{ targets.protein_g }} g</dd></div>
   <div><dt>Carbohydrate</dt><dd>{{ targets.carbohydrate_g }} g</dd></div>
   <div><dt>Fat</dt><dd>{{ targets.fat_g }} g</dd></div>
+  <div><dt>Calories from macros</dt><dd>{{ targets.macro_calories }} kcal</dd></div>
+  <div><dt>Calorie difference</dt><dd>{{ '%+d'|format(targets.calorie_delta) }} kcal</dd></div>
   {% if targets.fibre_g is not none %}<div><dt>Fibre</dt><dd>{{ targets.fibre_g }} g</dd></div>{% endif %}
 </dl>

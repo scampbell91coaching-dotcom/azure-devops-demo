@@ -102,3 +102,114 @@ def test_invalid_partial_variant_and_period_are_rejected(macro_app):
     path = f"/athletes/{macro_app.config['MACRO_IDS']['athlete']}/nutrition-prescriptions"
     assert client.post(path, data=_form(token, training_calories="2700")).status_code == 400
     assert client.post(path, data=_form(token, effective_from="2026-09-01", effective_until="2026-08-01")).status_code == 400
+
+
+def test_post_rejects_daily_macro_calories_outside_tolerance_without_persisting(macro_app):
+    client = macro_app.test_client()
+    _, token = _login(client, "coach@example.test", "coach password long enough")
+    athlete_id = macro_app.config["MACRO_IDS"]["athlete"]
+    path = f"/athletes/{athlete_id}/nutrition-prescriptions"
+
+    response = client.post(
+        path,
+        data=_form(
+            token,
+            calories="3200",
+            protein_g="200",
+            carbohydrate_g="340",
+            fat_g="85",
+        ),
+    )
+
+    assert response.status_code == 400
+    assert b"2925 kcal" in response.data
+    assert b"275 kcal below" in response.data
+
+    with macro_app.app_context():
+        assert NutritionMacroPrescription.query.count() == 0
+
+
+def test_post_accepts_macro_calories_within_tolerance(macro_app):
+    client = macro_app.test_client()
+    _, token = _login(client, "coach@example.test", "coach password long enough")
+    athlete_id = macro_app.config["MACRO_IDS"]["athlete"]
+
+    response = client.post(
+        f"/athletes/{athlete_id}/nutrition-prescriptions",
+        data=_form(
+            token,
+            calories="2555",
+            protein_g="180",
+            carbohydrate_g="300",
+            fat_g="65",
+        ),
+    )
+
+    assert response.status_code == 302
+
+    with macro_app.app_context():
+        row = NutritionMacroPrescription.query.one()
+        assert row.calories == 2555
+
+
+@pytest.mark.parametrize(
+    "variant",
+    [
+        {
+            "training_calories": "3200",
+            "training_protein_g": "200",
+            "training_carbohydrate_g": "340",
+            "training_fat_g": "85",
+        },
+        {
+            "rest_calories": "3200",
+            "rest_protein_g": "200",
+            "rest_carbohydrate_g": "340",
+            "rest_fat_g": "85",
+        },
+    ],
+)
+def test_post_rejects_misaligned_day_type_variants_without_persisting(macro_app, variant):
+    client = macro_app.test_client()
+    _, token = _login(client, "coach@example.test", "coach password long enough")
+    athlete_id = macro_app.config["MACRO_IDS"]["athlete"]
+
+    response = client.post(
+        f"/athletes/{athlete_id}/nutrition-prescriptions",
+        data=_form(token, **variant),
+    )
+
+    assert response.status_code == 400
+    assert b"2925 kcal" in response.data
+
+    with macro_app.app_context():
+        assert NutritionMacroPrescription.query.count() == 0
+
+
+@pytest.mark.parametrize(
+    ("field", "payload"),
+    [
+        ("protein_g", "200; DROP TABLE nutrition_macro_prescriptions;"),
+        ("carbohydrate_g", "340 OR 1=1"),
+        ("fat_g", "<script>alert(1)</script>"),
+        ("calories", "3200.5"),
+        ("protein_g", "999999999999999999999999999"),
+        ("fat_g", "-1"),
+    ],
+)
+def test_post_rejects_malformed_or_hostile_numeric_payloads_without_persisting(
+    macro_app, field, payload
+):
+    client = macro_app.test_client()
+    _, token = _login(client, "coach@example.test", "coach password long enough")
+    athlete_id = macro_app.config["MACRO_IDS"]["athlete"]
+
+    response = client.post(
+        f"/athletes/{athlete_id}/nutrition-prescriptions",
+        data=_form(token, **{field: payload}),
+    )
+
+    assert response.status_code == 400
+
+    with macro_app.app_context():
+        assert NutritionMacroPrescription.query.count() == 0

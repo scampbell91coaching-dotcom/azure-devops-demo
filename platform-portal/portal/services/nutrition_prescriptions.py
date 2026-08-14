@@ -18,6 +18,9 @@ class DayType(str, Enum):
     REST = "rest"
 
 
+MACRO_CALORIE_TOLERANCE = 50
+
+
 @dataclass(frozen=True)
 class MacroTargets:
     calories: int
@@ -25,6 +28,29 @@ class MacroTargets:
     carbohydrate_g: int
     fat_g: int
     fibre_g: int | None = None
+
+    @property
+    def macro_calories(self) -> int:
+        return (self.protein_g * 4) + (self.carbohydrate_g * 4) + (self.fat_g * 9)
+
+    @property
+    def calorie_delta(self) -> int:
+        return self.macro_calories - self.calories
+
+    def validate_calorie_alignment(
+        self,
+        tolerance: int = MACRO_CALORIE_TOLERANCE,
+    ) -> None:
+        delta = self.calorie_delta
+        if abs(delta) <= tolerance:
+            return
+
+        direction = "above" if delta > 0 else "below"
+        raise ValueError(
+            f"Protein, carbohydrate and fat provide {self.macro_calories} kcal, "
+            f"which is {abs(delta)} kcal {direction} the {self.calories} kcal target. "
+            f"Keep macro-derived calories within ±{tolerance} kcal of the calorie target."
+        )
 
     def __post_init__(self) -> None:
         limits = {

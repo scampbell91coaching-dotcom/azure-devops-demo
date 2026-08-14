@@ -29,7 +29,9 @@ def _targets(prefix: str = "") -> MacroTargets | None:
         return None
     if not all(values):
         raise ValueError("Calories, protein, carbohydrate and fat are required for each selected target set.")
-    return MacroTargets(*(int(value) for value in values), int(fibre) if fibre else None)
+    targets = MacroTargets(*(int(value) for value in values), int(fibre) if fibre else None)
+    targets.validate_calorie_alignment()
+    return targets
 
 
 @nutrition_prescriptions_bp.get("/athletes/<int:athlete_id>/nutrition-prescriptions")
