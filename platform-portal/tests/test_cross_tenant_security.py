@@ -18,7 +18,7 @@ from portal.models.athlete import Athlete
 from portal.models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from portal.models.meal_plan import MealPlanAssignment, MealPlanTemplate
 from portal.models.nutrition_prescription import NutritionMacroPrescription
-from portal.models.programming import TrainingBlock, TrainingSession, TrainingWeek
+from portal.models.programming import ExercisePrescription, TrainingBlock, TrainingSession, TrainingWeek
 from portal.models.user import User, UserRole
 from portal.models.organisation import (
     CoachAthleteOwnership,
@@ -43,6 +43,7 @@ class TenantSeed:
     block_b: int
     week_b: int
     session_b: int
+    prescription_b: int
     checkin_b: int
     macro_b: str
     meal_template_b: str
@@ -109,6 +110,13 @@ def tenant_app():
         session_b = TrainingSession(
             week=week_b, name="South private session", position=1
         )
+        prescription_b = ExercisePrescription(
+            session=session_b,
+            exercise_name="South private exercise",
+            position=1,
+            sets=3,
+            reps="5",
+        )
         checkin_b = WeeklyCheckin(
             athlete=athlete_b,
             week_ending=date(2026, 8, 9),
@@ -152,6 +160,7 @@ def tenant_app():
         db.session.add_all(
             [
                 block_b,
+                prescription_b,
                 checkin_b,
                 macro_b,
                 template_b,
@@ -179,6 +188,7 @@ def tenant_app():
             block_b=block_b.id,
             week_b=week_b.id,
             session_b=session_b.id,
+            prescription_b=prescription_b.id,
             checkin_b=checkin_b.id,
             macro_b=macro_b.id,
             meal_template_b=template_b.id,
@@ -279,6 +289,61 @@ def test_coach_cannot_mutate_other_org_programming_block_direct_id(tenant_app):
         data={"csrf_token": "tenant-a-csrf"},
     )
     assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "payload"),
+    [
+        ("post", "/programming/api/sessions/{session_b}/prescriptions", {"exercise_name": "tampered"}),
+        ("patch", "/programming/api/prescriptions/{prescription_b}", {"sets": 9}),
+        ("delete", "/programming/api/prescriptions/{prescription_b}", None),
+        ("post", "/programming/api/sessions/{session_b}/reorder", {"prescription_ids": []}),
+    ],
+)
+def test_coach_cannot_mutate_other_org_programming_json(
+    tenant_app, method, path, payload
+):
+    seed = tenant_app.config["TENANT_SEED"]
+    response = getattr(_coach_a_client(tenant_app), method)(
+        path.format(**vars(seed)), json=payload,
+        headers={"X-CSRF-Token": "tenant-a-csrf"},
+    )
+    assert response.status_code == 404
+
+    with tenant_app.app_context():
+        item = db.session.get(ExercisePrescription, seed.prescription_b)
+        assert item is not None
+        assert item.exercise_name == "South private exercise"
+        assert item.sets == 3
+
+
+def test_coach_cannot_read_other_org_programming_metrics(tenant_app):
+    seed = tenant_app.config["TENANT_SEED"]
+    response = _coach_a_client(tenant_app).get(
+        f"/programming/api/blocks/{seed.block_b}/metrics"
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize("path", ["/programming/block-factory", "/programming/factory/preview"])
+def test_both_factories_reject_other_org_athlete(tenant_app, path):
+    seed = tenant_app.config["TENANT_SEED"]
+    response = _coach_a_client(tenant_app).post(
+        path,
+        data={
+            "csrf_token": "tenant-a-csrf",
+            "athlete_id": seed.organisation_b.athlete_id,
+            "name": "Cross tenant block",
+            "squat_days": 1,
+            "bench_days": 1,
+            "deadlift_days": 1,
+            "weeks": 1,
+        },
+    )
+    assert response.status_code == 404
+
+    with tenant_app.app_context():
+        assert TrainingBlock.query.filter_by(name="Cross tenant block").first() is None
 
 
 def test_coach_cannot_read_other_org_checkin_direct_id(tenant_app):

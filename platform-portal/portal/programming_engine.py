@@ -5,6 +5,7 @@ from flask import Blueprint, abort, jsonify
 from .extensions import db
 from .models.exercise_library import DayTemplate, Exercise
 from .models.programming import ExercisePrescription, TrainingBlock
+from .tenancy import require_programming_access
 
 programming_engine_bp = Blueprint("programming_engine", __name__)
 
@@ -77,6 +78,7 @@ def block_metrics(block_id: int):
 
     if block is None:
         abort(404)
+    require_programming_access(block)
 
     prescriptions: list[ExercisePrescription] = []
 

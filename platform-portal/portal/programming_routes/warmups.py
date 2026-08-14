@@ -8,6 +8,7 @@ from ..models.programming import TrainingSession
 from ..models.warmup import WarmupAssignment, WarmupOverride, WarmupPlanSnapshot, WarmupProtocol, WarmupProtocolStep
 from ..services.movement_warmup_candidates import find_candidate
 from ..programming_services.revisions import append_revision
+from ..tenancy import require_programming_access
 
 PHASES = {"general": 10, "athlete": 20, "lift": 30, "barbell": 40}
 
@@ -16,6 +17,7 @@ def _session(session_id: int) -> TrainingSession:
     item = db.session.get(TrainingSession, session_id)
     if item is None:
         abort(404)
+    require_programming_access(item)
     if WarmupPlanSnapshot.query.filter_by(athlete_id=item.week.block.athlete_id, session_id=item.id).first():
         abort(409, description="The athlete has opened this session; its warm-up history is locked.")
     return item

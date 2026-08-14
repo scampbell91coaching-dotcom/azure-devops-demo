@@ -3,6 +3,7 @@ from flask import Blueprint, abort, redirect, request, url_for
 from ..extensions import db
 from ..models.programming import ProgrammingLiftSlot, TrainingSession
 from ..programming_services.lift_slots import delete, save_from_form
+from ..tenancy import require_programming_access
 
 
 def _redirect(session: TrainingSession):
@@ -15,6 +16,7 @@ def register_lift_slot_routes(blueprint: Blueprint) -> None:
         session = db.session.get(TrainingSession, session_id)
         if session is None:
             abort(404)
+        require_programming_access(session)
         try:
             save_from_form(session, request.form)
         except (TypeError, ValueError):
@@ -27,6 +29,7 @@ def register_lift_slot_routes(blueprint: Blueprint) -> None:
         if slot is None:
             abort(404)
         session = slot.session
+        require_programming_access(session)
         try:
             save_from_form(session, request.form, slot=slot)
         except (TypeError, ValueError):
@@ -39,5 +42,6 @@ def register_lift_slot_routes(blueprint: Blueprint) -> None:
         if slot is None:
             abort(404)
         session = slot.session
+        require_programming_access(session)
         delete(slot)
         return _redirect(session)

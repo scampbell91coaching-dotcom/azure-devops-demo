@@ -36,6 +36,7 @@ from .services.weekly_programming_intelligence import WeeklyProgrammingIntellige
 from .services.accessory_intelligence import AccessoryIntelligence
 from .services.programming_athlete_state import aggregate_programming_athlete_state
 from .services.proposal_explanations import ProposalExplanationService
+from .tenancy import athlete_query_for_request, require_athlete_access
 
 block_factory_bp = Blueprint("block_factory", __name__)
 
@@ -879,6 +880,7 @@ def _load_proposal() -> tuple[AthleteStateRecommendation, dict[str, Any]]:
         or proposal.recommendation_type not in ACCEPTED_PROPOSAL_TYPES
     ):
         abort(404)
+    require_athlete_access(proposal.athlete_id)
     payload = proposal.recommendation_json
     expected = _proposal_integrity(payload)
     if not hmac.compare_digest(expected, supplied_integrity):
@@ -903,11 +905,11 @@ def _mark_decided(proposal: AthleteStateRecommendation, status: str) -> bool:
 def wizard():
     selected_athlete_id = request.args.get("athlete_id", type=int)
     selected_athlete = (
-        db.session.get(Athlete, selected_athlete_id)
+        require_athlete_access(selected_athlete_id)
         if selected_athlete_id is not None
         else None
     )
-    athletes = Athlete.query.order_by(
+    athletes = athlete_query_for_request().order_by(
         Athlete.first_name.asc(),
         Athlete.last_name.asc(),
     ).all()
@@ -932,14 +934,14 @@ def wizard():
 
 @block_factory_bp.post("/programming/factory/preview")
 def preview():
-    factory = _parse_factory_request()
-    athlete = db.session.get(Athlete, factory.athlete_id)
-
-    if athlete is None:
-        abort(404)
+    try:
+        factory = _parse_factory_request()
+    except ValueError:
+        abort(400, description="Factory dates and numeric inputs must be valid.")
+    athlete = require_athlete_access(factory.athlete_id)
     factory = _apply_active_coach_overrides(factory)
 
-    athletes = Athlete.query.order_by(
+    athletes = athlete_query_for_request().order_by(
         Athlete.first_name.asc(),
         Athlete.last_name.asc(),
     ).all()
@@ -1037,10 +1039,7 @@ def generate():
     if proposal.status != "proposed":
         abort(409, description="Proposal was already decided and cannot be replayed.")
     factory = _factory_from_payload(payload)
-    athlete = db.session.get(Athlete, proposal.athlete_id)
-
-    if athlete is None:
-        abort(404)
+    athlete = require_athlete_access(proposal.athlete_id)
 
     try:
         scheduled_preview = _preview(factory)

@@ -14,6 +14,7 @@ from .models.programming import (
     TrainingWeek,
 )
 from .programming_services.revisions import append_revision
+from .tenancy import athlete_query_for_request, require_athlete_access, require_programming_access
 
 programming_templates_bp = Blueprint("programming_templates", __name__)
 
@@ -128,7 +129,7 @@ def _apply_template(session: TrainingSession, template_key: str) -> None:
 
 @programming_templates_bp.get("/programming/block-factory")
 def block_factory():
-    athletes = Athlete.query.order_by(
+    athletes = athlete_query_for_request().order_by(
         Athlete.last_name.asc(), Athlete.first_name.asc()
     ).all()
     return render_template("programming/block_factory.html", athletes=athletes)
@@ -136,9 +137,10 @@ def block_factory():
 
 @programming_templates_bp.post("/programming/block-factory")
 def create_factory_block():
-    athlete = db.session.get(Athlete, request.form.get("athlete_id", type=int))
-    if athlete is None:
-        abort(404)
+    athlete_id = request.form.get("athlete_id", type=int)
+    if athlete_id is None:
+        abort(400)
+    athlete = require_athlete_access(athlete_id)
 
     factory = FactoryRequest(
         squat_days=_bounded_int("squat_days", 1, 5),
@@ -190,6 +192,7 @@ def apply_day_template(session_id: int):
     session = db.session.get(TrainingSession, session_id)
     if session is None:
         abort(404)
+    require_programming_access(session)
     key = request.form.get("template_key", "").strip().upper()
     if key not in DAY_TEMPLATES:
         abort(400)

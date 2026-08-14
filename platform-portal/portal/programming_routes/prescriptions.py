@@ -3,6 +3,7 @@ from flask import Blueprint, abort, redirect, request, url_for
 from ..extensions import db
 from ..models.programming import ExercisePrescription, TrainingSession
 from ..programming_services.prescriptions import create, delete, update
+from ..tenancy import require_programming_access
 
 
 def _redirect_to_editor(session: TrainingSession):
@@ -23,6 +24,7 @@ def register_prescription_routes(blueprint: Blueprint) -> None:
         session = db.session.get(TrainingSession, session_id)
         if session is None:
             abort(404)
+        require_programming_access(session)
         name = request.form.get("exercise_name", "").strip()
         if not name:
             abort(400)
@@ -37,6 +39,7 @@ def register_prescription_routes(blueprint: Blueprint) -> None:
         item = db.session.get(ExercisePrescription, prescription_id)
         if item is None:
             abort(404)
+        require_programming_access(item.session)
         if item.lift_slot_id is not None:
             abort(409, description="Edit main lifts through the lift-slot editor.")
         name = request.form.get("exercise_name", "").strip()
@@ -53,6 +56,7 @@ def register_prescription_routes(blueprint: Blueprint) -> None:
         item = db.session.get(ExercisePrescription, prescription_id)
         if item is None:
             abort(404)
+        require_programming_access(item.session)
         if item.lift_slot_id is not None:
             abort(409, description="Remove main lifts through the lift-slot editor.")
         session = item.session
