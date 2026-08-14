@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: stevedevopslab6280.azurecr.io/flask-web
-  tag: 714a19df46fc445def8c53c5adf5f7a64cb04b1c
+  tag: 013810992b2a3e12e92f52a654f69eb560c4c9ce
   digest: ""
   pullPolicy: IfNotPresent
 
