@@ -370,7 +370,10 @@ class AccessoryIntelligence:
         families is supported for legacy rows; loaded carries are deliberately
         excluded so grip work does not collapse into farmer-carry suggestions.
         """
-        if priority == "none":
+        # Hook grip itself is an explicit competition requirement. It must make
+        # hook-specific practice eligible even when generic grip work is not a
+        # priority; every other competition grip retains the opt-out.
+        if priority == "none" and competition_grip != "hook":
             return []
         results: list[AccessorySuggestion] = []
         for suggestion in self.candidates(
@@ -402,7 +405,11 @@ class AccessoryIntelligence:
                 continue
             reasons = list(suggestion.reasons)
             reasons.extend((
-                f"grip-work priority is {priority}",
+                (
+                    "hook-grip competition requirement"
+                    if priority == "none"
+                    else f"grip-work priority is {priority}"
+                ),
                 f"matched {family}",
                 f"competition grip is {competition_grip}",
             ))
