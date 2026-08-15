@@ -376,6 +376,11 @@ test('Block Factory previews taxonomy-backed exposures with zero assistance and 
   await expect(
     page.locator('.factory-preview__intelligence p').filter({ hasText: 'Exposures' })
   ).toContainText('2 squat · 3 bench · 1 deadlift');
+
+  await page
+    .getByText('Review decision evidence and progression', { exact: true })
+    .click();
+
   await expect(page.getByText(/Incomplete data:/)).toBeVisible();
   await expect(page.getByText('Reported fatigue:', { exact: false })).toHaveCount(0);
   await expect(page.getByText(/0 assistance exercises/)).toHaveCount(4);
