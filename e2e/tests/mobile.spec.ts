@@ -97,6 +97,17 @@ for (const width of [320, 390, 430]) {
       await expectNoHorizontalOverflow(page);
     }
 
+    await page.goto('/coach');
+    await expect(page.locator('.coach-topbar__inner')).toHaveCSS('min-height', '60px');
+    await expect(page.locator('.coach-dashboard__summary')).toHaveCSS('grid-template-columns', /.+ .+/);
+
+    await page.goto('/nutrition');
+    const nutritionRecord = page.locator('.nutrition-ledger tbody > tr:not(.nutrition-evidence-row)').first();
+    await expect(nutritionRecord).toHaveCSS('display', 'grid');
+    await expect(nutritionRecord.locator('[data-label="Actual intake"]')).toBeVisible();
+    await expect(nutritionRecord.getByRole('link', { name: /Open record/ })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
     const menu = page.getByRole('button', { name: 'Menu' });
     await menu.click();
     await expect(page.getByRole('link', { name: 'Nutrition', exact: true })).toBeVisible();

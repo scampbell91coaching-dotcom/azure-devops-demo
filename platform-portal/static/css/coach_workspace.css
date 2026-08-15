@@ -752,6 +752,7 @@ select {
 }
 
 @media (max-width: 650px) {
+  :root { --coach-space-page: .75rem; --coach-space-md: .75rem; --coach-space-lg: 1rem; }
   .coach-shell,
   .coach-topbar__inner {
     width: min(100% - 1rem, var(--coach-shell));
@@ -762,7 +763,23 @@ select {
   }
 
   .coach-brand__copy strong { font-size: .95rem; }
-  .coach-brand__mark { width: 1.9rem; height: 2.75rem; }
+  .coach-brand__mark { width: 1.45rem; height: 2.1rem; }
+  .coach-topbar__inner { min-height: 3.75rem; }
+  .coach-context { top: 3.75rem; }
+  .coach-context__inner { width: calc(100% - 1rem); min-height: 2rem; }
+  .coach-menu-button { min-height: 2.75rem; padding: .45rem .7rem; }
+  .coach-navigation { max-height: calc(100dvh - 3.75rem); padding: .5rem .75rem max(.75rem, env(safe-area-inset-bottom)); }
+  .coach-navigation a, .coach-navigation__utilities button { display: flex; min-height: 2.75rem; align-items: center; padding: .5rem .25rem; }
+  .coach-main { padding-block: .75rem 2rem; }
+  .coach-page { gap: .75rem; }
+  .coach-page__header { margin: 0; }
+  .coach-page__header h1 { margin: .15rem 0 .3rem; font-size: clamp(1.55rem, 7vw, 1.9rem); }
+  .coach-page__header p { font-size: .86rem; line-height: 1.4; }
+  .coach-eyebrow, .coach-back-link { font-size: .68rem; }
+  .coach-back-link { margin-bottom: .4rem; }
+  .coach-panel { padding-top: .75rem; }
+  .coach-panel__heading { margin-bottom: .5rem; }
+  .coach-panel__heading h2 { font-size: 1.2rem; }
 
   .coach-page__header--split {
     align-items: stretch;
@@ -777,11 +794,17 @@ select {
   .coach-metric-grid,
   .coach-score-fields,
   .coach-score-grid,
-  .coach-checkin-card__copy,
-  .coach-dashboard__summary,
-  .coach-dashboard__grid {
+    .coach-checkin-card__copy,
+    .coach-dashboard__grid {
     grid-template-columns: 1fr;
   }
+
+  .coach-dashboard__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; border-block: 1px solid var(--coach-border); }
+  .coach-dashboard__summary .coach-metric { min-width: 0; padding: .55rem .65rem; border-bottom: 1px solid var(--coach-border); }
+  .coach-dashboard__summary .coach-metric:nth-child(odd) { border-inline-start: 0; }
+  .coach-dashboard__summary .coach-metric:nth-last-child(-n + 2) { border-bottom: 0; }
+  .coach-metric span { font-size: .7rem; line-height: 1.25; }
+  .coach-metric strong { margin-top: .15rem; font-size: 1rem; }
 
   .coach-dashboard-list article {
     align-items: stretch;
@@ -802,6 +825,13 @@ select {
   .coach-inbox-item { align-items: stretch; flex-direction: column; }
   .coach-inbox-item > .coach-link-button,
   .coach-inbox-item > .coach-primary-button { width: 100%; }
+  .coach-form, .coach-form-grid, .coach-score-fields { gap: .65rem; }
+  .coach-form input, .coach-form textarea, .coach-form select, .coach-response-form textarea { min-width: 0; font-size: 16px; }
+  .coach-link-button, .coach-primary-button { min-height: 2.75rem; }
+  .coach-empty-state { padding: .65rem 0; }
+  .coach-empty-state h3 { margin-bottom: .25rem; font-size: 1.15rem; }
+  .coach-dashboard-list article { gap: .55rem; padding-bottom: .55rem; }
+  .coach-dashboard-list article .coach-link-button { width: 100%; }
 }
 
 /* Allow coach workspace content to shrink within narrow mobile viewports. */

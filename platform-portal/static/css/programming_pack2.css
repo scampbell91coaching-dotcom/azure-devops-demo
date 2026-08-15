@@ -167,8 +167,9 @@
     flex-direction: column;
   }
 
-  .programming-template-table { overflow-x: auto; }
-  .programming-template-table__head, .programming-template-row { min-width: 760px; }
+  .programming-template-table { display: grid; gap: .65rem; border: 0; overflow: visible; }
+  .programming-template-table__head { display: none; }
+  .programming-template-row { display: grid; min-width: 0; grid-template-columns: 1fr; gap: .35rem; border: 1px solid var(--coach-border); border-top: 2px solid var(--coach-accent); padding: .7rem; }
   .builder-panel ol.session-lift-slots > li { grid-template-columns: 1fr; }
   .builder-shortcuts { display: none; }.future-action { align-items: stretch; flex-direction: column; }.future-action button { width: 100%; }
 }

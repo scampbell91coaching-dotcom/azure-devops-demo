@@ -298,6 +298,9 @@
             <h3>Proposal explanation</h3>
             <p><strong>Exposures</strong> {{ intelligence.exposures.squat }} squat · {{ intelligence.exposures.bench }} bench · {{ intelligence.exposures.deadlift }} deadlift</p>
           </div>
+          <details class="factory-decision-details">
+          <summary>Review decision evidence and progression</summary>
+          <div class="factory-decision-details__body">
           <p data-testid="proposal-reference"><strong>Reference:</strong> {{ explanation.reference_block.label }} — {{ explanation.reference_block.reason }}</p>
           <h4>What was kept</h4>
           {% if explanation.kept %}<ul>{% for item in explanation.kept %}<li data-reason-id="{{ item.reason_id }}">{{ item.label }} — {{ item.reason }}</li>{% endfor %}</ul>{% else %}<p>No exposure was identified as unchanged.</p>{% endif %}
@@ -339,6 +342,8 @@
             <section><h4>Reasoning</h4><ul>{% for item in intelligence.reasoning %}<li>{{ item }}</li>{% endfor %}</ul></section>
             <section><h4>Constraints &amp; data safety</h4><ul>{% for item in intelligence.constraints %}<li>{{ item }}</li>{% endfor %}</ul></section>
           </div>
+          </div>
+          </details>
           {% if proposal_override %}<p class="proposal-provenance" data-testid="coach-override-provenance"><strong>Coach override:</strong> {{ proposal_override.reason }} · {{ proposal_override.recorded_by }}</p>{% endif %}
           <label><span>Coach override reason (required after editing)</span><textarea name="override_reason" form="block-factory-form"></textarea></label>
           <div class="proposal-actions">
