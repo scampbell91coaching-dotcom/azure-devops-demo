@@ -38,7 +38,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: portal
-          image: stevedevopslab6280.azurecr.io/platform-portal-private:013810992b2a3e12e92f52a654f69eb560c4c9ce
+          image: stevedevopslab6280.azurecr.io/platform-portal-private:0201f96ef02dea8960ac38ac4b2ac92d63be9ea5
           ports:
             - name: http
               containerPort: 8080
@@ -125,7 +125,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: migrate
-          image: stevedevopslab6280.azurecr.io/platform-portal-private:013810992b2a3e12e92f52a654f69eb560c4c9ce
+          image: stevedevopslab6280.azurecr.io/platform-portal-private:0201f96ef02dea8960ac38ac4b2ac92d63be9ea5
           command: ["/bin/sh", "-ec"]
           args:
             - >-
