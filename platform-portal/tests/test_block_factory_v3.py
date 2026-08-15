@@ -9,6 +9,7 @@ from portal.models.athlete import Athlete
 from portal.models.athlete_state import AthleteStateOverride, AthleteStateRecommendation
 from portal.models.exercise_library import Exercise
 from portal.models.programming import TrainingBlock
+from portal.models.warmup import WarmupAssignment
 from portal.services.athlete_state import SignalDraft
 from portal.services.weekly_programming_intelligence import (
     WeeklyProgrammingIntelligence,
@@ -851,6 +852,28 @@ def test_proposal_integrity_staleness_replay_and_provenance():
         assert proposal.decided_by == "test-coach"
         assert proposal.decided_at is not None
         assert TrainingBlock.query.count() == 1
+
+
+def test_factory_composes_general_and_targeted_sbd_warmups():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    client = app.test_client()
+    response, accepted = preview_and_accept(client, base_form(athlete_id))
+    assert response.status_code == 200
+    assert accepted.status_code == 302
+    with app.app_context():
+        block = TrainingBlock.query.one()
+        for session in block.weeks[0].sessions:
+            assignments = WarmupAssignment.query.filter_by(session_id=session.id).all()
+            general = [item for item in assignments if item.lift_slot_id is None]
+            targeted = [item for item in assignments if item.lift_slot_id is not None]
+            assert [item.protocol.stable_key for item in general] == ["factory-session-general"]
+            assert {item.lift_slot_id for item in targeted} == {
+                slot.id for slot in session.lift_slots
+            }
+            assert {item.protocol.stable_key for item in targeted} == {
+                f"factory-{slot.lift_family}" for slot in session.lift_slots
+            }
 
 
 def test_stale_proposal_is_rejected_when_athlete_state_changes():

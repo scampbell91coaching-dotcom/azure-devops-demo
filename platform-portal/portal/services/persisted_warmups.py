@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from ..extensions import db
@@ -29,6 +28,7 @@ class WarmupStepView:
     notes: str | None
     source_type: str
     source_version: int | None
+    lift_slot_id: int | None = None
 
     @property
     def phase_label(self) -> str:
@@ -54,7 +54,11 @@ def resolve_warmup(athlete_id: int, session_id: int) -> tuple[WarmupStepView, ..
             selectinload(WarmupAssignment.protocol).selectinload(WarmupProtocol.steps)
         )
         .filter_by(athlete_id=athlete_id, session_id=session_id)
-        .order_by(WarmupAssignment.id)
+        .order_by(
+            WarmupAssignment.lift_slot_id.is_not(None),
+            WarmupAssignment.lift_slot_id,
+            WarmupAssignment.id,
+        )
         .all()
     )
     steps: list[WarmupStepView] = []
@@ -65,6 +69,7 @@ def resolve_warmup(athlete_id: int, session_id: int) -> tuple[WarmupStepView, ..
                 kind=row.kind, sets=row.sets, reps=row.reps, duration_seconds=row.duration_seconds,
                 percentage=row.percentage, load_kg=row.load_kg, rest_seconds=row.rest_seconds,
                 notes=row.notes, source_type="warmup_protocol", source_version=assignment.protocol.version,
+                lift_slot_id=assignment.lift_slot_id,
             ))
     for override in WarmupOverride.query.filter_by(athlete_id=athlete_id, session_id=session_id).order_by(WarmupOverride.id):
         if override.action == "remove":
@@ -76,6 +81,7 @@ def resolve_warmup(athlete_id: int, session_id: int) -> tuple[WarmupStepView, ..
                 duration_seconds=override.duration_seconds, percentage=override.percentage,
                 load_kg=override.load_kg, rest_seconds=override.rest_seconds, notes=override.notes,
                 source_type="manual_override", source_version=None,
+                lift_slot_id=None,
             ))
     return tuple(sorted(steps, key=lambda item: item.phase))
 
@@ -83,24 +89,34 @@ def resolve_warmup(athlete_id: int, session_id: int) -> tuple[WarmupStepView, ..
 def athlete_warmup(athlete_id: int, session_id: int) -> tuple[WarmupStepView, ...]:
     snapshot = WarmupPlanSnapshot.query.filter_by(athlete_id=athlete_id, session_id=session_id).first()
     if snapshot is None:
-        resolved = resolve_warmup(athlete_id, session_id)
-        snapshot = WarmupPlanSnapshot(athlete_id=athlete_id, session_id=session_id)
-        for position, item in enumerate(resolved, 1):
-            snapshot.steps.append(WarmupPlanSnapshotStep(
-                position=position, phase=item.phase, name=item.name, kind=item.kind, sets=item.sets,
-                reps=item.reps, duration_seconds=item.duration_seconds, percentage=item.percentage,
-                load_kg=item.load_kg, rest_seconds=item.rest_seconds, notes=item.notes,
-                source_type=item.source_type, source_key=item.key, source_version=item.source_version,
-            ))
-        db.session.add(snapshot)
-        try:
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            snapshot = WarmupPlanSnapshot.query.filter_by(athlete_id=athlete_id, session_id=session_id).one()
+        return resolve_warmup(athlete_id, session_id)
     return tuple(WarmupStepView(
         key=row.source_key, phase=row.phase, name=row.name, kind=row.kind, sets=row.sets,
         reps=row.reps, duration_seconds=row.duration_seconds, percentage=row.percentage,
         load_kg=row.load_kg, rest_seconds=row.rest_seconds, notes=row.notes,
         source_type=row.source_type, source_version=row.source_version,
     ) for row in snapshot.steps)
+
+
+def freeze_warmup(athlete_id: int, session_id: int) -> WarmupPlanSnapshot | None:
+    """Stage the first non-empty delivered plan in the caller's save transaction."""
+    snapshot = WarmupPlanSnapshot.query.filter_by(
+        athlete_id=athlete_id, session_id=session_id
+    ).one_or_none()
+    if snapshot is not None:
+        return snapshot
+    resolved = resolve_warmup(athlete_id, session_id)
+    if not resolved:
+        return None
+    snapshot = WarmupPlanSnapshot(athlete_id=athlete_id, session_id=session_id)
+    for position, item in enumerate(resolved, 1):
+        snapshot.steps.append(WarmupPlanSnapshotStep(
+            position=position, phase=item.phase, name=item.name, kind=item.kind,
+            sets=item.sets, reps=item.reps, duration_seconds=item.duration_seconds,
+            percentage=item.percentage, load_kg=item.load_kg,
+            rest_seconds=item.rest_seconds, notes=item.notes,
+            source_type=item.source_type, source_key=item.key,
+            source_version=item.source_version,
+        ))
+    db.session.add(snapshot)
+    return snapshot

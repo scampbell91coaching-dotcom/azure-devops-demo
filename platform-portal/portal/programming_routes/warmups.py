@@ -4,7 +4,7 @@ from flask import Blueprint, abort, flash, g, redirect, request, url_for
 
 from ..extensions import db
 from ..models.athlete_state import AthleteStateOverride
-from ..models.programming import TrainingSession
+from ..models.programming import ProgrammingLiftSlot, TrainingSession
 from ..models.warmup import WarmupAssignment, WarmupOverride, WarmupPlanSnapshot, WarmupProtocol, WarmupProtocolStep
 from ..services.movement_warmup_candidates import find_candidate
 from ..programming_services.revisions import append_revision
@@ -27,6 +27,16 @@ def _actor_id():
     return getattr(g.get("current_user"), "id", None)
 
 
+def _target_slot(session: TrainingSession) -> ProgrammingLiftSlot | None:
+    slot_id = request.form.get("lift_slot_id", type=int)
+    if slot_id is None:
+        return None
+    slot = db.session.get(ProgrammingLiftSlot, slot_id)
+    if slot is None or slot.session_id != session.id:
+        abort(400, description="Warm-up lift slot must belong to this session.")
+    return slot
+
+
 def register_warmup_routes(blueprint: Blueprint) -> None:
     @blueprint.post("/programming/sessions/<int:session_id>/warmup-protocols")
     def create_warmup_protocol(session_id: int):
@@ -34,6 +44,7 @@ def register_warmup_routes(blueprint: Blueprint) -> None:
         name = request.form.get("name", "").strip()
         reason = request.form.get("reason", "").strip()
         raw_steps = request.form.get("steps", "")
+        lift_slot = _target_slot(session)
         if not name or not reason:
             abort(400, description="Plan name and assignment reason are required.")
         stable_key = re.sub(r"[^a-z0-9]+", "-", name.casefold()).strip("-")[:80]
@@ -62,7 +73,7 @@ def register_warmup_routes(blueprint: Blueprint) -> None:
             abort(400, description="Add at least one warm-up step.")
         db.session.add(protocol)
         db.session.flush()
-        db.session.add(WarmupAssignment(protocol_id=protocol.id, athlete_id=session.week.block.athlete_id, session_id=session.id, assigned_by_user_id=_actor_id(), reason=reason))
+        db.session.add(WarmupAssignment(protocol_id=protocol.id, athlete_id=session.week.block.athlete_id, session_id=session.id, lift_slot_id=lift_slot.id if lift_slot else None, assigned_by_user_id=_actor_id(), reason=reason))
         append_revision(session.week.block, change_type="warmup_created", summary=f'Created and assigned warm-up "{name}"', reason=reason)
         db.session.commit()
         flash("Reusable warm-up created and assigned.", "success")
@@ -73,9 +84,10 @@ def register_warmup_routes(blueprint: Blueprint) -> None:
         session = _session(session_id)
         protocol = db.session.get(WarmupProtocol, request.form.get("protocol_id", type=int))
         reason = request.form.get("reason", "").strip()
+        lift_slot = _target_slot(session)
         if protocol is None or not reason:
             abort(400, description="Protocol and assignment reason are required.")
-        db.session.add(WarmupAssignment(protocol_id=protocol.id, athlete_id=session.week.block.athlete_id, session_id=session.id, assigned_by_user_id=_actor_id(), reason=reason))
+        db.session.add(WarmupAssignment(protocol_id=protocol.id, athlete_id=session.week.block.athlete_id, session_id=session.id, lift_slot_id=lift_slot.id if lift_slot else None, assigned_by_user_id=_actor_id(), reason=reason))
         append_revision(session.week.block, change_type="warmup_assigned", summary=f'Assigned warm-up "{protocol.name}"', reason=reason)
         db.session.commit()
         return redirect(url_for("programming.session", session_id=session.id))
