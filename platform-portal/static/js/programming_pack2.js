@@ -11,6 +11,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const status = builder.querySelector("[data-autosave-status]");
   const suggestions = builder.querySelector("[data-exercise-suggestions]");
   const csrfToken = newRowForm.elements.csrf_token?.value;
+  const prescriptionFields = [
+    "exercise_name",
+    "sets",
+    "reps",
+    "load_kg",
+    "percentage",
+    "rpe",
+    "tempo",
+    "rest_seconds",
+    "notes",
+  ];
   let draggedRow = null;
   let saveTimer = null;
 
@@ -196,7 +207,9 @@ document.addEventListener("DOMContentLoaded", () => {
   newRowForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const payload = Object.fromEntries(new FormData(newRowForm).entries());
+    const payload = Object.fromEntries(
+      prescriptionFields.map((name) => [name, newRowForm.elements[name].value])
+    );
     setStatus("Adding…", "is-saving");
 
     try {

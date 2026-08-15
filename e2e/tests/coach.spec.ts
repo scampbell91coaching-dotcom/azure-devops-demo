@@ -199,6 +199,18 @@ test('adds, edits, deletes, and preserves prescription order without an HTTP 400
 
   const response = await creationResponse;
   expect(response.status()).toBe(201);
+  expect(response.request().postDataJSON()).toEqual({
+    exercise_name: 'Lat Pulldown',
+    sets: '3',
+    reps: '10',
+    load_kg: '',
+    percentage: '',
+    rpe: '',
+    tempo: '',
+    rest_seconds: '',
+    notes: '',
+  });
+  expect(response.request().headers()['x-csrf-token']).toBeTruthy();
 
   const rows = page.locator('[data-prescription-row]');
   const addedIndex = await rows.evaluateAll((elements) =>

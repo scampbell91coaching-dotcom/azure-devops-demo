@@ -71,6 +71,16 @@ def test_hostile_programming_values_are_rejected(app, programming_ids, payload):
     assert response.status_code == 400
 
 
+def test_csrf_token_is_rejected_in_programming_json_body(app, programming_ids):
+    """CSRF belongs in the request header, not the prescription contract."""
+    session_id, _ = programming_ids
+    response = app.test_client().post(
+        f"/programming/api/sessions/{session_id}/prescriptions",
+        json={"exercise_name": "Squat", "csrf_token": "duplicate-form-token"},
+    )
+    assert response.status_code == 400
+
+
 def test_oversized_programming_json_is_rejected(app, programming_ids):
     session_id, _ = programming_ids
     response = app.test_client().post(
