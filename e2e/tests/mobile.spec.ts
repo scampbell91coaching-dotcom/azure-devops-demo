@@ -95,7 +95,7 @@ for (const width of [320, 390, 430]) {
     await athleteSession(page.request, athleteIds.primary);
     await page.goto('/athlete/dashboard');
     const more = page.locator('[data-athlete-more]');
-    const moreSummary = more.getByText('More', { exact: true });
+    const moreSummary = more.locator('summary');
     await moreSummary.focus();
     await page.keyboard.press('Enter');
     await expect(more).toHaveAttribute('open', '');
