@@ -53,10 +53,17 @@ class WarmupAssignment(db.Model):  # type: ignore[name-defined]
     protocol_id = db.Column(db.Integer, db.ForeignKey("warmup_protocols.id", ondelete="RESTRICT"), nullable=False, index=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="RESTRICT"), nullable=False, index=True)
     session_id = db.Column(db.Integer, db.ForeignKey("training_sessions.id", ondelete="RESTRICT"), nullable=False, index=True)
+    lift_slot_id = db.Column(
+        db.Integer,
+        db.ForeignKey("programming_lift_slots.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     assigned_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"))
     reason = db.Column(db.String(500), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(UTC))
     protocol = db.relationship("WarmupProtocol")
+    lift_slot = db.relationship("ProgrammingLiftSlot")
 
 
 class WarmupOverride(db.Model):  # type: ignore[name-defined]

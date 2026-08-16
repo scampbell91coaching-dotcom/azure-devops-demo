@@ -7,6 +7,19 @@
     link.addEventListener('click', () => link.setAttribute('aria-busy', 'true'));
   });
 
+  const more = document.querySelector('[data-athlete-more]');
+  if (more) {
+    const summary = more.querySelector('summary');
+    document.addEventListener('click', (event) => {
+      if (more.open && !more.contains(event.target)) more.removeAttribute('open');
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !more.open) return;
+      more.removeAttribute('open');
+      summary?.focus();
+    });
+  }
+
   const template = document.querySelector('#extra-set-template');
   document.querySelectorAll('[data-exercise]').forEach((exercise) => {
     exercise.querySelector('[data-add-set]')?.addEventListener('click', () => {

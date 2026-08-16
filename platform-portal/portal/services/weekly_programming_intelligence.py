@@ -285,6 +285,11 @@ class WeeklyProgrammingIntelligence:
             else None
         )
         reported_fatigue = context.state_signals.get("reported_fatigue")
+        high_fatigue = (
+            isinstance(reported_fatigue, (int, float))
+            and not isinstance(reported_fatigue, bool)
+            and 8 <= reported_fatigue <= 10
+        )
         fatigue = {
             "status": "reported" if reported_fatigue is not None else "not reported",
             "detail": (
@@ -297,7 +302,21 @@ class WeeklyProgrammingIntelligence:
                 if adherence is not None
                 else "No RPE-adherence signal exists for the current window."
             ),
+            "programming_adjustment": (
+                "High reported fatigue applies a bounded 0.8 volume multiplier; "
+                "at least one work set per requested exposure is retained."
+                if high_fatigue
+                else "No fatigue-based programming adjustment was applied."
+            ),
         }
+        fatigue_override = (
+            ({
+                "override": {"volume_multiplier": 0.8},
+                "reason": f"reported fatigue {reported_fatigue}/10",
+            },)
+            if high_fatigue
+            else ()
+        )
         volume = VolumeProgressionService().propose(
             block_type=factory.goal,
             duration=factory.week_count,
@@ -310,7 +329,9 @@ class WeeklyProgrammingIntelligence:
             },
             meet_date=factory.meet_date,
             constraints=context.active_constraints,
-            overrides=context.active_overrides,
+            # Derived fatigue is deliberately applied first. An explicit coach
+            # override is later in the sequence and therefore authoritative.
+            overrides=(*fatigue_override, *context.active_overrides),
             reference=_reference_volume(athlete.id)
             or _requested_split_baseline(factory, days),
         )

@@ -14,6 +14,7 @@ from ..models.programming import (
     TrainingSessionLog,
     TrainingSetResult,
 )
+from .persisted_warmups import freeze_warmup
 
 _ROW_PATTERN = re.compile(r"^row-(\d+)-(\d+)$")
 MAX_EXTRA_SETS = 5
@@ -189,6 +190,8 @@ def save_training_session(
             )
         log.status = "completed"
         log.completed_at = datetime.now(UTC)
+
+    freeze_warmup(athlete_id, training_session.id)
 
     try:
         db.session.commit()

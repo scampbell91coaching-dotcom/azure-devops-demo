@@ -123,8 +123,8 @@
       <input
         name="training_days"
         type="number"
-        min="3"
-        max="5"
+        min="1"
+        max="7"
         value="{{ form.get('training_days', 4) }}"
         required
       >
@@ -321,6 +321,7 @@
           <h4>Ambiguity and warnings</h4>
           {% if explanation.warnings %}<ul>{% for item in explanation.warnings %}<li data-reason-id="{{ item.reason_id }}">{{ item.label }} — {{ item.reason }}</li>{% endfor %}</ul>{% else %}<p>No unresolved input ambiguity was detected.</p>{% endif %}
           {% if intelligence.fatigue.status == 'reported' %}<p><strong>Reported fatigue:</strong> {{ intelligence.fatigue.detail }}</p>{% endif %}
+          <p>{{ intelligence.fatigue.programming_adjustment }}</p>
           <p><strong>RPE adherence:</strong> {{ intelligence.fatigue.rpe_adherence }}</p>
           <h4>Volume progression proposal</h4>
           <p>S/B/D work sets stay separate from assistance fatigue. This remains a reviewable proposal until you accept it.</p>

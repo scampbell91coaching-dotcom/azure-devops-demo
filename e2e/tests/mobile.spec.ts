@@ -1,4 +1,7 @@
+import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures/test';
+
+test.use({ mutationScope: 'training' });
 
 async function expectNoHorizontalOverflow(page: Page) {
   expect(
@@ -6,6 +9,17 @@ async function expectNoHorizontalOverflow(page: Page) {
       () => document.body.scrollWidth <= document.documentElement.clientWidth,
     ),
   ).toBeTruthy();
+}
+
+async function completeSession(page: Page) {
+  const sets = page.locator('[data-set-row]');
+  for (let index = 0; index < await sets.count(); index += 1) {
+    const row = sets.nth(index);
+    await row.getByLabel('Complete').check();
+    await row.locator('input[name$="-load"]').fill('100');
+    await row.locator('input[name$="-reps"]').fill('5');
+    await row.locator('input[name$="-rpe"]').fill('7');
+  }
 }
 
 test('public and coach pages render and navigation toggles at a mobile viewport', async ({ page, authenticatedState }) => {
@@ -70,8 +84,77 @@ test('athlete check-in controls remain usable at 430px', async ({ page, athleteS
 });
 
 for (const width of [320, 390, 430]) {
-  test(`core athlete surfaces remain readable at ${width}px`, async ({ page, athleteSession, athleteIds }) => {
+  test(`Mobile UX V2 critical actions complete at ${width}px`, async ({
+    page,
+    request,
+    athleteSession,
+    athleteIds,
+    authenticatedState,
+    resetE2EFixture,
+  }) => {
     await page.setViewportSize({ width, height: 844 });
+
+    await athleteSession(page.request, athleteIds.primary);
+    await page.goto('/athlete/dashboard');
+    const more = page.locator('[data-athlete-more]');
+    const moreSummary = more.locator('summary');
+    await moreSummary.focus();
+    await page.keyboard.press('Enter');
+    await expect(more).toHaveAttribute('open', '');
+    await expect(more.getByRole('link', { name: 'Meal plan', exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(more).not.toHaveAttribute('open', '');
+    await expect(moreSummary).toBeFocused();
+    await expectNoHorizontalOverflow(page);
+
+    await resetE2EFixture(request, 'training');
+    await athleteSession(page.request, athleteIds.primary);
+    await page.goto('/athlete/programme/sessions/502');
+    await completeSession(page);
+    const finish = page.getByRole('button', { name: 'Finish session' });
+    page.once('dialog', dialog => dialog.dismiss());
+    await finish.click();
+    await expect(finish).toBeFocused();
+    page.once('dialog', dialog => dialog.accept());
+    await finish.click();
+    await expect(page.getByText('Session complete', { exact: true })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    await resetE2EFixture(request, 'check-in');
+    await athleteSession(page.request, athleteIds.primary);
+    await page.goto(`/athletes/${athleteIds.primary}/check-ins/new`);
+    await page.locator('input[name="fatigue"]').fill('6');
+    await page.locator('input[name="recovery"]').fill('8');
+    await page.locator('textarea[name="general_notes"]').fill(`Mobile ${width}px submission`);
+    await page.getByRole('button', { name: 'Send check-in' }).click();
+    await expect(page.getByText(`Mobile ${width}px submission`)).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    await page.context().clearCookies();
+    await authenticatedState(page);
+    await page.goto('/programming/factory');
+    await page.getByLabel('Athlete').selectOption({ label: 'Sam Morgan' });
+    await page.getByLabel('Selection mode').selectOption('none');
+    await page.getByRole('button', { name: 'Preview' }).click();
+    const evidence = page.locator('.factory-decision-details');
+    const evidenceSummary = evidence.getByText('Review decision evidence and progression', { exact: true });
+    await evidenceSummary.focus();
+    await page.keyboard.press('Enter');
+    await expect(evidence).toHaveAttribute('open', '');
+    await expect(page.getByText(/Incomplete data:/)).toBeVisible();
+    await expect(page.getByText(/0 assistance exercises/)).toHaveCount(4);
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test(`core athlete surfaces remain readable at ${width}px`, async ({
+    page,
+    request,
+    athleteSession,
+    athleteIds,
+    resetE2EFixture,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await resetE2EFixture(request, 'training');
     await athleteSession(page.request, athleteIds.primary);
 
     for (const route of ['/athlete/dashboard', '/athlete/programme', '/athlete/programme/sessions/502']) {
