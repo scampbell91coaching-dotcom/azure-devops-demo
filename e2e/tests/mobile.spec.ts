@@ -1,6 +1,8 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures/test';
 
+test.use({ mutationScope: 'training' });
+
 async function expectNoHorizontalOverflow(page: Page) {
   expect(
     await page.evaluate(
@@ -144,8 +146,15 @@ for (const width of [320, 390, 430]) {
     await expectNoHorizontalOverflow(page);
   });
 
-  test(`core athlete surfaces remain readable at ${width}px`, async ({ page, athleteSession, athleteIds }) => {
+  test(`core athlete surfaces remain readable at ${width}px`, async ({
+    page,
+    request,
+    athleteSession,
+    athleteIds,
+    resetE2EFixture,
+  }) => {
     await page.setViewportSize({ width, height: 844 });
+    await resetE2EFixture(request, 'training');
     await athleteSession(page.request, athleteIds.primary);
 
     for (const route of ['/athlete/dashboard', '/athlete/programme', '/athlete/programme/sessions/502']) {
