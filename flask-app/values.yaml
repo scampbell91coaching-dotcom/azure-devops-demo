@@ -72,21 +72,21 @@ autoscaling:
 
 
 readinessProbe:
-  path: /health
+  path: /ready
   initialDelaySeconds: 5
   periodSeconds: 10
   timeoutSeconds: 2
   failureThreshold: 3
 
 livenessProbe:
-  path: /health
+  path: /live
   initialDelaySeconds: 15
   periodSeconds: 20
   timeoutSeconds: 2
   failureThreshold: 3
 
 startupProbe:
-  path: /health
+  path: /live
   periodSeconds: 5
   timeoutSeconds: 2
   failureThreshold: 30
@@ -132,6 +132,7 @@ nodeSelector:
 # definitions cannot create dashboards or live alerts without an explicit review.
 monitoring:
   enabled: false
+  runbookBaseUrl: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md
   serviceMonitor:
     enabled: false
     interval: 30s

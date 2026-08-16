@@ -1,194 +1,77 @@
-# Traditional Strength production observability
+# Production observability and incident runbook
 
-This document distinguishes the current production portal from repository-only
-reference instrumentation and future observability work. Nothing described here
-was deployed and no live alert was created.
+This runbook covers the paid-beta `traditional-strength` service. Prometheus rules and the Grafana dashboard are deliberately opt-in (`monitoring.enabled=false`) until the production Prometheus selector and Alertmanager route are verified. Enabling them is a reviewed GitOps change; do not apply chart output by hand.
 
-The measurable paid-beta objectives, skip evidence requirements and alert
-severities are defined in
-[paid-beta-slos-and-python-skips.md](paid-beta-slos-and-python-skips.md).
+The measurable product objectives and release evidence contract remain in [paid-beta-slos-and-python-skips.md](paid-beta-slos-and-python-skips.md); this document defines the operational response to their production signals.
 
-## Current versus proposed
+## Severity and routing
 
-| Resource | Repository state | Runtime state |
-|---|---|---|
-| `platform-portal` on port 8090 | Existing | Current production image and `app:app` entry point |
-| `/health` startup/readiness/liveness probes | Existing | Configured by the production Helm values |
-| Portal `/metrics` and application telemetry | Future | The production portal does not currently expose `/metrics` or configure OpenTelemetry |
-| Root `app/app.py` instrumentation | Reference only | Demo service on port 5000; not the production workload |
-| `ServiceMonitor` | Repository template | Disabled unless both monitoring flags are explicitly enabled; do not enable before portal metrics exist |
-| kube-prometheus-stack values | Existing | Confirm actual cluster state separately |
-| Grafana production dashboard ConfigMap | Added | **Proposed; disabled** (`monitoring.enabled: false`) |
-| Prometheus alert rules | Added | **Proposed; disabled** (`monitoring.enabled: false`) |
-| Application Insights KQL alerts | Added as definitions | **Proposed text only; not live Azure resources** |
-| Public Application Insights availability test | Design below | **Proposed; not provisioned** |
+| Severity | Meaning | Route | Response target |
+|---|---|---|---|
+| `critical` / `page=true` | Customers cannot use a core path, the database is unavailable, or a release/migration may be unsafe | On-call page | Acknowledge in 5 minutes; mitigate in 30 minutes |
+| `warning` / `page=false` | Degradation, capacity risk, collector failure, or security anomaly without proven customer outage | Team notification/ticket | Review in business hours; within 30 minutes during a release |
+| `info` / `page=false` | Trend or audit signal | Dashboard/digest | No immediate response |
 
-`monitoring.enabled` and `monitoring.serviceMonitor.enabled` are deliberately
-false in both values files. A `ServiceMonitor` renders only when both are true.
-The rule and dashboard have their own nested enablement under the main monitoring
-switch. Network policy must also set `networkPolicy.allowMonitoring=true` before
-Prometheus can reach the pod;
-notification delivery additionally needs a separately reviewed Alertmanager
-receiver and route. Never commit receiver tokens, webhooks, connection strings
-or database credentials.
+Route on `page`, not only `severity`. Inhibit warnings for the same service while a critical alert is active. Group by `service` and `alertname`; repeat pages no more often than every two hours. Never put emails, tenant IDs, object IDs, tokens, or query strings in alert labels.
 
-The root reference service exports `flask_http_requests_total`,
-`flask_http_request_duration_seconds`, `flask_http_request_errors_total`, and
-`flask_application_operations_total`. Labels are limited to HTTP method, Flask
-route template, status code, and fixed operation/outcome values. Raw paths,
-query strings, user identifiers, and other personal data are not labels.
-Prometheus scrapes are excluded from its request metrics. These metrics and its
-`/ready` and `/metrics` routes are not claims about the production portal.
+Paging thresholds require persistence and, where traffic is involved, a minimum sample: no scrape target for 5 minutes; fewer Ready replicas for 5 minutes; database unavailable for 2 minutes; at least 5 errors, 20 requests, and over 10% 5xx for 5 minutes; p95 over 3 seconds with 20 requests for 10 minutes; migration failure after 1 minute; stalled/degraded release for 10 minutes. Repeated 5xx below the page gate, p95 from 1–3 seconds, saturation, restarts, auth/tenant anomalies, and collector failures are non-paging.
 
-## Coverage and practical starting thresholds
+## First five minutes
 
-These older resource-oriented thresholds are implementation guidance. Where a
-threshold differs, the paid-beta contract linked above is authoritative.
+1. Confirm the alert is current in Prometheus and check the dashboard around the firing time. Silence only a known duplicate, never the underlying signal.
+2. Correlate `X-Request-ID` from a failed response with structured application logs. Logs contain route templates, not query strings or tenant identifiers.
+3. Check desired versus Ready replicas, pod events/restarts, the most recent deployment revision, and recent migration/collector Jobs. Read-only examples: `kubectl -n production get deploy,pods,jobs,cronjobs`; `kubectl -n production describe deploy flask-web`.
+4. Identify the last known-good immutable image and release revision. Rollback or retry remains a separate, approved GitOps action.
 
-| Signal | Source | Proposed threshold |
-|---|---|---|
-| Private reachability after portal metrics work | Prometheus `up` over ClusterIP | below 1 for 5m; critical |
-| Ready replicas | kube-state-metrics | available below desired for 10m; critical |
-| Public `/health` | Application Insights availability | every 2m from 2+ locations; failure or missing checks for 5m; critical |
-| HTTP 5xx after portal instrumentation | Prometheus / App Insights | over 5% for 10m, gated by >0.1 req/s or 20 requests; critical |
-| HTTP latency after portal instrumentation | Prometheus / App Insights | p95 over 1s for 15m, 20-request gate in App Insights; warning |
-| Pod restarts | kube-state-metrics | 3 in 15m, sustained for 5m; warning |
-| Rollout | kube-state-metrics | `Progressing=false` for 10m; critical |
-| Migration Job | kube-state-metrics | any failed Job matching `.*migrat.*` for 1m; critical |
-| Worker/batch | kube-state-metrics / exceptions | failed named Job for 5m or 5 exceptions in 10m; warning |
-| PostgreSQL | OpenTelemetry dependencies | 3 failed SQL/PostgreSQL calls from at least 5 in 10m; critical |
-| CPU | container/kube-state metrics | over 85% of limit for 15m; warning |
-| Memory | container/kube-state metrics | over 90% of limit for 10m; warning |
+## Web unavailable or not ready
 
-These are noise-resistant starting points. Review them after two weeks of normal
-traffic. Absence of PostgreSQL dependency telemetry is not proof of health:
-confirm that the database-using workload exports OpenTelemetry before activation.
+- Compare Prometheus `up`, desired/available replicas, probe failures, container logs, events, CPU/memory and the database readiness panel.
+- `/live` proves only that the process can serve HTTP. `/ready` and `/health` execute `SELECT 1`; a 503 removes a pod from traffic without causing liveness restarts.
+- If `/live` fails, investigate crash/OOM/configuration/startup. If only `/ready` fails, follow the database section. If Prometheus alone is down, verify the ServiceMonitor selector and monitoring NetworkPolicy before treating it as an application outage.
 
-## Ownership and dashboard
+## Database unavailable
 
-Platform owns dashboard availability, scraping, Kubernetes/resource alerts and
-this runbook. Application owns HTTP, PostgreSQL, migration, worker and Job
-diagnosis. Platform on-call triages first, then hands off when infrastructure is
-healthy but application telemetry is failing.
-
-The Grafana source is
-`flask-app/dashboards/traditional-strength-production.json`. It links to
-Application Insights for public availability, dependencies and traces instead of
-copying Azure telemetry into Grafana. Alert metadata includes `owner`, `service`,
-`severity` and `runbook_url`.
-
-Before opt-in, verify the dashboard repository link, Grafana sidecar label,
-PrometheusRule selector (`release: monitoring`), metric labels and Alertmanager
-routing in a non-production environment.
-
-## Public and private health
-
-The proposed Application Insights **Standard availability test** targets
-`https://traditionalstrength.co.uk/health`, requires HTTPS and status 200,
-validates certificates and redirects, runs every two minutes from at least two
-Azure locations, and is named `traditional-strength-public-health` for the KQL
-definition in `kubernetes/monitoring/application-insights-alerts.kql`.
-
-The current production portal exposes `/health`; Kubernetes startup, readiness,
-and liveness all use that route on container port 8090. It does not expose
-`/ready` or `/metrics`. A future private `/metrics` scrape could prove private
-DNS, Service selection, endpoints, and pod HTTP reachability, but it requires
-portal instrumentation first. Do not expose metrics publicly or add another
-public load balancer.
-
-```bash
-curl -fsS --max-time 5 https://traditionalstrength.co.uk/health
-kubectl run health-check --rm -i --restart=Never -n production \
-  --image=curlimages/curl -- curl -fsS --max-time 5 \
-  http://flask-web-prod-flask-app.production.svc.cluster.local/health
-```
-
-## Web unavailable or not Ready
-
-```bash
-kubectl get deploy,pod,endpointslice -n production -l app=flask-web
-kubectl describe deployment flask-web -n production
-kubectl get events -n production --sort-by=.lastTimestamp | tail -40
-kubectl logs -n production -l app=flask-web --all-containers --tail=200
-```
-
-Public-only failure suggests DNS, TLS or ingress. Public and private failure with
-healthy pods suggests Service selectors or policy. Never capture Secret values.
+- Confirm `traditional_strength_dependency_available{dependency="database"}` and readiness failures across pods. Check PostgreSQL provider health, connection limits, DNS/network policy, secret availability and recent migration timing.
+- Do not restart healthy processes repeatedly during a database outage. Preserve the first database exception and request ID. Escalate credential or network changes through the normal production change path.
+- Recovery requires stable readiness across all desired replicas and successful core-path smoke tests, not merely one successful probe.
 
 ## HTTP errors or latency
 
-Use the dashboard to identify status and onset, then Application Insights
-transaction search to correlate requests, exceptions and dependencies. Compare
-the deployment revision. If a release is causal, use the GitOps rollback in
-`docs/runbook.md`; do not make an untracked live edit.
+- Break down 5xx by route/status and latency by route. Exclude `/metrics`; probe traffic is visible but should not dominate a paid-beta workload.
+- Use request IDs to inspect exceptions and upstream dependency spans. Compare the onset with releases, database latency, pod saturation and restarts.
+- Page only at the documented error/latency gates. A few low-volume errors create a warning for investigation without waking on-call.
 
-## Pod restarts or rollout failure
+## Authentication or tenant-denial anomaly
 
-```bash
-kubectl rollout status deployment/flask-web -n production --timeout=5m
-kubectl describe pod -n production -l app=flask-web
-kubectl logs -n production -l app=flask-web --previous --tail=200
-kubectl get rs -n production -l app=flask-web
-```
-
-Check probes, OOMKilled, pulls, scheduling and missing secret references.
-
-## PostgreSQL connectivity
-
-Filter failed SQL dependencies in Application Insights by target/result and
-correlate operation IDs. Confirm network policy, private DNS, TLS, server state
-and ExternalSecret readiness without printing `DATABASE_URL`:
-
-```bash
-kubectl get networkpolicy,externalsecret -n production
-az postgres flexible-server show --resource-group <resource-group> \
-  --name <server> --query '{state:state,fqdn:fullyQualifiedDomainName}' -o table
-```
-
-## Migration Job failure
-
-```bash
-kubectl get jobs,pods -n production --sort-by=.metadata.creationTimestamp
-kubectl describe job -n production <migration-job>
-kubectl logs -n production job/<migration-job> --all-containers --tail=200
-```
-
-Stop rollout when schema compatibility is uncertain. Preserve sanitized logs,
-image digest and migration version. Do not blindly rerun a non-idempotent job.
-
-## Worker or Job failure
-
-```bash
-kubectl get job,cronjob,pod -n production
-kubectl describe job -n production <job>
-kubectl logs -n production job/<job> --all-containers --tail=200
-```
-
-Check backoff exhaustion, deadlines, missed schedules and correlated exceptions.
-Jobs must include `traditional-strength`, `flask`, `worker`, or `migrat` in their
-name for the proposed generic rules to select them.
+- Login metrics distinguish `failed`, `rate_limited`, and `success`; authorization metrics distinguish unauthenticated, forbidden, and concealed-object outcomes. Tenant metrics use bounded reasons only.
+- Check whether the increase follows a UI/API release, a single source pattern in protected logs, or broad customer reports. Do not weaken tenant checks or disclose concealed object existence while investigating.
+- These alerts are non-paging by default. Escalate to a security incident if there is credible automated abuse, cross-tenant access, or account compromise; page separately if login availability is materially affected.
 
 ## Resource pressure
 
-```bash
-kubectl top pod -n production -l app=flask-web --containers
-kubectl describe pod -n production -l app=flask-web
-kubectl get hpa -n production -o wide
-```
+- Check CPU/memory against requests and limits, throttling/OOM events, request rate and HPA current/max replicas. Sustained max replicas or over 85% CPU/90% memory is a warning.
+- Page only when pressure also causes availability, 5xx, or critical latency symptoms. Capacity changes require a reviewed values change and load evidence.
 
-Check throttling, OOM events, node pressure, HPA state and request/limit fit.
-Change resources through reviewed Helm values, never a lasting live patch.
+## Migration or release failure
 
-## Validation and activation gate
+- A failed migration is paging because schema state may block or mismatch the release. Stop promotion, retain failed Job logs/events, and establish whether the transaction rolled back before any retry.
+- Never rerun migrations with runtime credentials or edit the database manually. Use the separate migration secret and the existing migration verification tooling.
+- For a stalled rollout or degraded Argo application, compare desired revision, image digest/tag, migration result and pod events. Restore the last known-good Git revision through the approved GitOps workflow.
 
-The validation is local and does not contact a cluster:
+## Status collector stale or failed
 
-```bash
-scripts/validate-observability.sh
-```
+- The collector runs every five minutes. A failed Job or no success for 15 minutes is a warning, not a page, because it affects operational freshness rather than the customer data path.
+- Inspect the latest Job logs, RBAC denials, API timeouts, output volume and snapshot ingestion. Confirm a new successful timestamp and fresh portal snapshot after remediation.
 
-Before setting either ServiceMonitor flag, add and test portal metrics, then
-require owner and rule-expression review against real labels, staging
-render/apply, monitoring NetworkPolicy ingress, Alertmanager route review, and
-confirmation that public availability and PostgreSQL dependency telemetry exist.
-Activation and deployment are outside this change.
+## Activation and release verification
+
+Before enabling monitoring, render the chart with `./scripts/validate-observability.sh`, confirm Prometheus selects the `release: monitoring` ServiceMonitor/PrometheusRule labels, verify network access to `/metrics`, and use `promtool check rules` against the rendered rule group when `promtool` is available. In Alertmanager, test a synthetic non-production receiver route for both `page=true` and `page=false`; do not test by creating a production outage.
+
+After each release, verify migration success, rollout completion, `/live`, `/ready`, an authenticated paid-beta smoke path, a metrics scrape, dashboard freshness, and that no new critical alert is pending. Application deployment success without these checks is not release success.
+
+## Known gaps
+
+- Alertmanager receiver ownership, schedules, and delivery tests live outside this repository and must be verified before activation.
+- Prometheus Python metrics are process-local under the current two-worker Gunicorn configuration; counters and histograms can be under-reported depending on which worker serves a scrape. Configure Prometheus multiprocess mode or use one worker per horizontally scaled pod before relying on exact totals at larger scale.
+- Argo CD metrics and kube-state-metrics label availability must be confirmed in the live stack; absent release metrics currently fail quiet rather than page.
+- There is no independent multi-region synthetic for authenticated money paths, and no PostgreSQL server-side saturation/replication alert in this repository.

@@ -19,30 +19,31 @@ from .attempt_selection import attempt_selection_bp
 from .auth import init_auth
 from .block_factory import block_factory_bp
 from .checkins import checkins_bp
-from .coach_dashboard import coach_dashboard_bp
 from .coach_applications import coach_applications_bp
+from .coach_dashboard import coach_dashboard_bp
 from .database_cli import register_database_commands
 from .database_config import resolve_database_uri
 from .exercise_library import exercise_library_bp
-from .external_reviews import external_reviews_bp
 from .extensions import db, migrate
+from .external_reviews import external_reviews_bp
 from .lead_magnets import lead_magnets_bp
-from .meet_day import meet_day_bp
 from .meal_plan_delivery import meal_plan_delivery_bp
+from .meet_day import meet_day_bp
 from .nutrition_imports import nutrition_imports_bp
 from .nutrition_prescriptions import nutrition_prescriptions_bp
+from .observability import init_observability
 from .organisation_onboarding import organisation_onboarding_bp
 from .programming import programming_bp
 from .programming_engine import programming_engine_bp
 from .programming_pack2 import programming_pack2_bp
 from .programming_templates import programming_templates_bp
 from .release_readiness import release_readiness_bp
-from .security import init_security_headers
-from .services.release_readiness import ReleaseEvidenceService
 from .repositories.meal_plans import SqlAlchemyMealPlanRepository
-from .services.meal_plans import MealPlanWorkflow
+from .security import init_security_headers
 from .services.meal_plan_files import MealPlanFileStore
+from .services.meal_plans import MealPlanWorkflow
 from .services.nutrition_entitlements import nutrition_coaching_enabled
+from .services.release_readiness import ReleaseEvidenceService
 from .views import views_bp
 
 TESTING_SECRET_KEY = "testing-only-secret-key"
@@ -110,6 +111,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     if app.config["LEGACY_STARTUP_INITIALIZATION"] is None:
         app.config["LEGACY_STARTUP_INITIALIZATION"] = app.testing
     db.init_app(app)
+    init_observability(app)
     app.extensions["release_evidence"] = ReleaseEvidenceService(
         repository_root=Path(app.config["REPOSITORY_ROOT"]),
         evidence_path=app.config.get("RELEASE_EVIDENCE_FILE"),
@@ -119,7 +121,11 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         SqlAlchemyMealPlanRepository(), nutrition_coaching_enabled
     )
     app.extensions["meal_plan_file_store"] = MealPlanFileStore(
-        Path(app.config.get("MEAL_PLAN_FILE_ROOT", portal_root / "instance" / "meal-plans"))
+        Path(
+            app.config.get(
+                "MEAL_PLAN_FILE_ROOT", portal_root / "instance" / "meal-plans"
+            )
+        )
     )
     init_security_headers(app, prevent_caching=True)
     migrate.init_app(
@@ -183,12 +189,16 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     register_database_commands(app)
 
     error_copy = {
-        400: ("Check your request", "Review the highlighted information and try again."),
+        400: (
+            "Check your request",
+            "Review the highlighted information and try again.",
+        ),
         403: ("Access denied", "Your account does not have access to this area."),
         404: ("Page not found", "The page may have moved or no longer exists."),
         500: ("Something went wrong", "The platform could not complete that request."),
     }
     for status, (title, message) in error_copy.items():
+
         def render_error(error, status=status, title=title, message=message):
             description = getattr(error, "description", None)
             if status == 403:
@@ -207,6 +217,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
                 message=description or message,
                 back_url="/programming" if status != 403 else "/",
             ), status
+
         app.register_error_handler(status, render_error)
 
     return app

@@ -48,8 +48,15 @@ probe_paths="$(awk '
   /^[[:space:]]+(startupProbe|readinessProbe|livenessProbe):$/ { probe=$1; next }
   probe != "" && /^[[:space:]]+path:/ { print probe, $2; probe="" }
 ' "$production_rendered")"
-test "$(printf '%s\n' "$probe_paths" | grep -c '/health')" -eq 3
-printf '%s\n' "$probe_paths" | grep -q '^readinessProbe: /health$'
+printf '%s\n' "$probe_paths" | grep -q '^startupProbe: /live$'
+printf '%s\n' "$probe_paths" | grep -q '^readinessProbe: /ready$'
+printf '%s\n' "$probe_paths" | grep -q '^livenessProbe: /live$'
+grep -q 'alert: TraditionalStrengthDatabaseUnavailable' "$monitoring_rendered"
+grep -q 'alert: TraditionalStrengthLoginFailureBurst' "$monitoring_rendered"
+grep -q 'alert: TraditionalStrengthTenantDenialAnomaly' "$monitoring_rendered"
+grep -q 'alert: TraditionalStrengthStatusCollectorStale' "$monitoring_rendered"
+grep -q 'page: "true"' "$monitoring_rendered"
+grep -q 'page: "false"' "$monitoring_rendered"
 python3 -m json.tool \
   "$repo_root/flask-app/dashboards/traditional-strength-production.json" >/dev/null
-echo "Observability Helm defaults, production probes, opt-in resources, and dashboard JSON are valid."
+echo "Observability probes, opt-in resources, paging labels, alert coverage, and dashboard JSON are valid."

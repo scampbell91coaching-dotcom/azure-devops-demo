@@ -1,9 +1,12 @@
 {{- if and .Values.monitoring.enabled .Values.monitoring.prometheusRule.enabled }}
+{{- $namespace := .Release.Namespace -}}
+{{- $service := include "flask-app.fullname" . -}}
+{{- $runbook := .Values.monitoring.runbookBaseUrl -}}
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: {{ include "flask-app.fullname" . }}-production-health
-  namespace: {{ .Release.Namespace }}
+  name: {{ $service }}-production-health
+  namespace: {{ $namespace }}
   labels:
     {{- include "flask-app.labels" . | nindent 4 }}
     {{- with .Values.monitoring.prometheusRule.labels }}
@@ -11,78 +14,145 @@ metadata:
     {{- end }}
 spec:
   groups:
-    - name: traditional-strength.web
+    - name: traditional-strength.availability
       rules:
         - alert: TraditionalStrengthWebUnavailable
-          expr: max(up{namespace="{{ .Release.Namespace }}",service="{{ include "flask-app.fullname" . }}"}) < 1 or absent(up{namespace="{{ .Release.Namespace }}",service="{{ include "flask-app.fullname" . }}"})
+          expr: max(up{namespace="{{ $namespace }}",service="{{ $service }}"}) < 1 or absent(up{namespace="{{ $namespace }}",service="{{ $service }}"})
           for: 5m
-          labels: { severity: critical, service: traditional-strength, owner: platform }
+          labels: { severity: critical, page: "true", service: traditional-strength, owner: platform }
           annotations:
             summary: Production web metrics endpoint is unavailable
-            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#web-unavailable-or-not-ready
+            description: Prometheus has been unable to scrape any production web target for five minutes.
+            runbook_url: {{ printf "%s#web-unavailable-or-not-ready" $runbook | quote }}
         - alert: TraditionalStrengthWebNotReady
-          expr: kube_deployment_status_replicas_available{namespace="{{ .Release.Namespace }}",deployment="flask-web"} < kube_deployment_spec_replicas{namespace="{{ .Release.Namespace }}",deployment="flask-web"}
-          for: 10m
-          labels: { severity: critical, service: traditional-strength, owner: platform }
-          annotations:
-            summary: Production web replicas have not become Ready
-            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#web-unavailable-or-not-ready
-        - alert: TraditionalStrengthHttpErrorRateHigh
-          expr: (sum(rate(flask_http_requests_total{namespace="{{ .Release.Namespace }}",status_code=~"5.."}[5m])) / clamp_min(sum(rate(flask_http_requests_total{namespace="{{ .Release.Namespace }}"}[5m])), 0.001)) > 0.05 and sum(rate(flask_http_requests_total{namespace="{{ .Release.Namespace }}"}[5m])) > 0.1
-          for: 10m
-          labels: { severity: critical, service: traditional-strength, owner: application }
-          annotations:
-            summary: HTTP 5xx rate exceeds 5 percent with meaningful traffic
-            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#http-errors-or-latency
-        - alert: TraditionalStrengthHttpLatencyHigh
-          expr: histogram_quantile(0.95, sum by (le) (rate(flask_http_request_duration_seconds_bucket{namespace="{{ .Release.Namespace }}"}[10m]))) > 1
-          for: 15m
-          labels: { severity: warning, service: traditional-strength, owner: application }
-          annotations:
-            summary: HTTP p95 latency exceeds one second
-            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#http-errors-or-latency
-    - name: traditional-strength.kubernetes
-      rules:
-        - alert: TraditionalStrengthPodRestarting
-          expr: increase(kube_pod_container_status_restarts_total{namespace="{{ .Release.Namespace }}",pod=~"flask-web.*"}[15m]) >= 3
+          expr: kube_deployment_status_replicas_available{namespace="{{ $namespace }}",deployment="flask-web"} < kube_deployment_spec_replicas{namespace="{{ $namespace }}",deployment="flask-web"}
           for: 5m
-          labels: { severity: warning, service: traditional-strength, owner: platform }
+          labels: { severity: critical, page: "true", service: traditional-strength, owner: platform }
           annotations:
-            summary: A production web container restarted at least three times
-            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#pod-restarts-or-rollout-failure
-        - alert: TraditionalStrengthRolloutStalled
-          expr: kube_deployment_status_condition{namespace="{{ .Release.Namespace }}",deployment="flask-web",condition="Progressing",status="false"} == 1
+            summary: Production has fewer Ready web replicas than desired
+            description: Customer traffic has had reduced or zero ready capacity for five minutes.
+            runbook_url: {{ printf "%s#web-unavailable-or-not-ready" $runbook | quote }}
+        - alert: TraditionalStrengthDatabaseUnavailable
+          expr: min(traditional_strength_dependency_available{namespace="{{ $namespace }}",dependency="database"}) == 0
+          for: 2m
+          labels: { severity: critical, page: "true", service: traditional-strength, owner: application }
+          annotations:
+            summary: Production readiness checks cannot reach PostgreSQL
+            description: Database probes have failed for two minutes; pods should be removed from service but remain live for diagnosis.
+            runbook_url: {{ printf "%s#database-unavailable" $runbook | quote }}
+        - alert: TraditionalStrengthHttp5xxPage
+          expr: sum(increase(flask_http_requests_total{namespace="{{ $namespace }}",status_code=~"5.."}[10m])) >= 5 and sum(increase(flask_http_requests_total{namespace="{{ $namespace }}"}[10m])) >= 20 and sum(increase(flask_http_requests_total{namespace="{{ $namespace }}",status_code=~"5.."}[10m])) / sum(increase(flask_http_requests_total{namespace="{{ $namespace }}"}[10m])) > 0.10
+          for: 5m
+          labels: { severity: critical, page: "true", service: traditional-strength, owner: application }
+          annotations:
+            summary: More than 10 percent of meaningful production traffic is failing
+            description: At least five 5xx responses and a 10 percent error ratio occurred in ten minutes.
+            runbook_url: {{ printf "%s#http-errors-or-latency" $runbook | quote }}
+        - alert: TraditionalStrengthHttp5xxWarning
+          expr: sum(increase(flask_http_requests_total{namespace="{{ $namespace }}",status_code=~"5.."}[15m])) >= 3 unless on() (sum(increase(flask_http_requests_total{namespace="{{ $namespace }}",status_code=~"5.."}[10m])) >= 5 and sum(increase(flask_http_requests_total{namespace="{{ $namespace }}"}[10m])) >= 20 and sum(increase(flask_http_requests_total{namespace="{{ $namespace }}",status_code=~"5.."}[10m])) / sum(increase(flask_http_requests_total{namespace="{{ $namespace }}"}[10m])) > 0.10)
+          for: 5m
+          labels: { severity: warning, page: "false", service: traditional-strength, owner: application }
+          annotations:
+            summary: Production returned repeated 5xx responses
+            runbook_url: {{ printf "%s#http-errors-or-latency" $runbook | quote }}
+    - name: traditional-strength.performance
+      rules:
+        - alert: TraditionalStrengthHttpLatencyPage
+          expr: histogram_quantile(0.95, sum by (le) (rate(flask_http_request_duration_seconds_bucket{namespace="{{ $namespace }}"}[10m]))) > 3 and sum(increase(flask_http_request_duration_seconds_count{namespace="{{ $namespace }}"}[10m])) >= 20
           for: 10m
-          labels: { severity: critical, service: traditional-strength, owner: platform }
+          labels: { severity: critical, page: "true", service: traditional-strength, owner: application }
+          annotations:
+            summary: Production HTTP p95 latency exceeds three seconds
+            runbook_url: {{ printf "%s#http-errors-or-latency" $runbook | quote }}
+        - alert: TraditionalStrengthHttpLatencyWarning
+          expr: histogram_quantile(0.95, sum by (le) (rate(flask_http_request_duration_seconds_bucket{namespace="{{ $namespace }}"}[15m]))) > 1 and histogram_quantile(0.95, sum by (le) (rate(flask_http_request_duration_seconds_bucket{namespace="{{ $namespace }}"}[15m]))) <= 3 and sum(increase(flask_http_request_duration_seconds_count{namespace="{{ $namespace }}"}[15m])) >= 20
+          for: 15m
+          labels: { severity: warning, page: "false", service: traditional-strength, owner: application }
+          annotations:
+            summary: Production HTTP p95 latency exceeds one second
+            runbook_url: {{ printf "%s#http-errors-or-latency" $runbook | quote }}
+        - alert: TraditionalStrengthContainerCpuPressure
+          expr: sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="{{ $namespace }}",pod=~"flask-web.*",container="flask-web"}[5m])) / clamp_min(sum by (pod) (kube_pod_container_resource_limits{namespace="{{ $namespace }}",pod=~"flask-web.*",container="flask-web",resource="cpu"}), 0.001) > 0.85
+          for: 15m
+          labels: { severity: warning, page: "false", service: traditional-strength, owner: platform }
+          annotations:
+            summary: A web pod is using over 85 percent of its CPU limit
+            runbook_url: {{ printf "%s#resource-pressure" $runbook | quote }}
+        - alert: TraditionalStrengthContainerMemoryPressure
+          expr: container_memory_working_set_bytes{namespace="{{ $namespace }}",pod=~"flask-web.*",container="flask-web"} / clamp_min(kube_pod_container_resource_limits{namespace="{{ $namespace }}",pod=~"flask-web.*",container="flask-web",resource="memory"}, 1) > 0.90
+          for: 10m
+          labels: { severity: warning, page: "false", service: traditional-strength, owner: platform }
+          annotations:
+            summary: A web pod is using over 90 percent of its memory limit
+            runbook_url: {{ printf "%s#resource-pressure" $runbook | quote }}
+        - alert: TraditionalStrengthHpaAtMaximum
+          expr: kube_horizontalpodautoscaler_status_current_replicas{namespace="{{ $namespace }}",horizontalpodautoscaler="flask-web"} >= kube_horizontalpodautoscaler_spec_max_replicas{namespace="{{ $namespace }}",horizontalpodautoscaler="flask-web"}
+          for: 15m
+          labels: { severity: warning, page: "false", service: traditional-strength, owner: platform }
+          annotations:
+            summary: Production autoscaling has remained at maximum capacity
+            runbook_url: {{ printf "%s#resource-pressure" $runbook | quote }}
+    - name: traditional-strength.security
+      rules:
+        - alert: TraditionalStrengthLoginFailureBurst
+          expr: sum(increase(traditional_strength_auth_events_total{namespace="{{ $namespace }}",event="login",outcome=~"failed|rate_limited"}[10m])) >= 20
+          for: 5m
+          labels: { severity: warning, page: "false", service: traditional-strength, owner: application }
+          annotations:
+            summary: Production login failures are unusually high
+            description: Investigate abuse or a broken login flow; do not page unless customer availability is also affected.
+            runbook_url: {{ printf "%s#authentication-or-tenant-denial-anomaly" $runbook | quote }}
+        - alert: TraditionalStrengthTenantDenialAnomaly
+          expr: sum(increase(traditional_strength_tenant_access_denials_total{namespace="{{ $namespace }}"}[15m])) >= 10
+          for: 5m
+          labels: { severity: warning, page: "false", service: traditional-strength, owner: application }
+          annotations:
+            summary: Tenant boundary denials are unusually high
+            description: Treat as a possible client regression or security investigation; tenant identifiers are intentionally absent from metrics.
+            runbook_url: {{ printf "%s#authentication-or-tenant-denial-anomaly" $runbook | quote }}
+    - name: traditional-strength.jobs-and-releases
+      rules:
+        - alert: TraditionalStrengthMigrationJobFailed
+          expr: kube_job_status_failed{namespace="{{ $namespace }}",job_name=~".*migrat.*"} > 0
+          for: 1m
+          labels: { severity: critical, page: "true", service: traditional-strength, owner: application }
+          annotations:
+            summary: A production database migration failed
+            description: Stop the release and preserve the failed Job logs before retrying.
+            runbook_url: {{ printf "%s#migration-or-release-failure" $runbook | quote }}
+        - alert: TraditionalStrengthStatusCollectorFailed
+          expr: kube_job_status_failed{namespace="{{ $namespace }}",job_name=~"platform-status-collector.*"} > 0
+          for: 5m
+          labels: { severity: warning, page: "false", service: traditional-strength, owner: platform }
+          annotations:
+            summary: The platform status collector Job failed
+            runbook_url: {{ printf "%s#status-collector-stale-or-failed" $runbook | quote }}
+        - alert: TraditionalStrengthStatusCollectorStale
+          expr: time() - kube_cronjob_status_last_successful_time{namespace="{{ $namespace }}",cronjob="platform-status-collector"} > 900
+          for: 5m
+          labels: { severity: warning, page: "false", service: traditional-strength, owner: platform }
+          annotations:
+            summary: Platform status has not been collected successfully for 15 minutes
+            runbook_url: {{ printf "%s#status-collector-stale-or-failed" $runbook | quote }}
+        - alert: TraditionalStrengthRolloutStalled
+          expr: kube_deployment_status_condition{namespace="{{ $namespace }}",deployment="flask-web",condition="Progressing",status="false"} == 1
+          for: 10m
+          labels: { severity: critical, page: "true", service: traditional-strength, owner: platform }
           annotations:
             summary: Production rollout is not progressing
-            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#pod-restarts-or-rollout-failure
-        - alert: TraditionalStrengthJobFailed
-          expr: kube_job_status_failed{namespace="{{ .Release.Namespace }}",job_name=~".*(traditional-strength|flask|worker).*"} > 0
-          for: 5m
-          labels: { severity: warning, service: traditional-strength, owner: application }
-          annotations:
-            summary: A Traditional Strength worker or Job has failed
-            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#worker-or-job-failure
-        - alert: TraditionalStrengthMigrationJobFailed
-          expr: kube_job_status_failed{namespace="{{ .Release.Namespace }}",job_name=~".*migrat.*"} > 0
-          for: 1m
-          labels: { severity: critical, service: traditional-strength, owner: application }
-          annotations:
-            summary: A database migration Job has failed
-            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#migration-job-failure
-        - alert: TraditionalStrengthContainerCpuPressure
-          expr: sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="{{ .Release.Namespace }}",pod=~"flask-web.*",container!=""}[5m])) / clamp_min(sum by (pod) (kube_pod_container_resource_limits{namespace="{{ .Release.Namespace }}",pod=~"flask-web.*",resource="cpu"}), 0.001) > 0.85
-          for: 15m
-          labels: { severity: warning, service: traditional-strength, owner: platform }
-          annotations:
-            summary: Web pod CPU is above 85 percent of its limit
-            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#resource-pressure
-        - alert: TraditionalStrengthContainerMemoryPressure
-          expr: sum by (pod) (container_memory_working_set_bytes{namespace="{{ .Release.Namespace }}",pod=~"flask-web.*",container!=""}) / clamp_min(sum by (pod) (kube_pod_container_resource_limits{namespace="{{ .Release.Namespace }}",pod=~"flask-web.*",resource="memory"}), 1) > 0.90
+            runbook_url: {{ printf "%s#migration-or-release-failure" $runbook | quote }}
+        - alert: TraditionalStrengthArgoReleaseDegraded
+          expr: argocd_app_info{name=~"flask-web-production|platform-portal-private",health_status=~"Degraded|Missing",sync_status!="Synced"} == 1
           for: 10m
-          labels: { severity: warning, service: traditional-strength, owner: platform }
+          labels: { severity: critical, page: "true", service: traditional-strength, owner: platform }
           annotations:
-            summary: Web pod memory is above 90 percent of its limit
-            runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#resource-pressure
+            summary: Argo CD reports a degraded and unsynchronised production release
+            runbook_url: {{ printf "%s#migration-or-release-failure" $runbook | quote }}
+        - alert: TraditionalStrengthPodRestarting
+          expr: increase(kube_pod_container_status_restarts_total{namespace="{{ $namespace }}",pod=~"flask-web.*",container="flask-web"}[15m]) >= 3
+          for: 5m
+          labels: { severity: warning, page: "false", service: traditional-strength, owner: platform }
+          annotations:
+            summary: A production web container restarted at least three times
+            runbook_url: {{ printf "%s#web-unavailable-or-not-ready" $runbook | quote }}
 {{- end }}
