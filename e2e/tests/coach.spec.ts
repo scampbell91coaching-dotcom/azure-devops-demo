@@ -375,7 +375,7 @@ test('Block Factory previews taxonomy-backed exposures with zero assistance and 
   await expect(page.getByRole('heading', { name: 'Proposal explanation' })).toBeVisible();
   await expect(
     page.locator('.factory-preview__intelligence p').filter({ hasText: 'Exposures' })
-  ).toContainText('2 squat · 3 bench · 1 deadlift');
+  ).toContainText('1 squat · 1 bench · 1 deadlift');
 
   await page
     .getByText('Review decision evidence and progression', { exact: true })

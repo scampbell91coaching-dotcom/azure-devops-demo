@@ -63,12 +63,14 @@ test('coach builds, previews, publishes and revises a meal plan that the athlete
     expect(await page.evaluate(() => document.body.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
 
     const more = page.locator('[data-athlete-more]');
-    await expect(more.getByRole('link', { name: 'Meal plan', exact: true })).toHaveAttribute('aria-current', 'page');
-    await expect(more.locator('summary')).toHaveCSS('color', 'rgb(213, 189, 141)');
-    await more.locator('summary').focus();
+    const moreSummary = more.locator('summary');
+    await expect(moreSummary).toHaveCSS('color', 'rgb(213, 189, 141)');
+    await moreSummary.focus();
     await page.keyboard.press('Enter');
     await expect(more).toHaveAttribute('open', '');
+    await expect(more.getByRole('link', { name: 'Meal plan', exact: true }))
+      .toHaveAttribute('aria-current', 'page');
     await page.keyboard.press('Escape');
-    await expect(more.locator('summary')).toBeFocused();
+    await expect(moreSummary).toBeFocused();
   }
 });
