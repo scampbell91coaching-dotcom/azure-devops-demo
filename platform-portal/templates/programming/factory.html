@@ -278,6 +278,9 @@
           <article class="factory-preview__day">
             <span>Day {{ day.day }} · {{ day.day_type }}</span>
             <strong class="factory-preview__count">{{ day.accessory_count }} assistance exercise{% if day.accessory_count != 1 %}s{% endif %}</strong>
+            {% if day.coach_review_required %}
+              {% for reason in day.coach_review_reasons %}<p class="context-warning">Coach review required: {{ reason }}</p>{% endfor %}
+            {% endif %}
             <p class="factory-explanation" data-accessory-outcome="{{ day.accessory_outcome }}"><span>Selection</span> {{ day.accessory_outcome_reason }}</p>
 
             <ol>

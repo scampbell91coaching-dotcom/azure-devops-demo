@@ -11,6 +11,7 @@ import pytest
 from portal import create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
+from portal.models.athlete_state import AthleteStateRecommendation
 from portal.models.exercise_library import Exercise
 from portal.models.programming import TrainingBlock
 
@@ -132,11 +133,12 @@ def test_golden_programme_structure_survives_preview_and_persistence(case):
             },
         }
         role_shapes = {
-            "competition": (3, "3", 0.5, "competition practice"),
-            "primary_volume": (4, "6", -0.5, "primary volume"),
-            "secondary_strength": (3, "4", 0.0, "secondary strength"),
-            "overload": (2, "2", 1.0, "overload strength"),
+            "competition": ("3", 0.5, "competition practice"),
+            "primary_volume": ("6", -0.5, "primary volume"),
+            "secondary_strength": ("4", 0.0, "secondary strength"),
+            "overload": ("2", 1.0, "overload strength"),
         }
+        set_totals = {"squat": 0, "bench": 0, "deadlift": 0}
 
         for session, expected in zip(sessions, case["expected"]):
             # Slot identity/order is independent of assistance row ordering.
@@ -157,15 +159,17 @@ def test_golden_programme_structure_survives_preview_and_persistence(case):
             )
 
             for item, slot in zip(main, session.lift_slots):
-                sets, reps, offset, purpose = role_shapes[slot.exposure_role]
+                reps, offset, purpose = role_shapes[slot.exposure_role]
                 assert _prescription_shape(item) == {
                     "name": variations[slot.lift_family][slot.exposure_role],
                     "position": slot.position,
-                    "sets": sets,
+                    "sets": item.sets,
                     "reps": reps,
                     "rpe": max(1.0, min(10.0, start_rpe + offset)),
                     "provenance": "generated",
                 }
+                assert item.sets >= 1
+                set_totals[slot.lift_family] += item.sets
                 assert item.notes == purpose
             assert [
                 (item.sets, item.reps, item.rpe, item.provenance, item.lift_slot_id)
@@ -180,6 +184,11 @@ def test_golden_programme_structure_survives_preview_and_persistence(case):
                 )
                 for name in expected["accessories"]
             ]
+
+        envelope = AthleteStateRecommendation.query.one().recommendation_json[
+            "volume_progression"
+        ]["weeks"][0]["sbd_sets"]
+        assert set_totals == envelope
 
 
 def test_golden_corpus_covers_required_representative_shapes():

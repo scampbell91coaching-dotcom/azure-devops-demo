@@ -22,6 +22,7 @@ class WeeklyVolumeEnvelope:
     week: int
     phase: str
     target_rpe: float
+    effective_rpe_cap: float | None
     sbd_sets: dict[str, int]
     sbd_range: dict[str, tuple[int, int]]
     assistance_fatigue_budget: int
@@ -156,6 +157,7 @@ class VolumeProgressionService:
                     week=index,
                     phase=week_phase,
                     target_rpe=target_rpe,
+                    effective_rpe_cap=rpe_cap,
                     sbd_sets=targets,
                     sbd_range=ranges,
                     assistance_fatigue_budget=max(0, assistance),

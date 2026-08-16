@@ -4,7 +4,12 @@ from dataclasses import replace
 
 import pytest
 from portal import create_app
-from portal.block_factory import FactoryRequest, _day_sequence, _preview
+from portal.block_factory import (
+    FactoryRequest,
+    _allocate_weekly_sets,
+    _day_sequence,
+    _preview,
+)
 from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.athlete_state import AthleteConstraintFlag, AthleteStateOverride, AthleteStateRecommendation
@@ -136,6 +141,20 @@ def test_six_day_bench_exposures_have_differentiated_coaching_intent():
     assert days[-1]["day_type"] == "SBD"
     assert {item["role"] for item in days[-1]["exposures"]} == {"competition"}
 
+
+def test_multi_frequency_weekly_sets_are_allocated_deterministically_by_role():
+    intents = [
+        {"sets": 4, "role": "primary_volume"},
+        {"sets": 3, "role": "secondary_strength"},
+        {"sets": 2, "role": "competition"},
+    ]
+
+    allocation = _allocate_weekly_sets(8, intents)
+
+    assert allocation == [3, 3, 2]
+    assert sum(allocation) == 8
+    assert all(value >= 1 for value in allocation)
+
 def test_joint_constraints_select_supported_main_variations_and_coach_choice_wins():
     app = create_test_app()
     athlete_id = create_athlete(app)
@@ -165,6 +184,10 @@ def test_joint_constraints_select_supported_main_variations_and_coach_choice_win
 
         preview = _preview(replace(factory_request(1, 1, 1, 1), athlete_id=athlete_id))
         assert preview[0]["exercises"][:3] == ["Supported Squat", "Supported Bench", "Supported Deadlift"]
+        assert [item["exercise_name"] for item in preview[0]["exposures"]] == [
+            "Supported Squat", "Supported Bench", "Supported Deadlift",
+        ]
+        assert not preview[0]["coach_review_required"]
 
         db.session.add(AthleteStateOverride(
             athlete_id=athlete_id, target_type="programming", target_ref="weekly",
@@ -174,6 +197,39 @@ def test_joint_constraints_select_supported_main_variations_and_coach_choice_win
         db.session.commit()
         overridden = _preview(replace(factory_request(1, 1, 1, 1), athlete_id=athlete_id))
         assert overridden[0]["exercises"][1] == "Competition Bench Press"
+        assert overridden[0]["exposures"][1]["exercise_name"] == "Competition Bench Press"
+        assert overridden[0]["exposures"][1]["exercise_provenance"] == "coach_selected"
+
+
+def test_no_compatible_main_exercise_requires_coach_review():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    with app.app_context():
+        names = (
+            "Competition Bench Press", "Close-Grip Bench Press",
+            "Paused Bench Press", "Tempo Bench Press", "Feet-Up Bench Press",
+        )
+        existing = {row.name: row for row in Exercise.query.filter(Exercise.name.in_(names)).all()}
+        for name in names:
+            if name not in existing:
+                existing[name] = Exercise(name=name, movement="press", active=True)
+                db.session.add(existing[name])
+        for row in existing.values():
+            row.lift_family = "bench"
+            row.constraint_tags = '["shoulder_loading"]'
+        db.session.add(AthleteConstraintFlag(
+            athlete_id=athlete_id, flag_kind="irritation",
+            label="Shoulder irritation", reported_by="athlete",
+            starts_on=date.today(),
+        ))
+        db.session.commit()
+
+        preview = _preview(replace(factory_request(1, 0, 1, 0), athlete_id=athlete_id))
+
+        assert preview[0]["coach_review_required"] is True
+        assert "No automatically compatible bench alternative" in preview[0]["coach_review_reasons"][0]
+        assert preview[0]["exposures"][0]["exercise_name"] == preview[0]["exercises"][0]
+        assert preview[0]["exposures"][0]["exercise_provenance"] == "requires_coach_review"
 
 
 @pytest.mark.parametrize(
@@ -860,6 +916,116 @@ def test_high_fatigue_exactly_reduces_preview_and_persisted_sets_within_bounds(m
                     totals[item.lift_slot.lift_family] += item.sets
         assert totals == {"squat": 2, "bench": 2, "deadlift": 2}
         assert all(item.sets >= 1 for session in TrainingBlock.query.one().weeks[0].sessions for item in session.prescriptions if item.lift_slot is not None)
+
+
+def test_six_day_bench_sets_respect_authoritative_weekly_envelope():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    form = {
+        **base_form(athlete_id), "training_days": "6",
+        "squat_frequency": "2", "bench_frequency": "5",
+        "deadlift_frequency": "2",
+    }
+
+    _preview_response, accepted = preview_and_accept(app.test_client(), form)
+
+    assert accepted.status_code == 302
+    with app.app_context():
+        proposal = AthleteStateRecommendation.query.one().recommendation_json
+        expected = proposal["volume_progression"]["weeks"][0]["sbd_sets"]["bench"]
+        bench = [
+            item for session in TrainingBlock.query.one().weeks[0].sessions
+            for item in session.prescriptions
+            if item.lift_slot is not None and item.lift_slot.lift_family == "bench"
+        ]
+        assert len(bench) == 5
+        assert sum(item.sets for item in bench) == expected
+        assert len({item.sets for item in bench}) > 1
+
+
+def test_fatigue_reduction_persists_across_multi_exposure_lifts(monkeypatch):
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    monkeypatch.setattr(
+        "portal.services.weekly_programming_intelligence.calculate_signals",
+        lambda athlete: _fatigue_signal(9),
+    )
+    form = {
+        **base_form(athlete_id), "squat_frequency": "2",
+        "bench_frequency": "3", "deadlift_frequency": "1",
+    }
+
+    _preview_response, accepted = preview_and_accept(app.test_client(), form)
+
+    assert accepted.status_code == 302
+    with app.app_context():
+        expected = AthleteStateRecommendation.query.one().recommendation_json[
+            "volume_progression"
+        ]["weeks"][0]["sbd_sets"]
+        actual = {family: 0 for family in expected}
+        for session in TrainingBlock.query.one().weeks[0].sessions:
+            for item in session.prescriptions:
+                if item.lift_slot is not None:
+                    actual[item.lift_slot.lift_family] += item.sets
+        assert actual == expected
+
+
+def test_coach_fixed_weekly_sets_persist_across_multi_exposure_lifts(monkeypatch):
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    monkeypatch.setattr(
+        "portal.services.weekly_programming_intelligence.calculate_signals",
+        lambda athlete: _fatigue_signal(9),
+    )
+    with app.app_context():
+        db.session.add(AthleteStateOverride(
+            athlete_id=athlete_id, target_type="programming", target_ref="weekly",
+            override_json={"weekly_sbd_sets": {
+                "squat": 7, "bench": 10, "deadlift": 4,
+            }},
+            reason="Coach fixed weekly workload", recorded_by="coach@example.com",
+        ))
+        db.session.commit()
+    form = {
+        **base_form(athlete_id), "squat_frequency": "2",
+        "bench_frequency": "3", "deadlift_frequency": "1",
+    }
+
+    _preview_response, accepted = preview_and_accept(app.test_client(), form)
+
+    assert accepted.status_code == 302
+    with app.app_context():
+        actual = {"squat": 0, "bench": 0, "deadlift": 0}
+        for session in TrainingBlock.query.one().weeks[0].sessions:
+            for item in session.prescriptions:
+                if item.lift_slot is not None:
+                    actual[item.lift_slot.lift_family] += item.sets
+        assert actual == {"squat": 7, "bench": 10, "deadlift": 4}
+
+
+def test_final_rpe_cap_is_applied_after_exposure_role_offsets(monkeypatch):
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    monkeypatch.setattr(
+        "portal.services.weekly_programming_intelligence.calculate_signals",
+        lambda athlete: _fatigue_signal(9),
+    )
+    form = {
+        **base_form(athlete_id), "goal": "peaking",
+        "squat_frequency": "2", "bench_frequency": "3",
+        "deadlift_frequency": "1",
+    }
+
+    _preview_response, accepted = preview_and_accept(app.test_client(), form)
+
+    assert accepted.status_code == 302
+    with app.app_context():
+        rpes = [
+            item.rpe for session in TrainingBlock.query.one().weeks[0].sessions
+            for item in session.prescriptions if item.lift_slot is not None
+        ]
+        assert max(rpes) == 7
+        assert len(set(rpes)) > 1
 
 
 @pytest.mark.parametrize("fatigue", [None, 7])

@@ -648,12 +648,16 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
         exercises = [intent.exercise_name for intent in intents]
         main_count = len(day_type)
         main_exercises = exercises[:main_count]
-        main_exercises = _adapt_main_exercises(
+        main_exercises, adaptation_reviews, exercise_provenance = _adapt_main_exercises(
             factory.athlete_id,
             day_type,
             main_exercises,
             excluded_constraint_tags,
         )
+        exposure_metadata = [asdict(intent) for intent in intents]
+        for index, exercise_name in enumerate(main_exercises):
+            exposure_metadata[index]["exercise_name"] = exercise_name
+            exposure_metadata[index]["exercise_provenance"] = exercise_provenance[index]
         # Pinned selections replace automatic volume behaviour, are distributed
         # once across exposure-led days, and remain in coach order.
         manual_for_day = selected_accessories[day_index :: len(days)]
@@ -760,7 +764,9 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                 "exercises": main_exercises
                 + [item["name"] for item in generated_accessories],
                 "main_count": main_count,
-                "exposures": [asdict(intent) for intent in intents],
+                "exposures": exposure_metadata,
+                "coach_review_required": bool(adaptation_reviews),
+                "coach_review_reasons": adaptation_reviews,
                 "accessories": generated_accessories,
                 "accessory_count": len(generated_accessories),
                 "accessory_outcome": accessory_outcome,
@@ -793,7 +799,7 @@ def _adapt_main_exercises(
     day_type: str,
     names: list[str],
     excluded_tags: set[str],
-) -> list[str]:
+) -> tuple[list[str], list[str], list[str]]:
     """Choose a supported non-conflicting variation; coach selections win."""
     families = {"S": "squat", "B": "bench", "D": "deadlift"}
     normalised_tags = {tag.casefold() for tag in excluded_tags}
@@ -813,17 +819,21 @@ def _adapt_main_exercises(
                     selections[family] = name.strip()
 
     result: list[str] = []
+    reviews: list[str] = []
+    provenance: list[str] = []
     for code, current_name in zip(day_type, names):
         family = families[code]
         coach_name = selections.get(family)
         if coach_name:
             result.append(coach_name)
+            provenance.append("coach_selected")
             continue
         current = Exercise.query.filter_by(name=current_name, active=True).one_or_none()
         if not normalised_tags or current is None or not (
             _metadata_set(current.constraint_tags) & normalised_tags
         ):
             result.append(current_name)
+            provenance.append("generated")
             continue
         alternatives = Exercise.query.filter_by(
             lift_family=family, active=True
@@ -836,8 +846,62 @@ def _adapt_main_exercises(
             ),
             None,
         )
-        result.append(replacement.name if replacement is not None else current_name)
-    return result
+        if replacement is not None:
+            result.append(replacement.name)
+            provenance.append("constraint_adapted")
+        else:
+            result.append(current_name)
+            provenance.append("requires_coach_review")
+            reviews.append(
+                f"No automatically compatible {family} alternative was available; "
+                f"review {current_name} before acceptance."
+            )
+    return result, reviews, provenance
+
+
+def _allocate_weekly_sets(
+    weekly_total: int, intents: list[dict[str, Any]]
+) -> list[int]:
+    """Allocate an authoritative weekly envelope by role weight.
+
+    Every exposure receives one set first. Remaining sets follow the relative
+    role prescriptions using largest remainders, with stable exposure order as
+    the tie-break. This preserves role differentiation without exceeding the
+    weekly total.
+    """
+    count = len(intents)
+    if count == 0:
+        return []
+    if weekly_total < count:
+        raise ValueError(
+            f"Weekly set envelope ({weekly_total}) cannot retain one set across "
+            f"{count} scheduled exposures; coach review is required."
+        )
+    allocation = [1] * count
+    remaining = weekly_total - count
+    weights = [max(0, int(intent["sets"]) - 1) for intent in intents]
+    weight_total = sum(weights)
+    if not remaining or not weight_total:
+        for index in range(remaining):
+            allocation[index % count] += 1
+        return allocation
+    shares = [remaining * weight / weight_total for weight in weights]
+    floors = [int(share) for share in shares]
+    allocation = [value + floor for value, floor in zip(allocation, floors)]
+    leftovers = weekly_total - sum(allocation)
+    order = sorted(
+        range(count), key=lambda index: (-(shares[index] - floors[index]), index)
+    )
+    for index in order[:leftovers]:
+        allocation[index] += 1
+    return allocation
+
+
+def _effective_exposure_rpe(
+    base_rpe: float, role_offset: float, effective_cap: float | None
+) -> float:
+    adjusted = max(1.0, min(10.0, base_rpe + role_offset))
+    return min(effective_cap, adjusted) if effective_cap is not None else adjusted
 
 
 def _apply_active_coach_overrides(factory: FactoryRequest) -> FactoryRequest:
@@ -1212,10 +1276,20 @@ def generate():
         # later coach-authored cap in that envelope remains authoritative.
         week_rpe = volume_week.target_rpe
         exposure_seen = {family: 0 for family in ("squat", "bench", "deadlift")}
-        exposure_totals = {
-            "squat": factory.squat_frequency,
-            "bench": factory.bench_frequency,
-            "deadlift": factory.deadlift_frequency,
+        intents_by_family = {
+            family: [
+                intent
+                for day in scheduled_preview
+                for intent in day.get("exposures", [])
+                if intent["lift_family"] == family
+            ]
+            for family in ("squat", "bench", "deadlift")
+        }
+        set_allocations = {
+            family: _allocate_weekly_sets(
+                volume_week.sbd_sets[family], intents_by_family[family]
+            )
+            for family in ("squat", "bench", "deadlift")
         }
 
         for day in scheduled_preview:
@@ -1266,13 +1340,9 @@ def generate():
                 if exercise_position <= main_count:
                     family = main_families[exercise_position - 1]
                     intent = main_intents[exercise_position - 1]
-                    # Preserve athlete-state volume behaviour for a single weekly
-                    # exposure. At higher frequencies, the explicit role profile
-                    # owns the session prescription and never creates zero-set work.
-                    if exposure_totals[family] == 1:
-                        sets = volume_week.sbd_sets[family]
-                    else:
-                        sets = max(1, int(intent["sets"]))
+                    allocation_index = exposure_seen[family]
+                    sets = set_allocations[family][allocation_index]
+                    exposure_seen[family] += 1
                     reps = str(intent["reps"])
                     slot = ProgrammingLiftSlot(
                         session=session,
@@ -1307,15 +1377,10 @@ def generate():
                         sets=sets,
                         reps=reps,
                         prescription_type="rpe",
-                        rpe=max(
-                            1.0,
-                            min(
-                                10.0,
-                                week_rpe
-                                + float(
-                                    main_intents[exercise_position - 1]["rpe_offset"]
-                                ),
-                            ),
+                        rpe=_effective_exposure_rpe(
+                            week_rpe,
+                            float(main_intents[exercise_position - 1]["rpe_offset"]),
+                            volume_week.effective_rpe_cap,
                         )
                         if exercise_position <= main_count
                         else min(9.0, week_rpe + 0.5),

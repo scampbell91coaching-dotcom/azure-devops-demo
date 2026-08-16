@@ -224,7 +224,12 @@ def test_all_duplication_routes_retarget_pinned_warmup_to_copied_lift_slot(copy_
     week_id, session_id, _ = _programme(app)
     with app.app_context():
         source = db.session.get(TrainingSession, session_id)
-        slot = ProgrammingLiftSlot(session=source, position=1, lift_family="squat")
+        slot = ProgrammingLiftSlot(
+            session=source,
+            position=1,
+            lift_family="squat",
+            exposure_role="secondary_strength",
+        )
         db.session.add(slot)
         source.prescriptions[0].lift_slot = slot
         source.prescriptions[0].slot_role = "top_set"
@@ -264,6 +269,7 @@ def test_all_duplication_routes_retarget_pinned_warmup_to_copied_lift_slot(copy_
         assert copied_slot.session_id == copied_assignment.session_id
         assert copied_slot.lift_family == "squat"
         assert copied_slot.position == 1
+        assert copied_slot.exposure_role == "secondary_strength"
 
 
 def test_insert_before_and_after_creates_blank_sessions_and_renumbers():

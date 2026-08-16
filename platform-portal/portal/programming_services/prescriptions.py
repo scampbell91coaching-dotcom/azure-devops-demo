@@ -112,6 +112,7 @@ def copy(
             session=target,
             position=source_slot.position,
             lift_family=source_slot.lift_family,
+            exposure_role=source_slot.exposure_role,
         )
         db.session.add(target_slot)
         slots[source_slot.id] = target_slot
