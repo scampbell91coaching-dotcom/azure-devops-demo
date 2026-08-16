@@ -132,6 +132,41 @@ def test_manual_override_is_ordered_and_snapshot_locks_history():
     assert b"Late edit" not in client.get(f"/athlete/programme/sessions/{session_id}").data
 
 
+def test_first_save_freezes_empty_delivery_against_later_protocol_changes():
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
+    with app.app_context():
+        db.create_all()
+        athlete_id, _, session_id = _seed()
+        prescription_id = db.session.get(TrainingSession, session_id).prescriptions[0].id
+    client = app.test_client()
+    with client.session_transaction() as signed_in:
+        signed_in["athlete_id"] = athlete_id
+
+    saved = client.post(f"/athlete/programme/sessions/{session_id}", data={
+        f"row-{prescription_id}-1": "1",
+        f"set-{prescription_id}-1-completed": "1",
+        f"set-{prescription_id}-1-reps": "5",
+        "intent": "save",
+    })
+
+    assert saved.status_code == 302
+    with app.app_context():
+        snapshot = WarmupPlanSnapshot.query.one()
+        assert snapshot.steps == []
+
+    changed = client.post(f"/programming/sessions/{session_id}/warmup-protocols", data={
+        "name": "Later preparation",
+        "reason": "Added after delivery",
+        "steps": "general | Later drill | reps | 8",
+    })
+    assert changed.status_code == 409
+    delivered = client.get(f"/athlete/programme/sessions/{session_id}")
+    assert b"Later drill" not in delivered.data
+    with app.app_context():
+        assert WarmupAssignment.query.count() == 0
+        assert WarmupPlanSnapshot.query.one().steps == []
+
+
 def test_athlete_cannot_view_another_athletes_warmup():
     app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
     with app.app_context():

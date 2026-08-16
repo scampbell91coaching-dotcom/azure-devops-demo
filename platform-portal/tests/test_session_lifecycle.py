@@ -1,3 +1,4 @@
+import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
 from portal import create_app
@@ -5,6 +6,7 @@ from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.programming import (
     ExercisePrescription,
+    ProgrammingLiftSlot,
     TrainingBlock,
     TrainingSession,
     TrainingWeek,
@@ -148,12 +150,21 @@ def test_duplicate_preserves_authored_warmup_intent_but_not_resolved_history():
         )
         db.session.add(protocol)
         db.session.flush()
+        source_slot = ProgrammingLiftSlot(
+            session=source, position=1, lift_family="squat"
+        )
+        db.session.add(source_slot)
+        source.prescriptions[0].lift_slot = source_slot
+        source.prescriptions[0].slot_role = "top_set"
+        db.session.flush()
+        source_slot_id = source_slot.id
         db.session.add_all(
             [
                 WarmupAssignment(
                     protocol_id=protocol.id,
                     athlete_id=source.week.block.athlete_id,
                     session_id=source.id,
+                    lift_slot_id=source_slot_id,
                     reason="Prepare hips and competition pattern",
                 ),
                 WarmupOverride(
@@ -185,6 +196,9 @@ def test_duplicate_preserves_authored_warmup_intent_but_not_resolved_history():
         assignment = WarmupAssignment.query.filter_by(session_id=copied.id).one()
         assert assignment.protocol.stable_key == "squat-prep"
         assert assignment.reason == "Prepare hips and competition pattern"
+        assert assignment.lift_slot_id != source_slot_id
+        assert assignment.lift_slot.session_id == copied.id
+        assert assignment.lift_slot.lift_family == "squat"
         override = WarmupOverride.query.filter_by(session_id=copied.id).one()
         assert (
             override.name,
@@ -202,6 +216,54 @@ def test_duplicate_preserves_authored_warmup_intent_but_not_resolved_history():
             "Individual preparation drill",
         )
         assert WarmupPlanSnapshot.query.filter_by(session_id=copied.id).count() == 0
+
+
+@pytest.mark.parametrize("copy_level", ["session", "week", "block"])
+def test_all_duplication_routes_retarget_pinned_warmup_to_copied_lift_slot(copy_level):
+    app = _app()
+    week_id, session_id, _ = _programme(app)
+    with app.app_context():
+        source = db.session.get(TrainingSession, session_id)
+        slot = ProgrammingLiftSlot(session=source, position=1, lift_family="squat")
+        db.session.add(slot)
+        source.prescriptions[0].lift_slot = slot
+        source.prescriptions[0].slot_role = "top_set"
+        protocol = WarmupProtocol(stable_key="sbd-squat", version=1, name="Squat")
+        db.session.add(protocol)
+        db.session.flush()
+        source_slot_id = slot.id
+        db.session.add(
+            WarmupAssignment(
+                protocol_id=protocol.id,
+                athlete_id=source.week.block.athlete_id,
+                session_id=source.id,
+                lift_slot_id=slot.id,
+                reason="Coach pin",
+            )
+        )
+        db.session.commit()
+        block_id = source.week.block_id
+
+    target_id = {
+        "session": session_id,
+        "week": week_id,
+        "block": block_id,
+    }[copy_level]
+    response = app.test_client().post(
+        f"/programming/{copy_level}s/{target_id}/duplicate"
+    )
+
+    assert response.status_code == 302
+    with app.app_context():
+        copied_assignment = WarmupAssignment.query.filter(
+            WarmupAssignment.session_id != session_id
+        ).one()
+        copied_slot = copied_assignment.lift_slot
+        assert copied_assignment.reason == "Coach pin"
+        assert copied_slot.id != source_slot_id
+        assert copied_slot.session_id == copied_assignment.session_id
+        assert copied_slot.lift_family == "squat"
+        assert copied_slot.position == 1
 
 
 def test_insert_before_and_after_creates_blank_sessions_and_renumbers():

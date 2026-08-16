@@ -55,8 +55,8 @@ def duplicate(source: TrainingBlock) -> TrainingBlock:
             )
             db.session.add(target_session)
             db.session.flush()
-            copy_prescriptions(source_session, target_session)
-            copy_warmups(source_session, target_session)
+            lift_slots = copy_prescriptions(source_session, target_session)
+            copy_warmups(source_session, target_session, lift_slots)
 
     append_revision(target, change_type="block_duplicated", summary=f'Duplicated from "{source.name}"')
     db.session.commit()

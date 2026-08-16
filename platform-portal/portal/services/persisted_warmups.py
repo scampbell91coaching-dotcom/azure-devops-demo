@@ -98,16 +98,14 @@ def athlete_warmup(athlete_id: int, session_id: int) -> tuple[WarmupStepView, ..
     ) for row in snapshot.steps)
 
 
-def freeze_warmup(athlete_id: int, session_id: int) -> WarmupPlanSnapshot | None:
-    """Stage the first non-empty delivered plan in the caller's save transaction."""
+def freeze_warmup(athlete_id: int, session_id: int) -> WarmupPlanSnapshot:
+    """Stage the first delivered plan in the caller's save transaction."""
     snapshot = WarmupPlanSnapshot.query.filter_by(
         athlete_id=athlete_id, session_id=session_id
     ).one_or_none()
     if snapshot is not None:
         return snapshot
     resolved = resolve_warmup(athlete_id, session_id)
-    if not resolved:
-        return None
     snapshot = WarmupPlanSnapshot(athlete_id=athlete_id, session_id=session_id)
     for position, item in enumerate(resolved, 1):
         snapshot.steps.append(WarmupPlanSnapshotStep(
