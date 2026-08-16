@@ -77,8 +77,8 @@ def _copy(source: TrainingWeek, *, position: int) -> TrainingWeek:
         )
         db.session.add(target_session)
         db.session.flush()
-        copy_prescriptions(source_session, target_session)
-        copy_warmups(source_session, target_session)
+        lift_slots = copy_prescriptions(source_session, target_session)
+        copy_warmups(source_session, target_session, lift_slots)
     return target
 
 

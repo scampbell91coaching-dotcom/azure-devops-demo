@@ -88,6 +88,9 @@ def test_pdf_revisions_preserve_exact_bytes_hash_history_and_immutability(tmp_pa
     page = client.get("/athlete/pdf-meal-plan")
     assert page.status_code == 200
     assert b"Revised meet meals" in page.data and b"revision 1" in page.data
+    assert b'class="athlete-workspace"' in page.data
+    assert b'aria-label="Athlete navigation"' in page.data
+    assert b"Traditional Strength Platform" not in page.data
     download = client.get(f"/athlete/pdf-meal-plans/{first_id}/download")
     assert download.status_code == 200
     assert download.data == PDF_ONE

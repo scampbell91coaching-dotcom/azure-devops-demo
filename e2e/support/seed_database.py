@@ -176,6 +176,41 @@ def reset_fixture(name: str) -> None:
         MealPlanAssignment.query.filter_by(athlete_id=101).delete(synchronize_session=False)
         MealPlanTemplate.query.delete(synchronize_session=False)
         NutritionMacroPrescription.query.filter_by(athlete_id=101).delete(synchronize_session=False)
+
+        # Meal-plan browser coverage depends on athlete 101 retaining the
+        # nutrition entitlement. Restore the complete service boundary so this
+        # workflow cannot inherit mutable state from another E2E test.
+        ClientServiceChange.query.filter_by(athlete_id=101).delete(
+            synchronize_session=False
+        )
+        db.session.add_all(
+            [
+                ClientServiceChange(
+                    athlete_id=101,
+                    service="training",
+                    value="yes",
+                    effective_at=datetime(2026, 8, 10),
+                ),
+                ClientServiceChange(
+                    athlete_id=101,
+                    service="nutrition",
+                    value="yes",
+                    effective_at=datetime(2026, 8, 10),
+                ),
+                ClientServiceChange(
+                    athlete_id=101,
+                    service="meet_day",
+                    value="no",
+                    effective_at=datetime(2026, 8, 10),
+                ),
+                ClientServiceChange(
+                    athlete_id=101,
+                    service="video_review",
+                    value="none",
+                    effective_at=datetime(2026, 8, 10),
+                ),
+            ]
+        )
     else:
         raise KeyError(name)
     db.session.commit()

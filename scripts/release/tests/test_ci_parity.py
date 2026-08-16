@@ -45,7 +45,7 @@ class CIParityContractTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn(
-            'EXPECTED_ALEMBIC_HEAD = "0024_pdf_meal_plan_delivery"',
+            'EXPECTED_ALEMBIC_HEAD = "0026_programming_exposure_roles"',
             implementation,
         )
 

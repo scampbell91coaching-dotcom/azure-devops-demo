@@ -54,6 +54,9 @@ def test_coach_preview_and_read_only_athlete_snapshot(tmp_path):
     assert b"prescription macro-1 revision 3" in athlete.data
     assert b"Save meal plan" not in athlete.data
     assert b"Potato" not in athlete.data
+    assert b'class="athlete-workspace"' in athlete.data
+    assert b'aria-label="Athlete navigation"' in athlete.data
+    assert b"Traditional Strength Platform" not in athlete.data
 
 
 def test_coach_meal_plan_index_separates_templates_from_assignment_history(tmp_path):

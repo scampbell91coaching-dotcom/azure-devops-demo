@@ -40,6 +40,19 @@ async function configureServices(
   await page.getByRole('button', { name: 'Save' }).click();
 }
 
+async function expectEvenlyFilledMobileNavigation(page: Page, expectedItems: number) {
+  const navigation = page.getByRole('navigation', { name: 'Athlete navigation' }).last();
+  const items = navigation.locator(':scope > a, :scope > details');
+  await expect(items).toHaveCount(expectedItems);
+  const boxes = await items.evaluateAll(elements => elements.map(element => {
+    const box = element.getBoundingClientRect();
+    return { left: box.left, right: box.right, width: box.width };
+  }));
+  expect(boxes[0].left).toBeLessThanOrEqual(1);
+  expect(Math.abs(boxes.at(-1)!.right - 390)).toBeLessThanOrEqual(1);
+  expect(Math.max(...boxes.map(box => box.width)) - Math.min(...boxes.map(box => box.width))).toBeLessThanOrEqual(1);
+}
+
 test.beforeEach(async ({ request, resetE2EFixture }) => {
   await resetE2EFixture(request, 'services');
 });
@@ -64,6 +77,15 @@ test('training-only athlete gets a focused dashboard with no nutrition links', a
   await expect(page.getByRole('navigation', { name: 'Athlete navigation' }).first().getByText('Programme')).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: /Nutrition/ })).toHaveCount(0);
   await expect(page.locator('a[href*="nutrition-checkins"]')).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expectEvenlyFilledMobileNavigation(page, 4);
+  const more = page.locator('[data-athlete-more]');
+  await more.locator('summary').focus();
+  await page.keyboard.press('Enter');
+  await expect(more.getByRole('link', { name: 'Account' })).toBeVisible();
+  await expect(more.getByRole('link', { name: 'Meal plan', exact: true })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(more.locator('summary')).toBeFocused();
 });
 
 test('training and nutrition athlete gets both services without changing the primary training action', async ({
@@ -86,4 +108,6 @@ test('training and nutrition athlete gets both services without changing the pri
   await expect(page.getByRole('heading', { level: 2, name: 'Nutrition & bodyweight' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'View session' })).toBeVisible();
   await expect(page.locator('.athlete-mobile-nav a')).toHaveCount(7);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expectEvenlyFilledMobileNavigation(page, 5);
 });

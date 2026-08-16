@@ -33,10 +33,11 @@ from .models.programming import (
 )
 from .models.warmup import WarmupAssignment, WarmupProtocol, WarmupProtocolStep
 from .programming_services.revisions import append_revision
-from .services.weekly_programming_intelligence import WeeklyProgrammingIntelligence
 from .services.accessory_intelligence import AccessoryIntelligence
+from .services.exposure_intelligence import weekly_exposure_intents
 from .services.programming_athlete_state import aggregate_programming_athlete_state
 from .services.proposal_explanations import ProposalExplanationService
+from .services.weekly_programming_intelligence import WeeklyProgrammingIntelligence
 from .tenancy import athlete_query_for_request, require_athlete_access
 
 block_factory_bp = Blueprint("block_factory", __name__)
@@ -603,8 +604,10 @@ def _accessory_pool() -> list[dict[str, Any]]:
 
 
 def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
-    templates = _template_options()
     days = _day_sequence(factory)
+    exposure_intents = weekly_exposure_intents(
+        days, goal=factory.goal, deadlift_style=factory.deadlift_style
+    )
 
     preview = []
     selected_accessories = []
@@ -639,22 +642,22 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
     suggested_ids: set[int] = set()
     fatigue_budget = intelligence.VOLUME_FATIGUE_BUDGETS[factory.accessory_volume]
     for day_index, day_type in enumerate(days):
-        exercises = _candidate_exercises(
-            templates,
-            day_type,
-            day_index,
-        )
-        exercises = _apply_deadlift_style(
-            exercises,
-            factory.deadlift_style,
-        )
-        exercises = _ensure_main_lifts(
-            exercises,
-            day_type,
-            factory.deadlift_style,
-        )
+        # Scheduling chooses when a lift occurs; coaching intent chooses what the
+        # exposure is and how it is prescribed.
+        intents = exposure_intents[day_index]
+        exercises = [intent.exercise_name for intent in intents]
         main_count = len(day_type)
         main_exercises = exercises[:main_count]
+        main_exercises, adaptation_reviews, exercise_provenance = _adapt_main_exercises(
+            factory.athlete_id,
+            day_type,
+            main_exercises,
+            excluded_constraint_tags,
+        )
+        exposure_metadata = [asdict(intent) for intent in intents]
+        for index, exercise_name in enumerate(main_exercises):
+            exposure_metadata[index]["exercise_name"] = exercise_name
+            exposure_metadata[index]["exercise_provenance"] = exercise_provenance[index]
         # Pinned selections replace automatic volume behaviour, are distributed
         # once across exposure-led days, and remain in coach order.
         manual_for_day = selected_accessories[day_index :: len(days)]
@@ -761,6 +764,9 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                 "exercises": main_exercises
                 + [item["name"] for item in generated_accessories],
                 "main_count": main_count,
+                "exposures": exposure_metadata,
+                "coach_review_required": bool(adaptation_reviews),
+                "coach_review_reasons": adaptation_reviews,
                 "accessories": generated_accessories,
                 "accessory_count": len(generated_accessories),
                 "accessory_outcome": accessory_outcome,
@@ -774,6 +780,128 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
         )
 
     return preview
+
+
+def _metadata_set(value: str | None) -> set[str]:
+    try:
+        parsed = json.loads(value or "[]")
+    except (TypeError, ValueError):
+        return set()
+    return {
+        str(item).strip().casefold()
+        for item in parsed
+        if isinstance(parsed, list) and str(item).strip()
+    } if isinstance(parsed, list) else set()
+
+
+def _adapt_main_exercises(
+    athlete_id: int,
+    day_type: str,
+    names: list[str],
+    excluded_tags: set[str],
+) -> tuple[list[str], list[str], list[str]]:
+    """Choose a supported non-conflicting variation; coach selections win."""
+    families = {"S": "squat", "B": "bench", "D": "deadlift"}
+    normalised_tags = {tag.casefold() for tag in excluded_tags}
+    now = datetime.now(UTC).replace(tzinfo=None)
+    selections: dict[str, str] = {}
+    for row in AthleteStateOverride.query.filter(
+        AthleteStateOverride.athlete_id == athlete_id,
+        AthleteStateOverride.target_type == "programming",
+        AthleteStateOverride.revoked_at.is_(None),
+        (AthleteStateOverride.expires_at.is_(None)) | (AthleteStateOverride.expires_at > now),
+    ).order_by(AthleteStateOverride.recorded_at.asc(), AthleteStateOverride.id.asc()):
+        payload = row.override_json if isinstance(row.override_json, dict) else {}
+        choices = payload.get("exercise_selections")
+        if isinstance(choices, dict):
+            for family, name in choices.items():
+                if family in families.values() and isinstance(name, str) and name.strip():
+                    selections[family] = name.strip()
+
+    result: list[str] = []
+    reviews: list[str] = []
+    provenance: list[str] = []
+    for code, current_name in zip(day_type, names):
+        family = families[code]
+        coach_name = selections.get(family)
+        if coach_name:
+            result.append(coach_name)
+            provenance.append("coach_selected")
+            continue
+        current = Exercise.query.filter_by(name=current_name, active=True).one_or_none()
+        if not normalised_tags or current is None or not (
+            _metadata_set(current.constraint_tags) & normalised_tags
+        ):
+            result.append(current_name)
+            provenance.append("generated")
+            continue
+        alternatives = Exercise.query.filter_by(
+            lift_family=family, active=True
+        ).order_by(Exercise.specificity.desc(), Exercise.name.asc(), Exercise.id.asc()).all()
+        replacement = next(
+            (
+                item for item in alternatives
+                if item.name != current_name
+                and not (_metadata_set(item.constraint_tags) & normalised_tags)
+            ),
+            None,
+        )
+        if replacement is not None:
+            result.append(replacement.name)
+            provenance.append("constraint_adapted")
+        else:
+            result.append(current_name)
+            provenance.append("requires_coach_review")
+            reviews.append(
+                f"No automatically compatible {family} alternative was available; "
+                f"review {current_name} before acceptance."
+            )
+    return result, reviews, provenance
+
+
+def _allocate_weekly_sets(
+    weekly_total: int, intents: list[dict[str, Any]]
+) -> list[int]:
+    """Allocate an authoritative weekly envelope by role weight.
+
+    Every exposure receives one set first. Remaining sets follow the relative
+    role prescriptions using largest remainders, with stable exposure order as
+    the tie-break. This preserves role differentiation without exceeding the
+    weekly total.
+    """
+    count = len(intents)
+    if count == 0:
+        return []
+    if weekly_total < count:
+        raise ValueError(
+            f"Weekly set envelope ({weekly_total}) cannot retain one set across "
+            f"{count} scheduled exposures; coach review is required."
+        )
+    allocation = [1] * count
+    remaining = weekly_total - count
+    weights = [max(0, int(intent["sets"]) - 1) for intent in intents]
+    weight_total = sum(weights)
+    if not remaining or not weight_total:
+        for index in range(remaining):
+            allocation[index % count] += 1
+        return allocation
+    shares = [remaining * weight / weight_total for weight in weights]
+    floors = [int(share) for share in shares]
+    allocation = [value + floor for value, floor in zip(allocation, floors)]
+    leftovers = weekly_total - sum(allocation)
+    order = sorted(
+        range(count), key=lambda index: (-(shares[index] - floors[index]), index)
+    )
+    for index in order[:leftovers]:
+        allocation[index] += 1
+    return allocation
+
+
+def _effective_exposure_rpe(
+    base_rpe: float, role_offset: float, effective_cap: float | None
+) -> float:
+    adjusted = max(1.0, min(10.0, base_rpe + role_offset))
+    return min(effective_cap, adjusted) if effective_cap is not None else adjusted
 
 
 def _apply_active_coach_overrides(factory: FactoryRequest) -> FactoryRequest:
@@ -1143,13 +1271,25 @@ def generate():
         db.session.add(week)
         db.session.flush()
 
-        week_rpe = _week_rpe(factory, week_position)
         volume_week = intelligence.volume.weeks[week_position - 1]
+        # The intelligence envelope owns bounded readiness/adherence caps. A
+        # later coach-authored cap in that envelope remains authoritative.
+        week_rpe = volume_week.target_rpe
         exposure_seen = {family: 0 for family in ("squat", "bench", "deadlift")}
-        exposure_totals = {
-            "squat": factory.squat_frequency,
-            "bench": factory.bench_frequency,
-            "deadlift": factory.deadlift_frequency,
+        intents_by_family = {
+            family: [
+                intent
+                for day in scheduled_preview
+                for intent in day.get("exposures", [])
+                if intent["lift_family"] == family
+            ]
+            for family in ("squat", "bench", "deadlift")
+        }
+        set_allocations = {
+            family: _allocate_weekly_sets(
+                volume_week.sbd_sets[family], intents_by_family[family]
+            )
+            for family in ("squat", "bench", "deadlift")
         }
 
         for day in scheduled_preview:
@@ -1181,6 +1321,7 @@ def generate():
             }
             family_by_code = {"S": "squat", "B": "bench", "D": "deadlift"}
             main_families = [family_by_code[code] for code in day_type]
+            main_intents = list(day.get("exposures", []))
 
             for exercise_position, exercise_name in enumerate(
                 exercises,
@@ -1198,15 +1339,16 @@ def generate():
                 )
                 if exercise_position <= main_count:
                     family = main_families[exercise_position - 1]
-                    quotient, remainder = divmod(
-                        volume_week.sbd_sets[family], exposure_totals[family]
-                    )
-                    sets = quotient + (exposure_seen[family] < remainder)
+                    intent = main_intents[exercise_position - 1]
+                    allocation_index = exposure_seen[family]
+                    sets = set_allocations[family][allocation_index]
                     exposure_seen[family] += 1
+                    reps = str(intent["reps"])
                     slot = ProgrammingLiftSlot(
                         session=session,
                         position=exercise_position,
                         lift_family=family,
+                        exposure_role=intent["role"],
                     )
                     db.session.add(slot)
                     db.session.flush()
@@ -1235,9 +1377,17 @@ def generate():
                         sets=sets,
                         reps=reps,
                         prescription_type="rpe",
-                        rpe=week_rpe
-                        if exercise_position == 1
+                        rpe=_effective_exposure_rpe(
+                            week_rpe,
+                            float(main_intents[exercise_position - 1]["rpe_offset"]),
+                            volume_week.effective_rpe_cap,
+                        )
+                        if exercise_position <= main_count
                         else min(9.0, week_rpe + 0.5),
+                        notes=(
+                            main_intents[exercise_position - 1]["purpose"]
+                            if exercise_position <= main_count else None
+                        ),
                     )
                 )
 

@@ -1,11 +1,15 @@
 from typing import cast
 
 from ..extensions import db
-from ..models.programming import TrainingSession
+from ..models.programming import ProgrammingLiftSlot, TrainingSession
 from ..models.warmup import WarmupAssignment, WarmupOverride
 
 
-def copy(source: TrainingSession, target: TrainingSession) -> None:
+def copy(
+    source: TrainingSession,
+    target: TrainingSession,
+    lift_slots: dict[int, ProgrammingLiftSlot],
+) -> None:
     """Copy authored warm-up intent, but never an athlete's resolved snapshot."""
     assignments = WarmupAssignment.query.filter_by(session_id=source.id).order_by(
         WarmupAssignment.id
@@ -16,6 +20,11 @@ def copy(source: TrainingSession, target: TrainingSession) -> None:
                 protocol_id=item.protocol_id,
                 athlete_id=item.athlete_id,
                 session_id=target.id,
+                lift_slot=(
+                    lift_slots[item.lift_slot_id]
+                    if item.lift_slot_id is not None
+                    else None
+                ),
                 assigned_by_user_id=item.assigned_by_user_id,
                 reason=item.reason,
             )

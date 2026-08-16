@@ -102,13 +102,17 @@ def renumber(
         item.position = position
 
 
-def copy(source: TrainingSession, target: TrainingSession) -> None:
+def copy(
+    source: TrainingSession, target: TrainingSession
+) -> dict[int, ProgrammingLiftSlot]:
+    """Copy prescriptions and return the source-to-target lift-slot mapping."""
     slots: dict[int, ProgrammingLiftSlot] = {}
     for source_slot in source.lift_slots:
         target_slot = ProgrammingLiftSlot(
             session=target,
             position=source_slot.position,
             lift_family=source_slot.lift_family,
+            exposure_role=source_slot.exposure_role,
         )
         db.session.add(target_slot)
         slots[source_slot.id] = target_slot
@@ -118,6 +122,7 @@ def copy(source: TrainingSession, target: TrainingSession) -> None:
             values["lift_slot"] = slots[item.lift_slot_id]
             values["slot_role"] = item.slot_role
         db.session.add(ExercisePrescription(session=target, **values))
+    return slots
 
 
 def create(

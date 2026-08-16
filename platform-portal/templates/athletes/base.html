@@ -35,7 +35,7 @@
     <details class="athlete-mobile-more" data-athlete-more>
       <summary><span aria-hidden="true">•••</span>More</summary>
       <div class="athlete-mobile-more__menu">
-        {% if athlete_services and athlete_services.nutrition %}<a href="{{ url_for('meal_plan_delivery.athlete_plan') }}">Meal plan</a><a href="{{ url_for('meal_plan_delivery.athlete_pdf_plan') }}">PDF meal plan</a>{% endif %}
+        {% if athlete_services and athlete_services.nutrition %}<a data-nav-page="mealplan" href="{{ url_for('meal_plan_delivery.athlete_plan') }}">Meal plan</a><a data-nav-page="pdfmealplan" href="{{ url_for('meal_plan_delivery.athlete_pdf_plan') }}">PDF meal plan</a>{% endif %}
         <a data-nav-page="profile" href="{{ url_for('athletes.dashboard') }}#account">Account</a>
       </div>
     </details>

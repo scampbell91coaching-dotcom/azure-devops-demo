@@ -88,8 +88,8 @@ def duplicate(source: TrainingSession) -> TrainingSession:
         )
         db.session.add(target)
         db.session.flush()
-        copy_prescriptions(source, target)
-        copy_warmups(source, target)
+        lift_slots = copy_prescriptions(source, target)
+        copy_warmups(source, target, lift_slots)
         append_revision(week.block, change_type="session_duplicated", summary=f'Duplicated session "{source.name}"')
         _commit_or_rollback()
     except SQLAlchemyError:

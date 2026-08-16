@@ -178,6 +178,12 @@ class ProgrammingLiftSlot(db.Model):  # type: ignore[name-defined]
             "lift_family IN ('squat', 'bench', 'deadlift')",
             name="ck_programming_lift_slots_family",
         ),
+        db.CheckConstraint(
+            "exposure_role IS NULL OR exposure_role IN "
+            "('competition', 'primary_volume', 'secondary_strength', 'technique', "
+            "'low_fatigue', 'overload')",
+            name="ck_programming_lift_slots_exposure_role",
+        ),
         db.UniqueConstraint(
             "session_id", "position", name="uq_programming_lift_slots_position"
         ),
@@ -192,6 +198,7 @@ class ProgrammingLiftSlot(db.Model):  # type: ignore[name-defined]
     )
     position = db.Column(db.Integer, nullable=False)
     lift_family = db.Column(db.String(20), nullable=False, index=True)
+    exposure_role = db.Column(db.String(32), nullable=True, index=True)
 
     session = db.relationship("TrainingSession", back_populates="lift_slots")
     prescriptions = db.relationship(
@@ -205,6 +212,11 @@ class ProgrammingLiftSlot(db.Model):  # type: ignore[name-defined]
             raise ValueError(f"Unknown lift family: {self.lift_family}")
         if self.position is None or self.position <= 0:
             raise ValueError("lift slot position must be greater than zero")
+        if self.exposure_role is not None and self.exposure_role not in {
+            "competition", "primary_volume", "secondary_strength", "technique",
+            "low_fatigue", "overload",
+        }:
+            raise ValueError(f"Unknown exposure role: {self.exposure_role}")
 
 
 class TrainingSessionLog(db.Model):  # type: ignore[name-defined]

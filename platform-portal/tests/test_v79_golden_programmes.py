@@ -11,6 +11,7 @@ import pytest
 from portal import create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
+from portal.models.athlete_state import AthleteStateRecommendation
 from portal.models.exercise_library import Exercise
 from portal.models.programming import TrainingBlock
 
@@ -117,17 +118,27 @@ def test_golden_programme_structure_survives_preview_and_persistence(case):
         catalogue = {item["name"]: item for item in GOLDEN["catalogue"]}
         start_rpe = {"hypertrophy": 6.0, "development": 6.0,
                      "strength": 6.5, "peaking": 7.0}[case["goal"]]
-        main_reps, secondary_reps = {
-            "hypertrophy": ("8", "10"),
-            "development": ("5", "8"),
-            "strength": ("3", "6"),
-            "peaking": ("1", "4"),
-        }[case["goal"]]
-        main_names = {
-            "squat": "Competition Squat",
-            "bench": "Competition Bench Press",
-            "deadlift": "Conventional Deadlift",
+        variations = {
+            "squat": {
+                "competition": "Competition Squat", "primary_volume": "High-Bar Back Squat",
+                "secondary_strength": "Pause Squat", "overload": "Pin Squat",
+            },
+            "bench": {
+                "competition": "Competition Bench Press", "primary_volume": "Close-Grip Bench Press",
+                "secondary_strength": "Paused Bench Press", "overload": "Slingshot Bench Press",
+            },
+            "deadlift": {
+                "competition": "Conventional Deadlift", "primary_volume": "Romanian Deadlift",
+                "secondary_strength": "Paused Deadlift", "overload": "Block Pull",
+            },
         }
+        role_shapes = {
+            "competition": ("3", 0.5, "competition practice"),
+            "primary_volume": ("6", -0.5, "primary volume"),
+            "secondary_strength": ("4", 0.0, "secondary strength"),
+            "overload": ("2", 1.0, "overload strength"),
+        }
+        set_totals = {"squat": 0, "bench": 0, "deadlift": 0}
 
         for session, expected in zip(sessions, case["expected"]):
             # Slot identity/order is independent of assistance row ordering.
@@ -139,25 +150,27 @@ def test_golden_programme_structure_survives_preview_and_persistence(case):
             main = session.prescriptions[: len(expected["lifts"])]
             assistance = session.prescriptions[len(expected["lifts"]):]
             assert [item.exercise_name for item in main] == [
-                main_names[family] for family in expected["lifts"]
+                variations[slot.lift_family][slot.exposure_role]
+                for slot in session.lift_slots
             ]
             assert [item.exercise_name for item in assistance] == expected["accessories"]
             assert [item.position for item in session.prescriptions] == list(
                 range(1, len(session.prescriptions) + 1)
             )
 
-            assert [_prescription_shape(item) for item in main] == [
-                {
-                    "name": main_names[family],
-                    "position": position,
-                    "sets": 1 if case["goal"] == "peaking" and position == 1
-                    else (4 if case["goal"] == "strength" and position == 1 else 3),
-                    "reps": main_reps if position == 1 else secondary_reps,
-                    "rpe": start_rpe if position == 1 else start_rpe + 0.5,
+            for item, slot in zip(main, session.lift_slots):
+                reps, offset, purpose = role_shapes[slot.exposure_role]
+                assert _prescription_shape(item) == {
+                    "name": variations[slot.lift_family][slot.exposure_role],
+                    "position": slot.position,
+                    "sets": item.sets,
+                    "reps": reps,
+                    "rpe": max(1.0, min(10.0, start_rpe + offset)),
                     "provenance": "generated",
                 }
-                for position, family in enumerate(expected["lifts"], start=1)
-            ]
+                assert item.sets >= 1
+                set_totals[slot.lift_family] += item.sets
+                assert item.notes == purpose
             assert [
                 (item.sets, item.reps, item.rpe, item.provenance, item.lift_slot_id)
                 for item in assistance
@@ -171,6 +184,11 @@ def test_golden_programme_structure_survives_preview_and_persistence(case):
                 )
                 for name in expected["accessories"]
             ]
+
+        envelope = AthleteStateRecommendation.query.one().recommendation_json[
+            "volume_progression"
+        ]["weeks"][0]["sbd_sets"]
+        assert set_totals == envelope
 
 
 def test_golden_corpus_covers_required_representative_shapes():

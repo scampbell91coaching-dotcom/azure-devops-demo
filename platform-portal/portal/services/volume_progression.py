@@ -22,6 +22,7 @@ class WeeklyVolumeEnvelope:
     week: int
     phase: str
     target_rpe: float
+    effective_rpe_cap: float | None
     sbd_sets: dict[str, int]
     sbd_range: dict[str, tuple[int, int]]
     assistance_fatigue_budget: int
@@ -84,7 +85,7 @@ class VolumeProgressionService:
             raise ValueError("Training days must be positive.")
         clean_frequencies = self._frequencies(frequencies, training_days)
         clean_rpe = tuple(self._rpe(value) for value in rpe_curve)
-        multiplier, fixed_sets, assistance_override, applied = self._overrides(overrides)
+        multiplier, fixed_sets, assistance_override, rpe_cap, applied = self._overrides(overrides)
 
         baseline = {
             family: clean_frequencies[family] * self._SETS_PER_EXPOSURE[phase]
@@ -114,6 +115,8 @@ class VolumeProgressionService:
         weeks = []
         previous_rpe = clean_rpe[0]
         for index, target_rpe in enumerate(clean_rpe, start=1):
+            if rpe_cap is not None:
+                target_rpe = min(target_rpe, rpe_cap)
             week_phase = "taper" if self._is_taper(phase, index, duration, meet_date) else phase
             trajectory = self._trajectory(week_phase, index, duration)
             # Higher exertion consumes recovery: it never earns extra volume.
@@ -154,6 +157,7 @@ class VolumeProgressionService:
                     week=index,
                     phase=week_phase,
                     target_rpe=target_rpe,
+                    effective_rpe_cap=rpe_cap,
                     sbd_sets=targets,
                     sbd_range=ranges,
                     assistance_fatigue_budget=max(0, assistance),
@@ -197,10 +201,11 @@ class VolumeProgressionService:
         return phase == "taper" or (phase == "peak" and meet_date is not None and week == duration)
 
     @staticmethod
-    def _overrides(overrides: Sequence[Mapping[str, Any]]) -> tuple[float, dict[str, int], int | None, tuple[str, ...]]:
+    def _overrides(overrides: Sequence[Mapping[str, Any]]) -> tuple[float, dict[str, int], int | None, float | None, tuple[str, ...]]:
         multiplier = 1.0
         fixed: dict[str, int] = {}
         assistance = None
+        rpe_cap = None
         applied = []
         for item in overrides:
             payload = item.get("override") if isinstance(item.get("override"), dict) else item
@@ -220,4 +225,8 @@ class VolumeProgressionService:
             if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
                 assistance = value
                 applied.append(f"Assistance fatigue budget {value}: {reason}")
-        return multiplier, fixed, assistance, tuple(applied)
+            value = payload.get("rpe_cap")
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and 5 <= value <= 10:
+                rpe_cap = float(value)
+                applied.append(f"RPE cap {value:g}: {reason}")
+        return multiplier, fixed, assistance, rpe_cap, tuple(applied)

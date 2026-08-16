@@ -20,6 +20,7 @@ from .services.client_service_profiles import Service
 from .services.client_services import may_start_client_service
 from .services.meal_plans import DayMode, DraftStatus, FoodSnapshot, MacroTotals, Meal, MealItem, MealPlanDay, MealPlanDraft, MealPlanWorkflow, PrescriptionSnapshot, PublicationError, WorkflowConflictError
 from .services.nutrition_prescriptions import MacroPrescriptionService
+from .services.athlete_services import athlete_services
 from .tenancy import coach_owns_athlete, owned_athlete_ids, require_tenancy_context
 
 meal_plan_delivery_bp = Blueprint("meal_plan_delivery", __name__)
@@ -365,7 +366,13 @@ def athlete_plan():
     athlete_id = _athlete_id()
     assignment = _workflow().current_for_athlete(athlete_id, datetime.now(UTC).date())
     if assignment is None: abort(404)
-    return render_template("meal_plans/athlete_view.html", assignment=assignment, coach_view=False, history=_workflow().historical_for_athlete(athlete_id))
+    return render_template(
+        "meal_plans/athlete_view.html",
+        assignment=assignment,
+        coach_view=False,
+        history=_workflow().historical_for_athlete(athlete_id),
+        athlete_services=athlete_services(athlete_id),
+    )
 
 
 @meal_plan_delivery_bp.get("/athlete/meal-plan/history/<assignment_id>")
@@ -373,4 +380,11 @@ def athlete_historical_plan(assignment_id: str):
     athlete_id = _athlete_id()
     assignment = _workflow().repository.get_assignment(assignment_id)
     if assignment is None or assignment.athlete_id != athlete_id: abort(404)
-    return render_template("meal_plans/athlete_view.html", assignment=assignment, coach_view=False, historical=True, history=_workflow().historical_for_athlete(athlete_id))
+    return render_template(
+        "meal_plans/athlete_view.html",
+        assignment=assignment,
+        coach_view=False,
+        historical=True,
+        history=_workflow().historical_for_athlete(athlete_id),
+        athlete_services=athlete_services(athlete_id),
+    )
