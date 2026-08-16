@@ -33,10 +33,11 @@ from .models.programming import (
 )
 from .models.warmup import WarmupAssignment, WarmupProtocol, WarmupProtocolStep
 from .programming_services.revisions import append_revision
-from .services.weekly_programming_intelligence import WeeklyProgrammingIntelligence
 from .services.accessory_intelligence import AccessoryIntelligence
+from .services.exposure_intelligence import weekly_exposure_intents
 from .services.programming_athlete_state import aggregate_programming_athlete_state
 from .services.proposal_explanations import ProposalExplanationService
+from .services.weekly_programming_intelligence import WeeklyProgrammingIntelligence
 from .tenancy import athlete_query_for_request, require_athlete_access
 
 block_factory_bp = Blueprint("block_factory", __name__)
@@ -603,8 +604,10 @@ def _accessory_pool() -> list[dict[str, Any]]:
 
 
 def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
-    templates = _template_options()
     days = _day_sequence(factory)
+    exposure_intents = weekly_exposure_intents(
+        days, goal=factory.goal, deadlift_style=factory.deadlift_style
+    )
 
     preview = []
     selected_accessories = []
@@ -639,20 +642,10 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
     suggested_ids: set[int] = set()
     fatigue_budget = intelligence.VOLUME_FATIGUE_BUDGETS[factory.accessory_volume]
     for day_index, day_type in enumerate(days):
-        exercises = _candidate_exercises(
-            templates,
-            day_type,
-            day_index,
-        )
-        exercises = _apply_deadlift_style(
-            exercises,
-            factory.deadlift_style,
-        )
-        exercises = _ensure_main_lifts(
-            exercises,
-            day_type,
-            factory.deadlift_style,
-        )
+        # Scheduling chooses when a lift occurs; coaching intent chooses what the
+        # exposure is and how it is prescribed.
+        intents = exposure_intents[day_index]
+        exercises = [intent.exercise_name for intent in intents]
         main_count = len(day_type)
         main_exercises = exercises[:main_count]
         # Pinned selections replace automatic volume behaviour, are distributed
@@ -761,6 +754,7 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                 "exercises": main_exercises
                 + [item["name"] for item in generated_accessories],
                 "main_count": main_count,
+                "exposures": [asdict(intent) for intent in intents],
                 "accessories": generated_accessories,
                 "accessory_count": len(generated_accessories),
                 "accessory_outcome": accessory_outcome,
@@ -1145,7 +1139,6 @@ def generate():
 
         week_rpe = _week_rpe(factory, week_position)
         volume_week = intelligence.volume.weeks[week_position - 1]
-        exposure_seen = {family: 0 for family in ("squat", "bench", "deadlift")}
         exposure_totals = {
             "squat": factory.squat_frequency,
             "bench": factory.bench_frequency,
@@ -1181,6 +1174,7 @@ def generate():
             }
             family_by_code = {"S": "squat", "B": "bench", "D": "deadlift"}
             main_families = [family_by_code[code] for code in day_type]
+            main_intents = list(day.get("exposures", []))
 
             for exercise_position, exercise_name in enumerate(
                 exercises,
@@ -1198,15 +1192,20 @@ def generate():
                 )
                 if exercise_position <= main_count:
                     family = main_families[exercise_position - 1]
-                    quotient, remainder = divmod(
-                        volume_week.sbd_sets[family], exposure_totals[family]
-                    )
-                    sets = quotient + (exposure_seen[family] < remainder)
-                    exposure_seen[family] += 1
+                    intent = main_intents[exercise_position - 1]
+                    # Preserve athlete-state volume behaviour for a single weekly
+                    # exposure. At higher frequencies, the explicit role profile
+                    # owns the session prescription and never creates zero-set work.
+                    if exposure_totals[family] == 1:
+                        sets = volume_week.sbd_sets[family]
+                    else:
+                        sets = max(1, int(intent["sets"]))
+                    reps = str(intent["reps"])
                     slot = ProgrammingLiftSlot(
                         session=session,
                         position=exercise_position,
                         lift_family=family,
+                        exposure_role=intent["role"],
                     )
                     db.session.add(slot)
                     db.session.flush()
@@ -1235,9 +1234,22 @@ def generate():
                         sets=sets,
                         reps=reps,
                         prescription_type="rpe",
-                        rpe=week_rpe
-                        if exercise_position == 1
+                        rpe=max(
+                            1.0,
+                            min(
+                                10.0,
+                                week_rpe
+                                + float(
+                                    main_intents[exercise_position - 1]["rpe_offset"]
+                                ),
+                            ),
+                        )
+                        if exercise_position <= main_count
                         else min(9.0, week_rpe + 0.5),
+                        notes=(
+                            main_intents[exercise_position - 1]["purpose"]
+                            if exercise_position <= main_count else None
+                        ),
                     )
                 )
 

@@ -19,7 +19,7 @@ EXIT_READY = 0
 EXIT_NOT_READY = 1
 EXIT_ERROR = 2
 MAX_OUTPUT = 4_000
-EXPECTED_ALEMBIC_HEAD = "0024_pdf_meal_plan_delivery"
+EXPECTED_ALEMBIC_HEAD = "0026_programming_exposure_roles"
 
 SECRET_PATTERNS = (
     (re.compile(r"(?i)(password|passwd|token|secret|api[_-]?key)(\s*[=:]\s*)\S+"), r"\1\2[REDACTED]"),

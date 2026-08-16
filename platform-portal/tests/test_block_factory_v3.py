@@ -118,6 +118,24 @@ def test_six_day_golden_schedule_is_preserved_exactly():
     ]
 
 
+def test_six_day_bench_exposures_have_differentiated_coaching_intent():
+    app = create_test_app()
+    with app.app_context():
+        days = _preview(factory_request(6, 2, 5, 2))
+    bench = [
+        exposure for day in days for exposure in day["exposures"]
+        if exposure["lift_family"] == "bench"
+    ]
+    assert [item["role"] for item in bench] == [
+        "primary_volume", "secondary_strength", "technique", "low_fatigue",
+        "competition",
+    ]
+    assert len({item["exercise_name"] for item in bench}) == 5
+    assert len({(item["sets"], item["reps"], item["rpe_offset"]) for item in bench}) == 5
+    assert days[-1]["day_type"] == "SBD"
+    assert {item["role"] for item in days[-1]["exposures"]} == {"competition"}
+
+
 @pytest.mark.parametrize(
     "training_days, squat, bench, deadlift, message",
     [
@@ -270,9 +288,18 @@ def test_factory_v3_generates_complete_block():
             for session in first_week.sessions
             for prescription in session.prescriptions
         ]
-        assert sum(name == "Competition Squat" for name in exercise_names) == 2
-        assert sum(name == "Competition Bench Press" for name in exercise_names) == 3
+        assert sum(name == "Competition Squat" for name in exercise_names) == 1
+        assert sum(name == "Competition Bench Press" for name in exercise_names) == 1
         assert sum(name == "Sumo Deadlift" for name in exercise_names) == 1
+        assert {slot.exposure_role for session in first_week.sessions for slot in session.lift_slots} >= {
+            "competition", "primary_volume", "secondary_strength",
+        }
+        bench_rows = [
+            item for session in first_week.sessions for item in session.prescriptions
+            if item.lift_slot is not None and item.lift_slot.lift_family == "bench"
+        ]
+        assert len({(item.exercise_name, item.sets, item.reps, item.rpe, item.notes)
+                    for item in bench_rows}) == 3
 
 
 def test_factory_uses_multiple_ordered_catalogue_accessories():
@@ -576,6 +603,28 @@ def test_manual_atlas_stones_specialty_selection_is_preserved_exactly():
         assert (prescription.provenance, prescription.sets, prescription.reps) == (
             "coach_selected", 5, "3",
         )
+
+
+def test_automatic_assistance_never_selects_specialty_exercises():
+    app = create_test_app()
+    with app.app_context():
+        db.session.add_all([
+            Exercise(
+                name="Atlas Stones", movement="accessory", category="specialty",
+                accessory_suitable=True, auto_select=True, coach_priority=100,
+                lift_relevance='["all"]', fatigue_rating=1,
+            ),
+            Exercise(
+                name="Powerlifting Row", movement="accessory", category="assistance",
+                accessory_suitable=True, auto_select=True, coach_priority=1,
+                lift_relevance='["all"]', fatigue_rating=1,
+            ),
+        ])
+        db.session.commit()
+        preview = _preview(factory_request(3, 1, 1, 1))
+    names = {item["name"] for day in preview for item in day["accessories"]}
+    assert "Atlas Stones" not in names
+    assert "Powerlifting Row" in names
 
 
 def test_zero_assistance_generation_persists_after_reload():

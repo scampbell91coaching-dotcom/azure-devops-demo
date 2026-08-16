@@ -81,6 +81,8 @@ class AccessoryIntelligence:
         "grip", "grip_strength", "deadlift_grip", "hook_grip",
         "static_hold", "double_overhand", "no_strap",
     }
+    SPECIALTY_CATEGORIES = {"specialty", "strongman"}
+    SPECIALTY_NAME_MARKERS = {"atlas stone"}
 
     def __init__(self, repository: AccessoryRepository | None = None) -> None:
         self.repository = repository or AccessoryRepository()
@@ -258,6 +260,15 @@ class AccessoryIntelligence:
 
         for exercise in self.repository.automatic_candidates():
             if exercise.id in excluded_ids:
+                continue
+            category = (exercise.category or "").strip().casefold()
+            movement = (exercise.movement or "").strip().casefold()
+            name = exercise.name.strip().casefold()
+            if (
+                category in self.SPECIALTY_CATEGORIES
+                or movement in self.SPECIALTY_CATEGORIES
+                or any(marker in name for marker in self.SPECIALTY_NAME_MARKERS)
+            ):
                 continue
             phases = metadata_values(exercise.training_phases)
             relevance = metadata_values(exercise.lift_relevance)

@@ -105,7 +105,7 @@ def test_migration_cli_can_inspect_heads_with_local_validation_config(tmp_path: 
     config = Config(str(Path(__file__).parents[1] / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(Path(__file__).parents[1] / "migrations"))
     assert ScriptDirectory.from_config(config).get_heads() == [
-        "0025_warmup_lift_slot_target"
+        "0026_programming_exposure_roles"
     ]
 
 
@@ -139,6 +139,12 @@ def test_upgrade_and_schema_verification_on_empty_sqlite(tmp_path: Path):
             "compatibility_tags",
             "coach_priority",
         } <= exercise_columns
+        lift_slot_columns = {
+            column["name"] for column in inspect(db.engine).get_columns(
+                "programming_lift_slots"
+            )
+        }
+        assert "exposure_role" in lift_slot_columns
 
 
 def test_canonical_tenancy_migration_does_not_automatically_backfill_legacy_rows(tmp_path: Path):
@@ -355,4 +361,4 @@ def test_upgrade_on_empty_postgresql_when_available(monkeypatch):
         inspector = inspect(db.engine)
         assert set(inspector.get_table_names()) == EXPECTED_TABLES | {"alembic_version"}
         heads = db.session.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
-        assert heads == ["0025_warmup_lift_slot_target"]
+        assert heads == ["0026_programming_exposure_roles"]
