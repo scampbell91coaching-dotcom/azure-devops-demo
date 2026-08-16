@@ -40,9 +40,20 @@ class ClientOnboarding:
 
 
 def _has_invitation(athlete_id: int) -> bool:
-    return AccountToken.query.filter_by(
-        athlete_id=athlete_id, purpose=AccountTokenPurpose.INVITATION.value
-    ).first() is not None
+    invitation = (
+        AccountToken.query.filter_by(
+            athlete_id=athlete_id,
+            purpose=AccountTokenPurpose.INVITATION.value,
+        )
+        .order_by(AccountToken.created_at.desc(), AccountToken.id.desc())
+        .first()
+    )
+    # A historical invitation is audit evidence, not proof that an athlete can
+    # still activate.  Treating expired links as complete strands onboarding on
+    # the account step and prevents the coach from issuing a recovery link.
+    return invitation is not None and (
+        invitation.consumed_at is not None or invitation.is_available
+    )
 
 
 def build_client_onboarding(athlete: Athlete) -> ClientOnboarding:
