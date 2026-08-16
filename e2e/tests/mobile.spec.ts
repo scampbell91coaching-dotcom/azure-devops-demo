@@ -80,6 +80,10 @@ test('athlete check-in controls remain usable at 430px', async ({ page, athleteS
   await expect(page.getByRole('heading', { level: 1, name: 'How has your week been?' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Send check-in' })).toBeVisible();
   await expect(page.locator('input[name="recovery"]')).toHaveCSS('min-height', '48px');
+  await expect(page.locator('.checkin-card').first()).toHaveCSS('border-top-color', 'rgb(48, 48, 48)');
+  await expect(page.locator('input[name="recovery"]')).toHaveCSS('background-color', 'rgb(28, 28, 28)');
+  await page.locator('input[name="recovery"]').focus();
+  await expect(page.locator('input[name="recovery"]')).toHaveCSS('outline-color', 'rgb(213, 189, 141)');
   await expect(page.locator('html')).toHaveJSProperty('scrollWidth', 430);
 });
 

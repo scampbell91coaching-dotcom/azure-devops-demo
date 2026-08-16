@@ -51,8 +51,24 @@ test('coach builds, previews, publishes and revises a meal plan that the athlete
   await expect(page.getByText('Revision 6')).toBeVisible();
 
   await athleteSession(page.request, 101);
-  await page.goto('/athlete/meal-plan');
-  await expect(page.getByRole('heading', { name: 'Competition week meals' })).toBeVisible();
-  await expect(page.getByText('Oats')).toBeVisible();
-  await expect(page.getByText(/Assigned target 2000 kcal/)).toBeVisible();
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/athlete/meal-plan');
+    await expect(page.locator('body')).toHaveClass(/athlete-workspace/);
+    await expect(page.getByRole('navigation', { name: 'Athlete navigation' }).last()).toBeVisible();
+    await expect(page.locator('.coach-sidebar, [data-coach-navigation]')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Competition week meals' })).toBeVisible();
+    await expect(page.getByText('Oats')).toBeVisible();
+    await expect(page.getByText(/Assigned target 2000 kcal/)).toBeVisible();
+    expect(await page.evaluate(() => document.body.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+
+    const more = page.locator('[data-athlete-more]');
+    await expect(more.getByRole('link', { name: 'Meal plan', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(more.locator('summary')).toHaveCSS('color', 'rgb(213, 189, 141)');
+    await more.locator('summary').focus();
+    await page.keyboard.press('Enter');
+    await expect(more).toHaveAttribute('open', '');
+    await page.keyboard.press('Escape');
+    await expect(more.locator('summary')).toBeFocused();
+  }
 });

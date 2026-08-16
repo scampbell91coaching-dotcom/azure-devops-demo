@@ -1,4 +1,5 @@
-{% extends "base.html" %}
+{% extends "athletes/base.html" %}
+{% block athlete_page %}pdfmealplan{% endblock %}
 {% block title %}{{ plan.title }} | Meal plan{% endblock %}
-{% block content %}<main class="page-shell"><header><span class="eyebrow">Current published meal plan</span><h1>{{ plan.title }}</h1><p>Revision {{ plan.revision }} · effective {{ plan.effective_from }}</p>{% if plan.notes %}<p>{{ plan.notes }}</p>{% endif %}<p><a class="button" href="{{ url_for('meal_plan_delivery.athlete_pdf_download', plan_id=plan.id) }}">Download PDF meal plan</a></p></header>
-<section><h2>Meal-plan history</h2><ul>{% for item in history %}<li><strong>{{ item.title }}</strong> · revision {{ item.revision }} · effective {{ item.effective_from }} · <a href="{{ url_for('meal_plan_delivery.athlete_pdf_download', plan_id=item.id) }}">Download PDF</a></li>{% endfor %}</ul></section></main>{% endblock %}
+{% block content %}<div class="page-shell"><header><span class="eyebrow">Current published meal plan</span><h1>{{ plan.title }}</h1><p>Revision {{ plan.revision }} · effective {{ plan.effective_from }}</p>{% if plan.notes %}<p>{{ plan.notes }}</p>{% endif %}<p><a class="button" href="{{ url_for('meal_plan_delivery.athlete_pdf_download', plan_id=plan.id) }}">Download PDF meal plan</a></p></header>
+<section><h2>Meal-plan history</h2><ul>{% for item in history %}<li><strong>{{ item.title }}</strong> · revision {{ item.revision }} · effective {{ item.effective_from }} · <a href="{{ url_for('meal_plan_delivery.athlete_pdf_download', plan_id=item.id) }}">Download PDF</a></li>{% endfor %}</ul></section></div>{% endblock %}
