@@ -224,3 +224,80 @@ def test_expired_invitation_returns_to_invite_step_for_recovery(onboarding_app):
         assert tokens[0].revoked_at is not None
         assert tokens[1].is_available
         assert build_client_onboarding(db.session.get(Athlete, athlete_id)).current_step == "account"
+
+
+def test_failed_onboarding_delivery_stays_on_invite_and_exposes_one_time_manual_recovery(onboarding_app):
+    class FailingTransport:
+        def send(self, message):
+            raise RuntimeError("provider unavailable")
+
+    onboarding_app.config["EMAIL_TRANSPORT"] = FailingTransport()
+    client = onboarding_app.test_client()
+    _login(client)
+    athlete_id = onboarding_app.config["ATHLETE_ID"]
+    page = f"/athletes/{athlete_id}/onboarding"
+    response = client.post(
+        f"{page}/invite", data={"csrf_token": _session_csrf(client, page)}
+    )
+    assert response.status_code == 200
+    assert b"Email was not delivered" in response.data
+    assert b"/account/invitation#" in response.data
+    with onboarding_app.app_context():
+        athlete = db.session.get(Athlete, athlete_id)
+        assert build_client_onboarding(athlete).current_step == "invite"
+
+
+@pytest.mark.parametrize(
+    ("delivery_state", "expired", "revoked", "expected"),
+    [
+        ("sent", False, False, "account"),
+        ("pending", False, False, "invite"),
+        ("failed", False, False, "invite"),
+        ("not_configured", False, False, "invite"),
+        ("sent", True, False, "invite"),
+        ("sent", False, True, "invite"),
+    ],
+)
+def test_invitation_delivery_and_lifecycle_have_deliberate_completion_semantics(
+    onboarding_app, delivery_state, expired, revoked, expected
+):
+    with onboarding_app.app_context():
+        athlete = db.session.get(Athlete, onboarding_app.config["ATHLETE_ID"])
+        user = User(email=athlete.email, role=UserRole.ATHLETE,
+                    athlete_id=athlete.id, active=False)
+        db.session.add(user)
+        db.session.flush()
+        now = datetime.now(UTC)
+        db.session.add(AccountToken(
+            purpose="invitation", token_digest=(delivery_state[0] * 64),
+            athlete_id=athlete.id, user_id=user.id,
+            expires_at=now - timedelta(seconds=1) if expired else now + timedelta(hours=1),
+            revoked_at=now if revoked else None, delivery_state=delivery_state,
+        ))
+        db.session.commit()
+        assert build_client_onboarding(athlete).current_step == expected
+
+
+def test_consumed_or_replayed_invitation_remains_success_despite_newer_failed_history(onboarding_app):
+    with onboarding_app.app_context():
+        athlete = db.session.get(Athlete, onboarding_app.config["ATHLETE_ID"])
+        user = User(email=athlete.email, role=UserRole.ATHLETE,
+                    athlete_id=athlete.id, active=True)
+        db.session.add(user)
+        db.session.flush()
+        now = datetime.now(UTC)
+        db.session.add(AccountToken(
+            purpose="invitation", token_digest="c" * 64, athlete_id=athlete.id,
+            user_id=user.id, expires_at=now + timedelta(hours=1), consumed_at=now,
+            delivery_state="sent", created_at=now - timedelta(minutes=1),
+        ))
+        db.session.add(AccountToken(
+            purpose="invitation", token_digest="f" * 64, athlete_id=athlete.id,
+            user_id=user.id, expires_at=now + timedelta(hours=1),
+            delivery_state="failed", created_at=now,
+        ))
+        db.session.commit()
+        onboarding = build_client_onboarding(athlete)
+        assert onboarding.current_step == "goals"
+        assert next(step for step in onboarding.steps if step.key == "invite").complete
+        assert next(step for step in onboarding.steps if step.key == "account").complete

@@ -26,7 +26,7 @@ Paging thresholds require persistence and, where traffic is involved, a minimum 
 ## Web unavailable or not ready
 
 - Compare Prometheus `up`, desired/available replicas, probe failures, container logs, events, CPU/memory and the database readiness panel.
-- `/live` proves only that the process can serve HTTP. `/ready` and `/health` execute `SELECT 1`; a 503 removes a pod from traffic without causing liveness restarts.
+- `/health` is the stable, process-only compatibility contract used by existing consumers and all production probes during mixed-version rollout. `/live` is the equivalent additive liveness endpoint. `/ready` alone executes `SELECT 1` and returns 503 on dependency failure. A future probe switch requires an image contract proven before the values change; it must not be reconciled independently against an older image.
 - If `/live` fails, investigate crash/OOM/configuration/startup. If only `/ready` fails, follow the database section. If Prometheus alone is down, verify the ServiceMonitor selector and monitoring NetworkPolicy before treating it as an application outage.
 
 ## Database unavailable
@@ -65,13 +65,14 @@ Paging thresholds require persistence and, where traffic is involved, a minimum 
 
 ## Activation and release verification
 
-Before enabling monitoring, render the chart with `./scripts/validate-observability.sh`, confirm Prometheus selects the `release: monitoring` ServiceMonitor/PrometheusRule labels, verify network access to `/metrics`, and use `promtool check rules` against the rendered rule group when `promtool` is available. In Alertmanager, test a synthetic non-production receiver route for both `page=true` and `page=false`; do not test by creating a production outage.
+Before enabling monitoring, render the chart with `./scripts/validate-observability.sh`, confirm Prometheus selects the `release: monitoring` ServiceMonitor/PrometheusRule labels, and verify the monitoring namespace can scrape `/metrics` with the `METRICS_BEARER_TOKEN` Secret key. Public/unauthenticated requests receive 404 and the NetworkPolicy admits the private monitoring namespace only when explicitly enabled. The validator runs `promtool check rules` when installed and prints an explicit validation-boundary warning otherwise. In Alertmanager, test a synthetic non-production receiver route for both `page=true` and `page=false`; do not test by creating a production outage.
 
 After each release, verify migration success, rollout completion, `/live`, `/ready`, an authenticated paid-beta smoke path, a metrics scrape, dashboard freshness, and that no new critical alert is pending. Application deployment success without these checks is not release success.
 
 ## Known gaps
 
 - Alertmanager receiver ownership, schedules, and delivery tests live outside this repository and must be verified before activation.
-- Prometheus Python metrics are process-local under the current two-worker Gunicorn configuration; counters and histograms can be under-reported depending on which worker serves a scrape. Configure Prometheus multiprocess mode or use one worker per horizontally scaled pod before relying on exact totals at larger scale.
-- Argo CD metrics and kube-state-metrics label availability must be confirmed in the live stack; absent release metrics currently fail quiet rather than page.
+- The portal deliberately runs one Gunicorn process per pod (eight threads), so its Python counters, gauges, and histograms have one in-pod owner and are trustworthy for that pod. Horizontal replicas are aggregated by PromQL. This is not durable event storage: process restarts reset series, and `increase()` provides reset-aware window estimates rather than an audit count. Keep minimum traffic/event gates on paging rules.
+- Database paging fires both when the last readiness observation is zero and when the dependency series is absent; the separate `up` and Ready-replica alerts help distinguish database failure from scrape/pod loss. `/health` intentionally does not perform a database query, so the DB gauge is refreshed only by `/ready` callers.
+- Argo health degradation is independent of sync state, including `Synced + Degraded`. Argo CD metrics and kube-state-metrics label allowlisting still must be confirmed in the live stack before activation. The migration alert matches the exact Helm Job name and chart labels and ignores failures more than 15 minutes after Job creation, preventing retained failures from paging indefinitely.
 - There is no independent multi-region synthetic for authenticated money paths, and no PostgreSQL server-side saturation/replication alert in this repository.

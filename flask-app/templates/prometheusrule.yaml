@@ -33,7 +33,7 @@ spec:
             description: Customer traffic has had reduced or zero ready capacity for five minutes.
             runbook_url: {{ printf "%s#web-unavailable-or-not-ready" $runbook | quote }}
         - alert: TraditionalStrengthDatabaseUnavailable
-          expr: min(traditional_strength_dependency_available{namespace="{{ $namespace }}",dependency="database"}) == 0
+          expr: min(traditional_strength_dependency_available{namespace="{{ $namespace }}",dependency="database"}) == 0 or absent(traditional_strength_dependency_available{namespace="{{ $namespace }}",dependency="database"})
           for: 2m
           labels: { severity: critical, page: "true", service: traditional-strength, owner: application }
           annotations:
@@ -113,7 +113,7 @@ spec:
     - name: traditional-strength.jobs-and-releases
       rules:
         - alert: TraditionalStrengthMigrationJobFailed
-          expr: kube_job_status_failed{namespace="{{ $namespace }}",job_name=~".*migrat.*"} > 0
+          expr: kube_job_status_failed{namespace="{{ $namespace }}",job_name="{{ $service }}-migration"} > 0 and on(namespace, job_name) kube_job_labels{namespace="{{ $namespace }}",job_name="{{ $service }}-migration",label_app_kubernetes_io_name="{{ include "flask-app.name" . }}",label_app_kubernetes_io_instance="{{ .Release.Name }}",label_app_kubernetes_io_component="migration"} == 1 and on(namespace, job_name) (time() - kube_job_created{namespace="{{ $namespace }}",job_name="{{ $service }}-migration"} < 900)
           for: 1m
           labels: { severity: critical, page: "true", service: traditional-strength, owner: application }
           annotations:
@@ -142,7 +142,7 @@ spec:
             summary: Production rollout is not progressing
             runbook_url: {{ printf "%s#migration-or-release-failure" $runbook | quote }}
         - alert: TraditionalStrengthArgoReleaseDegraded
-          expr: argocd_app_info{name=~"flask-web-production|platform-portal-private",health_status=~"Degraded|Missing",sync_status!="Synced"} == 1
+          expr: argocd_app_info{name=~"flask-web-production|platform-portal-private",health_status=~"Degraded|Missing"} == 1
           for: 10m
           labels: { severity: critical, page: "true", service: traditional-strength, owner: platform }
           annotations:

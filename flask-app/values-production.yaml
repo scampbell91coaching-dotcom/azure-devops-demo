@@ -62,21 +62,24 @@ resources:
     memory: 512Mi
 
 readinessProbe:
-  path: /ready
+  # /health is the compatibility endpoint implemented by both the pinned
+  # release and newer releases.  Do not switch this during an image-independent
+  # GitOps reconciliation.
+  path: /health
   initialDelaySeconds: 5
   periodSeconds: 10
   timeoutSeconds: 2
   failureThreshold: 3
 
 livenessProbe:
-  path: /live
+  path: /health
   initialDelaySeconds: 15
   periodSeconds: 20
   timeoutSeconds: 2
   failureThreshold: 3
 
 startupProbe:
-  path: /live
+  path: /health
   periodSeconds: 5
   timeoutSeconds: 2
   failureThreshold: 30

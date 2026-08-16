@@ -87,6 +87,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         ACCOUNT_PUBLIC_BASE_URL=os.environ.get("ACCOUNT_PUBLIC_BASE_URL"),
         ACCOUNT_INVITATION_LIFETIME=timedelta(hours=48),
         ACCOUNT_RESET_LIFETIME=timedelta(hours=1),
+        METRICS_BEARER_TOKEN=os.environ.get("METRICS_BEARER_TOKEN"),
         REPOSITORY_ROOT=portal_root.parent,
         RELEASE_EVIDENCE_MAX_AGE_SECONDS=24 * 60 * 60,
     )

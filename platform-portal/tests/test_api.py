@@ -8,7 +8,7 @@ TEST_CONFIG = {"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"}
 def test_health():
     r = create_app(TEST_CONFIG).test_client().get("/health")
     assert r.status_code == 200
-    assert r.get_json() == {"status": "ready", "checks": {"database": "available"}}
+    assert r.get_json() == {"status": "healthy"}
 
 
 def test_liveness_is_process_only_and_readiness_checks_database(monkeypatch):
@@ -30,12 +30,13 @@ def test_liveness_is_process_only_and_readiness_checks_database(monkeypatch):
     }
 
 
-def test_metrics_are_public_bounded_and_exclude_scrapes():
-    app = create_app({**TEST_CONFIG, "AUTHENTICATION_DISABLED": False})
+def test_metrics_deny_public_access_but_allow_authenticated_internal_scrape():
+    app = create_app({**TEST_CONFIG, "AUTHENTICATION_DISABLED": False, "METRICS_BEARER_TOKEN": "monitor-only-secret"})
     client = app.test_client()
     client.get("/missing?secret=not-a-label")
-    client.get("/metrics")
-    response = client.get("/metrics")
+    assert client.get("/metrics").status_code == 404
+    assert client.get("/metrics", headers={"Authorization": "Bearer wrong"}).status_code == 404
+    response = client.get("/metrics", headers={"Authorization": "Bearer monitor-only-secret"})
 
     assert response.status_code == 200
     families = list(text_string_to_metric_families(response.get_data(as_text=True)))

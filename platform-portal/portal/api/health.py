@@ -9,8 +9,8 @@ health_bp = Blueprint("health", __name__)
 
 @health_bp.get("/health")
 def health():
-    """Compatibility readiness endpoint used by external availability checks."""
-    return ready()
+    """Stable, dependency-free compatibility endpoint for existing consumers."""
+    return jsonify({"status": "healthy"}), 200
 
 
 @health_bp.get("/live")

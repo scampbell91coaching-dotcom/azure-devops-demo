@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import json
+import hmac
 import logging
 import re
 import time
 import uuid
 from datetime import datetime, timezone
 
-from flask import Response, g, request
+from flask import Response, abort, current_app, g, request
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     Counter,
@@ -114,4 +115,11 @@ def init_observability(app) -> None:
 
     @app.get("/metrics")
     def metrics() -> Response:
+        expected = current_app.config.get("METRICS_BEARER_TOKEN")
+        supplied = request.headers.get("Authorization", "")
+        if not isinstance(expected, str) or not expected or not hmac.compare_digest(
+            supplied, f"Bearer {expected}"
+        ):
+            # A public caller must learn nothing about whether telemetry exists.
+            abort(404)
         return Response(generate_latest(), content_type=CONTENT_TYPE_LATEST)

@@ -83,6 +83,13 @@ spec:
                 secretKeyRef:
                   name: flask-runtime-secrets
                   key: APPLICATIONINSIGHTS_CONNECTION_STRING
+            {{- if and .Values.monitoring.enabled .Values.monitoring.serviceMonitor.enabled }}
+            - name: METRICS_BEARER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: flask-runtime-secrets
+                  key: METRICS_BEARER_TOKEN
+            {{- end }}
             {{- if .Values.application.message }}
             - name: FLASK_DEMO_MESSAGE
               valueFrom:

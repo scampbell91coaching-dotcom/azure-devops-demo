@@ -48,15 +48,38 @@ probe_paths="$(awk '
   /^[[:space:]]+(startupProbe|readinessProbe|livenessProbe):$/ { probe=$1; next }
   probe != "" && /^[[:space:]]+path:/ { print probe, $2; probe="" }
 ' "$production_rendered")"
-printf '%s\n' "$probe_paths" | grep -q '^startupProbe: /live$'
-printf '%s\n' "$probe_paths" | grep -q '^readinessProbe: /ready$'
-printf '%s\n' "$probe_paths" | grep -q '^livenessProbe: /live$'
+printf '%s\n' "$probe_paths" | grep -q '^startupProbe: /health$'
+printf '%s\n' "$probe_paths" | grep -q '^readinessProbe: /health$'
+printf '%s\n' "$probe_paths" | grep -q '^livenessProbe: /health$'
+! grep -q 'name: METRICS_BEARER_TOKEN' "$production_rendered"
+grep -q 'name: METRICS_BEARER_TOKEN' "$service_monitor_rendered"
+grep -q '^[[:space:]]*authorization:$' "$service_monitor_rendered"
+grep -q 'key: METRICS_BEARER_TOKEN' "$service_monitor_rendered"
 grep -q 'alert: TraditionalStrengthDatabaseUnavailable' "$monitoring_rendered"
 grep -q 'alert: TraditionalStrengthLoginFailureBurst' "$monitoring_rendered"
 grep -q 'alert: TraditionalStrengthTenantDenialAnomaly' "$monitoring_rendered"
 grep -q 'alert: TraditionalStrengthStatusCollectorStale' "$monitoring_rendered"
 grep -q 'page: "true"' "$monitoring_rendered"
 grep -q 'page: "false"' "$monitoring_rendered"
+grep -q 'or absent(traditional_strength_dependency_available' "$monitoring_rendered"
+grep -q 'health_status=~"Degraded|Missing"' "$monitoring_rendered"
+! grep -q 'health_status=~"Degraded|Missing",sync_status!=' "$monitoring_rendered"
+grep -q 'job_name="flask-web-monitoring-flask-app-migration"' "$monitoring_rendered"
+! grep -q 'job_name=~".*migrat.*"' "$monitoring_rendered"
+if command -v promtool >/dev/null 2>&1; then
+  rules_file="$(mktemp)"
+  trap 'rm -f "$default_rendered" "$production_rendered" "$monitoring_rendered" "$service_monitor_only_rendered" "$service_monitor_rendered" "$rules_file"' EXIT
+  python3 - "$monitoring_rendered" "$rules_file" <<'PY'
+import sys, yaml
+documents = yaml.safe_load_all(open(sys.argv[1], encoding="utf-8"))
+rule = next(item for item in documents if item and item.get("kind") == "PrometheusRule")
+with open(sys.argv[2], "w", encoding="utf-8") as destination:
+    yaml.safe_dump({"groups": rule["spec"]["groups"]}, destination)
+PY
+  promtool check rules "$rules_file"
+else
+  echo "WARNING: promtool unavailable; Helm/YAML and representative PromQL contract assertions ran, but promtool syntax validation did not." >&2
+fi
 python3 -m json.tool \
   "$repo_root/flask-app/dashboards/traditional-strength-production.json" >/dev/null
-echo "Observability probes, opt-in resources, paging labels, alert coverage, and dashboard JSON are valid."
+echo "Observability compatibility probes, private scrape authentication, scoped paging, alert coverage, and dashboard JSON are valid."
