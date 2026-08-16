@@ -11,7 +11,7 @@ from ..models.athlete_state import (
 )
 from .athlete_state import calculate_signals
 
-TRANSLATION_VERSION = "programming-athlete-state-v1"
+TRANSLATION_VERSION = "programming-athlete-state-v2"
 OBSERVATION_WINDOW_DAYS = 28
 IRRITATION_WINDOW_DAYS = 14
 RECOMMENDATION_WINDOW_DAYS = 28
@@ -142,12 +142,20 @@ def aggregate_programming_athlete_state(
         "logged_session_completion_rate", "set_completion_rate", "rpe_adherence_rate",
     }]
     excluded_tags = sorted({tag for item in hard for tag in item["effects"].get("excluded_constraint_tags", [])})
+    review_reasons = _review_reasons(hard, soft)
     return {
         "version": TRANSLATION_VERSION, "athlete_id": athlete.id,
         "as_of": as_of.isoformat(), "hard_constraints": hard,
         "soft_signals": soft, "recommendations": recommendation_items,
         "coach_overrides": override_items, "readiness_signals": readiness,
-        "consumer_hints": {"excluded_constraint_tags": excluded_tags},
+        "consumer_hints": {
+            "excluded_constraint_tags": excluded_tags,
+            "affected_lift_families": sorted({
+                lift for item in hard for lift in item["effects"].get("lift_families", [])
+            }),
+            "review_required": bool(review_reasons),
+            "review_reasons": review_reasons,
+        },
         "missing_data": not any((hard, soft, recommendation_items, override_items, readiness)),
         "medical_scope": "No diagnosis or treatment inference; coach review remains required.",
     }
@@ -168,8 +176,12 @@ def _pain_effects(text: str) -> dict[str, Any]:
     tags: list[str] = []
     regions: list[str] = []
     lifts: list[str] = []
+    if "shoulder" in value:
+        regions.append("shoulder"); tags.extend(("shoulder_loading", "shoulder_irritation", "overhead_loading")); lifts.append("bench")
     if "elbow" in value:
         regions.append("elbow"); tags.extend(("elbow_loading", "elbow_irritation")); lifts.append("bench")
+    if "hip" in value:
+        regions.append("hip"); tags.extend(("hip_loading", "deep_hip_flexion")); lifts.extend(("squat", "deadlift"))
     if "low back" in value or "lower back" in value or "lumbar" in value:
         regions.append("low_back"); tags.extend(("axial_loading", "low_back_loading")); lifts.extend(("squat", "deadlift"))
     return {"affected_regions": regions, "lift_families": sorted(set(lifts)), "excluded_constraint_tags": sorted(set(tags))}
@@ -178,4 +190,34 @@ def _pain_effects(text: str) -> dict[str, Any]:
 def _constraint_effects(text: str) -> dict[str, Any]:
     value = _normalise(text)
     lifts = [lift for lift in ("squat", "bench", "deadlift") if lift in value]
-    return {"lift_families": lifts, "excluded_constraint_tags": lifts}
+    pain = _pain_effects(text)
+    return {
+        "affected_regions": pain["affected_regions"],
+        "lift_families": sorted(set(lifts + pain["lift_families"])),
+        "excluded_constraint_tags": sorted(set(lifts + pain["excluded_constraint_tags"])),
+    }
+
+
+def _review_reasons(
+    hard: list[dict[str, Any]], soft: list[dict[str, Any]]
+) -> list[str]:
+    """Return stable reasons when state cannot support a single safe choice."""
+    reasons: list[str] = []
+    for item in hard:
+        if not item["effects"].get("affected_regions") and not item["effects"].get("lift_families"):
+            reasons.append(f"Unmapped active constraint: {item['label']}")
+    sided: dict[tuple[str, str], set[str]] = {}
+    for item in soft:
+        effects = item["effects"]
+        side = effects.get("side")
+        signal = effects.get("technical_signal")
+        for lift in effects.get("lift_families", []):
+            if signal and side:
+                sided.setdefault((lift, signal), set()).add(side)
+    for (lift, signal), sides in sorted(sided.items()):
+        if len(sides) > 1:
+            reasons.append(
+                f"Conflicting recent {lift} {signal.replace('_', ' ')} observations: "
+                + " and ".join(sorted(sides))
+            )
+    return reasons

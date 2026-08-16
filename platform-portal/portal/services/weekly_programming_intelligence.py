@@ -245,7 +245,16 @@ class WeeklyProgrammingIntelligence:
             constraints.append(
                 "Reported training constraints for coach review: "
                 + ", ".join(context.active_constraints)
-                + ". No diagnosis or exercise-suitability inference was made."
+                + ". Suitability uses only explicit catalogue tags; no diagnosis was inferred."
+            )
+        review_reasons = context.programming_state["consumer_hints"].get(
+            "review_reasons", []
+        )
+        if review_reasons:
+            constraints.append(
+                "Coach review required before relying on automatic suitability: "
+                + "; ".join(review_reasons)
+                + "."
             )
         if context.technical_observations:
             constraints.append(
@@ -290,6 +299,23 @@ class WeeklyProgrammingIntelligence:
             and not isinstance(reported_fatigue, bool)
             and 8 <= reported_fatigue <= 10
         )
+        reported_recovery = context.state_signals.get("reported_recovery")
+        low_recovery = (
+            isinstance(reported_recovery, (int, float))
+            and not isinstance(reported_recovery, bool)
+            and 1 <= reported_recovery <= 3
+        )
+        low_adherence = adherence is not None and adherence < 0.7
+        readiness_multiplier = (
+            0.8 if high_fatigue else 0.9 if low_recovery else 1.0
+        )
+        derived_rpe_cap = (
+            7.0
+            if high_fatigue or low_recovery
+            else 7.5
+            if low_adherence
+            else None
+        )
         fatigue = {
             "status": "reported" if reported_fatigue is not None else "not reported",
             "detail": (
@@ -303,18 +329,32 @@ class WeeklyProgrammingIntelligence:
                 else "No RPE-adherence signal exists for the current window."
             ),
             "programming_adjustment": (
-                "High reported fatigue applies a bounded 0.8 volume multiplier; "
-                "at least one work set per requested exposure is retained."
-                if high_fatigue
-                else "No fatigue-based programming adjustment was applied."
+                (
+                    "High reported fatigue applies a bounded 0.8 volume multiplier"
+                    if high_fatigue
+                    else f"Readiness applies a bounded {readiness_multiplier:g} volume multiplier"
+                )
+                + (f" and RPE cap {derived_rpe_cap:g}" if derived_rpe_cap else "")
+                + "; at least one work set per requested exposure is retained."
+                if readiness_multiplier < 1.0 or derived_rpe_cap is not None
+                else "No readiness or adherence adjustment was applied."
             ),
         }
-        fatigue_override = (
+        derived_overrides = (
             ({
-                "override": {"volume_multiplier": 0.8},
-                "reason": f"reported fatigue {reported_fatigue}/10",
+                "override": {
+                    "volume_multiplier": readiness_multiplier,
+                    **({"rpe_cap": derived_rpe_cap} if derived_rpe_cap else {}),
+                },
+                "reason": (
+                    f"reported fatigue {reported_fatigue}/10"
+                    if high_fatigue
+                    else f"reported recovery {reported_recovery}/10"
+                    if low_recovery
+                    else f"RPE adherence {adherence:.0%}"
+                ),
             },)
-            if high_fatigue
+            if readiness_multiplier < 1.0 or derived_rpe_cap is not None
             else ()
         )
         volume = VolumeProgressionService().propose(
@@ -331,7 +371,7 @@ class WeeklyProgrammingIntelligence:
             constraints=context.active_constraints,
             # Derived fatigue is deliberately applied first. An explicit coach
             # override is later in the sequence and therefore authoritative.
-            overrides=(*fatigue_override, *context.active_overrides),
+            overrides=(*derived_overrides, *context.active_overrides),
             reference=_reference_volume(athlete.id)
             or _requested_split_baseline(factory, days),
         )

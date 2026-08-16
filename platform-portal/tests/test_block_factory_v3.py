@@ -1,4 +1,5 @@
 import re
+from datetime import date
 from dataclasses import replace
 
 import pytest
@@ -6,7 +7,7 @@ from portal import create_app
 from portal.block_factory import FactoryRequest, _day_sequence, _preview
 from portal.extensions import db
 from portal.models.athlete import Athlete
-from portal.models.athlete_state import AthleteStateOverride, AthleteStateRecommendation
+from portal.models.athlete_state import AthleteConstraintFlag, AthleteStateOverride, AthleteStateRecommendation
 from portal.models.exercise_library import Exercise
 from portal.models.programming import TrainingBlock
 from portal.models.warmup import WarmupAssignment
@@ -134,6 +135,45 @@ def test_six_day_bench_exposures_have_differentiated_coaching_intent():
     assert len({(item["sets"], item["reps"], item["rpe_offset"]) for item in bench}) == 5
     assert days[-1]["day_type"] == "SBD"
     assert {item["role"] for item in days[-1]["exposures"]} == {"competition"}
+
+def test_joint_constraints_select_supported_main_variations_and_coach_choice_wins():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    with app.app_context():
+        existing = {row.name: row for row in Exercise.query.filter(Exercise.name.in_([
+            "Competition Squat", "Competition Bench Press"
+        ])).all()}
+        for name, family, tags in (
+            ("Competition Squat", "squat", '["hip_loading"]'),
+            ("Competition Bench Press", "bench", '["shoulder_loading", "elbow_loading"]'),
+        ):
+            existing[name].lift_family = family
+            existing[name].specificity = "competition"
+            existing[name].constraint_tags = tags
+        rows = [
+            Exercise(name="Supported Squat", movement="squat", lift_family="squat", specificity="variation", constraint_tags="[]"),
+            Exercise(name="Supported Bench", movement="press", lift_family="bench", specificity="variation", constraint_tags="[]"),
+            Exercise(name="Conventional Deadlift", movement="hinge", lift_family="deadlift", specificity="competition", constraint_tags='["low_back_loading"]'),
+            Exercise(name="Supported Deadlift", movement="hinge", lift_family="deadlift", specificity="variation", constraint_tags="[]"),
+        ]
+        db.session.add_all(rows)
+        db.session.add_all([
+            AthleteConstraintFlag(athlete_id=athlete_id, flag_kind="irritation", label=label, reported_by="athlete", starts_on=date.today())
+            for label in ("Shoulder irritation", "Elbow irritation", "Hip irritation", "Low-back irritation")
+        ])
+        db.session.commit()
+
+        preview = _preview(replace(factory_request(1, 1, 1, 1), athlete_id=athlete_id))
+        assert preview[0]["exercises"][:3] == ["Supported Squat", "Supported Bench", "Supported Deadlift"]
+
+        db.session.add(AthleteStateOverride(
+            athlete_id=athlete_id, target_type="programming", target_ref="weekly",
+            override_json={"exercise_selections": {"bench": "Competition Bench Press"}},
+            reason="Coach selected tolerable bench setup", recorded_by="coach@example.com",
+        ))
+        db.session.commit()
+        overridden = _preview(replace(factory_request(1, 1, 1, 1), athlete_id=athlete_id))
+        assert overridden[0]["exercises"][1] == "Competition Bench Press"
 
 
 @pytest.mark.parametrize(
@@ -733,6 +773,66 @@ def test_active_coach_override_is_surfaced_as_authoritative():
 
 def _fatigue_signal(value):
     return [SignalDraft("reported_fatigue", value, ("weekly_checkin:1",), "reported")]
+
+
+def test_low_recovery_has_bounded_volume_and_rpe_effect(monkeypatch):
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    monkeypatch.setattr(
+        "portal.services.weekly_programming_intelligence.calculate_signals",
+        lambda athlete: [SignalDraft("reported_recovery", 2, ("weekly_checkin:1",), "reported")],
+    )
+    response = app.test_client().post(
+        "/programming/factory/preview", data={**base_form(athlete_id), "goal": "strength"}
+    )
+    assert response.status_code == 200
+    with app.app_context():
+        week = AthleteStateRecommendation.query.one().recommendation_json["volume_progression"]["weeks"][0]
+        assert week["sbd_sets"] == {"squat": 4, "bench": 4, "deadlift": 4}
+        assert week["target_rpe"] == 6.5
+
+
+def test_low_rpe_adherence_caps_rpe_without_cutting_volume(monkeypatch):
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    monkeypatch.setattr(
+        "portal.services.weekly_programming_intelligence.calculate_signals",
+        lambda athlete: [SignalDraft("rpe_adherence_rate", 0.5, ("training_log:1",), "calculated")],
+    )
+    response = app.test_client().post(
+        "/programming/factory/preview",
+        data={**base_form(athlete_id), "goal": "strength", "week_count": "4"},
+    )
+    assert response.status_code == 200
+    with app.app_context():
+        weeks = AthleteStateRecommendation.query.one().recommendation_json["volume_progression"]["weeks"]
+        assert max(week["target_rpe"] for week in weeks) == 7.5
+        assert weeks[0]["sbd_sets"] == {"squat": 4, "bench": 4, "deadlift": 4}
+
+
+def test_coach_rpe_cap_overrides_derived_readiness_cap(monkeypatch):
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    monkeypatch.setattr(
+        "portal.services.weekly_programming_intelligence.calculate_signals",
+        lambda athlete: _fatigue_signal(9),
+    )
+    with app.app_context():
+        db.session.add(AthleteStateOverride(
+            athlete_id=athlete_id, target_type="programming", target_ref="weekly",
+            override_json={"rpe_cap": 8.5}, reason="Coach reviewed readiness",
+            recorded_by="coach@example.com",
+        ))
+        db.session.commit()
+    response = app.test_client().post(
+        "/programming/factory/preview",
+        data={**base_form(athlete_id), "goal": "strength", "week_count": "4"},
+    )
+    assert response.status_code == 200
+    with app.app_context():
+        weeks = AthleteStateRecommendation.query.one().recommendation_json["volume_progression"]["weeks"]
+        assert max(week["target_rpe"] for week in weeks) == 8.0
+        assert "RPE cap 8.5: Coach reviewed readiness" in AthleteStateRecommendation.query.one().recommendation_json["volume_progression"]["overrides_applied"]
 
 
 def test_high_fatigue_exactly_reduces_preview_and_persisted_sets_within_bounds(monkeypatch):

@@ -50,6 +50,41 @@ def test_elbow_irritation_and_low_back_pain_are_hard_non_diagnostic_filters():
         assert all(item["evidence"] for item in result["hard_constraints"])
 
 
+def test_shoulder_and_hip_irritation_produce_supported_programming_filters():
+    app = _app()
+    with app.app_context():
+        athlete = _athlete()
+        db.session.add_all([
+            AthleteConstraintFlag(athlete=athlete, flag_kind="irritation", label="Shoulder irritation", reported_by="athlete", starts_on=date(2026, 8, 10)),
+            AthleteConstraintFlag(athlete=athlete, flag_kind="irritation", label="Hip irritation", reported_by="athlete", starts_on=date(2026, 8, 10)),
+        ])
+        db.session.commit()
+
+        result = aggregate_programming_athlete_state(athlete, as_of=date(2026, 8, 12))
+
+        assert [item["effects"]["affected_regions"] for item in result["hard_constraints"]] == [["shoulder"], ["hip"]]
+        assert result["consumer_hints"]["affected_lift_families"] == ["bench", "deadlift", "squat"]
+        assert {"shoulder_loading", "overhead_loading", "hip_loading", "deep_hip_flexion"} <= set(result["consumer_hints"]["excluded_constraint_tags"])
+
+
+def test_conflicting_technical_observations_require_review():
+    app = _app()
+    with app.app_context():
+        athlete = _athlete()
+        db.session.add_all([
+            CoachTechnicalObservation(athlete=athlete, lift="squat", observation="Left hip shift", observed_on=date(2026, 8, 10), recorded_by="coach@test"),
+            CoachTechnicalObservation(athlete=athlete, lift="squat", observation="Right hip shift", observed_on=date(2026, 8, 11), recorded_by="coach@test"),
+        ])
+        db.session.commit()
+
+        result = aggregate_programming_athlete_state(athlete, as_of=date(2026, 8, 12))
+
+        assert result["consumer_hints"]["review_required"] is True
+        assert result["consumer_hints"]["review_reasons"] == [
+            "Conflicting recent squat hip shift observations: left and right"
+        ]
+
+
 def test_resolved_and_stale_state_does_not_affect_current_programming():
     app = _app()
     as_of = date(2026, 8, 12)

@@ -648,6 +648,12 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
         exercises = [intent.exercise_name for intent in intents]
         main_count = len(day_type)
         main_exercises = exercises[:main_count]
+        main_exercises = _adapt_main_exercises(
+            factory.athlete_id,
+            day_type,
+            main_exercises,
+            excluded_constraint_tags,
+        )
         # Pinned selections replace automatic volume behaviour, are distributed
         # once across exposure-led days, and remain in coach order.
         manual_for_day = selected_accessories[day_index :: len(days)]
@@ -768,6 +774,70 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
         )
 
     return preview
+
+
+def _metadata_set(value: str | None) -> set[str]:
+    try:
+        parsed = json.loads(value or "[]")
+    except (TypeError, ValueError):
+        return set()
+    return {
+        str(item).strip().casefold()
+        for item in parsed
+        if isinstance(parsed, list) and str(item).strip()
+    } if isinstance(parsed, list) else set()
+
+
+def _adapt_main_exercises(
+    athlete_id: int,
+    day_type: str,
+    names: list[str],
+    excluded_tags: set[str],
+) -> list[str]:
+    """Choose a supported non-conflicting variation; coach selections win."""
+    families = {"S": "squat", "B": "bench", "D": "deadlift"}
+    normalised_tags = {tag.casefold() for tag in excluded_tags}
+    now = datetime.now(UTC).replace(tzinfo=None)
+    selections: dict[str, str] = {}
+    for row in AthleteStateOverride.query.filter(
+        AthleteStateOverride.athlete_id == athlete_id,
+        AthleteStateOverride.target_type == "programming",
+        AthleteStateOverride.revoked_at.is_(None),
+        (AthleteStateOverride.expires_at.is_(None)) | (AthleteStateOverride.expires_at > now),
+    ).order_by(AthleteStateOverride.recorded_at.asc(), AthleteStateOverride.id.asc()):
+        payload = row.override_json if isinstance(row.override_json, dict) else {}
+        choices = payload.get("exercise_selections")
+        if isinstance(choices, dict):
+            for family, name in choices.items():
+                if family in families.values() and isinstance(name, str) and name.strip():
+                    selections[family] = name.strip()
+
+    result: list[str] = []
+    for code, current_name in zip(day_type, names):
+        family = families[code]
+        coach_name = selections.get(family)
+        if coach_name:
+            result.append(coach_name)
+            continue
+        current = Exercise.query.filter_by(name=current_name, active=True).one_or_none()
+        if not normalised_tags or current is None or not (
+            _metadata_set(current.constraint_tags) & normalised_tags
+        ):
+            result.append(current_name)
+            continue
+        alternatives = Exercise.query.filter_by(
+            lift_family=family, active=True
+        ).order_by(Exercise.specificity.desc(), Exercise.name.asc(), Exercise.id.asc()).all()
+        replacement = next(
+            (
+                item for item in alternatives
+                if item.name != current_name
+                and not (_metadata_set(item.constraint_tags) & normalised_tags)
+            ),
+            None,
+        )
+        result.append(replacement.name if replacement is not None else current_name)
+    return result
 
 
 def _apply_active_coach_overrides(factory: FactoryRequest) -> FactoryRequest:
@@ -1137,8 +1207,11 @@ def generate():
         db.session.add(week)
         db.session.flush()
 
-        week_rpe = _week_rpe(factory, week_position)
         volume_week = intelligence.volume.weeks[week_position - 1]
+        # The intelligence envelope owns bounded readiness/adherence caps. A
+        # later coach-authored cap in that envelope remains authoritative.
+        week_rpe = volume_week.target_rpe
+        exposure_seen = {family: 0 for family in ("squat", "bench", "deadlift")}
         exposure_totals = {
             "squat": factory.squat_frequency,
             "bench": factory.bench_frequency,
