@@ -1,0 +1,80 @@
+evaluation_interval: 1m
+rule_files:
+  - traditional-strength-rules.yaml
+
+tests:
+  - name: database unavailable and absent both page
+    interval: 1m
+    input_series:
+      - series: 'traditional_strength_dependency_available{namespace="production",dependency="database"}'
+        values: '0x4'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: TraditionalStrengthDatabaseUnavailable
+        exp_alerts:
+          - exp_labels: {severity: critical, page: "true", service: traditional-strength, owner: application}
+  - name: absent database series pages
+    interval: 1m
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: TraditionalStrengthDatabaseUnavailable
+        exp_alerts:
+          - exp_labels: {namespace: production, dependency: database, severity: critical, page: "true", service: traditional-strength, owner: application}
+
+  - name: Argo synced and degraded still pages
+    interval: 1m
+    input_series:
+      - series: 'argocd_app_info{name="flask-web-production",health_status="Degraded",sync_status="Synced"}'
+        values: '1x12'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: TraditionalStrengthArgoReleaseDegraded
+        exp_alerts:
+          - exp_labels: {name: flask-web-production, health_status: Degraded, sync_status: Synced, severity: critical, page: "true", service: traditional-strength, owner: platform}
+
+  - name: unrelated and retained failed migration jobs do not page
+    interval: 1m
+    input_series:
+      - series: 'kube_job_status_failed{namespace="production",job_name="unrelated-migration"}'
+        values: '1x4'
+      - series: 'kube_job_status_failed{namespace="production",job_name="flask-web-monitoring-flask-app-migration"}'
+        values: '1x4'
+      - series: 'kube_job_labels{namespace="production",job_name="flask-web-monitoring-flask-app-migration",label_app_kubernetes_io_name="flask-app",label_app_kubernetes_io_instance="flask-web-monitoring",label_app_kubernetes_io_component="migration"}'
+        values: '1x4'
+      - series: 'kube_job_created{namespace="production",job_name="flask-web-monitoring-flask-app-migration"}'
+        values: '-1000x4'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: TraditionalStrengthMigrationJobFailed
+        exp_alerts: []
+
+  - name: zero traffic does not page
+    interval: 1m
+    input_series:
+      - series: 'flask_http_requests_total{namespace="production",status_code="200"}'
+        values: '0x6'
+      - series: 'flask_http_requests_total{namespace="production",status_code="500"}'
+        values: '0x6'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: TraditionalStrengthHttp5xxPage
+        exp_alerts: []
+
+  - name: counter reset still counts failures
+    interval: 1m
+    input_series:
+      - series: 'flask_http_requests_total{namespace="production",status_code="500"}'
+        values: '0 1 2 3 4 0 1 2 3 4 5'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: TraditionalStrengthHttp5xxWarning
+        exp_alerts:
+          - exp_labels: {severity: warning, page: "false", service: traditional-strength, owner: application}
+
+  - name: absent status collector series warns
+    interval: 1m
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: TraditionalStrengthStatusCollectorStale
+        exp_alerts:
+          - exp_labels: {namespace: production, cronjob: platform-status-collector, severity: warning, page: "false", service: traditional-strength, owner: platform}

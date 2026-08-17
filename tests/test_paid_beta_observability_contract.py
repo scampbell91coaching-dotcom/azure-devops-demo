@@ -80,6 +80,8 @@ def test_alert_promql_covers_absence_degraded_and_only_current_app_migration():
     assert 'label_app_kubernetes_io_component="migration"' in migration
     assert ".*migrat.*" not in migration
     assert "< 900" in migration
+    stale = alerts["TraditionalStrengthStatusCollectorStale"]
+    assert "absent(kube_cronjob_status_last_successful_time" in stale
     page = alerts["TraditionalStrengthHttp5xxPage"]
     assert "increase(" in page and ">= 5" in page and ">= 20" in page
 

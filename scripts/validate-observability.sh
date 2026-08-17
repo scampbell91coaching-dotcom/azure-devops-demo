@@ -7,7 +7,8 @@ production_rendered="$(mktemp)"
 monitoring_rendered="$(mktemp)"
 service_monitor_only_rendered="$(mktemp)"
 service_monitor_rendered="$(mktemp)"
-trap 'rm -f "$default_rendered" "$production_rendered" "$monitoring_rendered" "$service_monitor_only_rendered" "$service_monitor_rendered"' EXIT
+rules_dir="$(mktemp -d)"
+trap 'rm -f "$default_rendered" "$production_rendered" "$monitoring_rendered" "$service_monitor_only_rendered" "$service_monitor_rendered"; rm -rf "$rules_dir"' EXIT
 
 helm lint "$repo_root/flask-app"
 helm lint "$repo_root/flask-app" -f "$repo_root/flask-app/values-production.yaml"
@@ -69,19 +70,23 @@ grep -q 'health_status=~"Degraded|Missing"' "$monitoring_rendered"
 ! grep -q 'health_status=~"Degraded|Missing",sync_status!=' "$monitoring_rendered"
 grep -q 'job_name="flask-web-monitoring-flask-app-migration"' "$monitoring_rendered"
 ! grep -q 'job_name=~".*migrat.*"' "$monitoring_rendered"
-if command -v promtool >/dev/null 2>&1; then
-  rules_file="$(mktemp)"
-  trap 'rm -f "$default_rendered" "$production_rendered" "$monitoring_rendered" "$service_monitor_only_rendered" "$service_monitor_rendered" "$rules_file"' EXIT
-  python3 - "$monitoring_rendered" "$rules_file" <<'PY'
+rules_file="$rules_dir/traditional-strength-rules.yaml"
+python3 - "$monitoring_rendered" "$rules_file" <<'PY'
 import sys, yaml
 documents = yaml.safe_load_all(open(sys.argv[1], encoding="utf-8"))
 rule = next(item for item in documents if item and item.get("kind") == "PrometheusRule")
 with open(sys.argv[2], "w", encoding="utf-8") as destination:
     yaml.safe_dump({"groups": rule["spec"]["groups"]}, destination)
 PY
+if command -v promtool >/dev/null 2>&1; then
   promtool check rules "$rules_file"
+  cp "$repo_root/tests/prometheus/traditional-strength.test.yml" "$rules_dir/rules.test.yml"
+  promtool test rules "$rules_dir/rules.test.yml"
+elif [[ "${REQUIRE_PROMTOOL:-false}" == "true" ]]; then
+  echo "ERROR: promtool is required for authoritative PromQL validation." >&2
+  exit 1
 else
-  echo "WARNING: promtool unavailable; Helm/YAML and representative PromQL contract assertions ran, but promtool syntax validation did not." >&2
+  echo "WARNING: promtool unavailable; local Helm/YAML and contract assertions ran, but authoritative PromQL checks did not. CI sets REQUIRE_PROMTOOL=true." >&2
 fi
 python3 -m json.tool \
   "$repo_root/flask-app/dashboards/traditional-strength-production.json" >/dev/null
