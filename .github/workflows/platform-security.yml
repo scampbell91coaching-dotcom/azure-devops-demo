@@ -80,6 +80,7 @@ jobs:
       - name: Render production chart
         run: |
           helm template flask-web-prod flask-app \
+            --namespace production \
             -f flask-app/values-production.yaml \
             > /tmp/flask-production.yaml
 
