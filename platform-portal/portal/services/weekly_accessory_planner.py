@@ -58,9 +58,22 @@ def _text(exercise: Exercise) -> str:
     )).casefold()
 
 
+@dataclass(frozen=True)
+class WeeklyAccessoryCandidate:
+    """An eligible catalogue row plus authoritative Athlete State metadata."""
+
+    exercise: Exercise
+    state_score: int = 0
+    state_provenance: tuple[dict[str, Any], ...] = ()
+    state_reasons: tuple[str, ...] = ()
+
+
 def purpose_for(exercise: Exercise) -> str:
     """Map broad/legacy catalogue language into the compact PL taxonomy."""
     tags = _values(exercise.technical_purposes) | _values(exercise.compatibility_tags)
+    explicit = sorted(tags & PURPOSES)
+    if explicit:
+        return explicit[0]
     joined = " ".join(sorted(tags)) + " " + _text(exercise)
     rules = (
         ("deadlift off-floor", ("off floor", "off-floor", "deficit deadlift")),
@@ -92,7 +105,8 @@ class WeeklyAccessoryContext:
     available_equipment: frozenset[str] | None = None
     readiness_multiplier: float = 1.0
     meet_date: date | None = None
-    grip_required: bool = False
+    competition_grip: str = "mixed"
+    grip_work_priority: str = "none"
 
 
 @dataclass(frozen=True)
@@ -112,6 +126,9 @@ class PlannedAccessory:
     reason: str
     prescriptions: tuple[WeekPrescription, ...]
     warnings: tuple[str, ...] = ()
+    state_score: int = 0
+    state_provenance: tuple[dict[str, Any], ...] = ()
+    state_reasons: tuple[str, ...] = ()
 
 
 class WeeklyAccessoryPlanner:
@@ -120,12 +137,19 @@ class WeeklyAccessoryPlanner:
     WEEKLY_BUDGET_PER_DAY = {"low": 2, "medium": 4, "high": 6}
 
     def plan(
-        self, exercises: Iterable[Exercise], context: WeeklyAccessoryContext
+        self,
+        exercises: Iterable[Exercise | WeeklyAccessoryCandidate],
+        context: WeeklyAccessoryContext,
     ) -> tuple[PlannedAccessory, ...]:
         if not 1 <= len(context.day_types) <= 7:
             raise ValueError("Weekly accessory planning requires 1-7 training days.")
-        eligible = [row for row in exercises if self._eligible(row, context)]
-        eligible.sort(key=lambda row: self._rank(row, context))
+        candidates = [
+            item if isinstance(item, WeeklyAccessoryCandidate)
+            else WeeklyAccessoryCandidate(item)
+            for item in exercises
+        ]
+        eligible = [item for item in candidates if self._eligible(item.exercise, context)]
+        eligible.sort(key=lambda item: self._rank(item, context))
         remaining = max(0, round(
             self.WEEKLY_BUDGET_PER_DAY.get(context.volume, 4)
             * len(context.day_types) * max(.5, min(1.0, context.readiness_multiplier))
@@ -133,10 +157,37 @@ class WeeklyAccessoryPlanner:
         selected: list[PlannedAccessory] = []
         used_groups: set[str] = set()
         purpose_counts: dict[str, int] = {}
-        day_purposes: dict[int, set[str]] = {i: set() for i in range(len(context.day_types))}
+        day_purposes: dict[int, set[str]] = {
+            i: set() for i in range(len(context.day_types))
+        }
+
+        required_grip = self._required_grip_candidate(eligible, context)
+        if required_grip is not None:
+            row = required_grip.exercise
+            purpose = purpose_for(row)
+            day = self._best_day(purpose, row, context, day_purposes)
+            if day >= 0:
+                reason = self._grip_reason(context)
+                selected.append(
+                    PlannedAccessory(
+                        row,
+                        day,
+                        purpose,
+                        reason,
+                        self._prescriptions(row, purpose, context),
+                        state_score=required_grip.state_score,
+                        state_provenance=required_grip.state_provenance,
+                        state_reasons=required_grip.state_reasons,
+                    )
+                )
+                remaining -= max(1, min(5, row.fatigue_rating or 3))
+                used_groups.add(self._redundancy_group(row, purpose))
         hinge_count = press_count = row_count = 0
 
-        for row in eligible:
+        for candidate in eligible:
+            row = candidate.exercise
+            if required_grip is not None and row.id == required_grip.exercise.id:
+                continue
             cost = max(1, min(5, row.fatigue_rating or 3))
             if cost > remaining:
                 continue
@@ -157,7 +208,10 @@ class WeeklyAccessoryPlanner:
                 continue
             reason = self._reason(row, purpose, context.day_types[day], context)
             selected.append(PlannedAccessory(
-                row, day, purpose, reason, self._prescriptions(row, purpose, context)
+                row, day, purpose, reason, self._prescriptions(row, purpose, context),
+                state_score=candidate.state_score,
+                state_provenance=candidate.state_provenance,
+                state_reasons=candidate.state_reasons,
             ))
             remaining -= cost
             used_groups.add(group)
@@ -166,7 +220,63 @@ class WeeklyAccessoryPlanner:
             hinge_count += purpose in _HINGE_PURPOSES
             press_count += purpose in _BENCH_STRESS_PURPOSES
             row_count += purpose == "upper-back stability"
-        return tuple(sorted(selected, key=lambda item: (item.day_index, item.purpose, item.exercise.name.casefold(), item.exercise.id)))
+        return tuple(sorted(
+            selected,
+            key=lambda item: (
+                item.day_index,
+                0 if required_grip is not None and item.exercise.id == required_grip.exercise.id else 1,
+                item.purpose,
+                item.exercise.name.casefold(),
+                item.exercise.id,
+            ),
+        ))
+
+    @staticmethod
+    def _grip_reason(context: WeeklyAccessoryContext) -> str:
+        if context.competition_grip == "hook" and context.grip_work_priority == "none":
+            return "hook-grip competition requirement"
+        return (
+            f"grip-work priority is {context.grip_work_priority}; "
+            f"competition grip is {context.competition_grip}"
+        )
+
+    def _required_grip_candidate(
+        self,
+        exercises: list[WeeklyAccessoryCandidate],
+        context: WeeklyAccessoryContext,
+    ) -> WeeklyAccessoryCandidate | None:
+        required = context.competition_grip == "hook" or context.grip_work_priority != "none"
+        if not required:
+            return None
+
+        candidates = []
+        for candidate in exercises:
+            row = candidate.exercise
+            if (row.category or "").casefold() != "grip":
+                continue
+
+            text = _text(row)
+            if "farmer" in text or "carry" in text:
+                continue
+
+            hook_specific = "hook grip" in text or "hook-grip" in text
+            candidates.append(
+                (
+                    -int(context.competition_grip == "hook" and hook_specific),
+                    -candidate.state_score,
+                    -row.coach_priority,
+                    max(1, min(5, row.fatigue_rating or 3)),
+                    row.name.casefold(),
+                    row.id,
+                    candidate,
+                )
+            )
+
+        if not candidates:
+            return None
+
+        candidates.sort(key=lambda item: item[:-1])
+        return candidates[0][-1]
 
     def _eligible(self, row: Exercise, context: WeeklyAccessoryContext) -> bool:
         # auto_select is intentionally a hard gate. Pins are handled by the caller.
@@ -187,8 +297,10 @@ class WeeklyAccessoryPlanner:
         }
         if relevance and "all" not in relevance and not relevance & scheduled:
             return False
-        if (row.category or "").casefold() == "grip" and not context.grip_required:
-            return False
+        if (row.category or "").casefold() == "grip":
+            grip_required = context.competition_grip == "hook" or context.grip_work_priority != "none"
+            if not grip_required:
+                return False
         if context.constraints & _values(row.constraint_tags):
             return False
         if context.available_equipment is not None:
@@ -199,7 +311,10 @@ class WeeklyAccessoryPlanner:
                 return False
         return True
 
-    def _rank(self, row: Exercise, context: WeeklyAccessoryContext) -> tuple[Any, ...]:
+    def _rank(
+        self, candidate: WeeklyAccessoryCandidate, context: WeeklyAccessoryContext
+    ) -> tuple[Any, ...]:
+        row = candidate.exercise
         purpose = purpose_for(row)
         candidate_signals = _values(row.technical_purposes) | _values(row.compatibility_tags) | {purpose}
         candidate_text = _text(row) + " " + " ".join(candidate_signals)
@@ -210,8 +325,11 @@ class WeeklyAccessoryPlanner:
         relevance = _values(row.lift_relevance)
         scheduled = {"squat" if "S" in d else "" for d in context.day_types} | {"bench" if "B" in d else "" for d in context.day_types} | {"deadlift" if "D" in d else "" for d in context.day_types}
         relevant = not relevance or "all" in relevance or bool(relevance & scheduled)
-        grip_match = context.grip_required and (row.category or "").casefold() == "grip"
-        return (-int(grip_match), -int(observation_match), -int(relevant), -row.coach_priority,
+        grip_match = (
+            (context.competition_grip == "hook" or context.grip_work_priority != "none")
+            and (row.category or "").casefold() == "grip"
+        )
+        return (-int(grip_match), -candidate.state_score, -int(observation_match), -int(relevant), -row.coach_priority,
                 max(1, min(5, row.fatigue_rating or 3)), row.name.casefold(), row.id)
 
     @staticmethod
@@ -246,7 +364,7 @@ class WeeklyAccessoryPlanner:
                 collision += 6
             if purpose in _BENCH_STRESS_PURPOSES and "B" in next_day:
                 collision += 5
-            match = desired and desired in day_type
+            match = bool(desired and desired in day_type)
             metadata_match = not relevance or "all" in relevance or any(
                 {"S": "squat", "B": "bench", "D": "deadlift"}[code] in relevance
                 for code in day_type

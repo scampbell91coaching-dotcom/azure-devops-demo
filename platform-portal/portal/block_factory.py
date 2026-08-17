@@ -33,12 +33,14 @@ from .models.programming import (
 )
 from .models.warmup import WarmupAssignment, WarmupProtocol, WarmupProtocolStep
 from .programming_services.revisions import append_revision
+from .services.accessory_intelligence import AccessoryIntelligence
 from .services.exposure_intelligence import weekly_exposure_intents
 from .services.athlete_state import latest_facts
 from .services.programming_athlete_state import aggregate_programming_athlete_state
 from .services.proposal_explanations import ProposalExplanationService
 from .services.weekly_programming_intelligence import WeeklyProgrammingIntelligence
 from .services.weekly_accessory_planner import (
+    WeeklyAccessoryCandidate,
     WeeklyAccessoryContext,
     WeeklyAccessoryPlanner,
 )
@@ -724,8 +726,26 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
             values = equipment_fact.get("available") or equipment_fact.get("equipment")
             if isinstance(values, (list, tuple, set)):
                 available_equipment = frozenset(str(value).casefold() for value in values)
+        state_evaluation = AccessoryIntelligence().evaluate_candidates(
+            phase=factory.goal,
+            lift_families={
+                {"S": "squat", "B": "bench", "D": "deadlift"}[code]
+                for day_type in days for code in day_type
+            },
+            excluded_constraint_tags=excluded_constraint_tags,
+            athlete_id=factory.athlete_id,
+            session_tags=observation_tags,
+        )
         plan = WeeklyAccessoryPlanner().plan(
-            Exercise.query.filter(Exercise.accessory_suitable.is_(True)).all(),
+            (
+                WeeklyAccessoryCandidate(
+                    suggestion.exercise,
+                    suggestion.state_score,
+                    suggestion.provenance,
+                    suggestion.reasons,
+                )
+                for suggestion in state_evaluation.candidates
+            ),
             WeeklyAccessoryContext(
                 goal=factory.goal, volume=factory.accessory_volume,
                 week_count=factory.week_count, day_types=tuple(days),
@@ -733,17 +753,31 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                 observations=frozenset(observation_tags),
                 available_equipment=available_equipment,
                 readiness_multiplier=readiness, meet_date=factory.meet_date,
-                grip_required=(factory.deadlift_grip == "hook" or factory.grip_work_priority != "none"),
+                competition_grip=factory.deadlift_grip,
+                grip_work_priority=factory.grip_work_priority,
             ),
         )
         for planned in plan:
             row = planned.exercise
             day = preview[planned.day_index]
+            reasons = (*planned.state_reasons, planned.reason)
+            if (row.category or "").casefold() == "grip":
+                grip_reasons = []
+                if factory.deadlift_grip == "hook" and factory.grip_work_priority == "none":
+                    grip_reasons.append("hook-grip competition requirement")
+                elif factory.grip_work_priority != "none":
+                    grip_reasons.append(f"grip-work priority is {factory.grip_work_priority}")
+                grip_reasons.append(f"competition grip is {factory.deadlift_grip}")
+                reasons = (*planned.state_reasons, *grip_reasons)
+
             item = {
                 "id": row.id, "name": row.name, "role": planned.purpose,
                 "purpose": planned.purpose, "source": "Weekly planner",
                 "provenance": "generated", "reason": planned.reason,
-                "reasons": (planned.reason,),
+                "reasons": reasons,
+                "state_score": planned.state_score,
+                "state_provenance": planned.state_provenance,
+                "state_reasons": planned.state_reasons,
                 "prescriptions": [asdict(value) for value in planned.prescriptions],
             }
             day["accessories"].append(item)

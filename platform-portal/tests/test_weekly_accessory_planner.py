@@ -7,7 +7,8 @@ import pytest
 
 from portal.models.exercise_library import Exercise
 from portal.services.weekly_accessory_planner import (
-    PURPOSES, WeeklyAccessoryContext, WeeklyAccessoryPlanner,
+    PURPOSES, WeeklyAccessoryCandidate, WeeklyAccessoryContext,
+    WeeklyAccessoryPlanner,
 )
 
 
@@ -114,3 +115,34 @@ def test_meet_proximal_week_persists_a_real_taper_not_a_static_copy():
         assert item.prescriptions[-1].sets < item.prescriptions[0].sets or item.prescriptions[-1].sets == 1
         assert item.prescriptions[-1].rpe <= 7
         assert len({(rx.sets, rx.rpe) for rx in item.prescriptions}) > 1
+
+
+def test_required_grip_respects_state_ranking_before_catalogue_priority():
+    catalogue_favourite = exercise(
+        "Hook Grip Hold A", priority=90, fatigue=1, relevance="deadlift",
+        pattern="grip_a", category="grip",
+    )
+    state_favourite = exercise(
+        "Hook Grip Hold B", priority=10, fatigue=1, relevance="deadlift",
+        pattern="grip_b", category="grip",
+    )
+    result = WeeklyAccessoryPlanner().plan(
+        (
+            WeeklyAccessoryCandidate(catalogue_favourite),
+            WeeklyAccessoryCandidate(
+                state_favourite,
+                state_score=20,
+                state_provenance=({"rule_id": "coach.grip-preference.v1"},),
+            ),
+        ),
+        WeeklyAccessoryContext(
+            goal="development", volume="low", week_count=1,
+            day_types=("D",), competition_grip="hook",
+        ),
+    )
+
+    assert result[0].exercise.name == "Hook Grip Hold B"
+    assert result[0].state_score == 20
+    assert result[0].state_provenance == (
+        {"rule_id": "coach.grip-preference.v1"},
+    )
