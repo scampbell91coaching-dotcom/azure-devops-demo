@@ -33,7 +33,7 @@ spec:
             description: Customer traffic has had reduced or zero ready capacity for five minutes.
             runbook_url: {{ printf "%s#web-unavailable-or-not-ready" $runbook | quote }}
         - alert: TraditionalStrengthDatabaseUnavailable
-          expr: min(traditional_strength_dependency_available{namespace="{{ $namespace }}",dependency="database"}) == 0 or absent(traditional_strength_dependency_available{namespace="{{ $namespace }}",dependency="database"}) or absent(traditional_strength_dependency_last_check_timestamp_seconds{namespace="{{ $namespace }}",dependency="database"}) or (time() - min(traditional_strength_dependency_last_check_timestamp_seconds{namespace="{{ $namespace }}",dependency="database"}) > 120)
+          expr: min by (namespace, dependency) (traditional_strength_dependency_available{namespace="{{ $namespace }}",dependency="database"}) == 0 or absent(traditional_strength_dependency_available{namespace="{{ $namespace }}",dependency="database"}) or absent(traditional_strength_dependency_last_check_timestamp_seconds{namespace="{{ $namespace }}",dependency="database"}) or (time() - min by (namespace, dependency) (traditional_strength_dependency_last_check_timestamp_seconds{namespace="{{ $namespace }}",dependency="database"}) > 120)
           for: 2m
           labels: { severity: critical, page: "true", service: traditional-strength, owner: application }
           annotations:
