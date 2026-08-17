@@ -1,5 +1,9 @@
 from portal import create_app
 from portal.extensions import db
+from portal.observability import (
+    DEPENDENCY_AVAILABLE,
+    DEPENDENCY_LAST_CHECK_TIMESTAMP,
+)
 from prometheus_client.parser import text_string_to_metric_families
 
 TEST_CONFIG = {"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"}
@@ -28,6 +32,39 @@ def test_liveness_is_process_only_and_readiness_checks_database(monkeypatch):
         "status": "not_ready",
         "checks": {"database": "unavailable"},
     }
+
+
+def test_periodic_database_collector_records_health_failure_and_recovery(monkeypatch):
+    app = create_app(TEST_CONFIG)
+    collector = app.extensions["database_availability_collector"]
+
+    assert collector.collect_once() is True
+    assert DEPENDENCY_AVAILABLE.labels(dependency="database")._value.get() == 1
+    healthy_timestamp = DEPENDENCY_LAST_CHECK_TIMESTAMP.labels(
+        dependency="database"
+    )._value.get()
+
+    with app.app_context():
+        engine = db.engine
+    real_connect = engine.connect
+    monkeypatch.setattr(
+        engine,
+        "connect",
+        lambda: (_ for _ in ()).throw(RuntimeError("database offline")),
+    )
+    assert collector.collect_once() is False
+    assert DEPENDENCY_AVAILABLE.labels(dependency="database")._value.get() == 0
+    failed_timestamp = DEPENDENCY_LAST_CHECK_TIMESTAMP.labels(
+        dependency="database"
+    )._value.get()
+    assert failed_timestamp >= healthy_timestamp
+
+    monkeypatch.setattr(engine, "connect", real_connect)
+    assert collector.collect_once() is True
+    assert DEPENDENCY_AVAILABLE.labels(dependency="database")._value.get() == 1
+    assert DEPENDENCY_LAST_CHECK_TIMESTAMP.labels(
+        dependency="database"
+    )._value.get() >= failed_timestamp
 
 
 def test_metrics_deny_public_access_but_allow_authenticated_internal_scrape():

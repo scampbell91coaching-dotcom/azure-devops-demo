@@ -26,14 +26,14 @@ Paging thresholds require persistence and, where traffic is involved, a minimum 
 ## Web unavailable or not ready
 
 - Compare Prometheus `up`, desired/available replicas, probe failures, container logs, events, CPU/memory and the database readiness panel.
-- `/health` is the stable, process-only compatibility contract used by existing consumers and all production probes during mixed-version rollout. `/live` is the equivalent additive liveness endpoint. `/ready` alone executes `SELECT 1` and returns 503 on dependency failure. A future probe switch requires an image contract proven before the values change; it must not be reconciled independently against an older image.
+- `/health` is the stable, process-only compatibility contract used by existing consumers and all production probes during mixed-version rollout. `/live` is the equivalent additive liveness endpoint. `/ready` executes `SELECT 1` and returns 503 on dependency failure. Independently, each web process checks the database every 30 seconds and updates availability and last-completed-check metrics, so database monitoring does not depend on probe or user traffic. A future probe switch requires the compatible image to be guaranteed deployed before the values change; it must not be reconciled independently against the currently pinned older image.
 - If `/live` fails, investigate crash/OOM/configuration/startup. If only `/ready` fails, follow the database section. If Prometheus alone is down, verify the ServiceMonitor selector and monitoring NetworkPolicy before treating it as an application outage.
 
 ## Database unavailable
 
-- Confirm `traditional_strength_dependency_available{dependency="database"}` and readiness failures across pods. Check PostgreSQL provider health, connection limits, DNS/network policy, secret availability and recent migration timing.
+- Confirm `traditional_strength_dependency_available{dependency="database"}` and `traditional_strength_dependency_last_check_timestamp_seconds{dependency="database"}` across pods. The page also fires if either series is absent or the oldest check is over two minutes old; first distinguish a reported database failure from a collector/scrape failure. Check PostgreSQL provider health, connection limits, DNS/network policy, secret availability and recent migration timing.
 - Do not restart healthy processes repeatedly during a database outage. Preserve the first database exception and request ID. Escalate credential or network changes through the normal production change path.
-- Recovery requires stable readiness across all desired replicas and successful core-path smoke tests, not merely one successful probe.
+- Recovery requires every periodic collector to report availability again with a current timestamp, plus successful `/ready` and core-path smoke tests. A new successful check sets the gauge back to 1 and clears the database condition after the alert state is re-evaluated.
 
 ## HTTP errors or latency
 
@@ -60,7 +60,7 @@ Paging thresholds require persistence and, where traffic is involved, a minimum 
 
 ## Status collector stale or failed
 
-- The collector runs every five minutes. A failed Job or no success for 15 minutes is a warning, not a page, because it affects operational freshness rather than the customer data path.
+- The platform-status collector runs every five minutes. A failed Job, no success for 15 minutes, or disappearance of its last-success metric is a warning, not a page, because it affects operational freshness rather than the customer data path.
 - Inspect the latest Job logs, RBAC denials, API timeouts, output volume and snapshot ingestion. Confirm a new successful timestamp and fresh portal snapshot after remediation.
 
 ## Activation and release verification
@@ -73,6 +73,6 @@ After each release, verify migration success, rollout completion, `/live`, `/rea
 
 - Alertmanager receiver ownership, schedules, and delivery tests live outside this repository and must be verified before activation.
 - The portal deliberately runs one Gunicorn process per pod (eight threads), so its Python counters, gauges, and histograms have one in-pod owner and are trustworthy for that pod. Horizontal replicas are aggregated by PromQL. This is not durable event storage: process restarts reset series, and `increase()` provides reset-aware window estimates rather than an audit count. Keep minimum traffic/event gates on paging rules.
-- Database paging fires both when the last readiness observation is zero and when the dependency series is absent; the separate `up` and Ready-replica alerts help distinguish database failure from scrape/pod loss. `/health` intentionally does not perform a database query, so the DB gauge is refreshed only by `/ready` callers.
+- Database paging fires when any periodic observation is zero, when availability or last-check series are absent, or when the oldest last-check timestamp is over two minutes old. The separate `up` and Ready-replica alerts help distinguish database failure from scrape/pod loss. `/health` intentionally remains dependency-free, and production probes intentionally remain on it until a compatible image is guaranteed deployed.
 - Argo health degradation is independent of sync state, including `Synced + Degraded`. Argo CD metrics and kube-state-metrics label allowlisting still must be confirmed in the live stack before activation. The migration alert matches the exact Helm Job name and chart labels and ignores failures more than 15 minutes after Job creation, preventing retained failures from paging indefinitely.
 - There is no independent multi-region synthetic for authenticated money paths, and no PostgreSQL server-side saturation/replication alert in this repository.

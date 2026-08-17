@@ -57,7 +57,21 @@ def test_alert_promql_covers_absence_degraded_and_only_current_app_migration():
     rule = next(item for item in documents if item["kind"] == "PrometheusRule")
     alerts = {entry["alert"]: entry["expr"] for group in rule["spec"]["groups"]
               for entry in group["rules"]}
-    assert "absent(traditional_strength_dependency_available" in alerts["TraditionalStrengthDatabaseUnavailable"]
+    database = alerts["TraditionalStrengthDatabaseUnavailable"]
+    assert "min(traditional_strength_dependency_available" in database
+    assert "== 0" in database
+    assert "absent(traditional_strength_dependency_available" in database
+    assert (
+        "absent(traditional_strength_dependency_last_check_timestamp_seconds"
+        in database
+    )
+    assert (
+        "time() - min(traditional_strength_dependency_last_check_timestamp_seconds"
+        in database
+    )
+    assert "> 120" in database
+    collector = alerts["TraditionalStrengthStatusCollectorStale"]
+    assert "absent(kube_cronjob_status_last_successful_time" in collector
     argo = alerts["TraditionalStrengthArgoReleaseDegraded"]
     assert 'health_status=~"Degraded|Missing"' in argo and "sync_status" not in argo
     migration = alerts["TraditionalStrengthMigrationJobFailed"]
@@ -68,3 +82,18 @@ def test_alert_promql_covers_absence_degraded_and_only_current_app_migration():
     assert "< 900" in migration
     page = alerts["TraditionalStrengthHttp5xxPage"]
     assert "increase(" in page and ">= 5" in page and ">= 20" in page
+
+
+def test_synced_degraded_argo_state_fires_without_misleading_sync_wording():
+    documents = _render("--set", "monitoring.enabled=true")
+    rule = next(item for item in documents if item["kind"] == "PrometheusRule")
+    alert = next(
+        entry
+        for group in rule["spec"]["groups"]
+        for entry in group["rules"]
+        if entry.get("alert") == "TraditionalStrengthArgoReleaseDegraded"
+    )
+
+    assert "sync_status" not in alert["expr"]
+    assert "unsynchronised" not in alert["annotations"]["summary"]
+    assert "degraded or missing" in alert["annotations"]["summary"]

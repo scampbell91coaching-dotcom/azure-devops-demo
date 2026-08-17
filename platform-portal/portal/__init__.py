@@ -88,6 +88,12 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         ACCOUNT_INVITATION_LIFETIME=timedelta(hours=48),
         ACCOUNT_RESET_LIFETIME=timedelta(hours=1),
         METRICS_BEARER_TOKEN=os.environ.get("METRICS_BEARER_TOKEN"),
+        DATABASE_AVAILABILITY_COLLECTOR_ENABLED=os.environ.get(
+            "DATABASE_AVAILABILITY_COLLECTOR_ENABLED", "true"
+        ).casefold() in {"1", "true", "yes"},
+        DATABASE_AVAILABILITY_CHECK_INTERVAL_SECONDS=float(
+            os.environ.get("DATABASE_AVAILABILITY_CHECK_INTERVAL_SECONDS", "30")
+        ),
         REPOSITORY_ROOT=portal_root.parent,
         RELEASE_EVIDENCE_MAX_AGE_SECONDS=24 * 60 * 60,
     )
@@ -102,6 +108,10 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
         app.config["AUTHENTICATION_DISABLED"] = True
     if app.testing and "SESSION_COOKIE_SECURE" not in (test_config or {}):
         app.config["SESSION_COOKIE_SECURE"] = False
+    if app.testing and "DATABASE_AVAILABILITY_COLLECTOR_ENABLED" not in (
+        test_config or {}
+    ):
+        app.config["DATABASE_AVAILABILITY_COLLECTOR_ENABLED"] = False
     if not app.config["SECRET_KEY"]:
         if app.testing:
             app.config["SECRET_KEY"] = TESTING_SECRET_KEY

@@ -33,12 +33,12 @@ spec:
             description: Customer traffic has had reduced or zero ready capacity for five minutes.
             runbook_url: {{ printf "%s#web-unavailable-or-not-ready" $runbook | quote }}
         - alert: TraditionalStrengthDatabaseUnavailable
-          expr: min(traditional_strength_dependency_available{namespace="{{ $namespace }}",dependency="database"}) == 0 or absent(traditional_strength_dependency_available{namespace="{{ $namespace }}",dependency="database"})
+          expr: min(traditional_strength_dependency_available{namespace="{{ $namespace }}",dependency="database"}) == 0 or absent(traditional_strength_dependency_available{namespace="{{ $namespace }}",dependency="database"}) or absent(traditional_strength_dependency_last_check_timestamp_seconds{namespace="{{ $namespace }}",dependency="database"}) or (time() - min(traditional_strength_dependency_last_check_timestamp_seconds{namespace="{{ $namespace }}",dependency="database"}) > 120)
           for: 2m
           labels: { severity: critical, page: "true", service: traditional-strength, owner: application }
           annotations:
-            summary: Production readiness checks cannot reach PostgreSQL
-            description: Database probes have failed for two minutes; pods should be removed from service but remain live for diagnosis.
+            summary: Production database availability is failing or no longer being observed
+            description: Periodic database checks report PostgreSQL unavailable, or their metric is absent or over two minutes old.
             runbook_url: {{ printf "%s#database-unavailable" $runbook | quote }}
         - alert: TraditionalStrengthHttp5xxPage
           expr: sum(increase(flask_http_requests_total{namespace="{{ $namespace }}",status_code=~"5.."}[10m])) >= 5 and sum(increase(flask_http_requests_total{namespace="{{ $namespace }}"}[10m])) >= 20 and sum(increase(flask_http_requests_total{namespace="{{ $namespace }}",status_code=~"5.."}[10m])) / sum(increase(flask_http_requests_total{namespace="{{ $namespace }}"}[10m])) > 0.10
@@ -128,7 +128,7 @@ spec:
             summary: The platform status collector Job failed
             runbook_url: {{ printf "%s#status-collector-stale-or-failed" $runbook | quote }}
         - alert: TraditionalStrengthStatusCollectorStale
-          expr: time() - kube_cronjob_status_last_successful_time{namespace="{{ $namespace }}",cronjob="platform-status-collector"} > 900
+          expr: time() - kube_cronjob_status_last_successful_time{namespace="{{ $namespace }}",cronjob="platform-status-collector"} > 900 or absent(kube_cronjob_status_last_successful_time{namespace="{{ $namespace }}",cronjob="platform-status-collector"})
           for: 5m
           labels: { severity: warning, page: "false", service: traditional-strength, owner: platform }
           annotations:
@@ -146,7 +146,7 @@ spec:
           for: 10m
           labels: { severity: critical, page: "true", service: traditional-strength, owner: platform }
           annotations:
-            summary: Argo CD reports a degraded and unsynchronised production release
+            summary: Argo CD reports a degraded or missing production application
             runbook_url: {{ printf "%s#migration-or-release-failure" $runbook | quote }}
         - alert: TraditionalStrengthPodRestarting
           expr: increase(kube_pod_container_status_restarts_total{namespace="{{ $namespace }}",pod=~"flask-web.*",container="flask-web"}[15m]) >= 3
