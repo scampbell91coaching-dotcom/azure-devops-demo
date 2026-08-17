@@ -13,6 +13,7 @@ class AccessoryRepository:
             Exercise.query.filter(
                 Exercise.active.is_(True),
                 Exercise.accessory_suitable.is_(True),
+                Exercise.auto_select.is_(True),
             )
             .order_by(
                 Exercise.auto_select.desc(),
