@@ -479,15 +479,10 @@ def test_factory_suggests_enabled_metadata_and_manual_selection_overrides_it():
         db.session.commit()
         automatic = _preview(factory_request(3, 1, 1, 1))
         automatic_accessories = [item for day in automatic for item in day["accessories"]]
-        assert [item["name"] for item in automatic_accessories] == [
-            "Development Row", "Coach Pin"
-        ]
+        assert [item["name"] for item in automatic_accessories] == ["Development Row"]
         suggested_accessory = automatic_accessories[0]
-        assert suggested_accessory["source"] == "Library suggestion"
-        assert any(
-            "relevant to bench" in reason
-            for reason in suggested_accessory["reasons"]
-        )
+        assert suggested_accessory["source"] == "Weekly planner"
+        assert suggested_accessory["purpose"] == "upper-back stability"
 
         request = factory_request(3, 1, 1, 1)
         request = request.__class__(
@@ -500,7 +495,7 @@ def test_factory_suggests_enabled_metadata_and_manual_selection_overrides_it():
         assert all(day["accessory_outcome"] == "coach_selected" for day in manual)
 
 
-def test_factory_automatic_falls_back_and_explains_zero_outcomes():
+def test_factory_auto_select_false_is_excluded_and_zero_is_explained():
     app = create_test_app()
     with app.app_context():
         fallback = Exercise(
@@ -513,8 +508,7 @@ def test_factory_automatic_falls_back_and_explains_zero_outcomes():
 
         automatic = _preview(factory_request(3, 1, 1, 1))
         selected = [item for day in automatic for item in day["accessories"]]
-        assert [item["name"] for item in selected] == ["Fallback Row"]
-        assert "eligible accessory fallback" in selected[0]["reasons"]
+        assert selected == []
         assert any(
             day["accessory_outcome"] == "no_eligible_candidates"
             for day in automatic
@@ -530,7 +524,7 @@ def test_factory_automatic_falls_back_and_explains_zero_outcomes():
         )
 
 
-def test_accessory_volume_produces_deterministic_default_metadata_recommendations():
+def test_weekly_planner_is_deterministic_and_controls_redundant_generic_rows():
     app = create_test_app()
     with app.app_context():
         for index in range(12):
@@ -546,16 +540,16 @@ def test_accessory_volume_produces_deterministic_default_metadata_recommendation
         medium = _preview(replace(request, accessory_volume="medium"))
         high = _preview(replace(request, accessory_volume="high"))
 
-        assert [day["accessory_count"] for day in low] == [1, 1, 1]
-        assert [day["accessory_count"] for day in medium] == [2, 2, 2]
-        assert [day["accessory_count"] for day in high] == [3, 3, 3]
+        assert sum(day["accessory_count"] for day in low) == 1
+        assert sum(day["accessory_count"] for day in medium) == 1
+        assert sum(day["accessory_count"] for day in high) == 1
         assert [item["name"] for day in medium for item in day["accessories"]] == [
             item["name"] for day in _preview(replace(request, accessory_volume="medium"))
             for item in day["accessories"]
         ]
 
 
-def test_low_fatigue_metadata_justifies_more_than_three_accessories_per_session():
+def test_low_fatigue_metadata_does_not_bypass_weekly_redundancy_control():
     app = create_test_app()
     with app.app_context():
         for index in range(9):
@@ -570,11 +564,7 @@ def test_low_fatigue_metadata_justifies_more_than_three_accessories_per_session(
             factory_request(3, 1, 1, 1), accessory_volume="high"
         ))
 
-        assert preview[0]["accessory_count"] == 9
-        assert preview[1]["accessory_count"] == 0
-        assert [item["name"] for item in preview[0]["accessories"]] == [
-            f"Low Cost Accessory {index:02d}" for index in range(9)
-        ]
+        assert sum(day["accessory_count"] for day in preview) == 1
 
 
 def test_more_than_three_manual_accessories_replace_automatic_selection():
@@ -748,6 +738,52 @@ def test_zero_assistance_generation_persists_after_reload():
                 range(1, len(session.prescriptions) + 1)
             )
             assert len(session.lift_slots) == len(day_type)
+
+
+def test_week_specific_accessory_plan_persists_with_preview_parity():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    with app.app_context():
+        row = Exercise(
+            name="Chest-Supported Row", movement="accessory",
+            category="assistance", accessory_suitable=True, auto_select=True,
+            lift_relevance='["bench"]', movement_pattern="horizontal_pull",
+            swap_group="row:supported", fatigue_rating=2, coach_priority=20,
+            default_sets=3, default_reps="8-12", default_rpe=7,
+            default_rest_seconds=120,
+        )
+        db.session.add(row)
+        db.session.commit()
+        request = replace(
+            factory_request(4, 2, 3, 1), athlete_id=athlete_id,
+            week_count=4, name="Accessory progression",
+        )
+        expected = next(
+            item for day in _preview(request) for item in day["accessories"]
+            if item["name"] == row.name
+        )["prescriptions"]
+
+    _preview_response, accepted = preview_and_accept(app.test_client(), {
+        **base_form(athlete_id), "name": "Accessory progression",
+        "week_count": 4, "training_days": 4,
+        "squat_frequency": 2, "bench_frequency": 3,
+        "deadlift_frequency": 1,
+    })
+    assert accepted.status_code == 302
+    with app.app_context():
+        actual = []
+        for week in TrainingBlock.query.one().weeks:
+            item = next(
+                prescription for session in week.sessions
+                for prescription in session.prescriptions
+                if prescription.exercise_name == "Chest-Supported Row"
+            )
+            actual.append({
+                "week": week.position, "sets": item.sets, "reps": item.reps,
+                "rpe": item.rpe, "rest_seconds": item.rest_seconds,
+            })
+        assert actual == expected
+        assert len({(item["sets"], item["rpe"]) for item in actual}) > 1
 
 
 def base_form(athlete_id):
