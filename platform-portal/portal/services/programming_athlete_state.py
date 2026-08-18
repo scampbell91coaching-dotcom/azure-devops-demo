@@ -161,6 +161,20 @@ def aggregate_programming_athlete_state(
     }
 
 
+def accessory_readiness_multiplier(programming_state: dict[str, Any]) -> float:
+    """Translate Athlete State readiness evidence for accessory consumers."""
+    multiplier = 1.0
+    for signal in programming_state.get("readiness_signals", []):
+        value = signal.get("value")
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            continue
+        if signal.get("type") == "reported_fatigue" and value >= 8:
+            multiplier = min(multiplier, .7)
+        elif signal.get("type") == "reported_recovery" and value <= 3:
+            multiplier = min(multiplier, .8)
+    return multiplier
+
+
 def _normalise(value: str) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", value.casefold()))
 

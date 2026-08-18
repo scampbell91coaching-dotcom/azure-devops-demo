@@ -53,11 +53,20 @@ def _seed_case(app, case):
                     category="assistance",
                     accessory_suitable=True,
                     auto_select=item.get("auto_select", False),
-                    lift_relevance='["all"]',
+                    lift_relevance=json.dumps([item.get("relevance", "all")]),
                     training_phases='["all"]',
                     coach_priority=item.get("priority", 0),
+                    fatigue_rating=item.get("fatigue", 3),
+                    movement_pattern=item.get("pattern"),
+                    swap_group=(
+                        f"golden:{item['pattern']}" if item.get("pattern") else None
+                    ),
+                    technical_purposes=json.dumps([item["purpose"]])
+                    if item.get("purpose") else None,
                     default_sets=item["sets"],
                     default_reps=item["reps"],
+                    default_rpe=item.get("rpe"),
+                    default_rest_seconds=item.get("rest"),
                 )
             )
         db.session.commit()
@@ -88,8 +97,14 @@ def _generate(app, case, athlete_id, exercise_ids):
     client = app.test_client()
     preview = client.post("/programming/factory/preview", data=form)
     assert preview.status_code == 200
-    accepted = client.post("/programming/factory", data=_proposal_fields(preview))
+    proposal_fields = _proposal_fields(preview)
+    with app.app_context():
+        preview_days = AthleteStateRecommendation.query.one().recommendation_json[
+            "preview"
+        ]
+    accepted = client.post("/programming/factory", data=proposal_fields)
     assert accepted.status_code == 302
+    return preview_days
 
 
 def _prescription_shape(item):
@@ -107,7 +122,7 @@ def _prescription_shape(item):
 def test_golden_programme_structure_survives_preview_and_persistence(case):
     app = _create_app()
     athlete_id, exercise_ids = _seed_case(app, case)
-    _generate(app, case, athlete_id, exercise_ids)
+    preview_days = _generate(app, case, athlete_id, exercise_ids)
 
     with app.app_context():
         block_id = TrainingBlock.query.one().id
@@ -140,7 +155,9 @@ def test_golden_programme_structure_survives_preview_and_persistence(case):
         }
         set_totals = {"squat": 0, "bench": 0, "deadlift": 0}
 
-        for session, expected in zip(sessions, case["expected"]):
+        for session, expected, preview_day in zip(
+            sessions, case["expected"], preview_days
+        ):
             # Slot identity/order is independent of assistance row ordering.
             assert [slot.position for slot in session.lift_slots] == list(
                 range(1, len(expected["lifts"]) + 1)
@@ -154,6 +171,9 @@ def test_golden_programme_structure_survives_preview_and_persistence(case):
                 for slot in session.lift_slots
             ]
             assert [item.exercise_name for item in assistance] == expected["accessories"]
+            assert [item["name"] for item in preview_day["accessories"]] == expected[
+                "accessories"
+            ]
             assert [item.position for item in session.prescriptions] == list(
                 range(1, len(session.prescriptions) + 1)
             )
@@ -171,24 +191,69 @@ def test_golden_programme_structure_survives_preview_and_persistence(case):
                 assert item.sets >= 1
                 set_totals[slot.lift_family] += item.sets
                 assert item.notes == purpose
+            expected_doses = {
+                item["name"]: item["prescriptions"][0]
+                for item in preview_day["accessories"]
+            }
+            assert all(expected_doses[name] for name in expected["accessories"])
             assert [
                 (item.sets, item.reps, item.rpe, item.provenance, item.lift_slot_id)
                 for item in assistance
             ] == [
                 (
-                    catalogue[name]["sets"],
-                    catalogue[name]["reps"],
-                    start_rpe + 0.5,
+                    expected_doses[name]["sets"],
+                    expected_doses[name]["reps"],
+                    expected_doses[name]["rpe"],
                     "coach_selected" if case.get("pinned") else "generated",
                     None,
                 )
                 for name in expected["accessories"]
             ]
+            if all(item["prescriptions"] for item in preview_day["accessories"]):
+                assert [
+                    (
+                        item.exercise_name,
+                        item.position,
+                        item.sets,
+                        item.reps,
+                        item.rpe,
+                        item.rest_seconds,
+                        item.provenance,
+                        item.notes,
+                    )
+                    for item in assistance
+                ] == [
+                    (
+                        item["name"],
+                        len(expected["lifts"]) + index,
+                        item["prescriptions"][0]["sets"],
+                        item["prescriptions"][0]["reps"],
+                        item["prescriptions"][0]["rpe"],
+                        item["prescriptions"][0]["rest_seconds"],
+                        item["provenance"],
+                        item["reason"],
+                    )
+                    for index, item in enumerate(
+                        preview_day["accessories"], start=1
+                    )
+                ]
 
         envelope = AthleteStateRecommendation.query.one().recommendation_json[
             "volume_progression"
         ]["weeks"][0]["sbd_sets"]
         assert set_totals == envelope
+
+        if case["accessory_mode"] == "automatic":
+            planned = [
+                item for day in preview_days for item in day["accessories"]
+            ]
+            assert len({item["name"] for item in planned}) == len(planned)
+            assert len({item["purpose"] for item in planned}) == len(planned)
+            assert sum(catalogue[item["name"]]["fatigue"] for item in planned) <= {
+                "low": 2, "medium": 4, "high": 6,
+            }[case["accessory_volume"]] * len(case["expected"])
+            if case["accessory_volume"] == "low":
+                assert len(planned) <= len(case["expected"])
 
 
 def test_golden_corpus_covers_required_representative_shapes():
