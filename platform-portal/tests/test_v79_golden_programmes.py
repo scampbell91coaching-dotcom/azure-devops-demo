@@ -191,14 +191,19 @@ def test_golden_programme_structure_survives_preview_and_persistence(case):
                 assert item.sets >= 1
                 set_totals[slot.lift_family] += item.sets
                 assert item.notes == purpose
+            expected_doses = {
+                item["name"]: item["prescriptions"][0]
+                for item in preview_day["accessories"]
+            }
+            assert all(expected_doses[name] for name in expected["accessories"])
             assert [
                 (item.sets, item.reps, item.rpe, item.provenance, item.lift_slot_id)
                 for item in assistance
             ] == [
                 (
-                    catalogue[name]["sets"],
-                    catalogue[name]["reps"],
-                    catalogue[name].get("rpe", start_rpe + 0.5),
+                    expected_doses[name]["sets"],
+                    expected_doses[name]["reps"],
+                    expected_doses[name]["rpe"],
                     "coach_selected" if case.get("pinned") else "generated",
                     None,
                 )

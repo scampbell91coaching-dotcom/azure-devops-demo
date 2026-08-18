@@ -384,6 +384,18 @@ def test_catalogue_canonical_names_aliases_and_deadlift_styles_are_consistent():
     assert {"conditioning", "gpp", "strongman", "regression"} <= categories
 
 
+def test_production_catalogue_has_a_deliberate_auto_select_allowlist():
+    records = json.loads(DEFAULT_DATA_PATH.read_text(encoding="utf-8"))["exercises"]
+    enabled = [item for item in records if item.get("auto_select")]
+    suitable = [item for item in records if item["accessory_suitable"]]
+    assert enabled
+    assert len(enabled) < len(suitable)
+    assert all(item["accessory_suitable"] for item in enabled)
+    assert not any(item["category"] in {
+        "competition", "conditioning", "gpp", "strongman", "regression"
+    } for item in enabled)
+
+
 def test_representative_records_contain_specific_coaching_knowledge():
     payload = json.loads(DEFAULT_DATA_PATH.read_text(encoding="utf-8"))
     records = {item["name"]: item for item in payload["exercises"]}

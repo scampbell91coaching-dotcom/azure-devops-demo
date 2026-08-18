@@ -30,7 +30,7 @@
       "expected": [
         {"lifts": ["bench"], "accessories": ["Golden Auto 01"]},
         {"lifts": ["deadlift"], "accessories": []},
-        {"lifts": ["squat"], "accessories": ["Golden Auto 03", "Golden Auto 02"]}
+        {"lifts": ["squat"], "accessories": ["Golden Auto 03"]}
       ]
     },
     {
@@ -40,9 +40,9 @@
       "accessory_mode": "automatic",
       "accessory_volume": "medium",
       "expected": [
-        {"lifts": ["bench"], "accessories": ["Golden Auto 04", "Golden Auto 01"]},
+        {"lifts": ["bench"], "accessories": ["Golden Auto 01"]},
         {"lifts": ["deadlift"], "accessories": ["Golden Auto 05"]},
-        {"lifts": ["squat"], "accessories": ["Golden Auto 06", "Golden Auto 03", "Golden Auto 02"]}
+        {"lifts": ["squat"], "accessories": ["Golden Auto 03", "Golden Auto 02"]}
       ]
     },
     {

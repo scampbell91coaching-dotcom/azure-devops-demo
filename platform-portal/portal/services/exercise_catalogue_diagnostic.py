@@ -90,5 +90,22 @@ def build_exercise_catalogue_diagnostic(
         "fatigue_cost_issues": fatigue_issues,
         "accessory_metadata_coverage": coverage,
         "category_movement_inconsistencies": inconsistencies,
+        "automatic_selection_status": (
+            {
+                "ready": True,
+                "explanation": (
+                    f"{len(eligible)} active accessory rows are deliberately "
+                    "enabled by auto_select."
+                ),
+            }
+            if eligible else {
+                "ready": False,
+                "explanation": (
+                    "Automatic assistance is empty: no active row has both "
+                    "accessory_suitable=true and auto_select=true. Run the "
+                    "catalogue audit after seeding or enable reviewed rows."
+                ),
+            }
+        ),
         "scope": "active rows; metadata coverage and fatigue checks use active accessory_suitable rows",
     }

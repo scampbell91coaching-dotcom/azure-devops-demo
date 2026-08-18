@@ -979,6 +979,18 @@ def make_record(
             (not is_main and not warmup)
             or name in GENERAL_ASSISTANCE_IN_MAIN_MOVEMENTS
         ),
+        # Production automation is an explicit safe-category allowlist. Coach
+        # catalogue rows and specialty/GPP/conditioning/regression work remain
+        # manual until deliberately enabled in the portal.
+        "auto_select": (
+            not is_main
+            and not warmup
+            and category in {"accessory", "unilateral"}
+            and family not in {
+                "Conditioning", "GPP and carries", "Strongman",
+                "Rehabilitation regressions",
+            }
+        ),
         "active": True,
         "fatigue_rating": 1
         if warmup

@@ -171,6 +171,7 @@ def _validated_values(
     rep_ranges = _required_string(record.get("rep_ranges"), maximum_length=80)
     warmup_suitable = record.get("warmup_suitable")
     accessory_suitable = record.get("accessory_suitable")
+    auto_select = record.get("auto_select", False)
     active = record.get("active")
     lift_family = _required_string(record.get("lift_family"), maximum_length=20)
     movement_pattern = _required_string(
@@ -212,6 +213,8 @@ def _validated_values(
         or rep_ranges is None
         or not isinstance(warmup_suitable, bool)
         or not isinstance(accessory_suitable, bool)
+        or not isinstance(auto_select, bool)
+        or (auto_select and not accessory_suitable)
         or not isinstance(active, bool)
         or not _is_integer_between(fatigue_rating, 1, 5)
         or not _is_integer_at_least(occurrence_count, 0)
@@ -290,6 +293,7 @@ def _validated_values(
         "rep_ranges": rep_ranges,
         "warmup_suitable": warmup_suitable,
         "accessory_suitable": accessory_suitable,
+        "auto_select": auto_select,
         "active": active,
         "catalogue_version": catalogue_version,
     }
