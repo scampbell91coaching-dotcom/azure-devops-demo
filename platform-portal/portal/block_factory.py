@@ -36,7 +36,10 @@ from .programming_services.revisions import append_revision
 from .services.accessory_intelligence import AccessoryIntelligence
 from .services.exposure_intelligence import weekly_exposure_intents
 from .services.athlete_state import latest_facts
-from .services.programming_athlete_state import aggregate_programming_athlete_state
+from .services.programming_athlete_state import (
+    accessory_readiness_multiplier,
+    aggregate_programming_athlete_state,
+)
 from .services.proposal_explanations import ProposalExplanationService
 from .services.weekly_programming_intelligence import WeeklyProgrammingIntelligence
 from .services.weekly_accessory_planner import (
@@ -636,6 +639,7 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
     programming_state = (
         aggregate_programming_athlete_state(athlete) if athlete is not None else {}
     )
+    readiness = accessory_readiness_multiplier(programming_state)
     excluded_constraint_tags = set(
         programming_state.get("consumer_hints", {}).get(
             "excluded_constraint_tags", []
@@ -672,14 +676,21 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
         )
 
     if selected_rows:
-        # Explicit coach order and round-robin placement are authoritative. Pins
-        # need not pass automatic quality, equipment, or fatigue gates.
-        for index, row in enumerate(selected_rows):
-            day = preview[index % len(preview)]
-            conflicts = sorted(
-                _metadata_set(row.constraint_tags)
-                & {tag.casefold() for tag in excluded_constraint_tags}
-            )
+        # Coach selection and prescription remain authoritative. Placement uses
+        # the same session-load policy as automatic assistance.
+        planner = WeeklyAccessoryPlanner()
+        pinned_context = WeeklyAccessoryContext(
+            goal=factory.goal, volume=factory.accessory_volume,
+            week_count=factory.week_count, day_types=tuple(days),
+            constraints=frozenset(tag.casefold() for tag in excluded_constraint_tags),
+            readiness_multiplier=readiness, meet_date=factory.meet_date,
+            competition_grip=factory.deadlift_grip,
+            grip_work_priority=factory.grip_work_priority,
+        )
+        for planned in planner.place_pins(selected_rows, pinned_context):
+            row = planned.exercise
+            day = preview[planned.day_index]
+            backstop_conflict = planner.constraint_conflict(row, pinned_context.constraints)
             item = {
                 "id": row.id, "name": row.name,
                 "role": _accessory_role(row.__dict__),
@@ -687,24 +698,18 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
                 "source": "Coach selected", "provenance": "coach_selected",
                 "reason": "Coach-pinned choice is authoritative.",
                 "reasons": ("Coach-pinned choice is authoritative.",),
-                "prescriptions": (),
-                "warnings": (
-                    ("Coach review: pin conflicts with reported constraint tags "
-                     + ", ".join(conflicts) + "; the pin was preserved.",)
-                    if conflicts else ()
+                "prescriptions": [asdict(value) for value in planned.prescriptions],
+                "warnings": planned.warnings + (
+                    ("Coach review: pin conflicts with the athlete's structured "
+                     "loading constraints; the authoritative pin was preserved.",)
+                    if backstop_conflict else ()
                 ),
             }
             day["accessories"].append(item)
-            if conflicts:
+            if item["warnings"]:
                 day["coach_review_required"] = True
                 day["coach_review_reasons"].extend(item["warnings"])
     elif factory.accessory_mode == "automatic":
-        readiness = 1.0
-        for signal in programming_state.get("readiness_signals", []):
-            if signal.get("type") == "reported_fatigue" and isinstance(signal.get("value"), (int, float)) and signal["value"] >= 8:
-                readiness = min(readiness, .7)
-            if signal.get("type") == "reported_recovery" and isinstance(signal.get("value"), (int, float)) and signal["value"] <= 3:
-                readiness = min(readiness, .8)
         observation_tags = {
             tag.casefold()
             for item in programming_state.get("soft_signals", [])

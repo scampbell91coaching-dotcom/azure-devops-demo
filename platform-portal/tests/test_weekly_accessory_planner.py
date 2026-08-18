@@ -14,7 +14,7 @@ from portal.services.weekly_accessory_planner import (
 
 def exercise(name, *, priority, fatigue, relevance="all", pattern=None,
              equipment=None, constraints=(), auto=True, category="assistance",
-             sets=None, reps=None, rpe=None, rest=None):
+             sets=None, reps=None, rpe=None, rest=None, purposes=(), compatible=()):
     return Exercise(
         id=priority, name=name, movement="accessory", category=category,
         active=True, accessory_suitable=True, auto_select=auto,
@@ -24,6 +24,8 @@ def exercise(name, *, priority, fatigue, relevance="all", pattern=None,
         equipment=equipment,
         equipment_options=f'["{equipment}"]' if equipment else None,
         constraint_tags=str(list(constraints)).replace("'", '"'),
+        technical_purposes=str(list(purposes)).replace("'", '"'),
+        compatibility_tags=str(list(compatible)).replace("'", '"'),
         default_sets=sets, default_reps=reps, default_rpe=rpe,
         default_rest_seconds=rest,
     )
@@ -146,3 +148,100 @@ def test_required_grip_respects_state_ranking_before_catalogue_priority():
     assert result[0].state_provenance == (
         {"rule_id": "coach.grip-preference.v1"},
     )
+
+
+def test_volume_is_a_weekly_set_and_fatigue_policy_not_a_name_quota():
+    planner = WeeklyAccessoryPlanner()
+    totals = {}
+    for volume in ("low", "medium", "high"):
+        result = planner.plan(GOLDEN_LIBRARY, WeeklyAccessoryContext(
+            goal="development", volume=volume, week_count=1,
+            day_types=("SBD", "B", "SD"),
+        ))
+        totals[volume] = sum(item.prescriptions[0].sets for item in result)
+        assert totals[volume] <= {"low": 6, "medium": 12, "high": 18}[volume]
+        assert all(sum(
+            candidate.prescriptions[0].sets for candidate in result
+            if candidate.day_index == day
+        ) <= 8 for day in range(3))
+    assert totals["low"] < totals["medium"] <= totals["high"]
+
+
+def test_reduced_readiness_changes_sets_rpe_count_and_supported_preference():
+    healthy = WeeklyAccessoryContext(
+        goal="development", volume="high", week_count=1,
+        day_types=("SB", "D", "B", "S", "BD"), readiness_multiplier=1.0,
+    )
+    fatigued = replace(healthy, readiness_multiplier=.7)
+    planner = WeeklyAccessoryPlanner()
+    normal = planner.plan(GOLDEN_LIBRARY, healthy)
+    reduced = planner.plan(GOLDEN_LIBRARY, fatigued)
+    assert len(reduced) < len(normal)
+    assert sum(x.prescriptions[0].sets for x in reduced) < sum(
+        x.prescriptions[0].sets for x in normal
+    )
+    shared = {x.exercise.name: x for x in normal}.keys() & {
+        x.exercise.name: x for x in reduced
+    }.keys()
+    assert shared
+    assert all(
+        next(x for x in reduced if x.exercise.name == name).prescriptions[0].rpe
+        < next(x for x in normal if x.exercise.name == name).prescriptions[0].rpe
+        for name in shared
+    )
+
+
+def test_meet_taper_reduces_movement_count_not_only_dose():
+    base = WeeklyAccessoryContext(
+        goal="strength", volume="high", week_count=1,
+        day_types=("SB", "D", "B", "SBD"),
+    )
+    planner = WeeklyAccessoryPlanner()
+    normal = planner.plan(GOLDEN_LIBRARY, base)
+    taper = planner.plan(GOLDEN_LIBRARY, replace(
+        base, goal="peaking", meet_date=date.today() + timedelta(days=10)
+    ))
+    assert len(taper) < len(normal)
+    assert sum(x.prescriptions[0].sets for x in taper) < sum(
+        x.prescriptions[0].sets for x in normal
+    )
+    assert all(x.prescriptions[0].rpe <= 7 for x in taper)
+
+
+def test_structured_constraint_backstop_changes_selection_without_symptom_parsing():
+    rows = (
+        exercise("Barbell Good Morning", priority=100, fatigue=4,
+                 relevance="deadlift", pattern="hinge"),
+        exercise("JM Press", priority=99, fatigue=3, relevance="bench",
+                 pattern="elbow_extension"),
+        exercise("Chest-Supported Row", priority=20, fatigue=2,
+                 relevance="bench", pattern="horizontal_pull"),
+        exercise("Lying Leg Curl", priority=19, fatigue=2,
+                 relevance="deadlift", pattern="knee_flexion"),
+    )
+    base = WeeklyAccessoryContext(
+        goal="development", volume="high", week_count=1,
+        day_types=("SB", "D", "B"),
+    )
+    planner = WeeklyAccessoryPlanner()
+    unconstrained = {x.exercise.name for x in planner.plan(rows, base)}
+    constrained = {x.exercise.name for x in planner.plan(rows, replace(
+        base, constraints=frozenset({"shoulder_loading", "spinal_loading"})
+    ))}
+    assert {"Barbell Good Morning", "JM Press"} <= unconstrained
+    assert not constrained & {"Barbell Good Morning", "JM Press"}
+    assert constrained & {"Chest-Supported Row", "Lying Leg Curl"}
+
+
+def test_session_ledger_prevents_multiple_high_fatigue_lower_compounds():
+    result = WeeklyAccessoryPlanner().plan(GOLDEN_LIBRARY, WeeklyAccessoryContext(
+        goal="development", volume="high", week_count=1,
+        day_types=("B", "D", "S"), available_equipment=frozenset({"barbell", "rack"}),
+    ))
+    demanding_lower = {
+        "Paused High-Bar Squat", "Barbell Hip Thrust", "Deficit Deadlift", "Rack Pull"
+    }
+    assert all(sum(
+        item.exercise.name in demanding_lower for item in result
+        if item.day_index == day
+    ) <= 1 for day in range(3))

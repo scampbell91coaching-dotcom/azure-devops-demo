@@ -3,6 +3,7 @@ from datetime import date
 from dataclasses import replace
 
 import pytest
+import portal.block_factory as block_factory_module
 from portal import create_app
 from portal.block_factory import (
     FactoryRequest,
@@ -493,6 +494,103 @@ def test_factory_suggests_enabled_metadata_and_manual_selection_overrides_it():
             "Coach Pin"
         ]
         assert all(day["accessory_outcome"] == "coach_selected" for day in manual)
+
+
+def test_manual_pin_without_dose_gets_complete_preview_prescription():
+    app = create_test_app()
+    with app.app_context():
+        pinned = Exercise(
+            name="Coach Chest-Supported Row", movement="accessory",
+            category="back", movement_pattern="horizontal_pull",
+            lift_relevance='["bench"]', accessory_suitable=True,
+            fatigue_rating=2,
+        )
+        db.session.add(pinned)
+        db.session.commit()
+        preview = _preview(replace(
+            factory_request(3, 1, 1, 1), accessory_exercise_ids=(pinned.id,),
+        ))
+        item = next(item for day in preview for item in day["accessories"])
+        assert item["provenance"] == "coach_selected"
+        assert item["prescriptions"] == [{
+            "week": 1, "sets": 2, "reps": "10-15", "rpe": 8.0,
+            "rest_seconds": 90,
+        }]
+
+
+def test_demanding_implicit_pins_use_load_aware_session_placement():
+    app = create_test_app()
+    with app.app_context():
+        pins = [
+            Exercise(
+                name=f"Demanding Pin {index}", movement="accessory",
+                category="lower body", movement_pattern="hinge",
+                technical_purposes='["hip extension"]',
+                lift_relevance='["deadlift"]', accessory_suitable=True,
+                fatigue_rating=5,
+            )
+            for index in range(2)
+        ]
+        db.session.add_all(pins)
+        db.session.commit()
+
+        preview = _preview(replace(
+            factory_request(3, 2, 2, 1),
+            accessory_exercise_ids=tuple(item.id for item in pins),
+        ))
+        placements = [
+            day["day"] for day in preview for item in day["accessories"]
+            if item["name"].startswith("Demanding Pin")
+        ]
+
+        assert len(placements) == 2
+        assert len(set(placements)) == 2
+        assert all(not day["coach_review_required"] for day in preview)
+
+
+def test_preview_and_automatic_planner_share_athlete_state_readiness(monkeypatch):
+    app = create_test_app()
+    with app.app_context():
+        athlete = Athlete(
+            first_name="Ready", last_name="State", email="ready@example.com"
+        )
+        pin = Exercise(
+            name="Readiness Pin", movement="accessory", category="assistance",
+            accessory_suitable=True,
+        )
+        db.session.add_all([athlete, pin])
+        db.session.commit()
+        state = {
+            "readiness_signals": [
+                {"type": "reported_fatigue", "value": 9},
+                {"type": "reported_recovery", "value": 2},
+            ],
+            "consumer_hints": {},
+        }
+        monkeypatch.setattr(
+            block_factory_module, "aggregate_programming_athlete_state",
+            lambda _athlete: state,
+        )
+        seen = []
+        real_planner = block_factory_module.WeeklyAccessoryPlanner
+
+        class RecordingPlanner(real_planner):
+            def place_pins(self, exercises, context, **kwargs):
+                seen.append(("preview", context.readiness_multiplier))
+                return super().place_pins(exercises, context, **kwargs)
+
+            def plan(self, exercises, context):
+                seen.append(("automatic", context.readiness_multiplier))
+                return super().plan(exercises, context)
+
+        monkeypatch.setattr(
+            block_factory_module, "WeeklyAccessoryPlanner", RecordingPlanner
+        )
+        base = replace(factory_request(3, 1, 1, 1), athlete_id=athlete.id)
+        _preview(replace(base, accessory_exercise_ids=(pin.id,)))
+        _preview(base)
+
+        assert seen == [("preview", .7), ("automatic", .7)]
 
 
 def test_factory_auto_select_false_is_excluded_and_zero_is_explained():
