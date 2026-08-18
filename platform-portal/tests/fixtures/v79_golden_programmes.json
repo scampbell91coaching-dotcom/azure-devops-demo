@@ -1,98 +1,394 @@
 {
   "schema_version": 1,
   "catalogue": [
-    {"name": "Golden Auto 01", "auto_select": true, "priority": 60, "fatigue": 2, "relevance": "bench", "pattern": "horizontal_pull", "purpose": "upper-back stability", "sets": 4, "reps": "8-10", "rpe": 7.5, "rest": 120},
-    {"name": "Golden Auto 02", "auto_select": true, "priority": 59, "fatigue": 2, "relevance": "squat", "pattern": "knee_extension", "purpose": "quad strength", "sets": 3, "reps": "10-12", "rpe": 8.0, "rest": 90},
-    {"name": "Golden Auto 03", "auto_select": true, "priority": 58, "fatigue": 2, "relevance": "deadlift", "pattern": "knee_flexion", "purpose": "posterior-chain hypertrophy", "sets": 2, "reps": "12-15", "rpe": 8.0, "rest": 90},
-    {"name": "Golden Auto 04", "auto_select": true, "priority": 57, "fatigue": 2, "relevance": "bench", "pattern": "horizontal_press", "purpose": "bench pec strength", "sets": 4, "reps": "6-8", "rpe": 7.0, "rest": 150},
-    {"name": "Golden Auto 05", "auto_select": true, "priority": 56, "fatigue": 2, "relevance": "all", "pattern": "trunk", "purpose": "low-fatigue technical support", "sets": 3, "reps": "8", "rpe": 7.0, "rest": 75},
-    {"name": "Golden Auto 06", "auto_select": true, "priority": 55, "fatigue": 2, "relevance": "deadlift", "pattern": "hip_extension", "purpose": "hip extension", "sets": 2, "reps": "15", "rpe": 7.5, "rest": 120},
-    {"name": "Pinned Row", "sets": 4, "reps": "8-12"},
-    {"name": "Pinned Lunge", "sets": 3, "reps": "10/side"},
-    {"name": "Pinned Curl", "sets": 2, "reps": "12-15"},
-    {"name": "Pinned Extension", "sets": 3, "reps": "12"},
-    {"name": "Pinned Trunk", "sets": 4, "reps": "20s"},
-    {"name": "Pinned Carry", "sets": 5, "reps": "20m"},
-    {"name": "Pinned Pulldown", "sets": 3, "reps": "10"},
-    {"name": "Pinned Split Squat", "sets": 4, "reps": "8/side"},
-    {"name": "Pinned Face Pull", "sets": 2, "reps": "15-20"},
-    {"name": "Pinned Hamstring Curl", "sets": 3, "reps": "12-15"},
-    {"name": "Pinned Calf Raise", "sets": 4, "reps": "15"},
-    {"name": "Pinned Pushdown", "sets": 3, "reps": "12"}
+    {
+      "name": "Golden Auto 01",
+      "auto_select": true,
+      "priority": 60,
+      "fatigue": 2,
+      "relevance": "bench",
+      "pattern": "horizontal_pull",
+      "purpose": "upper-back stability",
+      "sets": 4,
+      "reps": "8-10",
+      "rpe": 7.5,
+      "rest": 120
+    },
+    {
+      "name": "Golden Auto 02",
+      "auto_select": true,
+      "priority": 59,
+      "fatigue": 2,
+      "relevance": "squat",
+      "pattern": "knee_extension",
+      "purpose": "quad strength",
+      "sets": 3,
+      "reps": "10-12",
+      "rpe": 8.0,
+      "rest": 90
+    },
+    {
+      "name": "Golden Auto 03",
+      "auto_select": true,
+      "priority": 58,
+      "fatigue": 2,
+      "relevance": "deadlift",
+      "pattern": "knee_flexion",
+      "purpose": "posterior-chain hypertrophy",
+      "sets": 2,
+      "reps": "12-15",
+      "rpe": 8.0,
+      "rest": 90
+    },
+    {
+      "name": "Golden Auto 04",
+      "auto_select": true,
+      "priority": 57,
+      "fatigue": 2,
+      "relevance": "bench",
+      "pattern": "horizontal_press",
+      "purpose": "bench pec strength",
+      "sets": 4,
+      "reps": "6-8",
+      "rpe": 7.0,
+      "rest": 150
+    },
+    {
+      "name": "Golden Auto 05",
+      "auto_select": true,
+      "priority": 56,
+      "fatigue": 2,
+      "relevance": "all",
+      "pattern": "trunk",
+      "purpose": "low-fatigue technical support",
+      "sets": 3,
+      "reps": "8",
+      "rpe": 7.0,
+      "rest": 75
+    },
+    {
+      "name": "Golden Auto 06",
+      "auto_select": true,
+      "priority": 55,
+      "fatigue": 2,
+      "relevance": "deadlift",
+      "pattern": "hip_extension",
+      "purpose": "hip extension",
+      "sets": 2,
+      "reps": "15",
+      "rpe": 7.5,
+      "rest": 120
+    },
+    {
+      "name": "Pinned Row",
+      "sets": 4,
+      "reps": "8-12"
+    },
+    {
+      "name": "Pinned Lunge",
+      "sets": 3,
+      "reps": "10/side"
+    },
+    {
+      "name": "Pinned Curl",
+      "sets": 2,
+      "reps": "12-15"
+    },
+    {
+      "name": "Pinned Extension",
+      "sets": 3,
+      "reps": "12"
+    },
+    {
+      "name": "Pinned Trunk",
+      "sets": 4,
+      "reps": "20s"
+    },
+    {
+      "name": "Pinned Carry",
+      "sets": 5,
+      "reps": "20m"
+    },
+    {
+      "name": "Pinned Pulldown",
+      "sets": 3,
+      "reps": "10"
+    },
+    {
+      "name": "Pinned Split Squat",
+      "sets": 4,
+      "reps": "8/side"
+    },
+    {
+      "name": "Pinned Face Pull",
+      "sets": 2,
+      "reps": "15-20"
+    },
+    {
+      "name": "Pinned Hamstring Curl",
+      "sets": 3,
+      "reps": "12-15"
+    },
+    {
+      "name": "Pinned Calf Raise",
+      "sets": 4,
+      "reps": "15"
+    },
+    {
+      "name": "Pinned Pushdown",
+      "sets": 3,
+      "reps": "12"
+    }
   ],
   "cases": [
     {
       "id": "low_accessory",
       "goal": "development",
-      "frequencies": [1, 1, 1],
+      "frequencies": [
+        1,
+        1,
+        1
+      ],
       "accessory_mode": "automatic",
       "accessory_volume": "low",
       "expected": [
-        {"lifts": ["bench"], "accessories": ["Golden Auto 01"]},
-        {"lifts": ["deadlift"], "accessories": []},
-        {"lifts": ["squat"], "accessories": ["Golden Auto 03"]}
+        {
+          "lifts": [
+            "bench"
+          ],
+          "accessories": [
+            "Golden Auto 01"
+          ]
+        },
+        {
+          "lifts": [
+            "deadlift"
+          ],
+          "accessories": []
+        },
+        {
+          "lifts": [
+            "squat"
+          ],
+          "accessories": [
+            "Golden Auto 03"
+          ]
+        }
       ]
     },
     {
       "id": "moderate_accessory",
       "goal": "development",
-      "frequencies": [1, 1, 1],
+      "frequencies": [
+        1,
+        1,
+        1
+      ],
       "accessory_mode": "automatic",
       "accessory_volume": "medium",
       "expected": [
-        {"lifts": ["bench"], "accessories": ["Golden Auto 01"]},
-        {"lifts": ["deadlift"], "accessories": ["Golden Auto 05"]},
-        {"lifts": ["squat"], "accessories": ["Golden Auto 03", "Golden Auto 02"]}
+        {
+          "lifts": [
+            "bench"
+          ],
+          "accessories": [
+            "Golden Auto 01"
+          ]
+        },
+        {
+          "lifts": [
+            "deadlift"
+          ],
+          "accessories": [
+            "Golden Auto 05"
+          ]
+        },
+        {
+          "lifts": [
+            "squat"
+          ],
+          "accessories": [
+            "Golden Auto 03",
+            "Golden Auto 02"
+          ]
+        }
       ]
     },
     {
       "id": "high_accessory_over_three",
       "goal": "hypertrophy",
-      "frequencies": [1, 1, 1],
+      "frequencies": [
+        1,
+        1,
+        1
+      ],
       "accessory_mode": "manual",
       "accessory_volume": "high",
-      "pinned": ["Pinned Row", "Pinned Lunge", "Pinned Curl", "Pinned Extension", "Pinned Trunk", "Pinned Carry", "Pinned Pulldown", "Pinned Split Squat", "Pinned Face Pull", "Pinned Hamstring Curl", "Pinned Calf Raise", "Pinned Pushdown"],
+      "pinned": [
+        "Pinned Row",
+        "Pinned Lunge",
+        "Pinned Curl",
+        "Pinned Extension",
+        "Pinned Trunk",
+        "Pinned Carry",
+        "Pinned Pulldown",
+        "Pinned Split Squat",
+        "Pinned Face Pull",
+        "Pinned Hamstring Curl",
+        "Pinned Calf Raise",
+        "Pinned Pushdown"
+      ],
       "expected": [
-        {"lifts": ["bench"], "accessories": ["Pinned Row", "Pinned Extension", "Pinned Pulldown", "Pinned Hamstring Curl"]},
-        {"lifts": ["deadlift"], "accessories": ["Pinned Lunge", "Pinned Trunk", "Pinned Split Squat", "Pinned Calf Raise"]},
-        {"lifts": ["squat"], "accessories": ["Pinned Curl", "Pinned Carry", "Pinned Face Pull", "Pinned Pushdown"]}
+        {
+          "lifts": [
+            "bench"
+          ],
+          "accessories": [
+            "Pinned Row",
+            "Pinned Extension",
+            "Pinned Pulldown",
+            "Pinned Hamstring Curl"
+          ]
+        },
+        {
+          "lifts": [
+            "deadlift"
+          ],
+          "accessories": [
+            "Pinned Curl",
+            "Pinned Carry",
+            "Pinned Split Squat",
+            "Pinned Calf Raise"
+          ]
+        },
+        {
+          "lifts": [
+            "squat"
+          ],
+          "accessories": [
+            "Pinned Lunge",
+            "Pinned Trunk",
+            "Pinned Face Pull",
+            "Pinned Pushdown"
+          ]
+        }
       ]
     },
     {
       "id": "zero_assistance",
       "goal": "strength",
-      "frequencies": [2, 3, 1],
+      "frequencies": [
+        2,
+        3,
+        1
+      ],
       "accessory_mode": "none",
       "accessory_volume": "high",
       "expected": [
-        {"lifts": ["bench", "deadlift"], "accessories": []},
-        {"lifts": ["squat", "bench"], "accessories": []},
-        {"lifts": ["squat", "bench"], "accessories": []}
+        {
+          "lifts": [
+            "bench",
+            "deadlift"
+          ],
+          "accessories": []
+        },
+        {
+          "lifts": [
+            "squat",
+            "bench"
+          ],
+          "accessories": []
+        },
+        {
+          "lifts": [
+            "squat",
+            "bench"
+          ],
+          "accessories": []
+        }
       ]
     },
     {
       "id": "competition_oriented",
       "goal": "peaking",
-      "frequencies": [3, 3, 3],
+      "frequencies": [
+        3,
+        3,
+        3
+      ],
       "accessory_mode": "none",
       "accessory_volume": "low",
       "expected": [
-        {"lifts": ["squat", "bench", "deadlift"], "accessories": []},
-        {"lifts": ["squat", "bench", "deadlift"], "accessories": []},
-        {"lifts": ["squat", "bench", "deadlift"], "accessories": []}
+        {
+          "lifts": [
+            "squat",
+            "bench",
+            "deadlift"
+          ],
+          "accessories": []
+        },
+        {
+          "lifts": [
+            "squat",
+            "bench",
+            "deadlift"
+          ],
+          "accessories": []
+        },
+        {
+          "lifts": [
+            "squat",
+            "bench",
+            "deadlift"
+          ],
+          "accessories": []
+        }
       ]
     },
     {
       "id": "manual_pinned_assistance",
       "goal": "development",
-      "frequencies": [1, 1, 1],
+      "frequencies": [
+        1,
+        1,
+        1
+      ],
       "accessory_mode": "manual",
       "accessory_volume": "medium",
-      "pinned": ["Pinned Row", "Pinned Lunge", "Pinned Curl", "Pinned Extension", "Pinned Trunk"],
+      "pinned": [
+        "Pinned Row",
+        "Pinned Lunge",
+        "Pinned Curl",
+        "Pinned Extension",
+        "Pinned Trunk"
+      ],
       "expected": [
-        {"lifts": ["bench"], "accessories": ["Pinned Row", "Pinned Extension"]},
-        {"lifts": ["deadlift"], "accessories": ["Pinned Lunge", "Pinned Trunk"]},
-        {"lifts": ["squat"], "accessories": ["Pinned Curl"]}
+        {
+          "lifts": [
+            "bench"
+          ],
+          "accessories": [
+            "Pinned Row",
+            "Pinned Extension"
+          ]
+        },
+        {
+          "lifts": [
+            "deadlift"
+          ],
+          "accessories": [
+            "Pinned Curl"
+          ]
+        },
+        {
+          "lifts": [
+            "squat"
+          ],
+          "accessories": [
+            "Pinned Lunge",
+            "Pinned Trunk"
+          ]
+        }
       ]
     }
   ]
