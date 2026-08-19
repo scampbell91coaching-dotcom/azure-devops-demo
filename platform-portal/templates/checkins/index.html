@@ -20,10 +20,10 @@
       {% for item in checkins %}
         <article class="coach-inbox-item">
           <div class="coach-inbox-item__body">
-            <span class="coach-status coach-status--{{ 'active' if item.status == 'reviewed' else 'pending' }}">{{ "Reviewed" if item.status == "reviewed" else "Pending review" }}</span>
             <h2><a href="{{ url_for('checkins.detail', checkin_id=item.id) }}">{{ item.athlete.full_name }}</a></h2>
             <p>Week ending <time datetime="{{ item.week_ending.isoformat() }}">{{ item.week_ending.strftime('%d %b %Y') }}</time></p>
           </div>
+          <span class="coach-status coach-status--{{ 'active' if item.status == 'reviewed' else 'pending' }}">{{ "Reviewed" if item.status == "reviewed" else "Pending review" }}</span>
           <a class="{{ 'coach-link-button' if item.status == 'reviewed' else 'coach-primary-button' }}" href="{{ url_for('checkins.detail', checkin_id=item.id) }}">
             {{ "View check-in" if item.status == "reviewed" else "Review check-in" }}
           </a>

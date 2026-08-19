@@ -3,10 +3,10 @@
 {% block title %}Programming | Traditional Strength{% endblock %}
 {% block content %}
 <section class="coach-page">
-  <header class="coach-page__header"><span class="coach-eyebrow">Coach workspace</span><h1>Programming</h1><p>Choose an athlete to review their active block, current week and next programming decision.</p><a class="coach-primary-button" href="/programming/factory">Build next block</a>
+  <header class="coach-page__header coach-page__header--split"><div><span class="coach-eyebrow">Coach workspace</span><h1>Programming</h1><p>Choose an athlete to review their active block, current week and next programming decision.</p></div><a class="coach-primary-button" href="/programming/factory">Build next block</a>
 </header>
   <section class="coach-panel"><div class="coach-panel__heading coach-panel__heading--split"><div><span class="coach-eyebrow">Athlete first</span><h2>Athletes</h2></div><span class="coach-count">{{ athletes|length }}</span></div>
-    <div class="programming-cards">{% for athlete in athletes %}{% set active = active_by_athlete.get(athlete.id) %}<a href="{{ url_for('programming.athlete_program', athlete_id=athlete.id) }}" data-testid="programming-athlete"><span>Athlete</span><strong>{{ athlete.full_name }}</strong><small>{% if active %}{{ active.name }} · {{ active.weeks|length }} weeks active{% else %}No active block · Build next block{% endif %}</small></a>{% else %}<p>No athletes yet.</p>{% endfor %}</div>
+    <div class="programming-roster" role="list">{% for athlete in athletes %}{% set active = active_by_athlete.get(athlete.id) %}<a href="{{ url_for('programming.athlete_program', athlete_id=athlete.id) }}" data-testid="programming-athlete" role="listitem"><strong>{{ athlete.full_name }}</strong><span>{% if active %}{{ active.name }} · {{ active.weeks|length }} weeks active{% else %}<b>Programme gap</b> · Build next block{% endif %}</span><em>Open workspace →</em></a>{% else %}<div class="coach-empty-state"><h3>No athletes yet</h3><p>Add an athlete before building programming.</p></div>{% endfor %}</div>
   </section>
   <details class="coach-panel legacy-block-create">
     <summary><span class="coach-eyebrow">Secondary workflow</span><strong>Create an empty block</strong></summary>
@@ -19,7 +19,7 @@
   </details>
   <section class="coach-panel">
     <div class="coach-panel__heading coach-panel__heading--split"><div><span class="coach-eyebrow">Current work</span><h2>Blocks</h2></div><span class="coach-count">{{ blocks|length }}</span></div>
-    <div class="programming-cards">{% for block in blocks %}<a href="{{ url_for('programming.block', block_id=block.id) }}"><span>{{ block.athlete.full_name }}</span><strong>{{ block.name }}</strong><small>{{ block.weeks|length }} weeks · {{ block.status|title }}</small></a>{% else %}<p>No blocks yet.</p>{% endfor %}</div>
+    <div class="programming-roster" role="list">{% for block in blocks %}<a href="{{ url_for('programming.block', block_id=block.id) }}" role="listitem"><strong>{{ block.name }}</strong><span>{{ block.athlete.full_name }}</span><em>{{ block.weeks|length }} weeks · {{ block.status|title }} →</em></a>{% else %}<div class="coach-empty-state"><h3>No blocks yet</h3><p>Build the first block from an athlete workspace.</p></div>{% endfor %}</div>
   </section>
 </section>
 {% endblock %}
