@@ -868,3 +868,54 @@ select {
     width: 100%;
   }
 }
+
+/* Desktop V3: dense, flat coaching workstation. */
+@media (min-width: 1100px) {
+  :root { --coach-shell: 1580px; --coach-space-page: 1rem; --coach-control-height: 2.25rem; }
+  body.coach-workspace { font-size: .9rem; }
+  .coach-topbar__inner { min-height: 4rem; grid-template-columns: 250px minmax(0, 1fr) auto; grid-template-areas: "brand navigation actions"; gap: 1rem; }
+  .coach-brand__mark { width: 1.65rem; height: 2.35rem; }
+  .coach-brand__copy strong { font-size: .92rem; }
+  .coach-brand__copy small { font-size: .7rem; }
+  .coach-navigation { justify-content: center; gap: .15rem; }
+  .coach-navigation a { padding: .65rem .42rem; font-size: .69rem; }
+  .coach-navigation__divider { margin-inline: .25rem; }
+  .coach-user { max-width: 11rem; }
+  .coach-context { top: 4rem; }
+  .coach-context__inner { min-height: 1.9rem; }
+  .coach-main { min-height: calc(100vh - 7rem); padding-bottom: 2.5rem; }
+  .coach-page__header { display: flex; align-items: end; justify-content: space-between; gap: 2rem; }
+  .coach-page__header h1 { margin: .1rem 0 .25rem; font-size: 1.9rem; }
+  .coach-page__header p { font-size: .82rem; }
+  .coach-quick-actions { display: flex; gap: .5rem; }
+  .coach-link-button, .coach-primary-button { padding: .4rem .7rem; font-size: .78rem; }
+  .coach-panel { padding-top: .8rem; }
+  .coach-panel__heading { margin-bottom: .5rem; }
+  .coach-panel__heading h2 { font-size: 1.12rem; }
+  .coach-count { min-width: 1.8rem; height: 1.8rem; font-size: .75rem; }
+  .coach-dashboard__summary { gap: 0; border-block: 1px solid var(--coach-border); }
+  .coach-dashboard__summary .coach-metric:first-child { border-left: 0; }
+  .coach-metric { display: grid; grid-template-columns: 1fr auto; align-items: center; padding: .45rem .8rem; }
+  .coach-metric strong { margin: 0; color: var(--coach-heading); font-size: 1.25rem; }
+  .coach-dashboard__grid { grid-template-columns: 1.35fr .65fr; gap: 1rem 1.5rem; }
+  .coach-dashboard-list { gap: 0; }
+  .coach-dashboard-list article { min-height: 2.65rem; padding: .35rem 0; }
+  .coach-dashboard-list article > div { grid-template-columns: minmax(10rem, auto) 1fr; align-items: baseline; gap: .25rem .65rem; }
+  .coach-dashboard-list article > div > span:last-child:not(:nth-child(2)) { grid-column: 2; }
+  .coach-empty-state { display: flex; align-items: baseline; gap: .65rem; border: 0; padding: .35rem 0; }
+  .coach-empty-state h2, .coach-empty-state h3 { margin: 0; font: 700 .92rem/1.4 Inter, sans-serif; }
+  .coach-empty-state p { margin: 0; font-size: .78rem; }
+  .coach-form--athlete { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: .6rem; }
+  .coach-form label span { font-size: .72rem; }
+  .coach-form__actions { justify-content: start; padding: 0; }
+  .coach-create-drawer > summary { cursor: pointer; list-style: none; }
+  .coach-create-drawer > summary::-webkit-details-marker { display: none; }
+  .coach-create-drawer__hint { color: var(--coach-muted-low); font-size: .7rem; text-transform: uppercase; }
+  .coach-table th, .coach-table td { padding-block: .45rem; }
+  .coach-inbox-item { display: grid; grid-template-columns: minmax(14rem, 1fr) 9rem 9rem; min-height: 3.5rem; padding: .45rem 0; }
+  .coach-inbox-item h2 { font: 700 1rem Inter, sans-serif; }
+  .coach-inbox-item__body { grid-template-columns: minmax(10rem, 1fr) 1fr; align-items: baseline; }
+  .coach-inbox-item__body p { margin: 0; }
+  .coach-inbox-summary { min-width: 8rem; }
+  .coach-inbox-summary strong { font-size: 1.5rem; }
+}
