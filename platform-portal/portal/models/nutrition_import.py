@@ -14,6 +14,7 @@ class NutritionProviderConnection(db.Model):  # type: ignore[name-defined]
     __table_args__ = (db.UniqueConstraint("athlete_id", "provider", name="uq_nutrition_connection"),)
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="CASCADE"), nullable=False, index=True)
     provider = db.Column(db.String(40), nullable=False, default="myfitnesspal")
     status = db.Column(db.String(30), nullable=False, default="disconnected")
@@ -27,6 +28,7 @@ class NutritionProviderConnection(db.Model):  # type: ignore[name-defined]
 class NutritionImportJob(db.Model):  # type: ignore[name-defined]
     __tablename__ = "nutrition_import_jobs"
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="CASCADE"), nullable=False, index=True)
     provider = db.Column(db.String(40), nullable=False)
     source_filename = db.Column(db.String(255), nullable=False)
@@ -45,6 +47,7 @@ class DailyNutrition(db.Model):  # type: ignore[name-defined]
     __tablename__ = "daily_nutrition"
     __table_args__ = (db.UniqueConstraint("athlete_id", "date", "provider", name="uq_daily_nutrition_source"),)
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="CASCADE"), nullable=False, index=True)
     date = db.Column(db.Date, nullable=False, index=True)
     calories = db.Column(db.Float)

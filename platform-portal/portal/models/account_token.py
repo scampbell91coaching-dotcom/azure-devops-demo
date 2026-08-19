@@ -32,6 +32,7 @@ class AccountToken(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     purpose = db.Column(db.String(32), nullable=False, index=True)
     token_digest = db.Column(db.String(64), nullable=False, unique=True, index=True)
     athlete_id = db.Column(

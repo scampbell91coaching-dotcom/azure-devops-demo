@@ -9,12 +9,14 @@ class Athlete(db.Model):  # type: ignore[name-defined]
     __tablename__ = "athletes"
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     created_at = db.Column(
         db.DateTime,
         nullable=False,
         default=lambda: datetime.now(UTC),
         index=True,
     )
+
     updated_at = db.Column(
         db.DateTime,
         nullable=False,

@@ -13,6 +13,7 @@ class WarmupProtocol(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     stable_key = db.Column(db.String(80), nullable=False)
     version = db.Column(db.Integer, nullable=False, default=1)
     name = db.Column(db.String(160), nullable=False)
@@ -32,6 +33,7 @@ class WarmupProtocolStep(db.Model):  # type: ignore[name-defined]
         db.CheckConstraint("sets > 0", name="ck_warmup_protocol_step_sets"),
     )
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     protocol_id = db.Column(db.Integer, db.ForeignKey("warmup_protocols.id", ondelete="CASCADE"), nullable=False, index=True)
     position = db.Column(db.Integer, nullable=False)
     phase = db.Column(db.Integer, nullable=False)
@@ -50,6 +52,7 @@ class WarmupAssignment(db.Model):  # type: ignore[name-defined]
     __tablename__ = "warmup_assignments"
     __table_args__ = (db.UniqueConstraint("session_id", "protocol_id", name="uq_warmup_assignment_session_protocol"),)
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     protocol_id = db.Column(db.Integer, db.ForeignKey("warmup_protocols.id", ondelete="RESTRICT"), nullable=False, index=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="RESTRICT"), nullable=False, index=True)
     session_id = db.Column(db.Integer, db.ForeignKey("training_sessions.id", ondelete="RESTRICT"), nullable=False, index=True)
@@ -74,6 +77,7 @@ class WarmupOverride(db.Model):  # type: ignore[name-defined]
         db.CheckConstraint("kind IS NULL OR kind IN ('reps', 'duration', 'barbell')", name="ck_warmup_override_kind"),
     )
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="RESTRICT"), nullable=False, index=True)
     session_id = db.Column(db.Integer, db.ForeignKey("training_sessions.id", ondelete="RESTRICT"), nullable=False, index=True)
     action = db.Column(db.String(20), nullable=False)
@@ -97,6 +101,7 @@ class WarmupPlanSnapshot(db.Model):  # type: ignore[name-defined]
     __tablename__ = "warmup_plan_snapshots"
     __table_args__ = (db.UniqueConstraint("athlete_id", "session_id", name="uq_warmup_snapshot_session"),)
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="RESTRICT"), nullable=False, index=True)
     session_id = db.Column(db.Integer, db.ForeignKey("training_sessions.id", ondelete="RESTRICT"), nullable=False, index=True)
     resolved_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(UTC))
@@ -108,6 +113,7 @@ class WarmupPlanSnapshotStep(db.Model):  # type: ignore[name-defined]
     __tablename__ = "warmup_plan_snapshot_steps"
     __table_args__ = (db.UniqueConstraint("snapshot_id", "position", name="uq_warmup_snapshot_step_position"),)
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     snapshot_id = db.Column(db.Integer, db.ForeignKey("warmup_plan_snapshots.id", ondelete="CASCADE"), nullable=False, index=True)
     position = db.Column(db.Integer, nullable=False)
     phase = db.Column(db.Integer, nullable=False)

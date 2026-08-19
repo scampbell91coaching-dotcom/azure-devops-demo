@@ -18,6 +18,7 @@ class Meet(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     name = db.Column(db.String(160), nullable=False)
     meet_date = db.Column(
         db.Date, nullable=False, default=lambda: datetime.now(UTC).date(), index=True
@@ -48,6 +49,7 @@ class MeetEntry(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     meet_id = db.Column(
         db.Integer,
         db.ForeignKey("meets.id", ondelete="CASCADE"),
@@ -95,6 +97,7 @@ class MeetLift(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     entry_id = db.Column(
         db.Integer,
         db.ForeignKey("meet_entries.id", ondelete="CASCADE"),

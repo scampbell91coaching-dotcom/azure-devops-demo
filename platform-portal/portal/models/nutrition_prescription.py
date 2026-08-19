@@ -20,6 +20,7 @@ class NutritionMacroPrescription(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.String(36), primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="RESTRICT"), nullable=False, index=True)
     effective_from = db.Column(db.Date, nullable=False, index=True)
     effective_until = db.Column(db.Date)
