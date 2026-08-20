@@ -136,10 +136,10 @@ affinity:
 # PROPOSED, NOT ACTIVE: opt in only after confirming the monitoring release
 # label and Alertmanager routing described in docs/production-observability.md.
 monitoring:
-  enabled: false
+  enabled: true
   runbookBaseUrl: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md
   serviceMonitor:
-    enabled: false
+    enabled: true
     interval: 30s
     scrapeTimeout: 10s
     labels:
