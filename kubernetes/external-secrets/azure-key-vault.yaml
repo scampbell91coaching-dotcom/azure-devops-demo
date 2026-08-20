@@ -44,6 +44,9 @@ spec:
     - secretKey: APPLICATIONINSIGHTS_CONNECTION_STRING
       remoteRef:
         key: applicationinsights-connection-string
+    - secretKey: METRICS_BEARER_TOKEN
+      remoteRef:
+        key: metrics-bearer-token
 ---
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
