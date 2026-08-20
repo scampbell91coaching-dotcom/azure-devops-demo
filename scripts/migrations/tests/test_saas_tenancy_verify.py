@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
-from pathlib import Path
 import sys
-
+from pathlib import Path
 
 MODULE_PATH = Path(__file__).parents[1] / "saas_tenancy_verify.py"
 SPEC = importlib.util.spec_from_file_location("saas_tenancy_verify", MODULE_PATH)
@@ -20,7 +19,7 @@ def test_identifier_quoting_is_safe_for_catalog_values():
 
 def test_rollout_phases_are_ordered_and_explicit():
     assert verify.PHASES == ("expand", "backfill", "constrain")
-    assert verify.EXPECTED_HEAD == "0024_pdf_meal_plan_delivery"
+    assert verify.EXPECTED_HEAD == "0027_tenancy_ownership_expand"
     assert "organisations" in verify.CONTROL_TABLES
     assert "organisation_memberships" in verify.CONTROL_TABLES
     assert "coach_athlete_ownerships" in verify.CONTROL_TABLES

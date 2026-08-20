@@ -9,6 +9,7 @@ class NutritionCheckIn(db.Model):  # type: ignore[name-defined]
     __tablename__ = "nutrition_checkins"
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(
         db.Integer,
         db.ForeignKey("athletes.id", ondelete="CASCADE"),

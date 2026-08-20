@@ -91,6 +91,7 @@ class OrganisationMembership(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    authorization_generation = db.Column(db.Integer, nullable=True)
     organisation_id = db.Column(
         db.Integer, db.ForeignKey("organisations.id", ondelete="CASCADE"), nullable=False
     )

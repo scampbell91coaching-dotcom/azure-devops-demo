@@ -25,6 +25,7 @@ class User(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    session_generation = db.Column(db.Integer, nullable=True)
     email = db.Column(db.String(255), nullable=False, unique=True, index=True)
     password_hash = db.Column(db.String(512), nullable=True)
     role = db.Column(db.String(20), nullable=False, index=True)

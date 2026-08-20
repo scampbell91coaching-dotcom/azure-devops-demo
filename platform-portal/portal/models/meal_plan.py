@@ -9,6 +9,7 @@ class MealPlanTemplate(db.Model):  # type: ignore[name-defined]
     __tablename__ = "meal_plan_templates"
 
     id = db.Column(db.String(36), primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     coach_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
     revision = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(20), nullable=False)
@@ -24,6 +25,7 @@ class MealPlanAssignment(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.String(36), primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="RESTRICT"), nullable=False, index=True)
     template_id = db.Column(db.String(36), nullable=False, index=True)
     template_revision = db.Column(db.Integer, nullable=False)
