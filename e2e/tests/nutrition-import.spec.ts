@@ -2,10 +2,12 @@ import { test, expect } from '../fixtures/test';
 
 test.use({ mutationScope: 'nutrition-import' });
 
+const today = new Date().toISOString().slice(0, 10);
+
 const csv = Buffer.from([
   'Date,Meal,Calories,Fat (g),Carbohydrates (g),Protein (g),Fiber (g)',
-  '2026-08-10,Breakfast,600,15,70,35,8',
-  '2026-08-10,Dinner,900,30,100,60,10',
+  `${today},Breakfast,600,15,70,35,8`,
+  `${today},Dinner,900,30,100,60,10`,
 ].join('\n'));
 
 test.beforeEach(async ({ request, resetE2EFixture }) => {
