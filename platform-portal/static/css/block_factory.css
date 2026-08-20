@@ -118,6 +118,7 @@
   .proposal-actions > * { box-sizing: border-box; width: 100%; }
   .factory-decision-details__body { grid-template-columns: minmax(0, 1fr); }
   .factory-decision-details__body > * { min-width: 0; overflow-wrap: anywhere; }
-  .factory-decision-details__body .table-wrap { max-width: 100%; overflow-x: auto; }
+  .factory-decision-details__body .table-wrap { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+  .factory-decision-details__body .table-wrap:focus-visible { outline: 2px solid var(--coach-focus); outline-offset: 3px; }
   .factory-preview__day { padding: .65rem; }
 }

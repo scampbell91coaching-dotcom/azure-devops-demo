@@ -328,7 +328,7 @@
           <p><strong>RPE adherence:</strong> {{ intelligence.fatigue.rpe_adherence }}</p>
           <h4>Volume progression proposal</h4>
           <p>S/B/D work sets stay separate from assistance fatigue. This remains a reviewable proposal until you accept it.</p>
-          <div class="table-wrap">
+          <div class="table-wrap" role="region" aria-label="Volume progression proposal" tabindex="0">
             <table>
               <thead><tr><th>Week</th><th>Phase</th><th>RPE</th><th>Squat</th><th>Bench</th><th>Deadlift</th><th>Assistance fatigue</th></tr></thead>
               <tbody>{% for week in intelligence.volume.weeks %}<tr>
