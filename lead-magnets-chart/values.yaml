@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: stevedevopslab6280.azurecr.io/lead-magnets
-  tag: 6f0693fe35b64088c9eb4929186eb9b170d83f89
+  tag: 78250bc99075e4d53368a922d571fe2a0042a0d4
   digest: ""
   pullPolicy: IfNotPresent
 
