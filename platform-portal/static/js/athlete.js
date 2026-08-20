@@ -10,6 +10,9 @@
   const more = document.querySelector('[data-athlete-more]');
   if (more) {
     const summary = more.querySelector('summary');
+    const hasCurrentPage = Boolean(more.querySelector('[aria-current="page"]'));
+    more.classList.toggle('is-active', hasCurrentPage);
+    if (hasCurrentPage) summary?.setAttribute('aria-current', 'page');
     document.addEventListener('click', (event) => {
       if (more.open && !more.contains(event.target)) more.removeAttribute('open');
     });

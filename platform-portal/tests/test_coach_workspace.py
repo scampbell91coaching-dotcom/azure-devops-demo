@@ -115,3 +115,31 @@ def test_coach_hardening_keeps_surfaces_flat_and_validation_associated():
     assert "Current coaching actions and the latest information" not in dashboard
     assert "border-radius: 0;" in css
     assert "  .coach-panel {\n    padding: 1rem;\n  }" not in css
+
+
+def test_safari_shell_contract_is_present_in_root_templates_and_styles():
+    coach_base = (ROOT / "templates" / "coach" / "base.html").read_text()
+    athlete_base = (ROOT / "templates" / "athletes" / "base.html").read_text()
+    coach_css = (ROOT / "static" / "css" / "coach_workspace.css").read_text()
+    athlete_css = (ROOT / "static" / "css" / "athlete_dashboard.css").read_text()
+    athlete_js = (ROOT / "static" / "js" / "athlete.js").read_text()
+
+    assert "viewport-fit=cover" in coach_base
+    assert "viewport-fit=cover" in athlete_base
+    assert "safe-area-inset-bottom" in athlete_css
+    assert "--athlete-nav-height" in athlete_css
+    assert "scroll-padding-top" in coach_css
+    assert "scroll-margin-top" in coach_css
+    assert "prefers-reduced-motion: reduce" in coach_css
+    assert ".athlete-mobile-more.is-active>summary" in athlete_css
+    assert "more.classList.toggle('is-active'" in athlete_js
+
+
+def test_scrollable_paid_beta_tables_are_named_keyboard_regions():
+    athletes = (ROOT / "templates" / "athletes" / "list.html").read_text()
+    dashboard = (ROOT / "templates" / "coach" / "dashboard.html").read_text()
+    factory = (ROOT / "templates" / "programming" / "factory.html").read_text()
+
+    assert 'role="region" aria-label="Athlete roster" tabindex="0"' in athletes
+    assert 'role="region" aria-label="Recent nutrition records" tabindex="0"' in dashboard
+    assert 'role="region" aria-label="Volume progression proposal" tabindex="0"' in factory
