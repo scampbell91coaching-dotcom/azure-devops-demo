@@ -26,6 +26,7 @@
   --coach-space-sm: 0.75rem;
   --coach-space-md: 1rem;
   --coach-space-lg: 1.5rem;
+  --coach-sticky-offset: 8.05rem;
 }
 
 * {
@@ -34,7 +35,10 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--coach-sticky-offset) + 1rem);
 }
+
+:where([id], [aria-invalid="true"]) { scroll-margin-top: calc(var(--coach-sticky-offset) + 1rem); }
 
 body.coach-workspace {
   margin: 0;
@@ -409,6 +413,14 @@ select {
 
 .coach-table-wrap {
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.coach-table-wrap:focus-visible {
+  outline: 2px solid var(--coach-focus);
+  outline-offset: 3px;
 }
 
 .coach-table {
@@ -752,7 +764,7 @@ select {
 }
 
 @media (max-width: 650px) {
-  :root { --coach-space-page: .75rem; --coach-space-md: .75rem; --coach-space-lg: 1rem; }
+  :root { --coach-space-page: .75rem; --coach-space-md: .75rem; --coach-space-lg: 1rem; --coach-sticky-offset: 5.75rem; }
   .coach-shell,
   .coach-topbar__inner {
     width: min(100% - 1rem, var(--coach-shell));
@@ -834,6 +846,16 @@ select {
   .coach-dashboard-list article .coach-link-button { width: 100%; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
 /* Allow coach workspace content to shrink within narrow mobile viewports. */
 
 .coach-main,
@@ -871,7 +893,7 @@ select {
 
 /* Desktop V3: dense, flat coaching workstation. */
 @media (min-width: 1100px) {
-  :root { --coach-shell: 1580px; --coach-space-page: 1rem; --coach-control-height: 2.25rem; }
+  :root { --coach-shell: 1580px; --coach-space-page: 1rem; --coach-control-height: 2.25rem; --coach-sticky-offset: 5.9rem; }
   body.coach-workspace { font-size: .9rem; }
   .coach-topbar__inner { min-height: 4rem; grid-template-columns: 250px minmax(0, 1fr) auto; grid-template-areas: "brand navigation actions"; gap: 1rem; }
   .coach-brand__mark { width: 1.65rem; height: 2.35rem; }

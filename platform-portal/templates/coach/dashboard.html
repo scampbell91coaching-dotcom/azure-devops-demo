@@ -128,7 +128,7 @@
     <section class="coach-panel coach-dashboard__wide">
       <div class="coach-panel__heading"><h2>Recent activity <small>Bodyweight and nutrition</small></h2></div>
       {% if dashboard.nutrition %}
-        <div class="coach-table-wrap"><table class="coach-table"><thead><tr><th>Athlete</th><th>Bodyweight</th><th>Calories</th><th>Protein</th><th>Recorded</th></tr></thead><tbody>
+        <div class="coach-table-wrap" role="region" aria-label="Recent nutrition records" tabindex="0"><table class="coach-table"><thead><tr><th>Athlete</th><th>Bodyweight</th><th>Calories</th><th>Protein</th><th>Recorded</th></tr></thead><tbody>
           {% for item in dashboard.nutrition %}<tr><td>{{ athlete_link(item.athlete) }}</td><td>{{ "%.1f kg" | format(item.bodyweight_kg) if item.bodyweight_kg is not none else "Unavailable" }}</td><td>{{ item.calories if item.calories is not none else "Unavailable" }}</td><td>{{ (item.protein_g ~ " g") if item.protein_g is not none else "Unavailable" }}</td><td>{{ item.recorded_at.strftime("%d %b %Y") }}<small class="coach-dashboard__source">{{ item.source }}</small></td></tr>{% endfor %}
         </tbody></table></div>
       {% else %}
