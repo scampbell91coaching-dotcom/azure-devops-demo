@@ -549,6 +549,10 @@ def seed_database(app: Flask) -> None:
             exercise.active = True
             exercise.accessory_suitable = True
             exercise.auto_select = False
+        # Automatic selection is an explicit hard gate. Keep one deterministic
+        # browser-fixture candidate enabled so the automatic factory path tests
+        # selection and persistence rather than the intentional-empty state.
+        pulldown.auto_select = True
         extra_accessory_specs = (
             ("Leg Extension", "lower body", 2),
             ("Leg Curl", "lower body", 2),

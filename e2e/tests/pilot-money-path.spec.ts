@@ -157,7 +157,7 @@ test('first paying athlete money path: draft to immutable coach-reviewed trainin
   await changeAccount(page);
   await signIn(page, 'coach.e2e@example.test', 'Coach E2E password!');
   await page.goto('/coach');
-  const reviewQueue = page.getByRole('heading', { name: 'Athletes requiring review' })
+  const reviewQueue = page.getByRole('heading', { name: 'Priority athletes' })
     .locator('xpath=ancestor::section[1]');
   // Completed athlete training should enter the coach review queue.
   await expect(reviewQueue.getByText(pilot.name, { exact: true })).toHaveCount(1);

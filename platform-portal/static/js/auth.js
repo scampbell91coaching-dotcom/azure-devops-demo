@@ -16,7 +16,10 @@
   if (form && submit) {
     form.addEventListener('submit', () => {
       if (!form.checkValidity()) return;
-      submit.disabled = true;
+      // Disabling the native submitter during the submit event can cancel the
+      // form navigation in WebKit. The page is navigating, so an announced
+      // busy state is sufficient to prevent an apparent second action.
+      form.setAttribute('aria-busy', 'true');
       submit.classList.add('is-loading');
       submit.querySelector('[data-button-label]').textContent = 'Signing in…';
     });
