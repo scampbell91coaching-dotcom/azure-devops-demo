@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from portal import create_app
 from portal.repositories.status_repository import JsonStatusRepository
 from portal.services.platform_status import PlatformStatusService
+from prometheus_client import CONTENT_TYPE_LATEST
+from prometheus_client.parser import text_string_to_metric_families
 
 
 class Repository:
@@ -140,6 +142,44 @@ def test_observability_api_uses_stable_contract(monkeypatch):
 
     assert response.status_code == 200
     assert response.get_json() == payload
+
+
+def test_authenticated_metrics_scrape_returns_prometheus_exposition():
+    app = create_app(
+        {
+            "TESTING": True,
+            "AUTHENTICATION_DISABLED": False,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "METRICS_BEARER_TOKEN": "scrape-token",
+        }
+    )
+    client = app.test_client()
+
+    response = client.get(
+        "/metrics", headers={"Authorization": "Bearer scrape-token"}
+    )
+
+    assert response.status_code == 200
+    assert response.headers["Content-Type"] == CONTENT_TYPE_LATEST
+    families = list(text_string_to_metric_families(response.get_data(as_text=True)))
+    assert any(family.name == "flask_http_requests" for family in families)
+
+
+def test_metrics_scrape_rejects_an_invalid_bearer_token():
+    app = create_app(
+        {
+            "TESTING": True,
+            "AUTHENTICATION_DISABLED": False,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "METRICS_BEARER_TOKEN": "scrape-token",
+        }
+    )
+
+    response = app.test_client().get(
+        "/metrics", headers={"Authorization": "Bearer wrong-token"}
+    )
+
+    assert response.status_code == 404
 
 
 def test_observability_api_is_populated_from_configured_file(tmp_path, monkeypatch):
