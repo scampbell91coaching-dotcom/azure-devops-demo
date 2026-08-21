@@ -14,11 +14,15 @@
   const form = document.querySelector('[data-auth-form]');
   const submit = document.querySelector('[data-submit-button]');
   if (form && submit) {
-    form.addEventListener('submit', () => {
+    form.addEventListener('submit', event => {
       if (!form.checkValidity()) return;
+      if (form.getAttribute('aria-busy') === 'true') {
+        event.preventDefault();
+        return;
+      }
       // Disabling the native submitter during the submit event can cancel the
-      // form navigation in WebKit. The page is navigating, so an announced
-      // busy state is sufficient to prevent an apparent second action.
+      // form navigation in WebKit. Keep it enabled for the first native
+      // submission and reject any later submit event with the busy guard.
       form.setAttribute('aria-busy', 'true');
       submit.classList.add('is-loading');
       submit.querySelector('[data-button-label]').textContent = 'Signing in…';
