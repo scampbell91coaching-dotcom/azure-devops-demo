@@ -12,12 +12,11 @@
     </div>
   </header>
 
-  <section class="coach-panel">
-    <div class="coach-panel__heading">
-      <div>
-        <h2>Add athlete</h2>
-      </div>
-    </div>
+  <details class="coach-panel coach-create-drawer" open>
+    <summary class="coach-panel__heading coach-panel__heading--split">
+      <div><span class="coach-eyebrow">Roster action</span><h2>Add athlete</h2></div>
+      <span class="coach-create-drawer__hint">Expand / collapse</span>
+    </summary>
 
     <form
       class="coach-form coach-form--athlete"
@@ -72,7 +71,7 @@
         </button>
       </div>
     </form>
-  </section>
+  </details>
 
   <section class="coach-panel">
     <div class="coach-panel__heading coach-panel__heading--split">
@@ -84,7 +83,7 @@
     </div>
 
     {% if athletes %}
-      <div class="coach-table-wrap">
+      <div class="coach-table-wrap" role="region" aria-label="Athlete roster" tabindex="0">
         <table class="coach-table">
           <thead>
             <tr>

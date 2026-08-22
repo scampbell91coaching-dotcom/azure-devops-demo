@@ -35,9 +35,18 @@ from .models.warmup import WarmupAssignment, WarmupProtocol, WarmupProtocolStep
 from .programming_services.revisions import append_revision
 from .services.accessory_intelligence import AccessoryIntelligence
 from .services.exposure_intelligence import weekly_exposure_intents
-from .services.programming_athlete_state import aggregate_programming_athlete_state
+from .services.athlete_state import latest_facts
+from .services.programming_athlete_state import (
+    accessory_readiness_multiplier,
+    aggregate_programming_athlete_state,
+)
 from .services.proposal_explanations import ProposalExplanationService
 from .services.weekly_programming_intelligence import WeeklyProgrammingIntelligence
+from .services.weekly_accessory_planner import (
+    WeeklyAccessoryCandidate,
+    WeeklyAccessoryContext,
+    WeeklyAccessoryPlanner,
+)
 from .tenancy import athlete_query_for_request, require_athlete_access
 
 block_factory_bp = Blueprint("block_factory", __name__)
@@ -609,8 +618,8 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
         days, goal=factory.goal, deadlift_style=factory.deadlift_style
     )
 
-    preview = []
-    selected_accessories = []
+    preview: list[dict[str, Any]] = []
+    selected_rows: list[Exercise] = []
     if factory.accessory_exercise_ids:
         if len(factory.accessory_exercise_ids) != len(
             set(factory.accessory_exercise_ids)
@@ -621,26 +630,21 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
             Exercise.active.is_(True),
             Exercise.accessory_suitable.is_(True),
         ).all()
-        by_id = {item.id: item.name for item in rows}
+        by_id = {item.id: item for item in rows}
         if len(by_id) != len(set(factory.accessory_exercise_ids)):
             raise ValueError("One or more selected accessories are unavailable.")
-        selected_accessories = [
-            by_id[item_id] for item_id in factory.accessory_exercise_ids
-        ]
+        selected_rows = [by_id[item_id] for item_id in factory.accessory_exercise_ids]
 
-    pool = _accessory_pool()
-    intelligence = AccessoryIntelligence()
     athlete = db.session.get(Athlete, factory.athlete_id)
     programming_state = (
         aggregate_programming_athlete_state(athlete) if athlete is not None else {}
     )
+    readiness = accessory_readiness_multiplier(programming_state)
     excluded_constraint_tags = set(
         programming_state.get("consumer_hints", {}).get(
             "excluded_constraint_tags", []
         )
     )
-    suggested_ids: set[int] = set()
-    fatigue_budget = intelligence.VOLUME_FATIGUE_BUDGETS[factory.accessory_volume]
     for day_index, day_type in enumerate(days):
         # Scheduling chooses when a lift occurs; coaching intent chooses what the
         # exposure is and how it is prescribed.
@@ -658,125 +662,151 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
         for index, exercise_name in enumerate(main_exercises):
             exposure_metadata[index]["exercise_name"] = exercise_name
             exposure_metadata[index]["exercise_provenance"] = exercise_provenance[index]
-        # Pinned selections replace automatic volume behaviour, are distributed
-        # once across exposure-led days, and remain in coach order.
-        manual_for_day = selected_accessories[day_index :: len(days)]
-        generated_accessories = []
-        for name in manual_for_day:
-            item = next(
-                (
-                    item
-                    for item in pool
-                    if str(item.get("name", "")).casefold() == name.casefold()
-                ),
-                {"name": name},
-            )
-            generated_accessories.append(
-                {
-                    "name": name,
-                    "role": _accessory_role(item),
-                    "source": "Coach selected",
-                    "provenance": "coach_selected",
-                }
-            )
-
-        if factory.accessory_mode == "automatic" and not selected_accessories:
-            family_by_code = {"S": "squat", "B": "bench", "D": "deadlift"}
-            candidates = intelligence.candidates(
-                phase=factory.goal,
-                lift_families={family_by_code[code] for code in day_type},
-                excluded_constraint_tags=excluded_constraint_tags,
-                exclude_ids=suggested_ids,
-                athlete_id=factory.athlete_id,
-            )
-            if (
-                "D" in day_type
-                and factory.grip_work_priority == "none"
-                and factory.deadlift_grip != "hook"
-            ):
-                candidates = [
-                    item for item in candidates
-                    if (item.exercise.category or "").casefold() != "grip"
-                ]
-            if "D" in day_type and (
-                factory.grip_work_priority != "none"
-                or factory.deadlift_grip == "hook"
-            ):
-                grip = intelligence.grip_candidates(
-                    phase=factory.goal,
-                    competition_grip=factory.deadlift_grip,
-                    strap_usage=factory.training_strap_usage,
-                    priority=factory.grip_work_priority,
-                    exclude_ids=suggested_ids,
-                    athlete_id=factory.athlete_id,
-                )
-                grip_ids = {item.exercise.id for item in grip}
-                candidates = grip + [
-                    item for item in candidates if item.exercise.id not in grip_ids
-                ]
-            for suggestion in intelligence.select_for_volume(
-                candidates, volume=factory.accessory_volume
-            ):
-                suggested_ids.add(suggestion.exercise.id)
-                generated_accessories.append(
-                    {
-                        "id": suggestion.exercise.id,
-                        "name": suggestion.exercise.name,
-                        "role": _accessory_role(
-                            {
-                                "name": suggestion.exercise.name,
-                                "category": suggestion.exercise.category,
-                                "primary_muscles": suggestion.exercise.primary_muscles,
-                                "technical_purposes": suggestion.exercise.technical_purposes,
-                            }
-                        ),
-                        "source": "Library suggestion",
-                        "provenance": "generated",
-                        "reasons": suggestion.reasons,
-                        "state_score": suggestion.state_score,
-                        "state_provenance": suggestion.provenance,
-                    }
-                )
-
-        if selected_accessories:
-            accessory_outcome = "coach_selected"
-            accessory_outcome_reason = "Pinned coach choices replace suggestions."
-        elif factory.accessory_mode == "none":
-            accessory_outcome = "intentional_none"
-            accessory_outcome_reason = "The coach selected no assistance."
-        elif generated_accessories:
-            accessory_outcome = "automatic_selected"
-            accessory_outcome_reason = (
-                "Automatic assistance filled the available fatigue budget from "
-                "eligible catalogue candidates."
-            )
-        else:
-            accessory_outcome = "no_eligible_candidates"
-            accessory_outcome_reason = (
-                "No unused active, accessory-suitable catalogue candidates met "
-                "this day's metadata constraints and fatigue budget."
-            )
-
         preview.append(
             {
                 "day": day_index + 1,
                 "day_type": day_type,
-                "exercises": main_exercises
-                + [item["name"] for item in generated_accessories],
+                "exercises": main_exercises,
                 "main_count": main_count,
                 "exposures": exposure_metadata,
                 "coach_review_required": bool(adaptation_reviews),
                 "coach_review_reasons": adaptation_reviews,
-                "accessories": generated_accessories,
-                "accessory_count": len(generated_accessories),
-                "accessory_outcome": accessory_outcome,
-                "accessory_outcome_reason": accessory_outcome_reason,
-                "accessory_range": (
-                    f"{factory.accessory_volume} volume · {fatigue_budget}-unit fatigue budget"
-                    if factory.accessory_mode == "automatic"
-                    and not selected_accessories else "coach selected only"
+                "accessories": [],
+            }
+        )
+
+    if selected_rows:
+        # Coach selection and prescription remain authoritative. Placement uses
+        # the same session-load policy as automatic assistance.
+        planner = WeeklyAccessoryPlanner()
+        pinned_context = WeeklyAccessoryContext(
+            goal=factory.goal, volume=factory.accessory_volume,
+            week_count=factory.week_count, day_types=tuple(days),
+            constraints=frozenset(tag.casefold() for tag in excluded_constraint_tags),
+            readiness_multiplier=readiness, meet_date=factory.meet_date,
+            competition_grip=factory.deadlift_grip,
+            grip_work_priority=factory.grip_work_priority,
+        )
+        for planned in planner.place_pins(selected_rows, pinned_context):
+            row = planned.exercise
+            day = preview[planned.day_index]
+            backstop_conflict = planner.constraint_conflict(row, pinned_context.constraints)
+            item = {
+                "id": row.id, "name": row.name,
+                "role": _accessory_role(row.__dict__),
+                "purpose": "coach-selected assistance",
+                "source": "Coach selected", "provenance": "coach_selected",
+                "reason": "Coach-pinned choice is authoritative.",
+                "reasons": ("Coach-pinned choice is authoritative.",),
+                "prescriptions": [asdict(value) for value in planned.prescriptions],
+                "warnings": planned.warnings + (
+                    ("Coach review: pin conflicts with the athlete's structured "
+                     "loading constraints; the authoritative pin was preserved.",)
+                    if backstop_conflict else ()
                 ),
             }
+            day["accessories"].append(item)
+            if item["warnings"]:
+                day["coach_review_required"] = True
+                day["coach_review_reasons"].extend(item["warnings"])
+    elif factory.accessory_mode == "automatic":
+        observation_tags = {
+            tag.casefold()
+            for item in programming_state.get("soft_signals", [])
+            for tag in (
+                *item.get("effects", {}).get("assistance_preference_tags", []),
+                item.get("effects", {}).get("technical_signal", ""),
+                item.get("label", ""),
+            )
+            if tag
+        }
+        available_equipment = None
+        equipment_fact = next((
+            fact.value_json for key, fact in latest_facts(factory.athlete_id).items()
+            if "equipment" in str(key).casefold()
+        ), None)
+        if isinstance(equipment_fact, (list, tuple, set)):
+            available_equipment = frozenset(str(value).casefold() for value in equipment_fact)
+        elif isinstance(equipment_fact, dict):
+            values = equipment_fact.get("available") or equipment_fact.get("equipment")
+            if isinstance(values, (list, tuple, set)):
+                available_equipment = frozenset(str(value).casefold() for value in values)
+        state_evaluation = AccessoryIntelligence().evaluate_candidates(
+            phase=factory.goal,
+            lift_families={
+                {"S": "squat", "B": "bench", "D": "deadlift"}[code]
+                for day_type in days for code in day_type
+            },
+            excluded_constraint_tags=excluded_constraint_tags,
+            athlete_id=factory.athlete_id,
+            session_tags=observation_tags,
+        )
+        plan = WeeklyAccessoryPlanner().plan(
+            (
+                WeeklyAccessoryCandidate(
+                    suggestion.exercise,
+                    suggestion.state_score,
+                    suggestion.provenance,
+                    suggestion.reasons,
+                )
+                for suggestion in state_evaluation.candidates
+            ),
+            WeeklyAccessoryContext(
+                goal=factory.goal, volume=factory.accessory_volume,
+                week_count=factory.week_count, day_types=tuple(days),
+                constraints=frozenset(tag.casefold() for tag in excluded_constraint_tags),
+                observations=frozenset(observation_tags),
+                available_equipment=available_equipment,
+                readiness_multiplier=readiness, meet_date=factory.meet_date,
+                competition_grip=factory.deadlift_grip,
+                grip_work_priority=factory.grip_work_priority,
+            ),
+        )
+        for planned in plan:
+            row = planned.exercise
+            day = preview[planned.day_index]
+            reasons = (*planned.state_reasons, planned.reason)
+            if (row.category or "").casefold() == "grip":
+                grip_reasons = []
+                if factory.deadlift_grip == "hook" and factory.grip_work_priority == "none":
+                    grip_reasons.append("hook-grip competition requirement")
+                elif factory.grip_work_priority != "none":
+                    grip_reasons.append(f"grip-work priority is {factory.grip_work_priority}")
+                grip_reasons.append(f"competition grip is {factory.deadlift_grip}")
+                reasons = (*planned.state_reasons, *grip_reasons)
+
+            item = {
+                "id": row.id, "name": row.name, "role": planned.purpose,
+                "purpose": planned.purpose, "source": "Weekly planner",
+                "provenance": "generated", "reason": planned.reason,
+                "reasons": reasons,
+                "state_score": planned.state_score,
+                "state_provenance": planned.state_provenance,
+                "state_reasons": planned.state_reasons,
+                "prescriptions": [asdict(value) for value in planned.prescriptions],
+            }
+            day["accessories"].append(item)
+
+    for day in preview:
+        accessories = day["accessories"]
+        day["exercises"].extend(item["name"] for item in accessories)
+        day["accessory_count"] = len(accessories)
+        if selected_rows:
+            day["accessory_outcome"] = "coach_selected"
+            day["accessory_outcome_reason"] = "Pinned coach choices replace automatic planning."
+        elif factory.accessory_mode == "none":
+            day["accessory_outcome"] = "intentional_none"
+            day["accessory_outcome_reason"] = "The coach selected no assistance."
+        elif accessories:
+            day["accessory_outcome"] = "automatic_selected"
+            day["accessory_outcome_reason"] = "Selected and placed by the authoritative weekly accessory planner."
+        else:
+            day["accessory_outcome"] = "no_eligible_candidates"
+            day["accessory_outcome_reason"] = "No weekly candidate passed quality, state, redundancy, equipment, and fatigue gates."
+        day["accessory_range"] = (
+            f"{factory.accessory_volume} weekly fatigue plan"
+            if factory.accessory_mode == "automatic" and not selected_rows
+            else "coach selected only"
         )
 
     return preview
@@ -922,6 +952,8 @@ def _apply_active_coach_overrides(factory: FactoryRequest) -> FactoryRequest:
         "deadlift_frequency",
         "goal",
         "deadlift_style",
+        "accessory_exercise_ids",
+        "accessory_mode",
     }
     values: dict[str, Any] = {}
     for row in rows:
@@ -940,13 +972,22 @@ def _apply_active_coach_overrides(factory: FactoryRequest) -> FactoryRequest:
                     continue
                 if key == "deadlift_style" and value not in {"sumo", "conventional"}:
                     continue
+                if key == "accessory_exercise_ids":
+                    if not isinstance(value, (list, tuple)) or any(
+                        isinstance(item, bool) or not isinstance(item, int)
+                        for item in value
+                    ):
+                        continue
+                    value = tuple(value)
+                if key == "accessory_mode" and value not in {"automatic", "none"}:
+                    continue
                 values[key] = value
     return replace(factory, **values) if values else factory
 
 
 PROPOSAL_TYPE = "weekly_programming_v7"
 ACCEPTED_PROPOSAL_TYPES = {"weekly_programming_v6", PROPOSAL_TYPE}
-PROPOSAL_VERSION = "programming-v7-1"
+PROPOSAL_VERSION = "programming-v8-accessory-weekly"
 
 
 def _actor() -> str:
@@ -1365,6 +1406,16 @@ def generate():
                 if exercise_position > main_count and exercise_row is not None:
                     sets = exercise_row.default_sets or sets
                     reps = exercise_row.default_reps or reps
+                accessory_plan = accessory_by_name.get(exercise_name)
+                week_accessory = None
+                if accessory_plan and accessory_plan.get("prescriptions"):
+                    week_accessory = next(
+                        (value for value in accessory_plan["prescriptions"]
+                         if int(value["week"]) == week_position), None
+                    )
+                if week_accessory is not None:
+                    sets = int(week_accessory["sets"])
+                    reps = str(week_accessory["reps"])
                 db.session.add(
                     ExercisePrescription(
                         session=session,
@@ -1383,10 +1434,20 @@ def generate():
                             volume_week.effective_rpe_cap,
                         )
                         if exercise_position <= main_count
-                        else min(9.0, week_rpe + 0.5),
+                        else (
+                            float(week_accessory["rpe"])
+                            if week_accessory is not None
+                            else min(9.0, exercise_row.default_rpe if exercise_row and exercise_row.default_rpe is not None else week_rpe + 0.5)
+                        ),
+                        rest_seconds=(
+                            int(week_accessory["rest_seconds"])
+                            if week_accessory is not None
+                            else exercise_row.default_rest_seconds if exercise_row else None
+                        ),
                         notes=(
                             main_intents[exercise_position - 1]["purpose"]
-                            if exercise_position <= main_count else None
+                            if exercise_position <= main_count
+                            else accessory_plan.get("reason") if accessory_plan else None
                         ),
                     )
                 )

@@ -197,3 +197,30 @@ def test_non_training_entitlement_skips_programme_step(onboarding_app):
         assert onboarding.current_step == "checkin"
         assert onboarding.active_programme is None
         assert next(step for step in onboarding.steps if step.key == "programme").complete is True
+
+
+def test_expired_invitation_returns_to_invite_step_for_recovery(onboarding_app):
+    client = onboarding_app.test_client()
+    _login(client)
+    athlete_id = onboarding_app.config["ATHLETE_ID"]
+    page = f"/athletes/{athlete_id}/onboarding"
+
+    assert client.post(
+        f"{page}/invite", data={"csrf_token": _session_csrf(client, page)}
+    ).status_code == 302
+    with onboarding_app.app_context():
+        first = AccountToken.query.filter_by(athlete_id=athlete_id).one()
+        first.expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        db.session.commit()
+        assert build_client_onboarding(db.session.get(Athlete, athlete_id)).current_step == "invite"
+
+    recovery = client.post(
+        f"{page}/invite", data={"csrf_token": _session_csrf(client, page)}
+    )
+    assert recovery.status_code == 302
+    with onboarding_app.app_context():
+        tokens = AccountToken.query.filter_by(athlete_id=athlete_id).order_by(AccountToken.id).all()
+        assert len(tokens) == 2
+        assert tokens[0].revoked_at is not None
+        assert tokens[1].is_available
+        assert build_client_onboarding(db.session.get(Athlete, athlete_id)).current_step == "account"

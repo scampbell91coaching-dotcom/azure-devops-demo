@@ -37,6 +37,7 @@ _PUBLIC_ENDPOINTS = {
     "health.health",
     "lead_magnets.lead_magnet",
     "lead_magnets.capture_lead",
+    "metrics",
     "static",
 }
 _ATHLETE_ENDPOINTS = {

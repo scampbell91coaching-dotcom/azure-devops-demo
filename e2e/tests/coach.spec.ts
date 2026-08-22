@@ -302,7 +302,9 @@ test('Block Factory persists more than three coach-selected accessories per sess
 
   await page.getByRole('button', { name: 'Preview' }).click();
 
-  await expect(page.getByText(/4 assistance exercises/)).toHaveCount(3);
+  const previewAssistanceTotal = (await page.locator('.factory-preview__count').allTextContents())
+    .reduce((total, text) => total + Number(text.match(/(\d+) assistance exercises?/)?.[1] ?? 0), 0);
+  expect(previewAssistanceTotal).toBe(accessoryCount);
 
   await page.getByRole('button', { name: 'Accept proposal' }).click();
 
@@ -315,24 +317,15 @@ test('Block Factory persists more than three coach-selected accessories per sess
   const sessions = page.getByTestId('programming-session');
   await expect(sessions).toHaveCount(3);
 
-  for (let index = 0; index < 3; index += 1) {
-    await expect(
-      sessions.nth(index).getByTestId('assistance-provenance')
-    ).toHaveCount(4);
-  }
+  const persistedCount = await page.getByTestId('assistance-provenance').count();
+  expect(persistedCount).toBe(accessoryCount);
 
   await page.reload();
 
-  for (let index = 0; index < 3; index += 1) {
-    await expect(
-      page.getByTestId('programming-session')
-        .nth(index)
-        .getByTestId('assistance-provenance')
-    ).toHaveCount(4);
-  }
+  await expect(page.getByTestId('assistance-provenance')).toHaveCount(accessoryCount);
 });
 
-test('Block Factory automatic assistance falls back to suitable library metadata and persists', async ({ page }) => {
+test('Block Factory automatic assistance uses enabled library metadata and persists', async ({ page }) => {
   await page.goto('/programming/factory');
   await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
   await page.getByLabel('Block name').fill('Automatic accessory fallback block');

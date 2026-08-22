@@ -48,7 +48,7 @@ jobs:
       - name: Install browser-test dependencies
         run: npm ci
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium webkit
       - name: Run browser tests
         env:
           E2E_TEST_ONLY: "1"

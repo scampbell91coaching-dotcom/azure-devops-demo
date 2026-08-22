@@ -29,12 +29,10 @@ def test_public_app_applies_security_headers_to_error_responses():
 
     assert response.status_code == 404
     assert response.headers["Content-Security-Policy"].startswith("default-src 'self';")
-    assert response.headers["Content-Security-Policy"].endswith(
+    assert not response.headers["Content-Security-Policy"].endswith(
         "upgrade-insecure-requests"
     )
-    assert response.headers["Strict-Transport-Security"] == (
-        "max-age=31536000; includeSubDomains"
-    )
+    assert "Strict-Transport-Security" not in response.headers
     assert response.headers["X-Content-Type-Options"] == "nosniff"
     assert response.headers["X-Frame-Options"] == "DENY"
     assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"

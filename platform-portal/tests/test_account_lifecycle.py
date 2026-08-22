@@ -43,8 +43,11 @@ def lifecycle_app():
         other = Athlete(first_name="Other", last_name="Athlete", email="other@example.test")
         coach = User(email="coach@example.test", role=UserRole.COACH)
         coach.set_password("correct horse battery staple")
+        other_coach = User(email="other.coach@example.test", role=UserRole.COACH)
+        other_coach.set_password("correct horse battery staple")
         organisation = Organisation(name="Lifecycle Strength", slug="lifecycle-strength")
-        db.session.add_all([athlete, other, coach, organisation])
+        other_organisation = Organisation(name="Other Strength", slug="other-strength")
+        db.session.add_all([athlete, other, coach, other_coach, organisation, other_organisation])
         db.session.flush()
         membership = OrganisationMembership(
             organisation=organisation,
@@ -52,6 +55,12 @@ def lifecycle_app():
             role=OrganisationRole.COACH,
         )
         db.session.add(membership)
+        other_membership = OrganisationMembership(
+            organisation=other_organisation,
+            user=other_coach,
+            role=OrganisationRole.COACH,
+        )
+        db.session.add(other_membership)
         db.session.flush()
         db.session.add_all(
             [
@@ -68,7 +77,12 @@ def lifecycle_app():
             ]
         )
         db.session.commit()
-        app.config["IDS"] = {"athlete": athlete.id, "other": other.id}
+        app.config["IDS"] = {
+            "athlete": athlete.id,
+            "other": other.id,
+            "organisation": organisation.id,
+            "other_organisation": other_organisation.id,
+        }
     app.config["TEST_TRANSPORT"] = transport
     return app
 
@@ -169,6 +183,47 @@ def test_invitation_requires_confirmed_email_and_coach_authorization(lifecycle_a
     assert record_id is None
 
 
+def test_wrong_organisation_selection_cannot_view_or_invite_athlete(lifecycle_app):
+    client = lifecycle_app.test_client()
+    login_coach(client)
+    athlete_id = lifecycle_app.config["IDS"]["athlete"]
+    with client.session_transaction() as auth_session:
+        auth_session["organisation_id"] = lifecycle_app.config["IDS"]["other_organisation"]
+
+    assert client.get(f"/athletes/{athlete_id}").status_code == 404
+    response = client.post(
+        f"/athletes/{athlete_id}/account/invite",
+        data={"csrf_token": csrf_from_session(client), "email": "new@example.test"},
+    )
+    assert response.status_code == 404
+    with lifecycle_app.app_context():
+        assert AccountToken.query.count() == 0
+
+
+def test_coach_created_athlete_is_owned_only_in_selected_organisation(lifecycle_app):
+    client = lifecycle_app.test_client()
+    login_coach(client)
+    response = client.post(
+        "/athletes",
+        data={
+            "csrf_token": csrf_from_session(client),
+            "first_name": "Beta",
+            "last_name": "Athlete",
+            "email": "beta.athlete@example.test",
+        },
+    )
+    assert response.status_code == 302
+    with lifecycle_app.app_context():
+        athlete = Athlete.query.filter_by(email="beta.athlete@example.test").one()
+        ownership = CoachAthleteOwnership.query.filter_by(athlete_id=athlete.id).one()
+        assert ownership.organisation_id == lifecycle_app.config["IDS"]["organisation"]
+        assert ownership.coach_membership.user.email == "coach@example.test"
+        assert CoachAthleteOwnership.query.filter_by(
+            athlete_id=athlete.id,
+            organisation_id=lifecycle_app.config["IDS"]["other_organisation"],
+        ).count() == 0
+
+
 def test_activation_once_replay_rejected_and_login_handoff(lifecycle_app):
     coach_client = lifecycle_app.test_client()
     login_coach(coach_client)
@@ -249,6 +304,39 @@ def test_expired_invitation_is_rejected(lifecycle_app):
         record.expires_at = datetime.now(UTC) - timedelta(seconds=1)
         db.session.commit()
     assert submit_password(lifecycle_app.test_client(), f"/account/invitation#{raw}").status_code == 410
+
+
+def test_incomplete_activation_can_be_recovered_with_a_new_invitation(lifecycle_app):
+    client = lifecycle_app.test_client()
+    login_coach(client)
+    invitation(client, lifecycle_app)
+    first = raw_token_from_message(lifecycle_app)
+    with lifecycle_app.app_context():
+        athlete = db.session.get(Athlete, lifecycle_app.config["IDS"]["athlete"])
+        # Model a browser/provider interruption after the account placeholder
+        # was created but before activation was committed.
+        assert athlete.user is not None
+        assert athlete.user.active is False
+        assert athlete.user.password_hash is None
+
+    response, _ = invitation(client, lifecycle_app)
+    second = raw_token_from_message(lifecycle_app)
+    assert response.status_code == 200
+    assert second != first
+    assert submit_password(lifecycle_app.test_client(), f"/account/invitation#{first}").status_code == 410
+    assert submit_password(lifecycle_app.test_client(), f"/account/invitation#{second}").status_code == 302
+
+
+def test_non_positive_invitation_lifetime_is_rejected_without_partial_account(lifecycle_app):
+    lifecycle_app.config["ACCOUNT_INVITATION_LIFETIME"] = timedelta(0)
+    client = lifecycle_app.test_client()
+    login_coach(client)
+    response, record_id = invitation(client, lifecycle_app)
+    assert response.status_code == 409
+    assert record_id is None
+    with lifecycle_app.app_context():
+        athlete = db.session.get(Athlete, lifecycle_app.config["IDS"]["athlete"])
+        assert athlete.user is None
 
 
 def test_revoke_and_regenerate_invalidates_previous_link(lifecycle_app):

@@ -67,6 +67,8 @@ def _user_for_invitation(athlete: Athlete) -> User:
 
 
 def _issue(athlete: Athlete, user: User, purpose: AccountTokenPurpose, lifetime: timedelta) -> IssuedAccountToken:
+    if lifetime <= timedelta(0):
+        raise AccountLifecycleError("The account link lifetime must be positive.")
     now = datetime.now(UTC)
     AccountToken.query.filter_by(
         athlete_id=athlete.id, purpose=purpose.value, consumed_at=None, revoked_at=None

@@ -214,9 +214,8 @@ class AccessoryIntelligence:
     ) -> list[AccessorySuggestion]:
         """Return eligible records in an inspectable coach-priority order.
 
-        ``auto_select`` is a preference signal: preferred eligible rows rank
-        before fallback rows, but its absence never makes an otherwise eligible
-        catalogue empty. Empty phase/relevance metadata means unrestricted.
+        ``auto_select`` is a hard automatic-selection gate at the repository
+        boundary. Empty phase/relevance metadata means unrestricted.
         Constraint tags are exact tags; they are not athlete-state diagnoses.
         """
         return list(self.evaluate_candidates(
@@ -284,11 +283,7 @@ class AccessoryIntelligence:
             if excluded_tags.intersection(constraints):
                 continue
 
-            reasons = [
-                "preferred for automatic selection"
-                if exercise.auto_select
-                else "eligible accessory fallback"
-            ]
+            reasons = ["enabled for automatic selection"]
             if matched_lifts:
                 reasons.append(f"relevant to {', '.join(matched_lifts)}")
             elif "all" in relevance:
