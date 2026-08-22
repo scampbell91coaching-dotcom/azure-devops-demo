@@ -16,10 +16,15 @@ def init_security_headers(app: Flask, *, prevent_caching: bool = False) -> None:
 
     @app.after_request
     def add_security_headers(response: Response) -> Response:
-        response.headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY
-        response.headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains"
-        )
+        if app.testing:
+            response.headers["Content-Security-Policy"] = (
+                CONTENT_SECURITY_POLICY.replace("; upgrade-insecure-requests", "")
+            )
+        else:
+            response.headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"

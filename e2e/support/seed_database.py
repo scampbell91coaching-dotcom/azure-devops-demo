@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 
-from flask import Flask
+from flask import Flask, current_app
 
 from portal.extensions import db
 from portal.models.account_token import AccountToken
@@ -48,6 +48,13 @@ from portal.models.warmup import (
 )
 from portal.models.user import User, UserRole
 from portal.programming_services.lift_slots import create as create_lift_slot
+from portal.services.meal_plans import (
+    DayMode,
+    MacroTotals,
+    MealPlanDay,
+    MealPlanDraft,
+    PrescriptionSnapshot,
+)
 from werkzeug.security import generate_password_hash
 
 
@@ -210,6 +217,35 @@ def reset_fixture(name: str) -> None:
                     effective_at=datetime(2026, 8, 10),
                 ),
             ]
+        )
+    elif name == "safari-meal-plan":
+        reset_fixture("meal-plan")
+
+        targets = MacroTotals(2000, 150, 230, 53, 25)
+        draft = MealPlanDraft(
+            template_id="safari-meal-plan",
+            revision=1,
+            coach_id=str(User.query.filter_by(email="coach.e2e@example.test").one().id),
+            name="Safari current meal plan",
+            days=(
+                MealPlanDay(
+                    day_id="safari-flexible-day",
+                    name="Training day",
+                    position=1,
+                    mode=DayMode.FLEXIBLE,
+                    flexible_target=targets,
+                ),
+            ),
+        )
+        current_app.extensions["meal_plan_workflow"].save_draft(draft)
+        current_app.extensions["meal_plan_workflow"].publish(
+            assignment_id="safari-current-assignment",
+            athlete_id=101,
+            draft=draft,
+            prescription=PrescriptionSnapshot("safari-prescription", 1, targets),
+            effective_from=date(2026, 8, 1),
+            actor_id=draft.coach_id,
+            now=datetime(2026, 8, 1, 12, tzinfo=UTC),
         )
     else:
         raise KeyError(name)
@@ -549,6 +585,10 @@ def seed_database(app: Flask) -> None:
             exercise.active = True
             exercise.accessory_suitable = True
             exercise.auto_select = False
+        # Automatic selection is an explicit hard gate. Keep one deterministic
+        # browser-fixture candidate enabled so the automatic factory path tests
+        # selection and persistence rather than the intentional-empty state.
+        pulldown.auto_select = True
         extra_accessory_specs = (
             ("Leg Extension", "lower body", 2),
             ("Leg Curl", "lower body", 2),

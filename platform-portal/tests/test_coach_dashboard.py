@@ -360,13 +360,13 @@ def test_dashboard_route_renders_sections_links_and_unavailable_timing():
 
     assert response.status_code == 200
     for heading in (
-        "Athletes requiring review",
-        "Pending check-ins",
+        "Priority athletes",
+        "Check-ins due",
         "Recent check-ins",
         "Pain and fatigue flags",
         "Programmes ending soon",
-        "Bodyweight and nutrition",
-        "No current programme",
+        "Recent activity",
+        "Programme gaps",
     ):
         assert heading in page
     assert "Programme timing unavailable" in page

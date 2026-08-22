@@ -43,6 +43,7 @@ def test_diagnostic_reports_selection_counts_metadata_and_inconsistencies():
         "automatic_selection_eligible": 1,
         "accessory_suitable_not_auto_select": 1,
     }
+    assert report["automatic_selection_status"]["ready"] is True
     assert [item["name"] for item in report["fatigue_cost_issues"]] == ["Manual Row"]
     assert report["accessory_metadata_coverage"]["equipment_options"] == {
         "populated": 1, "empty": 0, "missing": 1, "invalid": 0,
@@ -71,3 +72,13 @@ def test_audit_command_is_read_only_and_emits_json():
     assert '"accessory_suitable_not_auto_select": 1' in result.output
     with app.app_context():
         assert Exercise.query.count() == 1
+
+
+def test_diagnostic_explains_an_empty_automatic_catalogue():
+    row = Exercise(
+        name="Manual Only", movement="accessory", category="back",
+        active=True, accessory_suitable=True, auto_select=False,
+    )
+    status = build_exercise_catalogue_diagnostic([row])["automatic_selection_status"]
+    assert status["ready"] is False
+    assert "no active row" in status["explanation"]
