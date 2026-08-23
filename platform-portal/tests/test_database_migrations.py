@@ -361,4 +361,4 @@ def test_upgrade_on_empty_postgresql_when_available(monkeypatch):
         inspector = inspect(db.engine)
         assert set(inspector.get_table_names()) == EXPECTED_TABLES | {"alembic_version"}
         heads = db.session.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
-        assert heads == ["0026_programming_exposure_roles"]
+        assert heads == ["0027_tenancy_ownership_expand"]
