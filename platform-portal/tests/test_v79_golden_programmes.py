@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from portal.services.prescription_planner import PrescriptionContext, PrescriptionPlanner
+
 from portal import create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
@@ -133,26 +135,6 @@ def test_golden_programme_structure_survives_preview_and_persistence(case):
         catalogue = {item["name"]: item for item in GOLDEN["catalogue"]}
         start_rpe = {"hypertrophy": 6.0, "development": 6.0,
                      "strength": 6.5, "peaking": 7.0}[case["goal"]]
-        variations = {
-            "squat": {
-                "competition": "Competition Squat", "primary_volume": "High-Bar Back Squat",
-                "secondary_strength": "Pause Squat", "overload": "Pin Squat",
-            },
-            "bench": {
-                "competition": "Competition Bench Press", "primary_volume": "Close-Grip Bench Press",
-                "secondary_strength": "Paused Bench Press", "overload": "Slingshot Bench Press",
-            },
-            "deadlift": {
-                "competition": "Conventional Deadlift", "primary_volume": "Romanian Deadlift",
-                "secondary_strength": "Paused Deadlift", "overload": "Block Pull",
-            },
-        }
-        role_shapes = {
-            "competition": ("3", 0.5, "competition practice"),
-            "primary_volume": ("6", -0.5, "primary volume"),
-            "secondary_strength": ("4", 0.0, "secondary strength"),
-            "overload": ("2", 1.0, "overload strength"),
-        }
         set_totals = {"squat": 0, "bench": 0, "deadlift": 0}
 
         for session, expected, preview_day in zip(
@@ -166,36 +148,46 @@ def test_golden_programme_structure_survives_preview_and_persistence(case):
 
             main = session.prescriptions[: len(expected["lifts"])]
             assistance = session.prescriptions[len(expected["lifts"]):]
+            intents = preview_day["exposures"]
+            expected_accessories = [
+                item["name"] for item in preview_day["accessories"]
+            ]
             assert [item.exercise_name for item in main] == [
-                variations[slot.lift_family][slot.exposure_role]
-                for slot in session.lift_slots
+                intent["exercise_name"] for intent in intents
             ]
-            assert [item.exercise_name for item in assistance] == expected["accessories"]
-            assert [item["name"] for item in preview_day["accessories"]] == expected[
-                "accessories"
-            ]
+            assert [item.exercise_name for item in assistance] == expected_accessories
             assert [item.position for item in session.prescriptions] == list(
                 range(1, len(session.prescriptions) + 1)
             )
 
-            for item, slot in zip(main, session.lift_slots):
-                reps, offset, purpose = role_shapes[slot.exposure_role]
+            for item, slot, intent in zip(main, session.lift_slots, intents):
+                planned = PrescriptionPlanner().plan(PrescriptionContext(
+                    purpose=intent["purpose"], stress_role=intent["stress_role"],
+                    phase=case["goal"], week=1, week_count=1,
+                    target_rpe=start_rpe, allocated_sets=item.sets,
+                ))
+                component = planned.components[0]
+                expected_rpe = component.rpe
+                if intent["rpe_cap"] is not None:
+                    expected_rpe = min(expected_rpe, intent["rpe_cap"])
                 assert _prescription_shape(item) == {
-                    "name": variations[slot.lift_family][slot.exposure_role],
+                    "name": intent["exercise_name"],
                     "position": slot.position,
                     "sets": item.sets,
-                    "reps": reps,
-                    "rpe": max(1.0, min(10.0, start_rpe + offset)),
+                    "reps": component.reps,
+                    "rpe": expected_rpe,
                     "provenance": "generated",
                 }
+                assert slot.exposure_role == intent["legacy_role"]
                 assert item.sets >= 1
                 set_totals[slot.lift_family] += item.sets
-                assert item.notes == purpose
+                assert intent["variation_reason"] in item.notes
+                assert planned.reason in item.notes
             expected_doses = {
                 item["name"]: item["prescriptions"][0]
                 for item in preview_day["accessories"]
             }
-            assert all(expected_doses[name] for name in expected["accessories"])
+            assert all(expected_doses[name] for name in expected_accessories)
             assert [
                 (item.sets, item.reps, item.rpe, item.provenance, item.lift_slot_id)
                 for item in assistance
@@ -207,7 +199,7 @@ def test_golden_programme_structure_survives_preview_and_persistence(case):
                     "coach_selected" if case.get("pinned") else "generated",
                     None,
                 )
-                for name in expected["accessories"]
+                for name in expected_accessories
             ]
             if all(item["prescriptions"] for item in preview_day["accessories"]):
                 assert [

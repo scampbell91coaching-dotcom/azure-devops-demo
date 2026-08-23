@@ -1,0 +1,16 @@
+[
+  {"name":"beginner 3-day","kind":"structure","days":3,"squat":2,"bench":2,"deadlift":1,"expected":["B","SB","SD"]},
+  {"name":"intermediate 4-day","kind":"structure","days":4,"squat":2,"bench":3,"deadlift":1,"expected":["B","S","BD","SB"]},
+  {"name":"advanced 5-day","kind":"structure","days":5,"squat":2,"bench":3,"deadlift":1,"expected":["B","S","B","D","SB"]},
+  {"name":"advanced 6-day high-frequency bench","kind":"structure","days":6,"squat":2,"bench":5,"deadlift":2,"expected":["B","SD","B","B","B","SBD"]},
+  {"name":"5x bench","kind":"bench","sequence":["B","SD","B","B","B","SBD"],"frequency":5},
+  {"name":"6x bench","kind":"bench","sequence":["B","SBD","B","B","B","SBD"],"frequency":6},
+  {"name":"SBD-primary bench","kind":"bench-placement","sequence":["B","B","SBD"],"intensity_day":2,"volume_day":0},
+  {"name":"SBD-not-primary","kind":"bench-placement","sequence":["B","B","DBS"],"intensity_day":0,"volume_day":1},
+  {"name":"second squat technical","kind":"secondary","sequence":["SD","SBD"],"family":"squat","purpose":"positional","exercise":"Pause Squat"},
+  {"name":"second deadlift technical/capacity","kind":"secondary","sequence":["SD","SBD"],"family":"deadlift","purpose":"technical_secondary","exercise":"Paused Deadlift"},
+  {"name":"accessory weak-point priority","kind":"accessory","intent":"weak-point"},
+  {"name":"broad hypertrophy","kind":"accessory","intent":"broad-hypertrophy"},
+  {"name":"meet proximity","kind":"meet","intent":"specificity-with-lower-assistance"},
+  {"name":"conservative Athlete State adjustment","kind":"adaptation","intent":"one-week-maintain"}
+]

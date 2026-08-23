@@ -147,6 +147,10 @@ for (const width of [320, 390, 430]) {
     await expect(evidence).toHaveAttribute('open', '');
     await expect(page.getByText(/Incomplete data:/)).toBeVisible();
     await expect(page.getByText(/0 assistance exercises/)).toHaveCount(4);
+    await page.getByLabel('Block name').fill(`Mobile edited proposal ${width}`);
+    await expect(page.getByText('This preview is out of date. Generate preview again before accepting.')).toBeVisible();
+    await expect(page.getByLabel('Coach override reason (required)')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Accept proposal' })).toBeDisabled();
     await expectNoHorizontalOverflow(page);
   });
 

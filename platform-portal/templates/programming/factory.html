@@ -25,7 +25,15 @@
     class="coach-form block-factory-form"
     method="post"
     data-copilot-context="block-intent"
+    data-has-preview="{{ 'true' if proposal else 'false' }}"
   >
+    {% if errors %}
+      <div class="factory-error-summary" role="alert" aria-live="assertive" tabindex="-1" data-error-summary>
+        <strong>Check the highlighted field{% if errors|length != 1 %}s{% endif %}.</strong>
+        <p>Your entries are still here. Correct the issue, then generate the preview again.</p>
+        <ul>{% for field, message in errors.items() %}<li>{% if field != 'form' %}<a href="#factory-{{ field }}">{{ message }}</a>{% else %}{{ message }}{% endif %}</li>{% endfor %}</ul>
+      </div>
+    {% endif %}
     {% if proposal %}
       <input type="hidden" name="proposal_id" value="{{ proposal.id }}">
       <input type="hidden" name="proposal_integrity" value="{{ proposal_integrity }}">
@@ -35,7 +43,7 @@
       <div class="factory-context__fields">
     <label class="factory-field--athlete">
       <span>Athlete</span>
-      <select name="athlete_id" required>
+      <select id="factory-athlete_id" name="athlete_id" required{% if errors and errors.get('athlete_id') %} aria-invalid="true" aria-describedby="factory-athlete_id-error"{% endif %}>
         {% for athlete in athletes %}
           <option
             value="{{ athlete.id }}"
@@ -45,6 +53,7 @@
           </option>
         {% endfor %}
       </select>
+      {% if errors and errors.get('athlete_id') %}<small class="coach-form-error" id="factory-athlete_id-error">{{ errors.athlete_id }}</small>{% endif %}
     </label>
 
     <label>
@@ -100,14 +109,16 @@
 
     <label>
       <span>Weeks</span>
-      <input
+      <input id="factory-week_count"
         name="week_count"
         type="number"
         min="1"
         max="24"
         value="{{ form.get('week_count', 4) }}"
         required
+        {% if errors and errors.get('week_count') %}aria-invalid="true" aria-describedby="factory-week_count-error"{% endif %}
       >
+      {% if errors and errors.get('week_count') %}<small class="coach-form-error" id="factory-week_count-error">{{ errors.week_count }}</small>{% endif %}
     </label>
       </div>
     </section>
@@ -120,47 +131,55 @@
       <div class="factory-intent__fields">
     <label>
       <span>Training days</span>
-      <input
+      <input id="factory-training_days"
         name="training_days"
         type="number"
         min="1"
-        max="7"
+        max="5"
         value="{{ form.get('training_days', 4) }}"
         required
+        {% if errors and errors.get('training_days') %}aria-invalid="true" aria-describedby="factory-training_days-error"{% endif %}
       >
+      {% if errors and errors.get('training_days') %}<small class="coach-form-error" id="factory-training_days-error">{{ errors.training_days }}</small>{% endif %}
     </label>
 
     <label>
       <span>Squat frequency</span>
-      <input
+      <input id="factory-squat_frequency"
         name="squat_frequency"
         type="number"
         min="0"
-        max="5"
+        max="7"
         value="{{ form.get('squat_frequency', 2) }}"
+        {% if errors and errors.get('squat_frequency') %}aria-invalid="true" aria-describedby="factory-squat_frequency-error"{% endif %}
       >
+      {% if errors and errors.get('squat_frequency') %}<small class="coach-form-error" id="factory-squat_frequency-error">{{ errors.squat_frequency }}</small>{% endif %}
     </label>
 
     <label>
       <span>Bench frequency</span>
-      <input
+      <input id="factory-bench_frequency"
         name="bench_frequency"
         type="number"
         min="0"
-        max="5"
+        max="7"
         value="{{ form.get('bench_frequency', 3) }}"
+        {% if errors and errors.get('bench_frequency') %}aria-invalid="true" aria-describedby="factory-bench_frequency-error"{% endif %}
       >
+      {% if errors and errors.get('bench_frequency') %}<small class="coach-form-error" id="factory-bench_frequency-error">{{ errors.bench_frequency }}</small>{% endif %}
     </label>
 
     <label>
       <span>Deadlift frequency</span>
-      <input
+      <input id="factory-deadlift_frequency"
         name="deadlift_frequency"
         type="number"
         min="0"
-        max="3"
+        max="2"
         value="{{ form.get('deadlift_frequency', 1) }}"
+        {% if errors and errors.get('deadlift_frequency') %}aria-invalid="true" aria-describedby="factory-deadlift_frequency-error"{% endif %}
       >
+      {% if errors and errors.get('deadlift_frequency') %}<small class="coach-form-error" id="factory-deadlift_frequency-error">{{ errors.deadlift_frequency }}</small>{% endif %}
     </label>
 
     <label>
@@ -207,11 +226,13 @@
 
     <label>
       <span>Meet date (optional)</span>
-      <input
+      <input id="factory-meet_date"
         name="meet_date"
         type="date"
         value="{{ form.get('meet_date', '') }}"
+        {% if errors and errors.get('meet_date') %}aria-invalid="true" aria-describedby="factory-meet_date-error"{% endif %}
       >
+      {% if errors and errors.get('meet_date') %}<small class="coach-form-error" id="factory-meet_date-error">{{ errors.meet_date }}</small>{% endif %}
     </label>
       </div>
     </section>
@@ -227,14 +248,15 @@
       </label>
       <label><span>Accessory volume</span>
         <select name="accessory_volume">
-          {% for value, label in (("low", "Low · 3 fatigue units/day"), ("medium", "Medium · 6 fatigue units/day"), ("high", "High · 9 fatigue units/day")) %}
+          {% for value, label in (("low", "Low"), ("medium", "Medium"), ("high", "High")) %}
             <option value="{{ value }}" {% if form.get("accessory_volume", "medium") == value %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
+        <small>Controls how much assistance work is suggested for coach review.</small>
       </label>
       <p class="factory-accessory-summary" data-accessory-summary aria-live="polite">No assistance selected.</p>
       <label><span>Filter catalogue</span><input type="search" data-accessory-filter placeholder="Search by exercise, category or movement"></label>
-      <div data-accessory-rows>
+      <div id="factory-accessory_exercise_id" data-accessory-rows{% if errors and errors.get('accessory_exercise_id') %} aria-invalid="true" aria-describedby="factory-accessory_exercise_id-error"{% endif %}>
         {% set selected_ids = form.getlist('accessory_exercise_id') if form.getlist is defined else [] %}
         {% for selected_id in selected_ids %}
           <div class="factory-accessory-row">
@@ -247,6 +269,7 @@
           </div>
         {% endfor %}
       </div>
+      {% if errors and errors.get('accessory_exercise_id') %}<small class="coach-form-error factory-accessory-error" id="factory-accessory_exercise_id-error">{{ errors.accessory_exercise_id }}</small>{% endif %}
       <button class="coach-link-button factory-add-accessory" type="button" data-add-accessory>Add accessory</button>
       <template data-accessory-template><div class="factory-accessory-row"><select name="accessory_exercise_id" aria-label="Accessory exercise" required>{% for exercise in accessory_exercises %}<option value="{{ exercise.id }}" data-search="{{ exercise.name }} {{ exercise.category }} {{ exercise.movement }}">{{ exercise.name }} · {{ exercise.category|title }}</option>{% endfor %}</select><button class="coach-link-button" type="button" data-move-up aria-label="Move accessory up">↑</button><button class="coach-link-button" type="button" data-move-down aria-label="Move accessory down">↓</button><button class="coach-link-button" type="button" data-remove-accessory>Remove</button></div></template>
     </fieldset>
@@ -259,12 +282,14 @@
       >
         Generate preview
       </button>
+      <p class="factory-preview-guidance">Preview creates the current proposal. Changing these fields requires another preview.</p>
 
     </div>
   </form>
 
   {% if preview %}
-    <section class="factory-preview" aria-labelledby="factory-review-heading" data-copilot-region="review-evidence">
+    <section class="factory-preview{% if preview_stale %} is-stale{% endif %}" aria-labelledby="factory-review-heading" data-copilot-region="review-evidence" data-factory-preview>
+      <div class="factory-stale-notice" role="status" data-preview-stale{% if not preview_stale %} hidden{% endif %}>This preview is out of date. Generate preview again before accepting.</div>
       <div class="factory-review-heading">
         <div>
           <span>Proposal review</span>
@@ -327,16 +352,16 @@
           <p>{{ intelligence.fatigue.programming_adjustment }}</p>
           <p><strong>RPE adherence:</strong> {{ intelligence.fatigue.rpe_adherence }}</p>
           <h4>Volume progression proposal</h4>
-          <p>S/B/D work sets stay separate from assistance fatigue. This remains a reviewable proposal until you accept it.</p>
+          <p>S/B/D work sets stay separate from assistance work. This remains a reviewable proposal until you accept it.</p>
           <div class="table-wrap" role="region" aria-label="Volume progression proposal" tabindex="0">
             <table>
-              <thead><tr><th>Week</th><th>Phase</th><th>RPE</th><th>Squat</th><th>Bench</th><th>Deadlift</th><th>Assistance fatigue</th></tr></thead>
+              <thead><tr><th>Week</th><th>Phase</th><th>RPE</th><th>Squat</th><th>Bench</th><th>Deadlift</th><th>Assistance level</th></tr></thead>
               <tbody>{% for week in intelligence.volume.weeks %}<tr>
                 <td>{{ week.week }}</td><td>{{ week.phase|title }}</td><td>{{ week.target_rpe|round(1) }}</td>
                 <td>{{ week.sbd_sets.squat }} ({{ week.sbd_range.squat[0] }}–{{ week.sbd_range.squat[1] }})</td>
                 <td>{{ week.sbd_sets.bench }} ({{ week.sbd_range.bench[0] }}–{{ week.sbd_range.bench[1] }})</td>
                 <td>{{ week.sbd_sets.deadlift }} ({{ week.sbd_range.deadlift[0] }}–{{ week.sbd_range.deadlift[1] }})</td>
-                <td>{{ week.assistance_fatigue_budget }} units</td>
+                <td>{{ form.get('accessory_volume', 'medium') | title }}</td>
               </tr>{% endfor %}</tbody>
             </table>
           </div>
@@ -349,12 +374,12 @@
           </div>
           </details>
           {% if proposal_override %}<p class="proposal-provenance" data-testid="coach-override-provenance"><strong>Coach override:</strong> {{ proposal_override.reason }} · {{ proposal_override.recorded_by }}</p>{% endif %}
-          <label><span>Coach override reason (required after editing)</span><textarea name="override_reason" form="block-factory-form"></textarea></label>
+          <label class="factory-override-reason" data-override-reason{% if not (errors and errors.get('override_reason')) %} hidden{% endif %} for="factory-override_reason"><span>Coach override reason <strong>(required)</strong></span><textarea id="factory-override_reason" name="override_reason" form="block-factory-form"{% if errors and errors.get('override_reason') %} required aria-invalid="true" aria-describedby="factory-override-reason-help factory-override_reason-error"{% else %} aria-describedby="factory-override-reason-help"{% endif %}>{{ form.get('override_reason', '') }}</textarea><small id="factory-override-reason-help">Explain why the previewed proposal is being changed.</small>{% if errors and errors.get('override_reason') %}<small class="coach-form-error" id="factory-override_reason-error">{{ errors.override_reason }}</small>{% endif %}</label>
           <div class="proposal-actions">
             <button class="coach-link-button" type="submit" form="block-factory-form" formmethod="post" formaction="{{ url_for('block_factory.dismiss_proposal') }}">Dismiss proposal</button>
-            <button class="coach-primary-button" type="submit" form="block-factory-form" formmethod="post" formaction="{{ url_for('block_factory.generate') }}">Accept proposal</button>
+            <button class="coach-primary-button" type="submit" form="block-factory-form" formmethod="post" formaction="{{ url_for('block_factory.generate') }}" data-accept-proposal{% if preview_stale %} disabled aria-disabled="true"{% endif %}>Accept proposal</button>
           </div>
-          <p class="factory-acceptance-note">Edits require a reason and a new preview. Acceptance writes the stored preview.</p>
+          <p class="factory-acceptance-note">Accept uses the last valid preview. Edits require a reason and another preview; stale proposals cannot be accepted.</p>
         </div>
       {% endif %}
     </section>

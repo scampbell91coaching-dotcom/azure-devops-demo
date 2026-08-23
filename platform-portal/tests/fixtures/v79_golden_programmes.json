@@ -314,7 +314,7 @@
       "frequencies": [
         3,
         3,
-        3
+        2
       ],
       "accessory_mode": "none",
       "accessory_volume": "low",
@@ -322,8 +322,7 @@
         {
           "lifts": [
             "squat",
-            "bench",
-            "deadlift"
+            "bench"
           ],
           "accessories": []
         },

@@ -44,6 +44,7 @@ def _exercise(name: str, *tags: str, priority: int = 5) -> Exercise:
         coach_priority=priority,
         fatigue_rating=2,
         lift_relevance='["all"]',
+        technical_purposes='["quad strength"]',
         constraint_tags=str(list(tags)).replace("'", '"'),
     )
 

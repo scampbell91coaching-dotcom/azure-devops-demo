@@ -85,7 +85,8 @@ def _reference_volume(athlete_id: int) -> ReferenceVolume | None:
     )
 
 
-def _rpe_curve(factory: FactoryInputs) -> tuple[float, ...]:
+def _volume_reference_rpe_curve(factory: FactoryInputs) -> tuple[float, ...]:
+    """Volume-service reference only; PrescriptionPlanner owns final effort."""
     bounds = {
         "hypertrophy": (6.0, 7.5),
         "development": (6.0, 8.0),
@@ -360,7 +361,7 @@ class WeeklyProgrammingIntelligence:
         volume = VolumeProgressionService().propose(
             block_type=factory.goal,
             duration=factory.week_count,
-            rpe_curve=_rpe_curve(factory),
+            rpe_curve=_volume_reference_rpe_curve(factory),
             training_days=factory.training_days,
             frequencies={
                 "squat": factory.squat_frequency,

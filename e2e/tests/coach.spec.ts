@@ -409,7 +409,7 @@ test('Block Factory edit presents coach override provenance', async ({ page }) =
   await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
   await page.getByRole('button', { name: 'Preview' }).click();
   await page.getByLabel('Block name').fill('Coach adjusted proposal');
-  await page.getByLabel('Coach override reason (required after editing)').fill('Meet timing requires a clearer block label');
+  await page.getByLabel('Coach override reason (required)').fill('Meet timing requires a clearer block label');
   await page.getByRole('button', { name: 'Preview' }).click();
   await expect(page.getByTestId('coach-override-provenance')).toContainText('Meet timing requires a clearer block label');
   await expect(page.getByTestId('coach-override-provenance')).toContainText('coach.e2e@example.test');
@@ -420,12 +420,30 @@ test('Block Factory rejects an edit without the required reason', async ({ page 
   await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
   await page.getByRole('button', { name: 'Preview' }).click();
   await page.getByLabel('Block name').fill('Unreasoned browser edit');
+  await expect(page.getByRole('button', { name: 'Accept proposal' })).toBeDisabled();
+  await expect(page.getByText('This preview is out of date. Generate preview again before accepting.')).toBeVisible();
+  await expect(page.getByLabel('Coach override reason (required)')).toBeVisible();
+  await page.locator('#block-factory-form').evaluate((form: HTMLFormElement) => { form.noValidate = true; });
   const rejected = page.waitForResponse(response =>
     response.url().endsWith('/programming/factory/preview') && response.request().method() === 'POST'
   );
   await page.getByRole('button', { name: 'Preview' }).click();
-  expect((await rejected).status()).toBe(400);
+  expect((await rejected).status()).toBe(422);
   await expect(page.getByText(/requires a coach override reason/)).toBeVisible();
+  await expect(page.getByLabel('Block name')).toHaveValue('Unreasoned browser edit');
+  await expect(page.getByLabel('Coach override reason (required)')).toBeFocused();
+});
+
+test('Block Factory re-preview enables acceptance after a proposal edit', async ({ page }) => {
+  await page.goto('/programming/factory');
+  await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await expect(page.getByRole('button', { name: 'Accept proposal' })).toBeEnabled();
+  await page.getByLabel('Block name').fill('Re-previewed proposal');
+  await expect(page.getByRole('button', { name: 'Accept proposal' })).toBeDisabled();
+  await page.getByLabel('Coach override reason (required)').fill('Use the coach-facing block name');
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await expect(page.getByRole('button', { name: 'Accept proposal' })).toBeEnabled();
 });
 
 test('Block Factory rejects a stale superseded proposal', async ({ page }) => {
@@ -436,7 +454,7 @@ test('Block Factory rejects a stale superseded proposal', async ({ page }) => {
     Array.from(new FormData(form as HTMLFormElement).entries()).map(([key, value]) => [key, String(value)])
   );
   await page.getByLabel('Block name').fill('Superseding browser edit');
-  await page.getByLabel('Coach override reason (required after editing)').fill('Supersede the first browser proposal');
+  await page.getByLabel('Coach override reason (required)').fill('Supersede the first browser proposal');
   await page.getByRole('button', { name: 'Preview' }).click();
   const stale = await page.evaluate(async fields => {
     const response = await fetch('/programming/factory', {
