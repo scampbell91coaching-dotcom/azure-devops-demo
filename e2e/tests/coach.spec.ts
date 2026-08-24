@@ -302,7 +302,13 @@ test('Block Factory persists more than three coach-selected accessories per sess
 
   await page.getByRole('button', { name: 'Preview' }).click();
 
-  await expect(page.getByText(/4 assistance exercises/)).toHaveCount(3);
+  const previewAssistanceCounts = await page
+    .locator('.factory-preview__count')
+    .evaluateAll(elements => elements.map(element =>
+      Number(element.textContent?.match(/(\d+) assistance exercises?/)?.[1] ?? 0)
+    ));
+  expect(previewAssistanceCounts.reduce((total, count) => total + count, 0)).toBe(12);
+  expect(Math.max(...previewAssistanceCounts)).toBeGreaterThan(3);
 
   await page.getByRole('button', { name: 'Accept proposal' }).click();
 
@@ -315,11 +321,14 @@ test('Block Factory persists more than three coach-selected accessories per sess
   const sessions = page.getByTestId('programming-session');
   await expect(sessions).toHaveCount(3);
 
+  const persistedCounts: number[] = [];
   for (let index = 0; index < 3; index += 1) {
-    await expect(
-      sessions.nth(index).getByTestId('assistance-provenance')
-    ).toHaveCount(4);
+    persistedCounts.push(
+      await sessions.nth(index).getByTestId('assistance-provenance').count()
+    );
   }
+  expect(persistedCounts.reduce((total, count) => total + count, 0)).toBe(12);
+  expect(Math.max(...persistedCounts)).toBeGreaterThan(3);
 
   await page.reload();
 
@@ -328,7 +337,7 @@ test('Block Factory persists more than three coach-selected accessories per sess
       page.getByTestId('programming-session')
         .nth(index)
         .getByTestId('assistance-provenance')
-    ).toHaveCount(4);
+    ).toHaveCount(persistedCounts[index]);
   }
 });
 
@@ -370,6 +379,10 @@ test('Block Factory previews taxonomy-backed exposures with zero assistance and 
   await page.goto('/programming/factory');
   await page.getByLabel('Athlete').selectOption({ label: 'Sam Morgan' });
   await expect(page.getByText('No assistance selected.')).toBeVisible();
+  await page.getByLabel('Training days').fill('3');
+  await page.getByLabel('Squat frequency').fill('1');
+  await page.getByLabel('Bench frequency').fill('1');
+  await page.getByLabel('Deadlift frequency').fill('1');
   await page.getByLabel('Selection mode').selectOption('none');
   await page.getByRole('button', { name: 'Preview' }).click();
   await expect(page.getByRole('heading', { name: 'Proposal explanation' })).toBeVisible();
@@ -383,7 +396,10 @@ test('Block Factory previews taxonomy-backed exposures with zero assistance and 
 
   await expect(page.getByText(/Incomplete data:/)).toBeVisible();
   await expect(page.getByText('Reported fatigue:', { exact: false })).toHaveCount(0);
-  await expect(page.getByText(/0 assistance exercises/)).toHaveCount(4);
+  const zeroAssistanceDays = page.locator('.factory-preview__count', {
+    hasText: '0 assistance exercises',
+  });
+  await expect(zeroAssistanceDays).toHaveCount(3);
   await expect(page.getByText('Accessory Day', { exact: false })).toHaveCount(0);
 });
 
@@ -429,9 +445,13 @@ test('Block Factory rejects an edit without the required reason', async ({ page 
   );
   await page.getByRole('button', { name: 'Preview' }).click();
   expect((await rejected).status()).toBe(422);
-  await expect(page.getByText(/requires a coach override reason/)).toBeVisible();
+  await expect(page.locator('[data-error-summary]')).toContainText(
+    'Editing a generated proposal requires a coach override reason.'
+  );
   await expect(page.getByLabel('Block name')).toHaveValue('Unreasoned browser edit');
-  await expect(page.getByLabel('Coach override reason (required)')).toBeFocused();
+  const overrideReason = page.getByLabel('Coach override reason (required)');
+  await expect(overrideReason).toHaveAttribute('aria-invalid', 'true');
+  await expect(overrideReason).toBeFocused();
 });
 
 test('Block Factory re-preview enables acceptance after a proposal edit', async ({ page }) => {

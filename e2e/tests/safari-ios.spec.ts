@@ -55,7 +55,10 @@ test('WebKit More fallback and coach sticky/table accessibility work without :ha
   athleteSession,
   athleteIds,
   authenticatedState,
+  request,
+  resetE2EFixture,
 }) => {
+  await resetE2EFixture(request, 'safari-meal-plan');
   await page.setViewportSize({ width: 390, height: 844 });
   await athleteSession(page.request, athleteIds.primary);
   await page.goto('/athlete/meal-plan');
@@ -85,8 +88,10 @@ test.describe('reduced motion', () => {
     athleteIds,
     authenticatedState,
   }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await athleteSession(page.request, athleteIds.primary);
     await page.goto('/athlete/dashboard');
+    expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
     await expect(page.locator('html')).toHaveCSS('scroll-behavior', 'auto');
     const athleteDuration = await page.locator('.athlete-mobile-nav').evaluate(element => getComputedStyle(element).transitionDuration);
     const athleteDurationMs = athleteDuration.endsWith('ms') ? Number.parseFloat(athleteDuration) : Number.parseFloat(athleteDuration) * 1000;
