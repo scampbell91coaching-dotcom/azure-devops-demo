@@ -1,0 +1,119 @@
+evaluation_interval: 1m
+rule_files:
+  - traditional-strength-rules.yaml
+
+tests:
+  - name: database unavailable pages
+    interval: 1m
+    input_series:
+      - series: 'traditional_strength_dependency_available{namespace="production",dependency="database"}'
+        values: '0x4'
+      - series: 'traditional_strength_dependency_last_check_timestamp_seconds{namespace="production",dependency="database"}'
+        values: '0 60 120 180'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: TraditionalStrengthDatabaseUnavailable
+        exp_alerts:
+          - exp_labels: {namespace: production, dependency: database, severity: critical, page: "true", service: traditional-strength, owner: application}
+            exp_annotations:
+              summary: Production database availability is failing or no longer being observed
+              description: Periodic database checks report PostgreSQL unavailable, or their metric is absent or over two minutes old.
+              runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#database-unavailable
+
+  - name: stale database check pages
+    interval: 1m
+    input_series:
+      - series: 'traditional_strength_dependency_available{namespace="production",dependency="database"}'
+        values: '1x6'
+      - series: 'traditional_strength_dependency_last_check_timestamp_seconds{namespace="production",dependency="database"}'
+        values: '0x6'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: TraditionalStrengthDatabaseUnavailable
+        exp_alerts:
+          - exp_labels: {namespace: production, dependency: database, severity: critical, page: "true", service: traditional-strength, owner: application}
+            exp_annotations:
+              summary: Production database availability is failing or no longer being observed
+              description: Periodic database checks report PostgreSQL unavailable, or their metric is absent or over two minutes old.
+              runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#database-unavailable
+  - name: absent database series pages
+    interval: 1m
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: TraditionalStrengthDatabaseUnavailable
+        exp_alerts:
+          - exp_labels: {namespace: production, dependency: database, severity: critical, page: "true", service: traditional-strength, owner: application}
+            exp_annotations:
+              summary: Production database availability is failing or no longer being observed
+              description: Periodic database checks report PostgreSQL unavailable, or their metric is absent or over two minutes old.
+              runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#database-unavailable
+
+  - name: Argo synced and degraded still pages
+    interval: 1m
+    input_series:
+      - series: 'argocd_app_info{name="flask-web-production",health_status="Degraded",sync_status="Synced"}'
+        values: '1x12'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: TraditionalStrengthArgoReleaseDegraded
+        exp_alerts:
+          - exp_labels: {name: flask-web-production, health_status: Degraded, sync_status: Synced, severity: critical, page: "true", service: traditional-strength, owner: platform}
+            exp_annotations:
+              summary: Argo CD reports a degraded or missing production application
+              runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#migration-or-release-failure
+
+  - name: unrelated and retained failed migration jobs do not page
+    interval: 1m
+    input_series:
+      - series: 'kube_job_status_failed{namespace="production",job_name="unrelated-migration"}'
+        values: '1x4'
+      - series: 'kube_job_status_failed{namespace="production",job_name="flask-web-monitoring-flask-app-migration"}'
+        values: '1x4'
+      - series: 'kube_job_labels{namespace="production",job_name="flask-web-monitoring-flask-app-migration",label_app_kubernetes_io_name="flask-app",label_app_kubernetes_io_instance="flask-web-monitoring",label_app_kubernetes_io_component="migration"}'
+        values: '1x4'
+      - series: 'kube_job_created{namespace="production",job_name="flask-web-monitoring-flask-app-migration"}'
+        values: '-1000x4'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: TraditionalStrengthMigrationJobFailed
+        exp_alerts: []
+
+  - name: zero traffic does not page
+    interval: 1m
+    input_series:
+      - series: 'flask_http_requests_total{namespace="production",status_code="200"}'
+        values: '0x6'
+      - series: 'flask_http_requests_total{namespace="production",status_code="500"}'
+        values: '0x6'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: TraditionalStrengthHttp5xxPage
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: TraditionalStrengthHttp5xxWarning
+        exp_alerts: []
+
+  - name: counter reset still counts failures
+    interval: 1m
+    input_series:
+      - series: 'flask_http_requests_total{namespace="production",status_code="500"}'
+        values: '0 1 2 3 4 0 1 2 3 4 5 6'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: TraditionalStrengthHttp5xxWarning
+        exp_alerts:
+          - exp_labels: {severity: warning, page: "false", service: traditional-strength, owner: application}
+            exp_annotations:
+              summary: Production returned repeated 5xx responses
+              runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#http-errors-or-latency
+
+  - name: absent status collector series warns
+    interval: 1m
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: TraditionalStrengthStatusCollectorStale
+        exp_alerts:
+          - exp_labels: {namespace: production, cronjob: platform-status-collector, severity: warning, page: "false", service: traditional-strength, owner: platform}
+            exp_annotations:
+              summary: Platform status has not been collected successfully for 15 minutes
+              runbook_url: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md#status-collector-stale-or-failed

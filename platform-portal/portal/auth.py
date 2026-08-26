@@ -27,6 +27,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from .extensions import db
 from .models.athlete import Athlete
 from .models.user import User, UserRole
+from .observability import record_auth_event
 from .services.athlete_services import athlete_services
 
 auth_bp = Blueprint("auth", __name__)
@@ -35,6 +36,9 @@ _PUBLIC_ENDPOINTS = {
     "auth.account_token",
     "auth.login",
     "health.health",
+    "health.live",
+    "health.ready",
+    "metrics",
     "lead_magnets.lead_magnet",
     "lead_magnets.capture_lead",
     "metrics",
@@ -198,6 +202,7 @@ def _authorize_request() -> Response | None:
         return None
     user: User | None = g.current_user
     if user is None:
+        record_auth_event("authorization", "unauthenticated")
         wants_json = request.accept_mimetypes.best == "application/json"
         if wants_json or request.path.startswith("/api/"):
             abort(401)
@@ -211,9 +216,11 @@ def _authorize_request() -> Response | None:
     if user.role != UserRole.ATHLETE or (
         endpoint not in _ATHLETE_ENDPOINTS and not athlete_api
     ):
+        record_auth_event("authorization", "forbidden")
         abort(403)
     athlete_id = _requested_athlete_id()
     if athlete_id is not None and athlete_id != user.athlete_id:
+        record_auth_event("authorization", "object_concealed")
         abort(404)
     return None
 
@@ -234,6 +241,7 @@ def init_auth(app) -> None:
     app.before_request(_authorize_request)
     app.before_request(_enforce_csrf)
     app.jinja_env.globals["csrf_token"] = _csrf_token
+
     def athlete_context() -> dict[str, object]:
         athlete_id = (
             g.current_user.athlete_id
@@ -345,6 +353,7 @@ def login():
         )
         valid = not limited and user is not None and password_valid
         if valid:
+            record_auth_event("login", "success")
             _attempts.pop(key, None)
             session.clear()
             session["user_id"] = user.id
@@ -358,6 +367,7 @@ def login():
             if target != "/" and _safe_redirect_target(target):
                 return redirect(target)
             return redirect(_default_destination(user))
+        record_auth_event("login", "rate_limited" if limited else "failed")
         if not limited:
             _record_failure(key)
         error = "Invalid email or password."
@@ -438,7 +448,9 @@ def account_token(purpose: str):
             error=error,
             account_token=token if available else "",
         ),
-        status=(410 if error and not available else 400) if error else (200 if available else 410),
+        status=(410 if error and not available else 400)
+        if error
+        else (200 if available else 410),
         content_type="text/html; charset=utf-8",
     )
     response.headers["Referrer-Policy"] = "no-referrer"

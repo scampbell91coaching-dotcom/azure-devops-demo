@@ -16,6 +16,10 @@ metadata:
     nginx.ingress.kubernetes.io/x-content-type-options: "nosniff"
     nginx.ingress.kubernetes.io/x-frame-options: "DENY"
     nginx.ingress.kubernetes.io/referrer-policy: "strict-origin-when-cross-origin"
+    # Defense in depth for older images which exposed /metrics without auth.
+    # Internal ServiceMonitor traffic goes directly to the ClusterIP Service.
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      if ($request_uri ~* "^/metrics(?:[/?]|$)") { return 404; }
 spec:
   ingressClassName: {{ .Values.ingress.className | quote }}
   tls:

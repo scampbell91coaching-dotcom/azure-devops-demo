@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import importlib.util
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pytest
-
 
 MODULE_PATH = Path(__file__).parents[1] / "postgres_migration_proof.py"
 SPEC = importlib.util.spec_from_file_location("postgres_migration_proof", MODULE_PATH)
@@ -19,7 +18,7 @@ def test_repository_has_one_canonical_head_and_exact_tail_chain():
     result = proof.migration_graph()
 
     assert result["ok"] is True
-    assert result["heads"] == ["0024_pdf_meal_plan_delivery"]
+    assert result["heads"] == ["0027_tenancy_ownership_expand"]
     assert [(item["from"], item["to"]) for item in result["transitions"]] == list(
         zip(proof.EXPECTED_CHAIN, proof.EXPECTED_CHAIN[1:])
     )

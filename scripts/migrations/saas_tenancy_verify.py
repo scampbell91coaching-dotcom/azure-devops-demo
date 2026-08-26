@@ -11,11 +11,11 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
-from typing import Any, Iterable
+from typing import Any
 
-
-EXPECTED_HEAD = "0024_pdf_meal_plan_delivery"
+EXPECTED_HEAD = "0027_tenancy_ownership_expand"
 CONTROL_TABLES = (
     "organisations",
     "organisation_memberships",
@@ -40,6 +40,23 @@ REMOVED_TABLES = (
     "organisation_athletes",
 )
 PHASES = ("expand", "backfill", "constrain")
+
+EXPANDED_TENANT_TABLES = (
+    "athletes", "account_tokens", "client_service_changes",
+    "athlete_checkin_settings", "weekly_checkins", "nutrition_checkins",
+    "athlete_state_facts", "coach_technical_observations",
+    "athlete_constraint_flags", "athlete_state_signals",
+    "athlete_state_recommendations", "athlete_state_overrides",
+    "external_coaching_reviews", "training_blocks", "programme_revisions",
+    "training_weeks", "training_sessions", "programming_lift_slots",
+    "exercise_prescriptions", "training_session_logs", "training_set_results",
+    "nutrition_provider_connections", "nutrition_import_jobs",
+    "daily_nutrition", "nutrition_macro_prescriptions", "meets",
+    "meet_entries", "meet_lifts", "warmup_protocols",
+    "warmup_protocol_steps", "warmup_assignments", "warmup_overrides",
+    "warmup_plan_snapshots", "warmup_plan_snapshot_steps",
+    "meal_plan_templates", "meal_plan_assignments",
+)
 
 
 @dataclass(frozen=True)
@@ -101,6 +118,63 @@ def run_checks(cursor: Any, phase: str, expected_head: str = EXPECTED_HEAD) -> l
     results.append(CheckResult("tenant_columns_present", bool(tenant_tables), f"tables={tenant_tables}"))
 
     if phase == "expand":
+        missing_expansion = sorted(set(EXPANDED_TENANT_TABLES) - set(tenant_tables))
+        results.append(CheckResult(
+            "expanded_tenant_columns_present", not missing_expansion,
+            f"missing={missing_expansion}",
+        ))
+        cursor.execute("""
+            SELECT table_name, column_name FROM information_schema.columns
+            WHERE table_schema=current_schema()
+              AND ((column_name='organisation_id' AND table_name=ANY(%s))
+                                OR (table_name IN ('support_access_events','support_delegations')
+                    AND column_name IN ('organisation_id','target_user_id'))
+                OR (table_name='users' AND column_name='session_generation')
+                OR (table_name IN ('organisation_memberships','support_principals')
+                    AND column_name='authorization_generation'))
+              AND is_nullable <> 'YES'
+        """, (list(EXPANDED_TENANT_TABLES),))
+        enforcing = sorted(f"{table}.{column}" for table, column in cursor.fetchall())
+        results.append(CheckResult(
+            "expansion_columns_are_nullable", not enforcing,
+            f"non_nullable={enforcing}",
+        ))
+        cursor.execute("""
+            SELECT expected.table_name
+            FROM unnest(%s::text[]) expected(table_name)
+            WHERE NOT EXISTS (
+              SELECT 1 FROM pg_constraint fk
+              JOIN pg_class child ON child.oid=fk.conrelid
+              JOIN pg_class parent ON parent.oid=fk.confrelid
+              JOIN pg_namespace ns ON ns.oid=child.relnamespace
+              JOIN unnest(fk.conkey) key(attnum) ON true
+              JOIN pg_attribute a ON a.attrelid=child.oid AND a.attnum=key.attnum
+              WHERE ns.nspname=current_schema() AND fk.contype='f'
+                AND child.relname=expected.table_name
+                AND parent.relname='organisations'
+                AND a.attname='organisation_id'
+            )
+        """, (list(EXPANDED_TENANT_TABLES),))
+        missing_fks = sorted(row[0] for row in cursor.fetchall())
+        results.append(CheckResult(
+            "expanded_tenant_foreign_keys_present", not missing_fks,
+            f"missing={missing_fks}",
+        ))
+        cursor.execute("""
+            SELECT expected.table_name
+            FROM unnest(%s::text[]) expected(table_name)
+            WHERE NOT EXISTS (
+              SELECT 1 FROM pg_indexes i
+              WHERE i.schemaname=current_schema()
+                AND i.tablename=expected.table_name
+                AND i.indexname='ix_' || expected.table_name || '_organisation_id'
+            )
+        """, (list(EXPANDED_TENANT_TABLES),))
+        missing_indexes = sorted(row[0] for row in cursor.fetchall())
+        results.append(CheckResult(
+            "expanded_tenant_indexes_present", not missing_indexes,
+            f"missing={missing_indexes}",
+        ))
         return results
 
     for table in tenant_tables:
@@ -199,12 +273,11 @@ def main(argv: list[str] | None = None) -> int:
     if database_url.startswith("postgresql+psycopg://"):
         database_url = "postgresql://" + database_url.removeprefix("postgresql+psycopg://")
 
-    with psycopg.connect(database_url) as connection:
-        with connection.cursor() as cursor:
-            cursor.execute("SET TRANSACTION READ ONLY")
-            cursor.execute("SET LOCAL statement_timeout = '30s'")
-            results = run_checks(cursor, args.phase, args.expected_head)
-            connection.rollback()
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        cursor.execute("SET TRANSACTION READ ONLY")
+        cursor.execute("SET LOCAL statement_timeout = '30s'")
+        results = run_checks(cursor, args.phase, args.expected_head)
+        connection.rollback()
     print(json.dumps({"phase": args.phase, "ok": all(r.ok for r in results), "checks": [asdict(r) for r in results]}, indent=2))
     return 0 if all(r.ok for r in results) else 1
 

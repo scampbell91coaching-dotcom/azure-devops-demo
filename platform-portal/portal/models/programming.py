@@ -24,6 +24,7 @@ class TrainingBlock(db.Model):  # type: ignore[name-defined]
     __tablename__ = "training_blocks"
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(
         db.Integer,
         db.ForeignKey("athletes.id", ondelete="CASCADE"),
@@ -73,6 +74,7 @@ class ProgrammeRevision(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     block_id = db.Column(
         db.Integer,
         db.ForeignKey("training_blocks.id", ondelete="SET NULL"),
@@ -111,6 +113,7 @@ class TrainingWeek(db.Model):  # type: ignore[name-defined]
     __tablename__ = "training_weeks"
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     block_id = db.Column(
         db.Integer,
         db.ForeignKey("training_blocks.id", ondelete="CASCADE"),
@@ -142,6 +145,7 @@ class TrainingSession(db.Model):  # type: ignore[name-defined]
     __tablename__ = "training_sessions"
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     week_id = db.Column(
         db.Integer,
         db.ForeignKey("training_weeks.id", ondelete="CASCADE"),
@@ -190,6 +194,7 @@ class ProgrammingLiftSlot(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     session_id = db.Column(
         db.Integer,
         db.ForeignKey("training_sessions.id", ondelete="CASCADE"),
@@ -234,6 +239,7 @@ class TrainingSessionLog(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(
         db.Integer,
         db.ForeignKey("athletes.id", ondelete="CASCADE"),
@@ -296,6 +302,7 @@ class TrainingSetResult(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     session_log_id = db.Column(
         db.Integer,
         db.ForeignKey("training_session_logs.id", ondelete="CASCADE"),
@@ -363,6 +370,7 @@ class ExercisePrescription(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     session_id = db.Column(
         db.Integer,
         db.ForeignKey("training_sessions.id", ondelete="CASCADE"),

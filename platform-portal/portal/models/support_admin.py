@@ -11,6 +11,7 @@ class SupportPrincipalRecord(db.Model):  # type: ignore[name-defined]
     __tablename__ = "support_principals"
 
     id = db.Column(db.Integer, primary_key=True)
+    authorization_generation = db.Column(db.Integer, nullable=True)
     subject = db.Column(db.String(255), nullable=False, unique=True, index=True)
     active = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(UTC))
@@ -40,6 +41,8 @@ class SupportAccessEvent(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
+    target_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True)
     principal_id = db.Column(
         db.Integer, db.ForeignKey("support_principals.id", ondelete="RESTRICT"), nullable=False, index=True
     )
@@ -61,6 +64,8 @@ class SupportDelegation(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.String(36), primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
+    target_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True)
     principal_id = db.Column(
         db.Integer, db.ForeignKey("support_principals.id", ondelete="RESTRICT"), nullable=False, index=True
     )

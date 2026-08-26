@@ -11,6 +11,9 @@ on:
       - "requirements*.txt"
       - ".github/workflows/platform-security.yml"
       - "scripts/platform/check-no-keepass-files.sh"
+      - "scripts/validate-observability.sh"
+      - "tests/prometheus/**"
+      - ".toolchain-versions.env"
       - "**/*.kdbx"
       - "**/*.kdbx.lock"
   push:
@@ -24,6 +27,9 @@ on:
       - "requirements*.txt"
       - ".github/workflows/platform-security.yml"
       - "scripts/platform/check-no-keepass-files.sh"
+      - "scripts/validate-observability.sh"
+      - "tests/prometheus/**"
+      - ".toolchain-versions.env"
       - "**/*.kdbx"
       - "**/*.kdbx.lock"
   workflow_dispatch:
@@ -48,12 +54,33 @@ jobs:
       - name: Helm lint
         run: helm lint flask-app -f flask-app/values-production.yaml
 
-      - name: Validate proposed observability resources
+      - name: Install pinned promtool
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .toolchain-versions.env
+          archive="prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz"
+          curl --fail --location --retry 3 \
+            --output "/tmp/${archive}" \
+            "https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/${archive}"
+          echo "${PROMETHEUS_LINUX_AMD64_SHA256}  /tmp/${archive}" | sha256sum --check --strict
+          tar --extract --gzip --file "/tmp/${archive}" --directory /tmp \
+            "prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool"
+          mkdir -p "$RUNNER_TEMP/promtool-bin"
+          install "/tmp/prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool" "$RUNNER_TEMP/promtool-bin/promtool"
+          echo "$RUNNER_TEMP/promtool-bin" >> "$GITHUB_PATH"
+          export PATH="$RUNNER_TEMP/promtool-bin:$PATH"
+          promtool --version
+
+      - name: Validate proposed observability resources (blocking PromQL gate)
+        env:
+          REQUIRE_PROMTOOL: "true"
         run: scripts/validate-observability.sh
 
       - name: Render production chart
         run: |
           helm template flask-web-prod flask-app \
+            --namespace production \
             -f flask-app/values-production.yaml \
             > /tmp/flask-production.yaml
 
@@ -90,7 +117,7 @@ jobs:
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
         with:
           scan-type: fs
-          skip-setup-trivy: true
+          skip-setup-trivy: false
           scan-ref: .
           scanners: vuln,secret,misconfig
           format: sarif

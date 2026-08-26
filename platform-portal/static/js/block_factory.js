@@ -1,6 +1,27 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const form = document.querySelector("#block-factory-form");
   const factory = document.querySelector("[data-factory-accessories]");
-  if (!factory) return;
+  if (!form || !factory) return;
+  const preview = document.querySelector("[data-factory-preview]");
+  const accept = document.querySelector("[data-accept-proposal]");
+  const staleNotice = document.querySelector("[data-preview-stale]");
+  const reasonWrap = document.querySelector("[data-override-reason]");
+  const reason = form.elements.namedItem("override_reason");
+  let dirty = preview?.classList.contains("is-stale") || false;
+
+  const markPreviewStale = () => {
+    if (!preview || dirty) return;
+    dirty = true;
+    preview.classList.add("is-stale");
+    if (staleNotice) staleNotice.hidden = false;
+    if (accept) {
+      accept.disabled = true;
+      accept.setAttribute("aria-disabled", "true");
+    }
+    if (reasonWrap) reasonWrap.hidden = false;
+    if (reason instanceof HTMLTextAreaElement) reason.required = true;
+  };
+
   const rows = factory.querySelector("[data-accessory-rows]");
   const template = factory.querySelector("[data-accessory-template]");
   const summary = factory.querySelector("[data-accessory-summary]");
@@ -11,18 +32,39 @@ document.addEventListener("DOMContentLoaded", () => {
       : "No assistance selected.";
   };
   const bind = (row) => {
-    row.querySelector("[data-remove-accessory]").onclick = () => { row.remove(); updateSummary(); };
-    row.querySelector("[data-move-up]").onclick = () => row.previousElementSibling && rows.insertBefore(row, row.previousElementSibling);
-    row.querySelector("[data-move-down]").onclick = () => row.nextElementSibling && rows.insertBefore(row.nextElementSibling, row);
+    row.querySelector("[data-remove-accessory]").onclick = () => { row.remove(); updateSummary(); markPreviewStale(); };
+    row.querySelector("[data-move-up]").onclick = () => { if (row.previousElementSibling) { rows.insertBefore(row, row.previousElementSibling); markPreviewStale(); } };
+    row.querySelector("[data-move-down]").onclick = () => { if (row.nextElementSibling) { rows.insertBefore(row.nextElementSibling, row); markPreviewStale(); } };
   };
   rows.querySelectorAll(".factory-accessory-row").forEach(bind);
   factory.querySelector("[data-add-accessory]").onclick = () => {
     const row = template.content.firstElementChild.cloneNode(true);
-    rows.append(row); bind(row); updateSummary(); row.querySelector("select").focus();
+    rows.append(row); bind(row); updateSummary(); markPreviewStale(); row.querySelector("select").focus();
   };
   factory.querySelector("[data-accessory-filter]").addEventListener("input", (event) => {
     const query = event.target.value.toLowerCase();
     factory.querySelectorAll("option[data-search]").forEach((option) => option.hidden = !option.dataset.search.toLowerCase().includes(query));
   });
+  form.addEventListener("input", (event) => {
+    if (event.target.name !== "override_reason") markPreviewStale();
+  });
+  form.addEventListener("change", (event) => {
+    if (event.target.name !== "override_reason") markPreviewStale();
+  });
+
+  const errorSummary = form.querySelector("[data-error-summary]");
+  if (errorSummary) {
+    errorSummary.focus();
+    const invalid = form.querySelector('[aria-invalid="true"]');
+    errorSummary.querySelector("a")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      invalid?.focus();
+    });
+    if (reason instanceof HTMLTextAreaElement && reason.getAttribute("aria-invalid") === "true") {
+      reasonWrap.hidden = false;
+      reason.required = true;
+      reason.focus();
+    }
+  }
   updateSummary();
 });

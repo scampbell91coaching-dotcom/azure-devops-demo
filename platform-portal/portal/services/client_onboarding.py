@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..models.account_token import AccountToken, AccountTokenPurpose
+from ..models.account_token import AccountToken, AccountTokenPurpose, DeliveryState
 from ..models.athlete import Athlete
 from ..models.athlete_state import AthleteStateFact
 from ..models.checkins import AthleteCheckinSettings
@@ -40,19 +40,24 @@ class ClientOnboarding:
 
 
 def _has_invitation(athlete_id: int) -> bool:
-    invitation = (
+    invitations = (
         AccountToken.query.filter_by(
             athlete_id=athlete_id,
             purpose=AccountTokenPurpose.INVITATION.value,
         )
         .order_by(AccountToken.created_at.desc(), AccountToken.id.desc())
-        .first()
+        .all()
     )
     # A historical invitation is audit evidence, not proof that an athlete can
     # still activate.  Treating expired links as complete strands onboarding on
     # the account step and prevents the coach from issuing a recovery link.
-    return invitation is not None and (
-        invitation.consumed_at is not None or invitation.is_available
+    if not invitations:
+        return False
+    # Consumption is durable success even when an older delivery record was
+    # retained.  Otherwise only confirmed delivery advances onboarding.
+    return any(invitation.consumed_at is not None for invitation in invitations) or (
+        invitations[0].is_available
+        and invitations[0].delivery_state == DeliveryState.SENT
     )
 
 

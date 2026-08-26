@@ -22,6 +22,7 @@ class AthleteStateFact(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="CASCADE"), nullable=False, index=True)
     fact_type = db.Column(db.String(80), nullable=False, index=True)
     value_json = db.Column(db.JSON, nullable=False)
@@ -40,6 +41,7 @@ class CoachTechnicalObservation(db.Model):  # type: ignore[name-defined]
     __tablename__ = "coach_technical_observations"
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="CASCADE"), nullable=False, index=True)
     lift = db.Column(db.String(20), nullable=False, index=True)
     observation = db.Column(db.Text, nullable=False)
@@ -62,6 +64,7 @@ class AthleteConstraintFlag(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="CASCADE"), nullable=False, index=True)
     flag_kind = db.Column(db.String(20), nullable=False)
     label = db.Column(db.String(160), nullable=False)
@@ -79,6 +82,7 @@ class AthleteStateSignal(db.Model):  # type: ignore[name-defined]
     __tablename__ = "athlete_state_signals"
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="CASCADE"), nullable=False, index=True)
     snapshot_id = db.Column(db.String(36), nullable=False, index=True)
     signal_type = db.Column(db.String(80), nullable=False, index=True)
@@ -100,6 +104,7 @@ class AthleteStateRecommendation(db.Model):  # type: ignore[name-defined]
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="CASCADE"), nullable=False, index=True)
     recommendation_type = db.Column(db.String(80), nullable=False, index=True)
     recommendation_json = db.Column(db.JSON, nullable=False)
@@ -118,6 +123,7 @@ class AthleteStateOverride(db.Model):  # type: ignore[name-defined]
     __tablename__ = "athlete_state_overrides"
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey("organisations.id", ondelete="RESTRICT"), nullable=True, index=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athletes.id", ondelete="CASCADE"), nullable=False, index=True)
     target_type = db.Column(db.String(30), nullable=False)
     target_ref = db.Column(db.String(160), nullable=False)

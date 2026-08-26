@@ -14,6 +14,25 @@
 
 .block-factory-form { display: grid; gap: 0; border-bottom: 1px solid var(--coach-border); }
 
+.factory-error-summary,
+.factory-stale-notice {
+  margin: .75rem 0;
+  border-left: 4px solid #d85c5c;
+  padding: .8rem 1rem;
+  background: var(--coach-panel-soft);
+}
+.factory-error-summary p, .factory-error-summary ul { margin: .3rem 0 0; }
+.factory-error-summary:focus { outline: 2px solid var(--coach-focus); outline-offset: 2px; }
+.factory-stale-notice { border-left-color: var(--coach-accent); font-weight: 800; }
+.factory-preview.is-stale .factory-preview__grid,
+.factory-preview.is-stale .factory-preview__intelligence { opacity: .62; }
+.factory-preview-guidance { align-self: center; margin: 0 auto 0 0; color: var(--coach-muted); font-size: .78rem; }
+.factory-override-reason { grid-column: 1 / -1; }
+.factory-override-reason textarea { box-sizing: border-box; width: 100%; min-height: 6rem; }
+.factory-accessory-error { grid-column: 1 / -1; }
+.block-factory-form [aria-invalid="true"] { border-color: #d85c5c; }
+.proposal-actions button:disabled { cursor: not-allowed; opacity: .55; }
+
 .factory-context,
 .factory-intent {
   display: grid;
@@ -72,6 +91,8 @@
   justify-content: flex-end;
   border-top: 1px solid var(--coach-border);
   padding: .8rem 0;
+  gap: .75rem;
+  align-items: center;
 }
 
 .factory-preview { margin-top: .25rem; border-top: 2px solid var(--coach-accent); }
@@ -116,6 +137,8 @@
   .factory-accessory-row [data-remove-accessory] { grid-column: 1 / -1; }
   .proposal-actions { align-items: stretch; flex-direction: column; }
   .proposal-actions > * { box-sizing: border-box; width: 100%; }
+  .block-factory-form .coach-form__actions { align-items: stretch; flex-direction: column; }
+  .block-factory-form .coach-form__actions > * { box-sizing: border-box; width: 100%; }
   .factory-decision-details__body { grid-template-columns: minmax(0, 1fr); }
   .factory-decision-details__body > * { min-width: 0; overflow-wrap: anywhere; }
   .factory-decision-details__body .table-wrap { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }

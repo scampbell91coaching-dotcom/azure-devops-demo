@@ -302,9 +302,13 @@ test('Block Factory persists more than three coach-selected accessories per sess
 
   await page.getByRole('button', { name: 'Preview' }).click();
 
-  const previewAssistanceTotal = (await page.locator('.factory-preview__count').allTextContents())
-    .reduce((total, text) => total + Number(text.match(/(\d+) assistance exercises?/)?.[1] ?? 0), 0);
-  expect(previewAssistanceTotal).toBe(accessoryCount);
+  const previewAssistanceCounts = await page
+    .locator('.factory-preview__count')
+    .evaluateAll(elements => elements.map(element =>
+      Number(element.textContent?.match(/(\d+) assistance exercises?/)?.[1] ?? 0)
+    ));
+  expect(previewAssistanceCounts.reduce((total, count) => total + count, 0)).toBe(12);
+  expect(Math.max(...previewAssistanceCounts)).toBeGreaterThan(3);
 
   await page.getByRole('button', { name: 'Accept proposal' }).click();
 
@@ -317,15 +321,27 @@ test('Block Factory persists more than three coach-selected accessories per sess
   const sessions = page.getByTestId('programming-session');
   await expect(sessions).toHaveCount(3);
 
-  const persistedCount = await page.getByTestId('assistance-provenance').count();
-  expect(persistedCount).toBe(accessoryCount);
+  const persistedCounts: number[] = [];
+  for (let index = 0; index < 3; index += 1) {
+    persistedCounts.push(
+      await sessions.nth(index).getByTestId('assistance-provenance').count()
+    );
+  }
+  expect(persistedCounts.reduce((total, count) => total + count, 0)).toBe(12);
+  expect(Math.max(...persistedCounts)).toBeGreaterThan(3);
 
   await page.reload();
 
-  await expect(page.getByTestId('assistance-provenance')).toHaveCount(accessoryCount);
+  for (let index = 0; index < 3; index += 1) {
+    await expect(
+      page.getByTestId('programming-session')
+        .nth(index)
+        .getByTestId('assistance-provenance')
+    ).toHaveCount(persistedCounts[index]);
+  }
 });
 
-test('Block Factory automatic assistance uses enabled library metadata and persists', async ({ page }) => {
+test('Block Factory automatic assistance falls back to suitable library metadata and persists', async ({ page }) => {
   await page.goto('/programming/factory');
   await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
   await page.getByLabel('Block name').fill('Automatic accessory fallback block');
@@ -363,6 +379,10 @@ test('Block Factory previews taxonomy-backed exposures with zero assistance and 
   await page.goto('/programming/factory');
   await page.getByLabel('Athlete').selectOption({ label: 'Sam Morgan' });
   await expect(page.getByText('No assistance selected.')).toBeVisible();
+  await page.getByLabel('Training days').fill('3');
+  await page.getByLabel('Squat frequency').fill('1');
+  await page.getByLabel('Bench frequency').fill('1');
+  await page.getByLabel('Deadlift frequency').fill('1');
   await page.getByLabel('Selection mode').selectOption('none');
   await page.getByRole('button', { name: 'Preview' }).click();
   await expect(page.getByRole('heading', { name: 'Proposal explanation' })).toBeVisible();
@@ -376,7 +396,10 @@ test('Block Factory previews taxonomy-backed exposures with zero assistance and 
 
   await expect(page.getByText(/Incomplete data:/)).toBeVisible();
   await expect(page.getByText('Reported fatigue:', { exact: false })).toHaveCount(0);
-  await expect(page.getByText(/0 assistance exercises/)).toHaveCount(4);
+  const zeroAssistanceDays = page.locator('.factory-preview__count', {
+    hasText: '0 assistance exercises',
+  });
+  await expect(zeroAssistanceDays).toHaveCount(3);
   await expect(page.getByText('Accessory Day', { exact: false })).toHaveCount(0);
 });
 
@@ -402,7 +425,7 @@ test('Block Factory edit presents coach override provenance', async ({ page }) =
   await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
   await page.getByRole('button', { name: 'Preview' }).click();
   await page.getByLabel('Block name').fill('Coach adjusted proposal');
-  await page.getByLabel('Coach override reason (required after editing)').fill('Meet timing requires a clearer block label');
+  await page.getByLabel('Coach override reason (required)').fill('Meet timing requires a clearer block label');
   await page.getByRole('button', { name: 'Preview' }).click();
   await expect(page.getByTestId('coach-override-provenance')).toContainText('Meet timing requires a clearer block label');
   await expect(page.getByTestId('coach-override-provenance')).toContainText('coach.e2e@example.test');
@@ -413,12 +436,34 @@ test('Block Factory rejects an edit without the required reason', async ({ page 
   await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
   await page.getByRole('button', { name: 'Preview' }).click();
   await page.getByLabel('Block name').fill('Unreasoned browser edit');
+  await expect(page.getByRole('button', { name: 'Accept proposal' })).toBeDisabled();
+  await expect(page.getByText('This preview is out of date. Generate preview again before accepting.')).toBeVisible();
+  await expect(page.getByLabel('Coach override reason (required)')).toBeVisible();
+  await page.locator('#block-factory-form').evaluate((form: HTMLFormElement) => { form.noValidate = true; });
   const rejected = page.waitForResponse(response =>
     response.url().endsWith('/programming/factory/preview') && response.request().method() === 'POST'
   );
   await page.getByRole('button', { name: 'Preview' }).click();
-  expect((await rejected).status()).toBe(400);
-  await expect(page.getByText(/requires a coach override reason/)).toBeVisible();
+  expect((await rejected).status()).toBe(422);
+  await expect(page.locator('[data-error-summary]')).toContainText(
+    'Editing a generated proposal requires a coach override reason.'
+  );
+  await expect(page.getByLabel('Block name')).toHaveValue('Unreasoned browser edit');
+  const overrideReason = page.getByLabel('Coach override reason (required)');
+  await expect(overrideReason).toHaveAttribute('aria-invalid', 'true');
+  await expect(overrideReason).toBeFocused();
+});
+
+test('Block Factory re-preview enables acceptance after a proposal edit', async ({ page }) => {
+  await page.goto('/programming/factory');
+  await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await expect(page.getByRole('button', { name: 'Accept proposal' })).toBeEnabled();
+  await page.getByLabel('Block name').fill('Re-previewed proposal');
+  await expect(page.getByRole('button', { name: 'Accept proposal' })).toBeDisabled();
+  await page.getByLabel('Coach override reason (required)').fill('Use the coach-facing block name');
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await expect(page.getByRole('button', { name: 'Accept proposal' })).toBeEnabled();
 });
 
 test('Block Factory rejects a stale superseded proposal', async ({ page }) => {
@@ -429,7 +474,7 @@ test('Block Factory rejects a stale superseded proposal', async ({ page }) => {
     Array.from(new FormData(form as HTMLFormElement).entries()).map(([key, value]) => [key, String(value)])
   );
   await page.getByLabel('Block name').fill('Superseding browser edit');
-  await page.getByLabel('Coach override reason (required after editing)').fill('Supersede the first browser proposal');
+  await page.getByLabel('Coach override reason (required)').fill('Supersede the first browser proposal');
   await page.getByRole('button', { name: 'Preview' }).click();
   const stale = await page.evaluate(async fields => {
     const response = await fetch('/programming/factory', {

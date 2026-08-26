@@ -6,6 +6,7 @@ graph alongside the powerlifting workflow records.
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -15,6 +16,7 @@ import pytest
 from portal import create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
+from portal.models.athlete_state import AthleteStateRecommendation
 from portal.models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from portal.models.meal_plan import MealPlanAssignment, MealPlanTemplate
 from portal.models.nutrition_prescription import NutritionMacroPrescription
@@ -206,6 +208,16 @@ def _coach_a_client(app):
     return client
 
 
+def _coach_b_client(app):
+    client = app.test_client()
+    seed = app.config["TENANT_SEED"]
+    with client.session_transaction() as signed_in:
+        signed_in["user_id"] = seed.organisation_b.coach_id
+        signed_in["authenticated_at"] = time.time()
+        signed_in["csrf_token"] = "tenant-b-csrf"
+    return client
+
+
 def test_coach_list_does_not_disclose_similarly_named_athlete_from_other_org(
     tenant_app,
 ):
@@ -344,6 +356,40 @@ def test_both_factories_reject_other_org_athlete(tenant_app, path):
 
     with tenant_app.app_context():
         assert TrainingBlock.query.filter_by(name="Cross tenant block").first() is None
+
+
+def test_coach_cannot_accept_another_coachs_signed_factory_proposal(tenant_app):
+    seed = tenant_app.config["TENANT_SEED"]
+    preview = _coach_b_client(tenant_app).post(
+        "/programming/factory/preview",
+        data={
+            "csrf_token": "tenant-b-csrf",
+            "athlete_id": seed.organisation_b.athlete_id,
+            "name": "South signed proposal",
+            "week_count": 1,
+            "training_days": 3,
+            "squat_frequency": 1,
+            "bench_frequency": 1,
+            "deadlift_frequency": 1,
+        },
+    )
+    proposal = re.search(rb'name="proposal_id" value="(\d+)"', preview.data)
+    integrity = re.search(rb'name="proposal_integrity" value="([0-9a-f]+)"', preview.data)
+    assert preview.status_code == 200 and proposal and integrity
+
+    response = _coach_a_client(tenant_app).post(
+        "/programming/factory",
+        data={
+            "csrf_token": "tenant-a-csrf",
+            "proposal_id": proposal.group(1).decode(),
+            "proposal_integrity": integrity.group(1).decode(),
+        },
+    )
+    assert response.status_code == 404
+    with tenant_app.app_context():
+        stored = db.session.get(AthleteStateRecommendation, int(proposal.group(1)))
+        assert stored.status == "proposed"
+        assert TrainingBlock.query.filter_by(name="South signed proposal").first() is None
 
 
 def test_coach_cannot_read_other_org_checkin_direct_id(tenant_app):

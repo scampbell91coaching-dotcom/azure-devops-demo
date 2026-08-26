@@ -62,6 +62,9 @@ resources:
     memory: 512Mi
 
 readinessProbe:
+  # /health is the compatibility endpoint implemented by both the pinned
+  # release and newer releases.  Do not switch this during an image-independent
+  # GitOps reconciliation.
   path: /health
   initialDelaySeconds: 5
   periodSeconds: 10
@@ -134,6 +137,7 @@ affinity:
 # label and Alertmanager routing described in docs/production-observability.md.
 monitoring:
   enabled: true
+  runbookBaseUrl: https://github.com/scampbell91coaching-dotcom/azure-devops-demo/blob/main/docs/production-observability.md
   serviceMonitor:
     enabled: true
     interval: 30s

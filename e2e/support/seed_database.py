@@ -585,10 +585,15 @@ def seed_database(app: Flask) -> None:
             exercise.active = True
             exercise.accessory_suitable = True
             exercise.auto_select = False
-        # Automatic selection is an explicit hard gate. Keep one deterministic
-        # browser-fixture candidate enabled so the automatic factory path tests
-        # selection and persistence rather than the intentional-empty state.
-        pulldown.auto_select = True
+        for exercise, movement_pattern, technical_purpose, lift_relevance in (
+            (pulldown, "vertical_pull", "upper-back stability", "bench"),
+            (split_squat, "knee_extension", "quad strength", "squat"),
+            (plank, "trunk", "low-fatigue technical support", "all"),
+        ):
+            exercise.auto_select = True
+            exercise.movement_pattern = movement_pattern
+            exercise.technical_purposes = f'["{technical_purpose}"]'
+            exercise.lift_relevance = f'["{lift_relevance}"]'
         extra_accessory_specs = (
             ("Leg Extension", "lower body", 2),
             ("Leg Curl", "lower body", 2),

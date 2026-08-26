@@ -32,9 +32,11 @@ from .models.programming import (
     TrainingWeek,
 )
 from .models.warmup import WarmupAssignment, WarmupProtocol, WarmupProtocolStep
-from .programming_services.revisions import append_revision
+from .programming_services.revisions import append_revision, authored_snapshot
 from .services.accessory_intelligence import AccessoryIntelligence
 from .services.exposure_intelligence import weekly_exposure_intents
+from .services.prescription_planner import PrescriptionContext, PrescriptionPlanner
+from .services.variation_selector import VariationContext, VariationSelector
 from .services.athlete_state import latest_facts
 from .services.programming_athlete_state import (
     accessory_readiness_multiplier,
@@ -42,6 +44,7 @@ from .services.programming_athlete_state import (
 )
 from .services.proposal_explanations import ProposalExplanationService
 from .services.weekly_programming_intelligence import WeeklyProgrammingIntelligence
+from .services.weekly_planner import WeeklyPlanner
 from .services.weekly_accessory_planner import (
     WeeklyAccessoryCandidate,
     WeeklyAccessoryContext,
@@ -344,8 +347,8 @@ def _validate_frequency_request(factory: FactoryRequest) -> None:
         )
 
 
-def _day_sequence(factory: FactoryRequest) -> list[str]:
-    """Build one weekly schedule whose primary lift counts match the request."""
+def _legacy_day_sequence(factory: FactoryRequest) -> list[str]:
+    """Compatibility schedule for out-of-policy historical requests."""
     _validate_frequency_request(factory)
 
     # This established six-day distribution is coach-reviewed golden output.
@@ -387,6 +390,24 @@ def _day_sequence(factory: FactoryRequest) -> list[str]:
             "the requested exposures cannot anchor every training day."
         )
     return list(min(candidates)[2])
+
+
+def _day_sequence(factory: FactoryRequest) -> list[str]:
+    """Compatibility projection of the coaching-led weekly skeleton.
+
+    Historical callers can still render requests outside Wave 3's supported
+    coaching bounds; new proposals never use that fallback.
+    """
+    try:
+        return WeeklyPlanner().plan(
+            training_days=factory.training_days,
+            squat_frequency=factory.squat_frequency,
+            bench_frequency=factory.bench_frequency,
+            deadlift_frequency=factory.deadlift_frequency,
+            goal=factory.goal,
+        ).day_sequence
+    except ValueError:
+        return _legacy_day_sequence(factory)
 
 
 def _candidate_exercises(
@@ -464,6 +485,7 @@ def _week_rpe(
     factory: FactoryRequest,
     week_position: int,
 ) -> float:
+    """Legacy rendering helper; not authoritative for new prescriptions."""
     start, end = GOAL_RPE[factory.goal]
 
     if factory.week_count == 1:
@@ -613,10 +635,21 @@ def _accessory_pool() -> list[dict[str, Any]]:
 
 
 def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
-    days = _day_sequence(factory)
-    exposure_intents = weekly_exposure_intents(
-        days, goal=factory.goal, deadlift_style=factory.deadlift_style
+    _validate_frequency_request(factory)
+    # WeeklyPlanner is authoritative for new proposals.  _day_sequence remains
+    # a compatibility helper for historical rendering and direct legacy calls.
+    weekly_structure = WeeklyPlanner().plan(
+        training_days=factory.training_days,
+        squat_frequency=factory.squat_frequency,
+        bench_frequency=factory.bench_frequency,
+        deadlift_frequency=factory.deadlift_frequency,
+        goal=factory.goal,
     )
+    days = weekly_structure.day_sequence
+    exposure_intents = weekly_exposure_intents(
+        weekly_structure, goal=factory.goal, deadlift_style=factory.deadlift_style
+    )
+    variation_selector = VariationSelector()
 
     preview: list[dict[str, Any]] = []
     selected_rows: list[Exercise] = []
@@ -649,7 +682,16 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
         # Scheduling chooses when a lift occurs; coaching intent chooses what the
         # exposure is and how it is prescribed.
         intents = exposure_intents[day_index]
-        exercises = [intent.exercise_name for intent in intents]
+        selections = [variation_selector.select(VariationContext(
+            lift_family=intent.lift_family,
+            purpose=intent.purpose,
+            stress_role=intent.stress_role,
+            # Competition deadlift style is an explicit coach input, not a
+            # catalogue inference. Other known mappings remain conservative.
+            available_exercises=((intent.exercise_name,)
+                                 if intent.purpose == "competition" else ()),
+        )) for intent in intents]
+        exercises = [selection.exercise_name for selection in selections]
         main_count = len(day_type)
         main_exercises = exercises[:main_count]
         main_exercises, adaptation_reviews, exercise_provenance = _adapt_main_exercises(
@@ -662,10 +704,14 @@ def _preview(factory: FactoryRequest) -> list[dict[str, Any]]:
         for index, exercise_name in enumerate(main_exercises):
             exposure_metadata[index]["exercise_name"] = exercise_name
             exposure_metadata[index]["exercise_provenance"] = exercise_provenance[index]
+            exposure_metadata[index]["variation_reason"] = selections[index].reason
+            exposure_metadata[index]["variation_provenance"] = selections[index].provenance
         preview.append(
             {
                 "day": day_index + 1,
                 "day_type": day_type,
+                "weekly_planner_reason": weekly_structure.days[day_index].reason,
+                "weekly_planner_provenance": list(weekly_structure.reasons),
                 "exercises": main_exercises,
                 "main_count": main_count,
                 "exposures": exposure_metadata,
@@ -865,27 +911,15 @@ def _adapt_main_exercises(
             result.append(current_name)
             provenance.append("generated")
             continue
-        alternatives = Exercise.query.filter_by(
-            lift_family=family, active=True
-        ).order_by(Exercise.specificity.desc(), Exercise.name.asc(), Exercise.id.asc()).all()
-        replacement = next(
-            (
-                item for item in alternatives
-                if item.name != current_name
-                and not (_metadata_set(item.constraint_tags) & normalised_tags)
-            ),
-            None,
+        # Constraint tags can reject a choice, but incomplete catalogue metadata
+        # cannot safely nominate an arbitrary replacement. Preserve the known
+        # mapping and make the unresolved decision explicit.
+        result.append(current_name)
+        provenance.append("requires_coach_review")
+        reviews.append(
+            f"No automatically compatible {family} alternative was available; "
+            f"review {current_name} before acceptance."
         )
-        if replacement is not None:
-            result.append(replacement.name)
-            provenance.append("constraint_adapted")
-        else:
-            result.append(current_name)
-            provenance.append("requires_coach_review")
-            reviews.append(
-                f"No automatically compatible {family} alternative was available; "
-                f"review {current_name} before acceptance."
-            )
     return result, reviews, provenance
 
 
@@ -987,7 +1021,7 @@ def _apply_active_coach_overrides(factory: FactoryRequest) -> FactoryRequest:
 
 PROPOSAL_TYPE = "weekly_programming_v7"
 ACCEPTED_PROPOSAL_TYPES = {"weekly_programming_v6", PROPOSAL_TYPE}
-PROPOSAL_VERSION = "programming-v8-accessory-weekly"
+PROPOSAL_VERSION = "programming-v10-purpose-led-variation-prescription"
 
 
 def _actor() -> str:
@@ -1026,11 +1060,166 @@ def _proposal_payload(
     return {
         "factory": _json_value(asdict(factory)),
         "preview": _json_value(scheduled_preview),
+        # This is the acceptance boundary.  Everything below is a final ORM-shaped
+        # value chosen during preview; acceptance only validates and materializes it.
+        "programme": _finalize_programme_graph(factory, scheduled_preview, intelligence),
+        "source_token": _proposal_source_token(factory.athlete_id),
         "source_context": _json_value(asdict(intelligence.data)),
         "volume_progression": _json_value(asdict(intelligence.volume)),
         "explanation": _json_value(asdict(explanation)),
         "generator_version": PROPOSAL_VERSION,
     }
+
+
+def _proposal_source_token(athlete_id: int) -> str:
+    """Fingerprint proposal inputs without invoking programming intelligence."""
+    tables = (
+        "athletes", "athlete_state_facts", "coach_technical_observations",
+        "athlete_constraint_flags", "athlete_state_overrides", "weekly_checkins",
+        "training_session_logs", "training_set_results", "training_blocks",
+        "exercises",
+    )
+    snapshot: dict[str, Any] = {}
+    for name in tables:
+        table = db.metadata.tables.get(name)
+        if table is None:
+            continue
+        statement = db.select(table)
+        if "athlete_id" in table.c:
+            statement = statement.where(table.c.athlete_id == athlete_id)
+        elif name == "athletes":
+            statement = statement.where(table.c.id == athlete_id)
+        elif name == "training_set_results":
+            logs = db.metadata.tables["training_session_logs"]
+            statement = statement.join(logs, table.c.session_log_id == logs.c.id).where(
+                logs.c.athlete_id == athlete_id
+            )
+        rows = db.session.execute(statement.order_by(table.c.id)).mappings().all()
+        snapshot[name] = [_json_value(dict(row)) for row in rows]
+    snapshot["programmes"] = [
+        authored_snapshot(block)
+        for block in TrainingBlock.query.filter_by(athlete_id=athlete_id).order_by(
+            TrainingBlock.id
+        )
+    ]
+    encoded = json.dumps(snapshot, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(encoded.encode()).hexdigest()
+
+
+def _finalize_programme_graph(
+    factory: FactoryRequest,
+    scheduled_preview: list[dict[str, Any]],
+    intelligence: Any,
+) -> dict[str, Any]:
+    """Apply the existing acceptance transformations before signing the proposal."""
+    graph: dict[str, Any] = {"schema_version": 1, "block": {
+        "name": factory.name, "objective": None, "status": "draft",
+    }, "weeks": []}
+    exercise_names = {name for day in scheduled_preview for name in day["exercises"]}
+    exercise_rows = {
+        item.name: item for item in Exercise.query.filter(Exercise.name.in_(exercise_names)).all()
+    }
+    prescription_planner = PrescriptionPlanner()
+    for week_position in range(1, factory.week_count + 1):
+        volume_week = intelligence.volume.weeks[week_position - 1]
+        exposure_seen = {family: 0 for family in ("squat", "bench", "deadlift")}
+        intents_by_family = {
+            family: [intent for day in scheduled_preview for intent in day.get("exposures", [])
+                     if intent["lift_family"] == family]
+            for family in exposure_seen
+        }
+        allocations = {
+            family: _allocate_weekly_sets(volume_week.sbd_sets[family], intents_by_family[family])
+            for family in exposure_seen
+        }
+        week = {"name": f"Week {week_position}", "position": week_position,
+                "notes": None, "sessions": []}
+        for day in scheduled_preview:
+            position = int(day["day"])
+            day_type = str(day["day_type"])
+            accessories = {item["name"]: item for item in day.get("accessories", [])}
+            main_intents = list(day.get("exposures", []))
+            families = [{"S": "squat", "B": "bench", "D": "deadlift"}[code]
+                        for code in day_type]
+            session = {
+                "name": f"Day {position} · {day_type}", "day_label": f"Day {position}",
+                "day_type": day_type, "position": position, "notes": None,
+                "warmups": ["session-general"], "prescriptions": [],
+            }
+            for exercise_position, exercise_name in enumerate(day["exercises"], 1):
+                sets, reps = _sets_and_reps(factory, exercise_position)
+                row = exercise_rows.get(exercise_name)
+                accessory = accessories.get(exercise_name)
+                slot = None
+                provenance = accessory.get("provenance", "coach_selected") if accessory else "coach_selected"
+                notes = accessory.get("reason") if accessory else None
+                week_accessory = None
+                if exercise_position <= int(day["main_count"]):
+                    family = families[exercise_position - 1]
+                    intent = main_intents[exercise_position - 1]
+                    allocation_index = exposure_seen[family]
+                    sets = allocations[family][allocation_index]
+                    exposure_seen[family] += 1
+                    planned_prescription = prescription_planner.plan(PrescriptionContext(
+                        purpose=str(intent["purpose"]),
+                        stress_role=str(intent["stress_role"]),
+                        phase=factory.goal,
+                        week=week_position,
+                        week_count=factory.week_count,
+                        target_rpe=float(volume_week.target_rpe),
+                        allocated_sets=sets,
+                    ))
+                    component = planned_prescription.components[0]
+                    sets, reps = component.sets, component.reps
+                    slot = {
+                        "position": exercise_position,
+                        "lift_family": family,
+                        # Compatibility projection for the migration-free ORM.
+                        "exposure_role": intent["legacy_role"],
+                    }
+                    # ORM provenance remains the migration-free compatibility
+                    # projection; richer selector provenance is signed in the
+                    # exposure metadata and explanation.
+                    exercise_provenance = str(intent.get("exercise_provenance", "generated"))
+                    provenance = (exercise_provenance
+                                  if exercise_provenance == "coach_selected"
+                                  else "generated")
+                    notes = (f"{intent.get('variation_reason', intent['reason'])} "
+                             f"{planned_prescription.reason}")
+                    rpe = component.rpe
+                    effective_cap = min(
+                        value for value in (
+                            volume_week.effective_rpe_cap, intent.get("rpe_cap")
+                        ) if value is not None
+                    ) if any(value is not None for value in (
+                        volume_week.effective_rpe_cap, intent.get("rpe_cap")
+                    )) else None
+                    if effective_cap is not None:
+                        rpe = min(float(effective_cap), rpe)
+                    session["warmups"].append(family)
+                else:
+                    if row is not None:
+                        sets, reps = row.default_sets or sets, row.default_reps or reps
+                    if accessory and accessory.get("prescriptions"):
+                        week_accessory = next((value for value in accessory["prescriptions"]
+                                               if int(value["week"]) == week_position), None)
+                    if week_accessory:
+                        sets, reps = int(week_accessory["sets"]), str(week_accessory["reps"])
+                    rpe = (float(week_accessory["rpe"]) if week_accessory else
+                           min(9.0, row.default_rpe if row and row.default_rpe is not None
+                               else volume_week.target_rpe + 0.5))
+                session["prescriptions"].append({
+                    "exercise_id": row.id if row else None, "exercise_name": exercise_name,
+                    "position": exercise_position, "sets": sets, "reps": reps,
+                    "prescription_type": "rpe", "rpe": rpe,
+                    "rest_seconds": (int(week_accessory["rest_seconds"]) if week_accessory
+                                     else row.default_rest_seconds if row else None),
+                    "notes": notes, "provenance": provenance, "slot_role": "top_set" if slot else None,
+                    "lift_slot": slot,
+                })
+            week["sessions"].append(session)
+        graph["weeks"].append(week)
+    return _json_value(graph)
 
 
 def _reference_block(athlete_id: int) -> dict[str, Any] | None:
@@ -1077,9 +1266,7 @@ def _proposal_explanation(
         factory=factory,
         weekly_structure=intelligence.weekly_structure,
         context=intelligence.data,
-        rpe_values=[
-            _week_rpe(factory, week) for week in range(1, factory.week_count + 1)
-        ],
+        rpe_values=[week.target_rpe for week in intelligence.volume.weeks],
         volume_values=[weekly_sets] * factory.week_count,
         reference_block=_reference_block(factory.athlete_id),
         assistance_reasons={
@@ -1116,11 +1303,117 @@ def _load_proposal() -> tuple[AthleteStateRecommendation, dict[str, Any]]:
     ):
         abort(404)
     require_athlete_access(proposal.athlete_id)
+    if proposal.status != "proposed":
+        abort(409, description="Proposal was already decided and cannot be replayed.")
     payload = proposal.recommendation_json
+    if (
+        not isinstance(payload, dict)
+        or payload.get("generator_version") != proposal.generator_version
+    ):
+        abort(409, description="Proposal version check failed; preview again.")
     expected = _proposal_integrity(payload)
     if not hmac.compare_digest(expected, supplied_integrity):
         abort(409, description="Proposal integrity check failed; preview again.")
     return proposal, payload
+
+
+def _validate_programme_graph(graph: Any) -> dict[str, Any]:
+    """Validate signed persistence data without deriving or changing any value."""
+    if not isinstance(graph, dict) or graph.get("schema_version") != 1:
+        raise ValueError("Unsupported proposal programme graph")
+    block = graph.get("block")
+    weeks = graph.get("weeks")
+    if not isinstance(block, dict) or not isinstance(block.get("name"), str) or not isinstance(weeks, list) or not weeks:
+        raise ValueError("Proposal programme graph is incomplete")
+    for week_position, week in enumerate(weeks, 1):
+        if not isinstance(week, dict) or week.get("position") != week_position or not isinstance(week.get("sessions"), list):
+            raise ValueError("Proposal week ordering is invalid")
+        for session_position, session in enumerate(week["sessions"], 1):
+            if not isinstance(session, dict) or session.get("position") != session_position:
+                raise ValueError("Proposal session ordering is invalid")
+            prescriptions = session.get("prescriptions")
+            if not isinstance(prescriptions, list) or not prescriptions:
+                raise ValueError("Proposal session prescriptions are invalid")
+            for position, item in enumerate(prescriptions, 1):
+                if not isinstance(item, dict) or item.get("position") != position:
+                    raise ValueError("Proposal prescription ordering is invalid")
+                if not isinstance(item.get("exercise_name"), str) or not item["exercise_name"].strip():
+                    raise ValueError("Proposal exercise identity is invalid")
+                if isinstance(item.get("sets"), bool) or not isinstance(item.get("sets"), int) or item["sets"] < 1:
+                    raise ValueError("Proposal sets are invalid")
+                rpe = item.get("rpe")
+                if isinstance(rpe, bool) or not isinstance(rpe, (int, float)) or not 1 <= rpe <= 10:
+                    raise ValueError("Proposal RPE is invalid")
+                slot = item.get("lift_slot")
+                if slot is not None:
+                    if (not isinstance(slot, dict) or slot.get("position") != position
+                            or slot.get("lift_family") not in {"squat", "bench", "deadlift"}):
+                        raise ValueError("Proposal lift slot is invalid")
+                    # The model validator deliberately includes historical readable roles.
+                    ProgrammingLiftSlot(
+                        position=position, lift_family=slot["lift_family"],
+                        exposure_role=slot.get("exposure_role"),
+                    ).validate()
+    return graph
+
+
+def _materialize_programme_graph(
+    graph: dict[str, Any], athlete: Athlete
+) -> TrainingBlock:
+    block_data = graph["block"]
+    block = TrainingBlock(
+        athlete=athlete, name=block_data["name"],
+        objective=block_data.get("objective"), status=block_data.get("status", "draft"),
+    )
+    db.session.add(block)
+    db.session.flush()
+    protocols = _factory_warmup_protocols()
+    for week_data in graph["weeks"]:
+        week = TrainingWeek(
+            block=block, name=week_data["name"], position=week_data["position"],
+            notes=week_data.get("notes"),
+        )
+        db.session.add(week)
+        db.session.flush()
+        for session_data in week_data["sessions"]:
+            session = TrainingSession(
+                week=week, name=session_data["name"], day_label=session_data.get("day_label"),
+                position=session_data["position"], notes=session_data.get("notes"),
+            )
+            db.session.add(session)
+            db.session.flush()
+            db.session.add(WarmupAssignment(
+                protocol_id=protocols["session-general"].id, athlete_id=athlete.id,
+                session_id=session.id, reason="Factory-generated session preparation",
+            ))
+            for item in session_data["prescriptions"]:
+                slot = None
+                slot_data = item.get("lift_slot")
+                if slot_data:
+                    slot = ProgrammingLiftSlot(
+                        session=session, position=slot_data["position"],
+                        lift_family=slot_data["lift_family"],
+                        exposure_role=slot_data.get("exposure_role"),
+                    )
+                    db.session.add(slot)
+                    db.session.flush()
+                    db.session.add(WarmupAssignment(
+                        protocol_id=protocols[slot.lift_family].id, athlete_id=athlete.id,
+                        session_id=session.id, lift_slot_id=slot.id,
+                        reason=f"Factory-generated {slot.lift_family} preparation",
+                    ))
+                exercise = db.session.get(Exercise, item.get("exercise_id")) if item.get("exercise_id") else None
+                if exercise is not None and exercise.name != item["exercise_name"]:
+                    raise ValueError("Proposal exercise identity no longer matches")
+                db.session.add(ExercisePrescription(
+                    session=session, exercise=exercise, lift_slot=slot,
+                    slot_role=item.get("slot_role"), provenance=item.get("provenance"),
+                    exercise_name=item["exercise_name"], position=item["position"],
+                    sets=item["sets"], reps=item.get("reps"),
+                    prescription_type=item.get("prescription_type"), rpe=item["rpe"],
+                    rest_seconds=item.get("rest_seconds"), notes=item.get("notes"),
+                ))
+    return block
 
 
 def _mark_decided(proposal: AthleteStateRecommendation, status: str) -> bool:
@@ -1136,14 +1429,7 @@ def _mark_decided(proposal: AthleteStateRecommendation, status: str) -> bool:
     return True
 
 
-@block_factory_bp.get("/programming/factory")
-def wizard():
-    selected_athlete_id = request.args.get("athlete_id", type=int)
-    selected_athlete = (
-        require_athlete_access(selected_athlete_id)
-        if selected_athlete_id is not None
-        else None
-    )
+def _factory_page_context() -> tuple[list[Athlete], list[Exercise]]:
     athletes = athlete_query_for_request().order_by(
         Athlete.first_name.asc(),
         Athlete.last_name.asc(),
@@ -1156,6 +1442,105 @@ def wizard():
         .order_by(Exercise.category.asc(), Exercise.name.asc())
         .all()
     )
+    return athletes, accessory_exercises
+
+
+def _validation_field(message: str) -> str | None:
+    lowered = message.casefold()
+    if "override reason" in lowered:
+        return "override_reason"
+    if "squat frequency" in lowered:
+        return "squat_frequency"
+    if "bench frequency" in lowered:
+        return "bench_frequency"
+    if "deadlift frequency" in lowered:
+        return "deadlift_frequency"
+    if "training days" in lowered or "every training day" in lowered:
+        return "training_days"
+    if "accessor" in lowered:
+        return "accessory_exercise_id"
+    if "date" in lowered:
+        return "meet_date"
+    return None
+
+
+def _request_contract_error() -> tuple[str, str] | None:
+    integer_fields = {
+        "athlete_id": (1, None, "Choose an athlete."),
+        "week_count": (1, 24, "Weeks must be between 1 and 24."),
+        "training_days": (1, 7, "Training days must be between 1 and 7."),
+        "squat_frequency": (0, 5, "Squat frequency must be between 0 and 5."),
+        "bench_frequency": (0, 7, "Bench frequency must be between 0 and 7."),
+        "deadlift_frequency": (0, 2, "Deadlift frequency must be between 0 and 2."),
+    }
+    for field, (minimum, maximum, message) in integer_fields.items():
+        raw = request.form.get(field)
+        if field != "athlete_id" and raw in (None, ""):
+            continue
+        try:
+            value = int(raw or "")
+        except ValueError:
+            return field, message
+        if value < minimum or (maximum is not None and value > maximum):
+            return field, message
+    for raw in request.form.getlist("accessory_exercise_id"):
+        try:
+            int(raw)
+        except ValueError:
+            return "accessory_exercise_id", "Choose an available accessory exercise."
+    return None
+
+
+def _render_factory_validation(
+    message: str,
+    *,
+    field: str | None = None,
+    athlete: Athlete | None = None,
+    proposal: AthleteStateRecommendation | None = None,
+    status: int = 422,
+):
+    athletes, accessory_exercises = _factory_page_context()
+    field = field or _validation_field(message)
+    errors = {field: message} if field else {"form": message}
+    context: dict[str, Any] = {
+        "athletes": athletes,
+        "accessory_exercises": accessory_exercises,
+        "form": request.form,
+        "selected_athlete": athlete,
+        "preview": None,
+        "errors": errors,
+    }
+    if proposal is not None:
+        payload = proposal.recommendation_json
+        previous_factory = _factory_from_payload(payload)
+        previous_athlete = db.session.get(Athlete, proposal.athlete_id)
+        previous_preview = payload["preview"]
+        previous_intelligence = WeeklyProgrammingIntelligence().preview(
+            previous_factory, previous_athlete, previous_preview
+        )
+        context.update(
+            preview=previous_preview,
+            intelligence=previous_intelligence,
+            explanation=_proposal_explanation(
+                previous_factory, previous_preview, previous_intelligence
+            ),
+            selected_athlete=previous_athlete,
+            proposal=proposal,
+            proposal_integrity=_proposal_integrity(payload),
+            preview_stale=True,
+        )
+    return render_template("programming/factory.html", **context), status
+
+
+@block_factory_bp.get("/programming/factory")
+def wizard():
+    selected_athlete_id = request.args.get("athlete_id", type=int)
+    selected_athlete = (
+        require_athlete_access(selected_athlete_id)
+        if selected_athlete_id is not None
+        else None
+    )
+    athletes, accessory_exercises = _factory_page_context()
 
     return render_template(
         "programming/factory.html",
@@ -1169,25 +1554,20 @@ def wizard():
 
 @block_factory_bp.post("/programming/factory/preview")
 def preview():
+    contract_error = _request_contract_error()
+    if contract_error:
+        field, message = contract_error
+        return _render_factory_validation(message, field=field)
     try:
         factory = _parse_factory_request()
     except ValueError:
-        abort(400, description="Factory dates and numeric inputs must be valid.")
+        return _render_factory_validation(
+            "Enter a valid date and whole numbers for the factory fields."
+        )
     athlete = require_athlete_access(factory.athlete_id)
     factory = _apply_active_coach_overrides(factory)
 
-    athletes = athlete_query_for_request().order_by(
-        Athlete.first_name.asc(),
-        Athlete.last_name.asc(),
-    ).all()
-    accessory_exercises = (
-        Exercise.query.filter(
-            Exercise.active.is_(True),
-            Exercise.accessory_suitable.is_(True),
-        )
-        .order_by(Exercise.category.asc(), Exercise.name.asc())
-        .all()
-    )
+    athletes, accessory_exercises = _factory_page_context()
 
     try:
         scheduled_preview = _preview(factory)
@@ -1195,7 +1575,7 @@ def preview():
             factory, athlete, scheduled_preview
         )
     except ValueError as error:
-        abort(400, description=str(error))
+        return _render_factory_validation(str(error), athlete=athlete)
 
     explanation = _proposal_explanation(
         factory, scheduled_preview, intelligence_preview
@@ -1223,9 +1603,10 @@ def preview():
             abort(409, description="Proposal integrity check failed; preview again.")
         reason = request.form.get("override_reason", "").strip()
         if previous.recommendation_json != payload and not reason:
-            abort(
-                400,
-                description="Editing a generated proposal requires a coach override reason.",
+            return _render_factory_validation(
+                "Editing a generated proposal requires a coach override reason.",
+                athlete=athlete,
+                proposal=previous,
             )
         if previous.recommendation_json != payload:
             proposal_override = AthleteStateOverride(
@@ -1271,189 +1652,24 @@ def preview():
 @block_factory_bp.post("/programming/factory")
 def generate():
     proposal, payload = _load_proposal()
-    if proposal.status != "proposed":
-        abort(409, description="Proposal was already decided and cannot be replayed.")
-    factory = _factory_from_payload(payload)
+    if proposal.generator_version != PROPOSAL_VERSION:
+        abort(409, description="Proposal must be previewed with the current version.")
     athlete = require_athlete_access(proposal.athlete_id)
-
     try:
-        scheduled_preview = _preview(factory)
-        intelligence = WeeklyProgrammingIntelligence().preview(
-            factory, athlete, scheduled_preview
-        )
+        if payload.get("source_token") != _proposal_source_token(proposal.athlete_id):
+            abort(409, description="Proposal is stale because its source data changed; preview again.")
+        graph = _validate_programme_graph(payload.get("programme"))
+        block = _materialize_programme_graph(graph, athlete)
+        append_revision(block, change_type="factory_programme_created", summary="Created programme from accepted factory proposal", reason=proposal.rationale)
+        if not _mark_decided(proposal, "accepted"):
+            abort(409, description="Proposal was already decided and cannot be replayed.")
+        db.session.commit()
     except ValueError as error:
-        abort(409, description=f"Proposal is stale: {error}")
-    explanation = _proposal_explanation(factory, scheduled_preview, intelligence)
-    current_payload = _proposal_payload(
-        factory, scheduled_preview, intelligence, explanation
-    )
-    if current_payload != payload:
-        abort(
-            409,
-            description="Proposal is stale because its source data changed; preview again.",
-        )
-    if not _mark_decided(proposal, "accepted"):
-        abort(409, description="Proposal was already decided and cannot be replayed.")
-
-    block = TrainingBlock(
-        athlete=athlete,
-        name=factory.name,
-    )
-    db.session.add(block)
-    db.session.flush()
-    warmup_protocols = _factory_warmup_protocols()
-
-    for week_position in range(1, factory.week_count + 1):
-        week = TrainingWeek(
-            block=block,
-            name=f"Week {week_position}",
-            position=week_position,
-        )
-        db.session.add(week)
-        db.session.flush()
-
-        volume_week = intelligence.volume.weeks[week_position - 1]
-        # The intelligence envelope owns bounded readiness/adherence caps. A
-        # later coach-authored cap in that envelope remains authoritative.
-        week_rpe = volume_week.target_rpe
-        exposure_seen = {family: 0 for family in ("squat", "bench", "deadlift")}
-        intents_by_family = {
-            family: [
-                intent
-                for day in scheduled_preview
-                for intent in day.get("exposures", [])
-                if intent["lift_family"] == family
-            ]
-            for family in ("squat", "bench", "deadlift")
-        }
-        set_allocations = {
-            family: _allocate_weekly_sets(
-                volume_week.sbd_sets[family], intents_by_family[family]
-            )
-            for family in ("squat", "bench", "deadlift")
-        }
-
-        for day in scheduled_preview:
-            day_index = int(day["day"]) - 1
-            day_type = str(day["day_type"])
-            exercises = list(day["exercises"])
-
-            session = TrainingSession(
-                week=week,
-                name=f"Day {day_index + 1} · {day_type}",
-                day_label=f"Day {day_index + 1}",
-                position=day_index + 1,
-            )
-            db.session.add(session)
-            db.session.flush()
-            db.session.add(WarmupAssignment(
-                protocol_id=warmup_protocols["session-general"].id,
-                athlete_id=athlete.id, session_id=session.id,
-                reason="Factory-generated session preparation",
-            ))
-
-            exercise_rows = {
-                item.name: item
-                for item in Exercise.query.filter(Exercise.name.in_(exercises)).all()
-            }
-            main_count = int(day["main_count"])
-            accessory_by_name = {
-                item["name"]: item for item in day.get("accessories", [])
-            }
-            family_by_code = {"S": "squat", "B": "bench", "D": "deadlift"}
-            main_families = [family_by_code[code] for code in day_type]
-            main_intents = list(day.get("exposures", []))
-
-            for exercise_position, exercise_name in enumerate(
-                exercises,
-                start=1,
-            ):
-                sets, reps = _sets_and_reps(
-                    factory,
-                    exercise_position,
-                )
-
-                slot = None
-                slot_role = None
-                provenance = accessory_by_name.get(exercise_name, {}).get(
-                    "provenance", "coach_selected"
-                )
-                if exercise_position <= main_count:
-                    family = main_families[exercise_position - 1]
-                    intent = main_intents[exercise_position - 1]
-                    allocation_index = exposure_seen[family]
-                    sets = set_allocations[family][allocation_index]
-                    exposure_seen[family] += 1
-                    reps = str(intent["reps"])
-                    slot = ProgrammingLiftSlot(
-                        session=session,
-                        position=exercise_position,
-                        lift_family=family,
-                        exposure_role=intent["role"],
-                    )
-                    db.session.add(slot)
-                    db.session.flush()
-                    db.session.add(WarmupAssignment(
-                        protocol_id=warmup_protocols[family].id,
-                        athlete_id=athlete.id, session_id=session.id,
-                        lift_slot_id=slot.id,
-                        reason=f"Factory-generated {family} preparation",
-                    ))
-                    slot_role = "top_set"
-                    provenance = "generated"
-
-                exercise_row = exercise_rows.get(exercise_name)
-                if exercise_position > main_count and exercise_row is not None:
-                    sets = exercise_row.default_sets or sets
-                    reps = exercise_row.default_reps or reps
-                accessory_plan = accessory_by_name.get(exercise_name)
-                week_accessory = None
-                if accessory_plan and accessory_plan.get("prescriptions"):
-                    week_accessory = next(
-                        (value for value in accessory_plan["prescriptions"]
-                         if int(value["week"]) == week_position), None
-                    )
-                if week_accessory is not None:
-                    sets = int(week_accessory["sets"])
-                    reps = str(week_accessory["reps"])
-                db.session.add(
-                    ExercisePrescription(
-                        session=session,
-                        exercise=exercise_row,
-                        lift_slot=slot,
-                        slot_role=slot_role,
-                        provenance=provenance,
-                        exercise_name=exercise_name,
-                        position=exercise_position,
-                        sets=sets,
-                        reps=reps,
-                        prescription_type="rpe",
-                        rpe=_effective_exposure_rpe(
-                            week_rpe,
-                            float(main_intents[exercise_position - 1]["rpe_offset"]),
-                            volume_week.effective_rpe_cap,
-                        )
-                        if exercise_position <= main_count
-                        else (
-                            float(week_accessory["rpe"])
-                            if week_accessory is not None
-                            else min(9.0, exercise_row.default_rpe if exercise_row and exercise_row.default_rpe is not None else week_rpe + 0.5)
-                        ),
-                        rest_seconds=(
-                            int(week_accessory["rest_seconds"])
-                            if week_accessory is not None
-                            else exercise_row.default_rest_seconds if exercise_row else None
-                        ),
-                        notes=(
-                            main_intents[exercise_position - 1]["purpose"]
-                            if exercise_position <= main_count
-                            else accessory_plan.get("reason") if accessory_plan else None
-                        ),
-                    )
-                )
-
-    append_revision(block, change_type="factory_programme_created", summary="Created programme from accepted factory proposal", reason=proposal.rationale)
-    db.session.commit()
+        db.session.rollback()
+        abort(409, description=f"Proposal materialization failed: {error}")
+    except Exception:
+        db.session.rollback()
+        raise
 
     return redirect(url_for("programming.block", block_id=block.id))
 
@@ -1461,8 +1677,6 @@ def generate():
 @block_factory_bp.post("/programming/factory/proposal/dismiss")
 def dismiss_proposal():
     proposal, _payload = _load_proposal()
-    if proposal.status != "proposed":
-        abort(409, description="Proposal was already decided and cannot be replayed.")
     if not _mark_decided(proposal, "dismissed"):
         abort(409, description="Proposal was already decided and cannot be replayed.")
     db.session.commit()

@@ -15,7 +15,10 @@ from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.athlete_state import AthleteConstraintFlag, AthleteStateOverride, AthleteStateRecommendation
 from portal.models.exercise_library import Exercise
-from portal.models.programming import TrainingBlock
+from portal.models.programming import (
+    ExercisePrescription, ProgrammeRevision, ProgrammingLiftSlot, TrainingBlock,
+    TrainingSession, TrainingWeek,
+)
 from portal.models.warmup import WarmupAssignment
 from portal.services.athlete_state import SignalDraft
 from portal.services.weekly_programming_intelligence import (
@@ -80,6 +83,34 @@ def preview_and_accept(client, data):
     )
 
 
+def normalized_persisted_programme(block):
+    return {
+        "schema_version": 1,
+        "block": {"name": block.name, "objective": block.objective, "status": block.status},
+        "weeks": [{
+            "name": week.name, "position": week.position, "notes": week.notes,
+            "sessions": [{
+                "name": session.name, "day_label": session.day_label,
+                "day_type": session.name.rsplit("·", 1)[1].strip(),
+                "position": session.position, "notes": session.notes,
+                "warmups": ["session-general"] + [slot.lift_family for slot in session.lift_slots],
+                "prescriptions": [{
+                    "exercise_id": item.exercise_id, "exercise_name": item.exercise_name,
+                    "position": item.position, "sets": item.sets, "reps": item.reps,
+                    "prescription_type": item.prescription_type, "rpe": item.rpe,
+                    "rest_seconds": item.rest_seconds, "notes": item.notes,
+                    "provenance": item.provenance, "slot_role": item.slot_role,
+                    "lift_slot": ({
+                        "position": item.lift_slot.position,
+                        "lift_family": item.lift_slot.lift_family,
+                        "exposure_role": item.lift_slot.exposure_role,
+                    } if item.lift_slot else None),
+                } for item in session.prescriptions],
+            } for session in week.sessions],
+        } for week in block.weeks],
+    }
+
+
 @pytest.mark.parametrize(
     ("training_days", "squat", "bench", "deadlift"),
     [
@@ -133,14 +164,16 @@ def test_six_day_bench_exposures_have_differentiated_coaching_intent():
         exposure for day in days for exposure in day["exposures"]
         if exposure["lift_family"] == "bench"
     ]
-    assert [item["role"] for item in bench] == [
-        "primary_volume", "secondary_strength", "technique", "low_fatigue",
-        "competition",
-    ]
-    assert len({item["exercise_name"] for item in bench}) == 5
+    assert sum(item["stress_role"] == "hard" for item in bench) == 2
+    assert {item["purpose"] for item in bench if item["stress_role"] == "hard"} == {
+        "competition_intensity", "competition_volume",
+    }
+    assert all(item["exercise_name"] == "Competition Bench Press"
+               for item in bench if item["stress_role"] == "hard")
     assert len({(item["sets"], item["reps"], item["rpe_offset"]) for item in bench}) == 5
     assert days[-1]["day_type"] == "SBD"
-    assert {item["role"] for item in days[-1]["exposures"]} == {"competition"}
+    assert all(item["purpose"] == "competition" or item["stress_role"] == "hard"
+               for item in days[-1]["exposures"])
 
 
 def test_multi_frequency_weekly_sets_are_allocated_deterministically_by_role():
@@ -156,7 +189,7 @@ def test_multi_frequency_weekly_sets_are_allocated_deterministically_by_role():
     assert sum(allocation) == 8
     assert all(value >= 1 for value in allocation)
 
-def test_joint_constraints_select_supported_main_variations_and_coach_choice_wins():
+def test_joint_constraints_do_not_invent_main_variations_and_coach_choice_wins():
     app = create_test_app()
     athlete_id = create_athlete(app)
     with app.app_context():
@@ -184,11 +217,12 @@ def test_joint_constraints_select_supported_main_variations_and_coach_choice_win
         db.session.commit()
 
         preview = _preview(replace(factory_request(1, 1, 1, 1), athlete_id=athlete_id))
-        assert preview[0]["exercises"][:3] == ["Supported Squat", "Supported Bench", "Supported Deadlift"]
+        assert preview[0]["exercises"][:3] == ["Competition Squat", "Competition Bench Press", "Conventional Deadlift"]
         assert [item["exercise_name"] for item in preview[0]["exposures"]] == [
-            "Supported Squat", "Supported Bench", "Supported Deadlift",
+            "Competition Squat", "Competition Bench Press", "Conventional Deadlift",
         ]
-        assert not preview[0]["coach_review_required"]
+        assert preview[0]["coach_review_required"]
+        assert len(preview[0]["coach_review_reasons"]) == 3
 
         db.session.add(AthleteStateOverride(
             athlete_id=athlete_id, target_type="programming", target_ref="weekly",
@@ -339,8 +373,11 @@ def test_preview_rejects_an_impossible_frequency_combination():
         },
     )
 
-    assert response.status_code == 400
+    assert response.status_code == 422
     assert b"Squat frequency (5) exceeds the 4 training days" in response.data
+    assert b'aria-invalid="true"' in response.data
+    assert b'data-error-summary' in response.data
+    assert b'value="5"' in response.data
 
 
 def test_factory_v3_generates_complete_block():
@@ -386,7 +423,7 @@ def test_factory_v3_generates_complete_block():
             for prescription in session.prescriptions
         ]
         assert sum(name == "Competition Squat" for name in exercise_names) == 1
-        assert sum(name == "Competition Bench Press" for name in exercise_names) == 1
+        assert sum(name == "Competition Bench Press" for name in exercise_names) == 2
         assert sum(name == "Sumo Deadlift" for name in exercise_names) == 1
         assert {slot.exposure_role for session in first_week.sessions for slot in session.lift_slots} >= {
             "competition", "primary_volume", "secondary_strength",
@@ -470,6 +507,7 @@ def test_factory_suggests_enabled_metadata_and_manual_selection_overrides_it():
             name="Development Row", movement="accessory", category="balancing",
             accessory_suitable=True, auto_select=True,
             lift_relevance='["bench"]', training_phases='["development"]',
+            movement_pattern="horizontal_pull",
             coach_priority=10, default_sets=4, default_reps="8-12",
         )
         pinned = Exercise(
@@ -638,9 +676,9 @@ def test_weekly_planner_is_deterministic_and_controls_redundant_generic_rows():
         medium = _preview(replace(request, accessory_volume="medium"))
         high = _preview(replace(request, accessory_volume="high"))
 
-        assert sum(day["accessory_count"] for day in low) == 1
-        assert sum(day["accessory_count"] for day in medium) == 1
-        assert sum(day["accessory_count"] for day in high) == 1
+        assert sum(day["accessory_count"] for day in low) == 0
+        assert sum(day["accessory_count"] for day in medium) == 0
+        assert sum(day["accessory_count"] for day in high) == 0
         assert [item["name"] for day in medium for item in day["accessories"]] == [
             item["name"] for day in _preview(replace(request, accessory_volume="medium"))
             for item in day["accessories"]
@@ -662,7 +700,7 @@ def test_low_fatigue_metadata_does_not_bypass_weekly_redundancy_control():
             factory_request(3, 1, 1, 1), accessory_volume="high"
         ))
 
-        assert sum(day["accessory_count"] for day in preview) == 1
+        assert sum(day["accessory_count"] for day in preview) == 0
 
 
 def test_more_than_three_manual_accessories_replace_automatic_selection():
@@ -802,6 +840,7 @@ def test_automatic_assistance_never_selects_specialty_exercises():
                 name="Powerlifting Row", movement="accessory", category="assistance",
                 accessory_suitable=True, auto_select=True, coach_priority=1,
                 lift_relevance='["all"]', fatigue_rating=1,
+                movement_pattern="horizontal_pull",
             ),
         ])
         db.session.commit()
@@ -881,7 +920,7 @@ def test_week_specific_accessory_plan_persists_with_preview_parity():
                 "rpe": item.rpe, "rest_seconds": item.rest_seconds,
             })
         assert actual == expected
-        assert len({(item["sets"], item["rpe"]) for item in actual}) > 1
+        assert len({(item["sets"], item["rpe"]) for item in actual}) == 1
 
 
 def base_form(athlete_id):
@@ -917,8 +956,39 @@ def test_non_assistance_main_lift_post_is_rejected_even_when_active():
         "/programming/factory/preview",
         data={**base_form(athlete_id), "accessory_exercise_id": str(lift_id)},
     )
-    assert response.status_code == 400
+    assert response.status_code == 422
     assert b"selected accessories are unavailable" in response.data
+    assert b'factory-accessory_exercise_id-error' in response.data
+
+
+def test_duplicate_manual_accessory_stays_in_factory_with_field_error():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    with app.app_context():
+        pin = Exercise(
+            name="Duplicate pin",
+            movement="row",
+            category="accessory",
+            accessory_suitable=True,
+            active=True,
+        )
+        db.session.add(pin)
+        db.session.commit()
+        pin_id = pin.id
+
+    response = app.test_client().post(
+        "/programming/factory/preview",
+        data={
+            **base_form(athlete_id),
+            "name": "Keep this name",
+            "accessory_exercise_id": [str(pin_id), str(pin_id)],
+        },
+    )
+
+    assert response.status_code == 422
+    assert b"cannot be added twice" in response.data
+    assert b'factory-accessory_exercise_id-error' in response.data
+    assert b'value="Keep this name"' in response.data
 
 
 def test_incomplete_state_and_rpe_adherence_do_not_infer_fatigue(monkeypatch):
@@ -1349,6 +1419,91 @@ def test_stale_proposal_is_rejected_when_athlete_state_changes():
         assert TrainingBlock.query.count() == 0
 
 
+@pytest.mark.parametrize("week_count,training_days,squat,bench,deadlift", [
+    (1, 3, 1, 1, 1),
+    (3, 4, 2, 3, 1),
+])
+def test_signed_preview_programme_exactly_matches_persisted_programme(
+    week_count, training_days, squat, bench, deadlift
+):
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    client = app.test_client()
+    response = client.post("/programming/factory/preview", data={
+        **base_form(athlete_id), "name": "Exact parity with notes",
+        "week_count": week_count, "training_days": training_days,
+        "squat_frequency": squat, "bench_frequency": bench,
+        "deadlift_frequency": deadlift,
+    })
+    fields = preview_fields(response)
+    with app.app_context():
+        expected = db.session.get(
+            AthleteStateRecommendation, int(fields["proposal_id"])
+        ).recommendation_json["programme"]
+        assert any(
+            item["notes"] and item["provenance"]
+            for week in expected["weeks"] for session in week["sessions"]
+            for item in session["prescriptions"]
+        )
+    assert client.post("/programming/factory", data=fields).status_code == 302
+    with app.app_context():
+        assert normalized_persisted_programme(TrainingBlock.query.one()) == expected
+
+
+def test_acceptance_materializes_pinned_accessory_graph_without_regeneration(monkeypatch):
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    with app.app_context():
+        accessory = Exercise(
+            name="Coach Pinned Row", movement="accessory", category="assistance",
+            accessory_suitable=True, default_sets=4, default_reps="9",
+            default_rpe=7.5, default_rest_seconds=150,
+        )
+        db.session.add(accessory)
+        db.session.commit()
+        accessory_id = accessory.id
+    client = app.test_client()
+    response = client.post("/programming/factory/preview", data={
+        **base_form(athlete_id), "week_count": 3,
+        "accessory_exercise_ids": [accessory_id],
+    })
+    fields = preview_fields(response)
+    monkeypatch.setattr(block_factory_module, "_preview", lambda *_args: pytest.fail("acceptance regenerated preview"))
+    monkeypatch.setattr(
+        block_factory_module.WeeklyProgrammingIntelligence, "preview",
+        lambda *_args: pytest.fail("acceptance regenerated intelligence"),
+    )
+    assert client.post("/programming/factory", data=fields).status_code == 302
+    with app.app_context():
+        proposal = db.session.get(AthleteStateRecommendation, int(fields["proposal_id"]))
+        assert normalized_persisted_programme(TrainingBlock.query.one()) == proposal.recommendation_json["programme"]
+
+
+def test_materialization_failure_is_atomic_and_leaves_proposal_proposed(monkeypatch):
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    client = app.test_client()
+    response = client.post("/programming/factory/preview", data=base_form(athlete_id))
+    fields = preview_fields(response)
+
+    def fail_after_partial_write(graph, athlete):
+        db.session.add(TrainingBlock(athlete=athlete, name=graph["block"]["name"]))
+        db.session.flush()
+        raise ValueError("injected materialization failure")
+
+    monkeypatch.setattr(block_factory_module, "_materialize_programme_graph", fail_after_partial_write)
+    assert client.post("/programming/factory", data=fields).status_code == 409
+    with app.app_context():
+        proposal = db.session.get(AthleteStateRecommendation, int(fields["proposal_id"]))
+        assert proposal.status == "proposed"
+        assert TrainingBlock.query.count() == 0
+        assert TrainingWeek.query.count() == 0
+        assert TrainingSession.query.count() == 0
+        assert ProgrammingLiftSlot.query.count() == 0
+        assert ExercisePrescription.query.count() == 0
+        assert ProgrammeRevision.query.count() == 0
+
+
 def test_edit_requires_reason_and_records_override_provenance():
     app = create_test_app()
     athlete_id = create_athlete(app)
@@ -1357,7 +1512,13 @@ def test_edit_requires_reason_and_records_override_provenance():
     fields = preview_fields(original)
     edited_data = {**base_form(athlete_id), **fields, "name": "Coach edit"}
     missing_reason = client.post("/programming/factory/preview", data=edited_data)
-    assert missing_reason.status_code == 400
+    assert missing_reason.status_code == 422
+    assert b'data-error-summary' in missing_reason.data
+    assert b'id="factory-override_reason"' in missing_reason.data
+    assert b'aria-invalid="true"' in missing_reason.data
+    assert b'value="Coach edit"' in missing_reason.data
+    assert b"This preview is out of date" in missing_reason.data
+    assert b"disabled aria-disabled=\"true\"" in missing_reason.data
     edited = client.post(
         "/programming/factory/preview",
         data={**edited_data, "override_reason": "Match the coach-authored block label"},

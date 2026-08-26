@@ -422,15 +422,20 @@ def onboarding_invite(athlete_id: int):
     athlete = _onboarding_athlete(athlete_id)
     try:
         require_current(build_client_onboarding(athlete), "invite")
-        create_invitation(
+        issued = create_invitation(
             athlete,
             activation_url=_account_link(AccountTokenPurpose.INVITATION),
             lifetime=current_app.config["ACCOUNT_INVITATION_LIFETIME"],
         )
     except (AccountLifecycleError, ValueError) as exc:
         abort(409, description=str(exc))
-    flash("Invitation issued. Onboarding will continue when the athlete activates their account.", "success")
-    return redirect(url_for("athletes.client_onboarding", athlete_id=athlete.id))
+    if issued.record.delivery_state == DeliveryState.SENT:
+        flash("Invitation sent. Onboarding will continue when the athlete activates their account.", "success")
+        return redirect(url_for("athletes.client_onboarding", athlete_id=athlete.id))
+    # The raw token exists only in this response.  Surface the same explicit,
+    # one-time manual recovery path as the account-management flow; a later
+    # retry issues a fresh token and revokes this one.
+    return _account_action_result(athlete, issued)
 
 
 def _replace_onboarding_fact(athlete: Athlete, fact_type: str, value: object) -> None:

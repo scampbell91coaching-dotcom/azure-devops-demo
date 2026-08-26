@@ -34,6 +34,17 @@ def test_factory_page_loads():
     assert b"Block Factory" in response.data
 
 
+def test_factory_accessory_volume_uses_neutral_coach_facing_copy():
+    app = create_test_app()
+    response = app.test_client().get("/programming/factory")
+
+    assert response.status_code == 200
+    assert b'<option value="high"' in response.data
+    assert b">High</option>" in response.data
+    assert b"fatigue units/day" not in response.data
+    assert b"how much assistance work is suggested" in response.data
+
+
 def test_factory_page_exposes_dense_intent_workflow_without_fake_copilot_fields():
     app = create_test_app()
 

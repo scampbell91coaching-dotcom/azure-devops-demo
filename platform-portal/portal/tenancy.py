@@ -24,6 +24,7 @@ from .models.organisation import (
     OwnershipStatus,
 )
 from .models.user import User, UserRole
+from .observability import record_tenant_denial
 
 
 class TenancyResolutionError(RuntimeError):
@@ -58,13 +59,10 @@ def resolve_tenancy_context(
     ):
         raise TenancyResolutionError("a valid Organisation selection is required")
 
-    query = (
-        OrganisationMembership.query.join(Organisation)
-        .filter(
-            OrganisationMembership.user_id == user.id,
-            OrganisationMembership.status == MembershipStatus.ACTIVE,
-            Organisation.active.is_(True),
-        )
+    query = OrganisationMembership.query.join(Organisation).filter(
+        OrganisationMembership.user_id == user.id,
+        OrganisationMembership.status == MembershipStatus.ACTIVE,
+        Organisation.active.is_(True),
     )
     if organisation_id is not None:
         membership = query.filter(
@@ -105,6 +103,7 @@ def require_tenancy_context() -> TenancyContext:
     try:
         return current_tenancy_context()
     except TenancyResolutionError:
+        record_tenant_denial("context_unavailable")
         abort(403)
 
 
@@ -124,11 +123,10 @@ def load_tenant_object(
 ) -> ModelT:
     """Load by Organisation and ID, concealing cross-tenant existence."""
     item = (
-        tenant_scoped_query(context, model)
-        .filter(model.id == object_id)
-        .one_or_none()
+        tenant_scoped_query(context, model).filter(model.id == object_id).one_or_none()
     )
     if item is None:
+        record_tenant_denial("object_concealed")
         raise TenantObjectNotFound
     return item
 
@@ -151,6 +149,7 @@ def load_owned_athlete(context: TenancyContext, athlete_id: int):
         .one_or_none()
     )
     if athlete is None:
+        record_tenant_denial("athlete_concealed")
         raise TenantObjectNotFound
     return athlete
 
@@ -214,9 +213,7 @@ def require_programming_access(item):
 
 def coach_athlete_ids_query(user_id: int):
     """Compatibility-shaped query, constrained by the request's trusted context."""
-    query = CoachAthleteOwnership.query.with_entities(
-        CoachAthleteOwnership.athlete_id
-    )
+    query = CoachAthleteOwnership.query.with_entities(CoachAthleteOwnership.athlete_id)
     try:
         context = current_tenancy_context()
     except (TenancyResolutionError, RuntimeError):
@@ -249,9 +246,11 @@ def coach_owns_athlete_in_organisation(
         organisation_id is not None and context.organisation_id != organisation_id
     ):
         return None
-    row = coach_athlete_ids_query(user_id).filter(
-        CoachAthleteOwnership.athlete_id == athlete_id
-    ).first()
+    row = (
+        coach_athlete_ids_query(user_id)
+        .filter(CoachAthleteOwnership.athlete_id == athlete_id)
+        .first()
+    )
     return context.organisation_id if row is not None else None
 
 
@@ -271,6 +270,7 @@ def athlete_belongs_to_organisation(athlete_id: int, organisation_id: int) -> bo
 
 def organisation_membership_required(view):
     """Require active Organisation authority for a coach-facing request."""
+
     @wraps(view)
     def wrapped(*args, **kwargs):
         if current_app.config["AUTHENTICATION_DISABLED"]:
