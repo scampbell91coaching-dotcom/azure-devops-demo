@@ -178,7 +178,24 @@ class WeeklyAccessoryPlanner:
         return tuple(result)
 
     def constraint_conflict(self, row: Exercise, constraints: frozenset[str]) -> bool:
-        return bool(constraints & _values(row.constraint_tags))
+        if constraints & _values(row.constraint_tags):
+            return True
+        active = {item.casefold().replace("-", "_") for item in constraints}
+        pattern = (row.movement_pattern or "").casefold().replace("-", "_")
+        tags = _values(row.compatibility_tags)
+        cost = self._cost(row)
+        if active & {"shoulder_loading", "elbow_loading", "shoulder", "elbow"}:
+            if pattern in {"horizontal_press", "elbow_extension"} and not (
+                tags & {"shoulder_compatible", "elbow_compatible"}
+            ):
+                return True
+        if active & {"spinal_loading", "low_back_loading", "lower_back_loading", "low_back"}:
+            if pattern in {
+                "hinge", "hip_extension", "deadlift_off_floor",
+                "deadlift_lockout", "squat",
+            } and cost >= 3 and "low_back_compatible" not in tags:
+                return True
+        return False
 
     def plan(self, exercises: Iterable[Exercise | WeeklyAccessoryCandidate],
              context: WeeklyAccessoryContext) -> tuple[PlannedAccessory, ...]:
@@ -267,15 +284,8 @@ class WeeklyAccessoryPlanner:
         record = history.get(row.id)
         if record and (record.pain or not record.tolerated or record.compensation or not record.carryover or not record.adherence):
             return False
-        if context.constraints & _values(row.constraint_tags):
+        if self.constraint_conflict(row, context.constraints):
             return False
-        pattern = (row.movement_pattern or "").casefold().replace("-", "_")
-        if any(tag in context.constraints for tag in {"spinal_loading", "low_back_loading", "lower_back_loading"}):
-            if pattern in {"hinge", "hip_extension", "deadlift_off_floor", "deadlift_lockout", "squat"} and self._cost(row) >= 3:
-                return False
-        if any(tag in context.constraints for tag in {"shoulder_loading", "elbow_loading"}):
-            if pattern in {"horizontal_press", "elbow_extension"}:
-                return False
         phases = _values(row.training_phases)
         if phases and not ({context.goal.casefold(), "all"} & phases):
             return False

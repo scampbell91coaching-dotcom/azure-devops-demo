@@ -41,6 +41,7 @@ _PUBLIC_ENDPOINTS = {
     "metrics",
     "lead_magnets.lead_magnet",
     "lead_magnets.capture_lead",
+    "metrics",
     "static",
 }
 _ATHLETE_ENDPOINTS = {

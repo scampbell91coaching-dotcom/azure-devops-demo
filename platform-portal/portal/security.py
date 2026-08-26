@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Flask, Response, request
+from flask import Flask, Response
 
 CONTENT_SECURITY_POLICY = (
     "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self'; "
@@ -16,7 +16,10 @@ def init_security_headers(app: Flask, *, prevent_caching: bool = False) -> None:
 
     @app.after_request
     def add_security_headers(response: Response) -> Response:
-        if app.testing and request.headers.get("X-E2E-Run-Token"):
+        # WebKit does not implement upgrade-insecure-requests consistently in
+        # Flask's in-process HTTP test environment. Production keeps the
+        # directive; only explicitly testing applications omit it.
+        if app.testing:
             response.headers["Content-Security-Policy"] = (
                 CONTENT_SECURITY_POLICY.replace("; upgrade-insecure-requests", "")
             )
