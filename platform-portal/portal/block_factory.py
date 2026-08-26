@@ -1021,7 +1021,7 @@ def _apply_active_coach_overrides(factory: FactoryRequest) -> FactoryRequest:
 
 PROPOSAL_TYPE = "weekly_programming_v7"
 ACCEPTED_PROPOSAL_TYPES = {"weekly_programming_v6", PROPOSAL_TYPE}
-PROPOSAL_VERSION = "programming-v10-purpose-led-variation-prescription"
+PROPOSAL_VERSION = "programming-v10-purpose-led-planning"
 
 
 def _actor() -> str:

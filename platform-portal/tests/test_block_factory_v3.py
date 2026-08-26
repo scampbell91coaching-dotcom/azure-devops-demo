@@ -320,6 +320,12 @@ def test_factory_preview_loads():
     assert b"Day 1" in response.data
 
 
+def test_factory_proposal_version_fits_production_column():
+    column = AthleteStateRecommendation.__table__.c.generator_version
+
+    assert len(block_factory_module.PROPOSAL_VERSION) <= column.type.length
+
+
 def test_preview_and_generation_use_the_same_frequency_schedule():
     app = create_test_app()
     athlete_id = create_athlete(app)
