@@ -41,6 +41,24 @@
     <section class="factory-context" aria-labelledby="factory-context-heading">
       <h2 id="factory-context-heading">Block context</h2>
       <div class="factory-context__fields">
+    <label>
+      <span>Start from</span>
+      <select name="start_from" data-start-from>
+        <option value="custom" {% if form.get("start_from", "custom") == "custom" %}selected{% endif %}>Custom</option>
+        <option value="golden" {% if form.get("start_from") == "golden" %}selected{% endif %}>Golden programme</option>
+      </select>
+    </label>
+
+    <label data-golden-programme-field{% if form.get("start_from") != "golden" %} hidden{% endif %}>
+      <span>Golden programme</span>
+      <select name="golden_programme" data-golden-programme>
+        <option value="">Choose a validated starting point</option>
+        {% for golden in golden_programmes %}
+          <option value="{{ golden.id }}" data-prefill='{{ golden | tojson }}' {% if form.get("golden_programme") == golden.id %}selected{% endif %}>{{ golden.name }}</option>
+        {% endfor %}
+      </select>
+      <small>Prefills editable inputs; Preview still uses the normal planner.</small>
+    </label>
     <label class="factory-field--athlete">
       <span>Athlete</span>
       <select id="factory-athlete_id" name="athlete_id" required{% if errors and errors.get('athlete_id') %} aria-invalid="true" aria-describedby="factory-athlete_id-error"{% endif %}>
@@ -92,6 +110,7 @@
           ("POWERLIFTING_3", "Powerlifting · 3 days"),
           ("POWERLIFTING_4", "Powerlifting · 4 days"),
           ("POWERLIFTING_5", "Powerlifting · 5 days"),
+          ("POWERLIFTING_6", "Powerlifting · 6 days"),
           ("UPPER_LOWER", "Upper / Lower"),
           ("SBD", "SBD"),
           ("SB", "SB"),
@@ -135,7 +154,7 @@
         name="training_days"
         type="number"
         min="1"
-        max="5"
+        max="6"
         value="{{ form.get('training_days', 4) }}"
         required
         {% if errors and errors.get('training_days') %}aria-invalid="true" aria-describedby="factory-training_days-error"{% endif %}

@@ -16,13 +16,29 @@ import pytest
 from portal.models.exercise_library import Exercise
 from portal.services.adaptation_policy import AdaptationEvidence, ConservativeAdaptationPolicy
 from portal.services.exposure_intelligence import weekly_exposure_intents
+from portal.services.golden_programmes import golden_programmes
 from portal.services.prescription_planner import PrescriptionContext, PrescriptionPlanner
 from portal.services.variation_selector import VariationContext, VariationSelector
 from portal.services.weekly_accessory_planner import WeeklyAccessoryContext, WeeklyAccessoryPlanner
 from portal.services.weekly_planner import WeeklyPlanner
 
 
-GOLDENS = json.loads((Path(__file__).parent / "fixtures/wave7_coaching_goldens.json").read_text())
+GOLDENS = [
+    *(
+        {
+            "name": item["name"], "kind": "structure",
+            "days": item["training_days"], "squat": item["squat_frequency"],
+            "bench": item["bench_frequency"], "deadlift": item["deadlift_frequency"],
+            "expected": item["expected"],
+        }
+        for item in golden_programmes()
+    ),
+    *(
+        item for item in json.loads(
+            (Path(__file__).parent / "fixtures/wave7_coaching_goldens.json").read_text()
+        ) if item["kind"] != "structure"
+    ),
+]
 
 
 def _intents(sequence):

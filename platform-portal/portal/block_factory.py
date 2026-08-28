@@ -35,6 +35,7 @@ from .models.warmup import WarmupAssignment, WarmupProtocol, WarmupProtocolStep
 from .programming_services.revisions import append_revision, authored_snapshot
 from .services.accessory_intelligence import AccessoryIntelligence
 from .services.exposure_intelligence import weekly_exposure_intents
+from .services.golden_programmes import golden_programmes
 from .services.prescription_planner import PrescriptionContext, PrescriptionPlanner
 from .services.variation_selector import VariationContext, VariationSelector
 from .services.athlete_state import latest_facts
@@ -145,6 +146,7 @@ DEFAULT_SPLITS = {
     "POWERLIFTING_3": ["SBD", "B", "D"],
     "POWERLIFTING_4": ["SB", "BD", "B", "SBD"],
     "POWERLIFTING_5": ["SB", "BD", "B", "S", "D"],
+    "POWERLIFTING_6": ["B", "SD", "B", "B", "B", "SBD"],
 }
 
 
@@ -1509,6 +1511,7 @@ def _render_factory_validation(
         "selected_athlete": athlete,
         "preview": None,
         "errors": errors,
+        "golden_programmes": golden_programmes(),
     }
     if proposal is not None:
         payload = proposal.recommendation_json
@@ -1549,6 +1552,7 @@ def wizard():
         form={},
         selected_athlete=selected_athlete,
         accessory_exercises=accessory_exercises,
+        golden_programmes=golden_programmes(),
     )
 
 
@@ -1646,6 +1650,7 @@ def preview():
         proposal=proposal,
         proposal_integrity=integrity,
         proposal_override=proposal_override,
+        golden_programmes=golden_programmes(),
     )
 
 

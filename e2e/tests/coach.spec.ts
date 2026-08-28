@@ -260,6 +260,12 @@ test('lift-slot editor persists an RPE range and same-family back-off after relo
   await expect(benchChoice).toHaveAttribute('disabled', '');
   await editor.getByRole('button', { name: 'Save lift slot' }).click();
   await page.reload();
+  const restoredEditor = session.getByTestId('lift-slot-editor').first();
+  await expect(restoredEditor.locator('select[name="top_rpe_mode"]')).toHaveValue('range');
+  await expect(restoredEditor.locator('input[name="top_rpe_min"]')).toHaveValue('5.0');
+  await expect(restoredEditor.locator('input[name="top_rpe_max"]')).toHaveValue('6.0');
+  await expect(restoredEditor.locator('input[name="back_off_enabled"]')).toBeChecked();
+  await expect(restoredEditor.locator('select[name="back_off_exercise_id"]')).toHaveValue('');
   await expect(session.getByText(/Top: Competition Squat 3 x 5 @ RPE 5-6/)).toBeVisible();
   await expect(session.getByText(/Back-off: Competition Squat 3 x 6 @ RPE 6/)).toBeVisible();
   await expect(page.getByLabel('Taxonomy-backed competition lift exposures')).toContainText('Squat 1');
@@ -339,6 +345,26 @@ test('Block Factory persists more than three coach-selected accessories per sess
         .getByTestId('assistance-provenance')
     ).toHaveCount(persistedCounts[index]);
   }
+});
+
+test('Block Factory golden programme prefills an editable canonical six-day week', async ({ page }) => {
+  await page.goto('/programming/factory');
+
+  await page.getByLabel('Athlete').selectOption({ label: 'Alex Rivera' });
+  await page.getByLabel('Start from').selectOption('golden');
+  await expect(page.locator('select[name="golden_programme"]')).toBeVisible();
+  await page.locator('select[name="golden_programme"]').selectOption('advanced-6-day-high-frequency-bench');
+
+  await expect(page.getByLabel('Split')).toHaveValue('POWERLIFTING_6');
+  await expect(page.getByLabel('Training days')).toHaveValue('6');
+  await expect(page.getByLabel('Squat frequency')).toHaveValue('2');
+  await expect(page.getByLabel('Bench frequency')).toHaveValue('5');
+  await expect(page.getByLabel('Deadlift frequency')).toHaveValue('2');
+
+  await page.getByLabel('Block name').fill('Edited six-day golden');
+  await page.getByRole('button', { name: /preview/i }).click();
+  await expect(page.getByText('Day 6 \u00b7 SBD', { exact: false })).toBeVisible();
+  await expect(page.getByLabel('Block name')).toHaveValue('Edited six-day golden');
 });
 
 test('Block Factory automatic assistance falls back to suitable library metadata and persists', async ({ page }) => {

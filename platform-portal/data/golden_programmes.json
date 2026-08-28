@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "programmes": [
+    {
+      "id": "beginner-3-day",
+      "name": "Beginner 3-day",
+      "split": "POWERLIFTING_3",
+      "goal": "development",
+      "training_days": 3,
+      "squat_frequency": 2,
+      "bench_frequency": 2,
+      "deadlift_frequency": 1,
+      "expected": ["B", "SB", "SD"]
+    },
+    {
+      "id": "intermediate-4-day",
+      "name": "Intermediate 4-day",
+      "split": "POWERLIFTING_4",
+      "goal": "development",
+      "training_days": 4,
+      "squat_frequency": 2,
+      "bench_frequency": 3,
+      "deadlift_frequency": 1,
+      "expected": ["B", "S", "BD", "SB"]
+    },
+    {
+      "id": "advanced-5-day",
+      "name": "Advanced 5-day",
+      "split": "POWERLIFTING_5",
+      "goal": "strength",
+      "training_days": 5,
+      "squat_frequency": 2,
+      "bench_frequency": 3,
+      "deadlift_frequency": 1,
+      "expected": ["B", "S", "B", "D", "SB"]
+    },
+    {
+      "id": "advanced-6-day-high-frequency-bench",
+      "name": "Advanced 6-day high-frequency bench",
+      "split": "POWERLIFTING_6",
+      "goal": "strength",
+      "training_days": 6,
+      "squat_frequency": 2,
+      "bench_frequency": 5,
+      "deadlift_frequency": 2,
+      "expected": ["B", "SD", "B", "B", "B", "SBD"]
+    }
+  ]
+}

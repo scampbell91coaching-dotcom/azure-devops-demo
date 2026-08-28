@@ -9,6 +9,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const reason = form.elements.namedItem("override_reason");
   let dirty = preview?.classList.contains("is-stale") || false;
 
+  const startFrom = form.querySelector("[data-start-from]");
+  const goldenField = form.querySelector("[data-golden-programme-field]");
+  const goldenSelect = form.querySelector("[data-golden-programme]");
+  const showGoldenChoice = () => {
+    if (goldenField) goldenField.hidden = startFrom?.value !== "golden";
+  };
+  startFrom?.addEventListener("change", showGoldenChoice);
+  goldenSelect?.addEventListener("change", () => {
+    const selected = goldenSelect.selectedOptions[0];
+    if (!selected?.dataset.prefill) return;
+    const values = JSON.parse(selected.dataset.prefill);
+    for (const name of ["split", "goal", "training_days", "squat_frequency", "bench_frequency", "deadlift_frequency"]) {
+      const control = form.elements.namedItem(name);
+      if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement) {
+        control.value = String(values[name]);
+        control.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+  });
+  showGoldenChoice();
+
   const markPreviewStale = () => {
     if (!preview || dirty) return;
     dirty = true;
