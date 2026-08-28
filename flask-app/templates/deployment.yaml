@@ -131,7 +131,7 @@ spec:
             - name: tmp
               mountPath: /tmp
             - name: application-data
-              mountPath: /app/data
+              mountPath: /app/runtime-data
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
