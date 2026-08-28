@@ -295,6 +295,66 @@ def test_factory_v3_page_loads():
     assert b'max="7"' in response.data
 
 
+def test_factory_exposes_six_day_and_golden_starting_options():
+    app = create_test_app()
+    create_athlete(app)
+
+    response = app.test_client().get("/programming/factory")
+
+    assert response.status_code == 200
+    assert b'POWERLIFTING_6' in response.data
+    assert b'Powerlifting \xc2\xb7 6 days' in response.data
+    assert b'Golden programme' in response.data
+    assert b'advanced-6-day-high-frequency-bench' in response.data
+    assert b'id="factory-training_days"' in response.data
+    assert b'max="6"' in response.data
+
+
+def test_six_day_preview_round_trip_uses_canonical_structure_and_signed_acceptance():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    form = {
+        **base_form(athlete_id), "start_from": "golden",
+        "golden_programme": "advanced-6-day-high-frequency-bench",
+        "split": "POWERLIFTING_6", "training_days": 6,
+        "squat_frequency": 2, "bench_frequency": 5, "deadlift_frequency": 2,
+    }
+
+    preview_response, accepted = preview_and_accept(app.test_client(), form)
+
+    assert accepted.status_code == 302
+    expected = ["B", "SD", "B", "B", "B", "SBD"]
+    for number, day_type in enumerate(expected, 1):
+        assert f"Day {number} \u00b7 {day_type}".encode() in preview_response.data
+    with app.app_context():
+        proposal = AthleteStateRecommendation.query.one().recommendation_json
+        assert proposal["factory"]["training_days"] == 6
+        sessions = TrainingBlock.query.one().weeks[0].sessions
+        assert [session.name.rsplit("\u00b7", 1)[1].strip() for session in sessions] == expected
+
+
+def test_golden_metadata_does_not_override_coach_edits_before_preview():
+    app = create_test_app()
+    athlete_id = create_athlete(app)
+    form = {
+        **base_form(athlete_id), "start_from": "golden",
+        "golden_programme": "beginner-3-day",
+        "name": "Coach edited golden", "goal": "strength",
+        "split": "POWERLIFTING_4", "training_days": 4,
+        "squat_frequency": 2, "bench_frequency": 3, "deadlift_frequency": 1,
+    }
+
+    response = app.test_client().post("/programming/factory/preview", data=form)
+
+    assert response.status_code == 200
+    with app.app_context():
+        factory = AthleteStateRecommendation.query.one().recommendation_json["factory"]
+        assert factory["name"] == "Coach edited golden"
+        assert factory["goal"] == "strength"
+        assert factory["training_days"] == 4
+        assert factory["split"] == "POWERLIFTING_4"
+
+
 def test_factory_preview_loads():
     app = create_test_app()
     athlete_id = create_athlete(app)
