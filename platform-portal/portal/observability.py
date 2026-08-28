@@ -40,6 +40,16 @@ TENANT_DENIALS = Counter(
     "Tenant boundary denials without tenant or object identifiers.",
     ("reason",),
 )
+SPREADSHEET_IMPORT_EVENTS = Counter(
+    "traditional_strength_spreadsheet_import_events_total",
+    "Spreadsheet import lifecycle outcomes.",
+    ("event",),
+)
+SPREADSHEET_IMPORT_ROWS = Counter(
+    "traditional_strength_spreadsheet_import_rows_total",
+    "Spreadsheet import row outcomes.",
+    ("outcome",),
+)
 DEPENDENCY_AVAILABLE = Gauge(
     "traditional_strength_dependency_available",
     "Whether a dependency succeeded during the latest readiness check.",
@@ -63,6 +73,13 @@ def record_auth_event(event: str, outcome: str) -> None:
 
 def record_tenant_denial(reason: str) -> None:
     TENANT_DENIALS.labels(reason=reason).inc()
+
+
+def record_spreadsheet_import(event: str, **rows: int) -> None:
+    SPREADSHEET_IMPORT_EVENTS.labels(event=event).inc()
+    for outcome, count in rows.items():
+        if count:
+            SPREADSHEET_IMPORT_ROWS.labels(outcome=outcome).inc(count)
 
 
 def set_dependency_available(dependency: str, available: bool) -> None:

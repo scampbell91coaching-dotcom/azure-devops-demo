@@ -1,0 +1,13 @@
+{% extends "coach/base.html" %}
+{% block title %}Import training history · Traditional Strength{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/spreadsheet_import.css') }}">{% endblock %}
+{% set coach_section = "athletes" %}{% block content %}<main class="import-shell">
+{% set stage='upload' %}{% include 'spreadsheet_import/_steps.html' %}
+<p class="eyebrow">{{ athlete.full_name }}</p><h1>Bring existing training history over</h1>
+<p>Upload completed training from CSV or XLSX. Nothing is saved until you review the interpretation and explicitly confirm.</p>
+{% if error %}<div class="import-alert" role="alert">{{ error }}</div>{% endif %}
+<form method="post" enctype="multipart/form-data" action="{{ url_for('spreadsheet_imports.mapping', athlete_id=athlete.id) }}" class="import-card">
+  <label for="spreadsheet"><strong>Training spreadsheet</strong><span>CSV or XLSX, up to 10 MB. Macros and formulas are not imported.</span></label>
+  <input id="spreadsheet" name="spreadsheet" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
+  <button type="submit">Inspect spreadsheet</button>
+</form></main>{% endblock %}

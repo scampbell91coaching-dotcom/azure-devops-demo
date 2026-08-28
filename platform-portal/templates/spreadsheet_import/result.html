@@ -1,0 +1,5 @@
+{% extends "coach/base.html" %}{% set coach_section = "athletes" %}{% block title %}Import complete{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/spreadsheet_import.css') }}">{% endblock %}
+{% block content %}<main class="import-shell">{% set stage='result' %}{% include 'spreadsheet_import/_steps.html' %}<h1>Training history imported</h1>
+<div class="summary-grid"><div><strong>{{ batch.rows_imported }}</strong><span>imported</span></div><div><strong>{{ batch.rows_skipped_duplicate }}</strong><span>skipped duplicates</span></div><div><strong>{{ batch.rows_rejected }}</strong><span>rejected</span></div></div>
+<p>The imported completed work is now available to historical performance surfaces. No live programme or athlete state was created.</p><a class="button" href="{{ url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}">Return to athlete</a></main>{% endblock %}

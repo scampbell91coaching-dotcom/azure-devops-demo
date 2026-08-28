@@ -38,6 +38,7 @@ from .programming_engine import programming_engine_bp
 from .programming_pack2 import programming_pack2_bp
 from .programming_templates import programming_templates_bp
 from .release_readiness import release_readiness_bp
+from .spreadsheet_imports import spreadsheet_imports_bp
 from .repositories.meal_plans import SqlAlchemyMealPlanRepository
 from .security import init_security_headers
 from .services.meal_plan_files import MealPlanFileStore
@@ -76,6 +77,8 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
             "EDGE_AUTH_EMAIL_HEADER", "X-Auth-Request-Email"
         ),
         NUTRITION_UPLOAD_MAX_BYTES=10 * 1024 * 1024,
+        SPREADSHEET_UPLOAD_MAX_BYTES=10 * 1024 * 1024,
+        SPREADSHEET_PREVIEW_MAX_AGE_SECONDS=30 * 60,
         MEAL_PLAN_PDF_MAX_BYTES=10 * 1024 * 1024,
         MFP_API_ENABLED=False,
         SMTP_HOST=os.environ.get("SMTP_HOST"),
@@ -178,6 +181,7 @@ def create_app(test_config: dict[str, object] | None = None) -> Flask:
     app.register_blueprint(meet_day_bp)
     app.register_blueprint(meal_plan_delivery_bp)
     app.register_blueprint(nutrition_imports_bp)
+    app.register_blueprint(spreadsheet_imports_bp)
     app.register_blueprint(nutrition_prescriptions_bp)
     app.register_blueprint(organisation_onboarding_bp)
 

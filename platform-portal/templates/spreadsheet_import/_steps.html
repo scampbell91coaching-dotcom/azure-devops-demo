@@ -1,0 +1,5 @@
+<ol class="import-steps" aria-label="Import progress">
+  {% for key, label in [('upload','Upload'),('map','Map'),('review','Review'),('result','Import result')] %}
+  <li{% if stage == key %} aria-current="step"{% endif %}>{{ loop.index }}. {{ label }}</li>
+  {% endfor %}
+</ol>
