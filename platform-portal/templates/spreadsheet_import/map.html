@@ -1,0 +1,11 @@
+{% extends "coach/base.html" %}{% set coach_section = "athletes" %}{% block title %}Map training history{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/spreadsheet_import.css') }}">{% endblock %}
+{% block content %}<main class="import-shell">{% set stage='map' %}{% include 'spreadsheet_import/_steps.html' %}
+<h1>Check the column mapping</h1><p><strong>Sheet detected:</strong> {{ sheet.name }} · {{ sheet.rows|length }} rows. Available sheets: {{ sheet_names|join(', ') }}.</p>
+{% if formula_cells %}<div class="import-alert">{{ formula_cells }} formula cell(s) were left blank. Formulas and cached results are never imported.</div>{% endif %}
+<form method="post" action="{{ url_for('spreadsheet_imports.review', athlete_id=athlete.id) }}">
+<input type="hidden" name="preview_token" value="{{ token }}">
+<div class="import-card"><table><thead><tr><th>Spreadsheet heading</th><th>Status</th><th>Import as</th></tr></thead><tbody>
+{% for column in inferred.columns %}<tr><td>{{ column.heading }}</td><td><span class="status status-{{ column.status }}">{{ column.status }} · {{ column.confidence }}</span></td><td>
+<select name="column_{{ column.index }}"><option value="">Do not import</option>{% for field in fields %}<option value="{{ field }}"{% if column.field == field %} selected{% endif %}>{{ field|replace('_',' ')|title }}</option>{% endfor %}</select></td></tr>{% endfor %}
+</tbody></table></div><div class="actions"><a href="{{ url_for('spreadsheet_imports.index', athlete_id=athlete.id) }}">Back</a><button type="submit">Review interpreted rows</button></div></form></main>{% endblock %}

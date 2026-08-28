@@ -238,7 +238,7 @@
   <section class="coach-panel" id="training-sessions">
     <div class="coach-panel__heading coach-panel__heading--split">
       <div><span class="coach-eyebrow">Training history</span><h2>Completed sessions</h2></div>
-      <span class="coach-count">{{ training_logs | length }}</span>
+      <div><span class="coach-count">{{ training_logs | length }}</span> <a class="coach-link-button" href="{{ url_for('spreadsheet_imports.index', athlete_id=athlete.id) }}">Import spreadsheet</a></div>
     </div>
     {% if training_logs %}
       <div class="coach-dashboard-list">

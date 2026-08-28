@@ -58,6 +58,7 @@ from .support_admin import (
     SupportDelegation,
     SupportPrincipalRecord,
 )
+from .spreadsheet_import import SpreadsheetImportBatch, SpreadsheetImportProvenance
 from .user import User, UserRole
 from .warmup import (
     WarmupAssignment,
@@ -113,6 +114,8 @@ __all__ = [
     "ProgrammeRevision",
     "ProgrammingLiftSlot",
     "SubscriptionAccount",
+    "SpreadsheetImportBatch",
+    "SpreadsheetImportProvenance",
     "SupportAccessEvent",
     "SupportCapabilityGrant",
     "SupportDelegation",
