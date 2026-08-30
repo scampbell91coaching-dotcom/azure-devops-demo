@@ -2,8 +2,13 @@ from flask import Blueprint, abort, redirect, render_template, request, url_for
 from sqlalchemy.orm import joinedload, selectinload
 
 from ..extensions import db
-from ..models.programming import ProgrammingLiftSlot, TrainingBlock, TrainingSession, TrainingWeek
 from ..models.exercise_library import Exercise
+from ..models.programming import (
+    ProgrammingLiftSlot,
+    TrainingBlock,
+    TrainingSession,
+    TrainingWeek,
+)
 from ..programming_services.prescriptions import PRESCRIPTION_MODE_LABELS
 from ..programming_services.presentation import week_exposure_summary
 from ..programming_services.weeks import (
@@ -12,6 +17,8 @@ from ..programming_services.weeks import (
     delete,
     duplicate,
     extend,
+    reorder,
+    update,
 )
 from ..services.weekly_programming_intelligence import map_athlete_programming_context
 from ..tenancy import require_programming_access
@@ -64,6 +71,31 @@ def register_week_routes(blueprint: Blueprint) -> None:
         require_programming_access(source)
         target = duplicate(source)
         return redirect(url_for("programming.week", week_id=target.id))
+
+    @blueprint.post("/programming/weeks/<int:week_id>/edit")
+    def edit_week(week_id: int):
+        item = db.session.get(TrainingWeek, week_id)
+        require_programming_access(item)
+        try:
+            update(
+                item,
+                name=request.form.get("name", "").strip(),
+                notes=request.form.get("notes", "").strip() or None,
+            )
+        except ValueError:
+            abort(400)
+        return redirect(url_for("programming.week", week_id=item.id))
+
+    @blueprint.post("/programming/weeks/<int:week_id>/reorder")
+    def reorder_week(week_id: int):
+        item = db.session.get(TrainingWeek, week_id)
+        require_programming_access(item)
+        try:
+            position = int(request.form.get("position", ""))
+            reorder(item, position=position)
+        except (TypeError, ValueError):
+            abort(400)
+        return redirect(url_for("programming.block", block_id=item.block_id))
 
     @blueprint.post("/programming/blocks/<int:block_id>/extend")
     def extend_block(block_id: int):

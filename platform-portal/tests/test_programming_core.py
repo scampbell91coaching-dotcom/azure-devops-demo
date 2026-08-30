@@ -5,8 +5,11 @@ from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.programming import (
     ExercisePrescription,
+    ProgrammeRevision,
     TrainingBlock,
     TrainingSession,
+    TrainingSessionLog,
+    TrainingSetResult,
     TrainingWeek,
 )
 
@@ -256,6 +259,20 @@ def test_duplicate_block_copies_full_programme_as_a_draft():
         assert copied.weeks[0].sessions[0].prescriptions[0].exercise_name == "Squat"
 
 
+def test_edit_block_metadata_keeps_programming_structure():
+    app = app_with_db()
+    _, block_id = _athlete_with_programme(app)
+    response = app.test_client().post(
+        f"/programming/blocks/{block_id}/edit",
+        data={"name": "Revised development", "objective": "Build capacity"},
+    )
+    assert response.status_code == 302
+    with app.app_context():
+        block = db.session.get(TrainingBlock, block_id)
+        assert (block.name, block.objective) == ("Revised development", "Build capacity")
+        assert len(block.weeks) == 1 and len(block.weeks[0].sessions) == 1
+
+
 def test_archive_block_removes_it_from_current_programme():
     app = app_with_db()
     athlete_id, block_id = _athlete_with_programme(app)
@@ -299,3 +316,57 @@ def test_delete_draft_block_removes_its_programming_and_rejects_non_drafts():
         .status_code
         == 409
     )
+
+
+def test_delete_draft_block_preserves_completed_history_snapshots():
+    app = app_with_db()
+    athlete_id, block_id = _athlete_with_programme(app)
+    with app.app_context():
+        block = db.session.get(TrainingBlock, block_id)
+        session = block.weeks[0].sessions[0]
+        prescription = session.prescriptions[0]
+        log = TrainingSessionLog(
+            athlete_id=athlete_id,
+            session=session,
+            session_name=session.name,
+            block_name=block.name,
+            week_name=block.weeks[0].name,
+            status="completed",
+            completed_at=datetime.now(UTC),
+        )
+        result = TrainingSetResult(
+            session_log=log,
+            prescription=prescription,
+            exercise_name=prescription.exercise_name,
+            exercise_position=1,
+            set_order=1,
+            actual_load_kg=100,
+            actual_reps=5,
+            actual_rpe=7,
+            completed=True,
+        )
+        db.session.add_all([log, result])
+        db.session.commit()
+        log_id, result_id = log.id, result.id
+        revision = ProgrammeRevision(
+            block=block,
+            athlete_id=athlete_id,
+            revision_number=1,
+            change_type="created",
+            summary="Created draft",
+            reason="Created draft",
+            authored_snapshot={"block": block.name},
+            authored_by="Coach",
+        )
+        db.session.add(revision)
+        db.session.commit()
+        revision_id = revision.id
+
+    assert app.test_client().post(f"/programming/blocks/{block_id}/delete").status_code == 302
+    with app.app_context():
+        log = db.session.get(TrainingSessionLog, log_id)
+        result = db.session.get(TrainingSetResult, result_id)
+        assert log is not None and log.session_id is None and log.block_name == "Development"
+        assert result is not None and result.prescription_id is None
+        revision = db.session.get(ProgrammeRevision, revision_id)
+        assert revision is not None and revision.block_id is None
