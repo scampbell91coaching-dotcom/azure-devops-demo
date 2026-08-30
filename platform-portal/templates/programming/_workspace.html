@@ -1,0 +1,24 @@
+{% macro athlete_workspace_nav(athlete, active='programming') %}
+<aside class="athlete-workspace-nav" aria-label="{{ athlete.full_name }} workspace">
+  <div class="athlete-workspace-nav__identity">
+    <span aria-hidden="true">{{ athlete.first_name[:1] }}{{ athlete.last_name[:1] }}</span>
+    <div><strong>{{ athlete.full_name }}</strong><small>{{ athlete.weight_class or 'Weight class not set' }}</small></div>
+  </div>
+  <nav>
+    <a href="{{ url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}">Overview</a>
+    <a href="{{ url_for('programming.athlete_program', athlete_id=athlete.id) }}"{% if active == 'programming' %} aria-current="page"{% endif %}>Programming</a>
+    <a href="{{ url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}#training-sessions">Tracking</a>
+    <a href="{{ url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}#competition">Competition</a>
+    <a href="{{ url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}#imported-nutrition">Nutrition</a>
+  </nav>
+</aside>
+{% endmacro %}
+
+{% macro week_tabs(block, current_week=none) %}
+<nav class="programme-week-tabs" aria-label="Weeks in {{ block.name }}">
+  <div class="programme-week-tabs__scroll">
+    {% for tab in block.weeks %}<a href="{{ url_for('programming.week', week_id=tab.id) }}"{% if current_week and tab.id == current_week.id %} aria-current="page"{% endif %}>Week {{ tab.position }}</a>{% endfor %}
+  </div>
+  <form method="post" action="{{ url_for('programming.extend_block', block_id=block.id) }}"><input type="hidden" name="weeks" value="1"><button type="submit" class="programme-week-tabs__add">+ Add week</button></form>
+</nav>
+{% endmacro %}

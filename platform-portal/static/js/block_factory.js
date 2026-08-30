@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const accept = document.querySelector("[data-accept-proposal]");
   const staleNotice = document.querySelector("[data-preview-stale]");
   const reasonWrap = document.querySelector("[data-override-reason]");
+  const state = document.querySelector("[data-factory-state]");
   const reason = form.elements.namedItem("override_reason");
   let dirty = preview?.classList.contains("is-stale") || false;
 
@@ -38,6 +39,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (accept) {
       accept.disabled = true;
       accept.setAttribute("aria-disabled", "true");
+    }
+    if (state) {
+      state.textContent = "Preview stale";
+      state.classList.remove("is-ready", "is-error");
+      state.classList.add("is-dirty");
     }
     if (reasonWrap) reasonWrap.hidden = false;
     if (reason instanceof HTMLTextAreaElement) reason.required = true;
