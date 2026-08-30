@@ -10,6 +10,7 @@ from ..programming_services.blocks import (
     create,
     delete_draft,
     duplicate,
+    update,
 )
 from ..programming_services.presentation import week_exposure_summary
 from ..tenancy import require_athlete_access, require_programming_access
@@ -36,6 +37,20 @@ def register_block_routes(blueprint: Blueprint) -> None:
         require_programming_access(source)
         target = duplicate(source)
         return redirect(url_for("programming.block", block_id=target.id))
+
+    @blueprint.post("/programming/blocks/<int:block_id>/edit")
+    def edit_block(block_id: int):
+        item = db.session.get(TrainingBlock, block_id)
+        require_programming_access(item)
+        try:
+            update(
+                item,
+                name=request.form.get("name", "").strip(),
+                objective=request.form.get("objective", "").strip() or None,
+            )
+        except ValueError:
+            abort(400)
+        return redirect(url_for("programming.block", block_id=item.id))
 
     @blueprint.post("/programming/blocks/<int:block_id>/activate")
     def activate_block(block_id: int):

@@ -61,9 +61,10 @@
     <div class="week-lifecycle" aria-label="Week controls">
       <form method="post" action="{{ url_for('programming.duplicate_week', week_id=week.id) }}"><button class="coach-link-button" type="submit">Duplicate week</button></form>
       <form method="post" action="{{ url_for('programming.extend_block', block_id=week.block.id) }}"><input type="hidden" name="weeks" value="1"><button class="coach-link-button" type="submit">Extend block</button></form>
-      <form method="post" action="{{ url_for('programming.delete_week', week_id=week.id) }}"><button class="coach-link-button" type="submit">Delete week</button></form>
+      <form method="post" action="{{ url_for('programming.delete_week', week_id=week.id) }}" data-confirm="Delete this week’s programming structure? Completed and imported training history will remain available."><button class="coach-link-button" type="submit">Delete week</button></form>
     </div>
   </header>
+  <details class="week-add-session"><summary class="coach-link-button">Rename or edit week</summary><form class="coach-form programming-form" method="post" action="{{ url_for('programming.edit_week', week_id=week.id) }}"><label><span>Name</span><input name="name" value="{{ week.name }}" required maxlength="120"></label><label><span>Notes</span><textarea name="notes" rows="2">{{ week.notes or '' }}</textarea></label><button class="coach-primary-button" type="submit">Save week</button></form></details>
   <section class="week-context" aria-label="Week planning context">
     <div><span class="coach-eyebrow">Week focus</span><strong>{{ week.notes or week.block.objective or 'No focus recorded' }}</strong></div>
     <div class="exposure-strip" aria-label="Taxonomy-backed competition lift exposures"><span><b>S</b> Squat <strong>{{ exposure_summary.squat }}</strong></span><span><b>B</b> Bench <strong>{{ exposure_summary.bench }}</strong></span><span><b>D</b> Deadlift <strong>{{ exposure_summary.deadlift }}</strong></span></div>

@@ -23,6 +23,8 @@ EXPECTED_PROGRAMMING_ROUTES = {
     ),
     ("programming.create_session", "/programming/weeks/<int:week_id>/sessions", "POST"),
     ("programming.create_week", "/programming/blocks/<int:block_id>/weeks", "POST"),
+    ("programming.edit_block", "/programming/blocks/<int:block_id>/edit", "POST"),
+    ("programming.edit_week", "/programming/weeks/<int:week_id>/edit", "POST"),
     (
         "programming.delete_draft_block",
         "/programming/blocks/<int:block_id>/delete",
@@ -51,6 +53,11 @@ EXPECTED_PROGRAMMING_ROUTES = {
     (
         "programming.delete_week",
         "/programming/weeks/<int:week_id>/delete",
+        "POST",
+    ),
+    (
+        "programming.reorder_week",
+        "/programming/weeks/<int:week_id>/reorder",
         "POST",
     ),
     (

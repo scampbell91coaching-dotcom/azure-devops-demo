@@ -99,6 +99,22 @@ test('navigates from a programming block to its week', async ({ page }) => {
   ).toBeVisible();
 });
 
+test('coach duplicates and safely deletes programme structure', async ({ page }) => {
+  await page.goto('/programming/blocks/301');
+  await page.getByRole('button', { name: 'Duplicate block' }).click();
+  await expect(page.getByRole('heading', { name: 'Deterministic strength block Copy' })).toBeVisible();
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: 'Delete draft' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Alex Rivera' })).toBeVisible();
+
+  await page.goto('/programming/weeks/401');
+  await page.getByRole('button', { name: 'Duplicate week' }).click();
+  await expect(page.getByRole('heading', { name: 'Foundation week Copy' })).toBeVisible();
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: 'Delete week' }).click();
+  await expect(page.getByRole('heading', { name: 'Deterministic strength block' })).toBeVisible();
+});
+
 test('filters the exercise library', async ({ page }) => {
   await page.goto('/exercise-library');
   await page.locator('input[name="q"]').fill('Pulldown');
