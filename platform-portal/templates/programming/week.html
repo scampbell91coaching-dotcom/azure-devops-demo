@@ -55,7 +55,10 @@
 {% endmacro %}
 
 {% block content %}
-<section class="coach-page week-editor">
+{% from "programming/_workspace.html" import athlete_workspace_nav, week_tabs %}
+<div class="athlete-programming-shell">
+{{ athlete_workspace_nav(week.block.athlete) }}
+<section class="coach-page week-editor athlete-programming-main">
   <header class="coach-page__header coach-page__header--split">
     <div><a class="coach-back-link" href="{{ url_for('programming.block', block_id=week.block.id) }}">← {{ week.block.name }}</a><span class="coach-eyebrow">{{ week.block.athlete.full_name }} · Week {{ week.position }}</span><h1>{{ week.name }}</h1>{% if week.notes %}<p>{{ week.notes }}</p>{% endif %}</div>
     <div class="week-lifecycle" aria-label="Week controls">
@@ -64,6 +67,7 @@
       <form method="post" action="{{ url_for('programming.delete_week', week_id=week.id) }}"><button class="coach-link-button" type="submit">Delete week</button></form>
     </div>
   </header>
+  {{ week_tabs(week.block, week) }}
   <section class="week-context" aria-label="Week planning context">
     <div><span class="coach-eyebrow">Week focus</span><strong>{{ week.notes or week.block.objective or 'No focus recorded' }}</strong></div>
     <div class="exposure-strip" aria-label="Taxonomy-backed competition lift exposures"><span><b>S</b> Squat <strong>{{ exposure_summary.squat }}</strong></span><span><b>B</b> Bench <strong>{{ exposure_summary.bench }}</strong></span><span><b>D</b> Deadlift <strong>{{ exposure_summary.deadlift }}</strong></span></div>
@@ -83,12 +87,12 @@
       <div class="session-day-structure" aria-label="Scheduled lift structure"><strong>Structure</strong>{% for slot in session.lift_slots %}<span>{{ slot.lift_family[0]|upper }} · {{ slot.lift_family|title }}</span>{% else %}<span>Assistance only</span>{% endfor %}</div>
       <section class="lift-slots"><h3>Main-lift prescriptions</h3>
       {% for slot in session.lift_slots %}
-        <details class="lift-slot" open data-testid="lift-slot"><summary><span class="lift-family-badge">{{ slot.lift_family[0]|upper }}</span><strong>{{ slot.lift_family|title }} exposure {{ loop.index }}</strong><span>{% for row in slot.prescriptions %}{{ 'Top' if row.slot_role == 'top_set' else 'Back-off' }}: {{ row.exercise_name }} {{ row.summary }}{% if not loop.last %} · {% endif %}{% endfor %}</span></summary>{{ lift_slot_form(session, slot) }}<form class="lift-slot-delete" method="post" action="{{ url_for('programming.delete_lift_slot', slot_id=slot.id) }}"><button class="coach-link-button" type="submit">Remove exposure</button></form></details>
+        <details class="lift-slot" open data-testid="lift-slot"><summary><span class="lift-family-badge">{{ slot.lift_family[0]|upper }}</span><span class="compact-exercise-title"><strong>{% set first_row = slot.prescriptions|first %}{{ first_row.exercise_name if first_row else slot.lift_family|title }}</strong><small>{{ slot.exposure_role|replace('_', ' ')|title if slot.exposure_role else slot.lift_family|title }} · click to edit</small></span><span>{% for row in slot.prescriptions %}{{ 'Top' if row.slot_role == 'top_set' else 'Back-off' }}: {{ row.exercise_name }} {{ row.summary }}{% if not loop.last %} + {% endif %}{% endfor %}</span></summary>{{ lift_slot_form(session, slot) }}<form class="lift-slot-delete" method="post" action="{{ url_for('programming.delete_lift_slot', slot_id=slot.id) }}"><button class="coach-link-button" type="submit">Remove exposure</button></form></details>
       {% else %}<p class="week-editor__empty">No squat, bench or deadlift exposures scheduled.</p>{% endfor %}
       <details class="lift-slot lift-slot--new"><summary><strong>Add S/B/D lift slot</strong><span>Top set with optional back-off</span></summary>{{ lift_slot_form(session) }}</details></section>
       <section class="assistance"><div class="assistance__heading"><div><span class="coach-eyebrow">Subordinate work</span><h3>Assistance</h3></div><span>Zero assistance is valid</span></div><div class="week-prescriptions">
       {% for item in session.prescriptions if item.lift_slot_id is none %}
-        <details class="week-prescription" open><summary><strong>{{ item.position }}. {{ item.exercise_name }}</strong><span>{{ item.summary or 'No prescription set' }}</span></summary>
+        <details class="week-prescription" open><summary><span class="compact-exercise-title"><strong>{{ item.position }}. {{ item.exercise_name }}</strong><small>{{ (item.provenance or 'coach_authored')|replace('_', ' ')|title }} · click to edit</small></span><span>{{ item.summary or 'No prescription set' }}</span></summary>
           <span class="provenance-badge" data-testid="assistance-provenance">{{ (item.provenance or 'coach_authored')|replace('_', ' ')|title }}</span>
           <form class="week-prescription__form" method="post" action="{{ url_for('programming.update_prescription', prescription_id=item.id) }}"><input type="hidden" name="week_editor" value="1">{{ prescription_fields(item) }}<button class="coach-primary-button" type="submit">Save exercise</button></form>
           <form class="week-prescription__delete" method="post" action="{{ url_for('programming.delete_prescription', prescription_id=item.id) }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Delete exercise</button></form>
@@ -99,6 +103,6 @@
     </article>
   {% else %}<section class="coach-panel"><p>No sessions yet. Add the first session above.</p></section>{% endfor %}
   </div>
-</section>
+</section></div>
 {% endblock %}
 {% block scripts %}<script src="{{ url_for('static', filename='js/programming_lift_slots.js') }}" defer></script>{% endblock %}

@@ -12,7 +12,10 @@
 {% endblock %}
 
 {% block content %}
-<section class="coach-page">
+{% from "programming/_workspace.html" import athlete_workspace_nav %}
+<div class="athlete-programming-shell">
+{{ athlete_workspace_nav(athlete) }}
+<section class="coach-page athlete-programming-main">
   <header class="coach-page__header">
     <span class="coach-eyebrow">Athlete programming</span>
 
@@ -171,5 +174,5 @@
       </div>
     {% endif %}
   </section>
-</section>
+</section></div>
 {% endblock %}

@@ -3,7 +3,10 @@
 {% block title %}{{ block.name }} | Traditional Strength{% endblock %}
 {% block content %}
 {% set athlete = block.athlete %}
-<section class="coach-page programme-workspace">
+{% from "programming/_workspace.html" import athlete_workspace_nav, week_tabs %}
+<div class="athlete-programming-shell">
+{{ athlete_workspace_nav(athlete) }}
+<section class="coach-page programme-workspace athlete-programming-main">
   <nav class="programme-crumbs" aria-label="Programme hierarchy">
     <a href="{{ url_for('programming.athlete_program', athlete_id=athlete.id) }}">{{ athlete.full_name }}</a><span aria-hidden="true">/</span><span aria-current="page">{{ block.name }}</span>
   </nav>
@@ -22,6 +25,7 @@
     <dl><div><dt>Athlete</dt><dd>{{ athlete.full_name }}</dd></div><div><dt>Class</dt><dd>{{ athlete.weight_class or 'Not set' }}</dd></div><div><dt>Bodyweight</dt><dd>{{ athlete.bodyweight_kg ~ ' kg' if athlete.bodyweight_kg else 'Not set' }}</dd></div><div><dt>Federation</dt><dd>{{ athlete.federation or 'Not set' }}</dd></div><div><dt>Meet</dt><dd>{{ athlete.next_competition or 'Not selected' }}</dd></div><div><dt>Duration</dt><dd>{{ block.weeks|length }} weeks</dd></div></dl>
   </section>
   <section class="programme-intent" aria-labelledby="reasoning-title"><h2 id="reasoning-title">Block intent</h2><p>{{ block.objective or 'No coach-authored objective is stored for this block.' }}</p><span>Coach-authored</span></section>
+  {{ week_tabs(block) }}
   <div class="programme-section-heading"><div><span class="coach-eyebrow">Athlete → block → week</span><h2>Weeks and lift exposure</h2></div><details class="quick-create"><summary class="coach-primary-button">Add week</summary><form class="coach-form programming-form" method="post" action="{{ url_for('programming.create_week', block_id=block.id) }}"><label><span>Name</span><input name="name" placeholder="Week {{ block.weeks|length + 1 }}"></label><label><span>Notes</span><input name="notes" placeholder="Focus or constraints"></label><button class="coach-primary-button" type="submit">Add week</button></form></details></div>
   <div class="programme-week-table" role="table" aria-label="Weeks and lift exposure">
     <div class="programme-week-table__head" role="row"><span role="columnheader">Week</span><span role="columnheader">Focus</span><span role="columnheader">Sessions</span><span role="columnheader">Lift exposure</span><span role="columnheader">Actions</span></div>
@@ -41,5 +45,5 @@
       {% for revision in block.revisions %}<li><div><strong>Revision {{ revision.revision_number }} · {{ revision.summary }}</strong><p>{{ revision.reason }}</p></div><span>{{ revision.authored_at.strftime('%d %b %Y, %H:%M') }} · {{ revision.authored_by }}</span></li>{% endfor %}
     </ol>{% else %}<div class="coach-empty-state"><h3>No revisions recorded</h3><p>History begins with the next authored programme change.</p></div>{% endif %}
   </section>
-</section>
+</section></div>
 {% endblock %}

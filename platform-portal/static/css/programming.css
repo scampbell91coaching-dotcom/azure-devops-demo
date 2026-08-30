@@ -114,3 +114,63 @@
 .revision-history { display:grid; gap:.75rem; margin:1rem 0 0; padding:0; list-style:none; }.revision-history li { display:flex; justify-content:space-between; gap:1rem; border-top:1px solid var(--coach-border); padding-top:.75rem; }.revision-history p { margin:.25rem 0 0; color:var(--coach-muted); }.revision-history span { flex:none; color:var(--coach-muted); font-size:.8rem; }
 @media (max-width: 560px) { .programme-context-bar dl, .session-context { grid-template-columns: 1fr 1fr; }.programme-context-bar dl > div { border-right: 1px solid var(--coach-border); }.programme-context-bar dl > div:nth-child(2n) { border-right: 0; }.programme-intent { grid-template-columns: 1fr; }.programme-hero, .programme-section-heading { align-items: stretch; flex-direction: column; }.context-facts { grid-template-columns: 1fr 1fr; }.quick-create, .quick-create > summary { box-sizing: border-box; width: 100%; }.quick-create[open] > form { position: static; width: auto; }.exposure-strip > span { flex: 1 1 88px; }.revision-history li { flex-direction:column; } }
 @media (max-width: 700px) { .programme-week-table { display:grid; gap:.65rem; border:0; overflow:visible; }.programme-week-table__head { display:none; }.programme-week-row { display:grid; grid-template-columns:1fr; gap:.45rem; min-width:0; padding:.7rem; border:1px solid var(--coach-border); border-top:2px solid var(--coach-accent); }.programme-week-row__focus { white-space:normal; }.programme-week-row__actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); width:100%; }.programme-week-row__actions > *, .programme-week-row__actions a, .programme-week-row__actions button { box-sizing:border-box; min-width:0; width:100%; text-align:center; }.session-day-structure { flex-wrap:wrap; } }
+
+/* Athlete-first programming workspace */
+.athlete-programming-shell { display: grid; grid-template-columns: 13.5rem minmax(0, 1fr); gap: clamp(1.25rem, 3vw, 2.5rem); width: 100%; min-width: 0; max-width: 1440px; margin-inline: auto; }
+.athlete-programming-shell > *, .athlete-programming-main, .athlete-programming-main > *, .week-session > *, .lift-slots, .lift-slot, .lift-slot > summary, .assistance, .week-prescription, .week-prescription > summary { min-width: 0; max-width: 100%; }
+.athlete-workspace-nav { position: sticky; top: 1rem; min-width: 0; max-width: 100%; align-self: start; border-right: 1px solid var(--coach-border); padding-right: 1rem; }
+.athlete-workspace-nav__identity { display: flex; gap: .7rem; align-items: center; padding: .7rem 0 1rem; }
+.athlete-workspace-nav__identity > span { display: grid; flex: 0 0 2.35rem; height: 2.35rem; place-items: center; border-radius: 50%; background: var(--coach-accent); color: #0b0d0c; font-weight: 950; }
+.athlete-workspace-nav__identity div { display: grid; min-width: 0; }
+.athlete-workspace-nav__identity strong { overflow: hidden; color: var(--coach-heading); text-overflow: ellipsis; white-space: nowrap; }
+.athlete-workspace-nav__identity small { color: var(--coach-muted); }
+.athlete-workspace-nav nav { display: grid; gap: .2rem; }
+.athlete-workspace-nav nav a { border-left: 2px solid transparent; padding: .62rem .7rem; color: var(--coach-muted); font-size: .87rem; font-weight: 800; text-decoration: none; }
+.athlete-workspace-nav nav a:hover, .athlete-workspace-nav nav a:focus-visible { background: var(--coach-panel-soft); color: var(--coach-text); }
+.athlete-workspace-nav nav a[aria-current="page"] { border-left-color: var(--coach-accent); background: var(--coach-panel-soft); color: var(--coach-heading); }
+.programme-week-tabs { display: flex; min-width: 0; max-width: 100%; justify-content: space-between; gap: .5rem; align-items: stretch; margin: .4rem 0 1rem; overflow: hidden; border-bottom: 1px solid var(--coach-border-strong); }
+.programme-week-tabs__scroll { display: flex; flex: 1 1 auto; min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
+.programme-week-tabs a, .programme-week-tabs__add { display: block; min-height: 2.75rem; box-sizing: border-box; border: 0; border-bottom: 2px solid transparent; padding: .78rem .9rem; background: transparent; color: var(--coach-muted); font: inherit; font-size: .82rem; font-weight: 850; white-space: nowrap; text-decoration: none; cursor: pointer; }
+.programme-week-tabs a:hover, .programme-week-tabs__add:hover { color: var(--coach-heading); }
+.programme-week-tabs a[aria-current="page"] { border-bottom-color: var(--coach-accent); color: var(--coach-heading); }
+.programme-week-tabs form { flex: none; }
+.programme-week-tabs__add { color: var(--coach-accent-soft); }
+.week-editor__sessions { display: grid; gap: .9rem; border-top: 0; }
+.week-session { border: 1px solid var(--coach-border); border-top: 2px solid var(--coach-accent); padding: 1rem; background: var(--coach-panel); }
+.week-session__heading h2 { font-size: 1.45rem; }
+.week-session__actions { justify-content: flex-end; }
+.week-session__actions form:nth-of-type(-n+2), .week-session__actions form:last-child { opacity: .62; }
+.lift-slots, .assistance { gap: .5rem; }
+.lift-slots > h3, .assistance h3 { font-size: 1rem; }
+.lift-slot, .week-prescription { background: var(--coach-panel-soft); }
+.lift-slot > summary, .week-prescription summary { min-height: 3rem; box-sizing: border-box; }
+.compact-exercise-title { display: grid; min-width: 0; }
+.compact-exercise-title strong { overflow: hidden; color: var(--coach-heading); text-overflow: ellipsis; white-space: nowrap; }
+.compact-exercise-title small { color: var(--coach-muted); font-size: .68rem; font-weight: 700; }
+.lift-slot[open], .week-prescription[open] { box-shadow: inset 3px 0 var(--coach-accent); }
+.lift-slot summary:focus-visible, .week-prescription summary:focus-visible { outline: 2px solid var(--coach-focus); outline-offset: -2px; }
+.assistance { margin-top: .9rem; padding-top: .8rem; }
+.programme-context-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
+
+@media (max-width: 980px) {
+  .athlete-programming-shell { grid-template-columns: 1fr; }
+  .athlete-workspace-nav { position: static; overflow: hidden; border-right: 0; border-bottom: 1px solid var(--coach-border); padding: 0; }
+  .athlete-workspace-nav__identity { padding-bottom: .55rem; }
+  .athlete-workspace-nav nav { display: flex; width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-inline: contain; }
+  .athlete-workspace-nav nav a { border-left: 0; border-bottom: 2px solid transparent; }
+  .athlete-workspace-nav nav a[aria-current="page"] { border-bottom-color: var(--coach-accent); }
+  .programme-context-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .athlete-programming-shell { gap: .85rem; }
+  .athlete-workspace-nav__identity { padding-inline: .2rem; }
+  .programme-week-tabs { margin-inline: -.2rem; }
+  .programme-week-tabs__scroll { scroll-snap-type: x proximity; }
+  .programme-week-tabs a { scroll-snap-align: start; }
+  .week-session { padding: .75rem; }
+  .week-session__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .week-session__actions > *, .week-session__actions a, .week-session__actions button { width: 100%; }
+  .lift-slot > summary { grid-template-columns: auto minmax(0, 1fr); }
+  .lift-slot > summary > span:last-child { grid-column: 1 / -1; padding-left: 2.25rem; }
+  .week-prescription summary { gap: .3rem; }
+}
