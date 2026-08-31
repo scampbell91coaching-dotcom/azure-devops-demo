@@ -107,7 +107,7 @@ def test_migration_cli_can_inspect_heads_with_local_validation_config(tmp_path: 
     config = Config(str(Path(__file__).parents[1] / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(Path(__file__).parents[1] / "migrations"))
     assert ScriptDirectory.from_config(config).get_heads() == [
-        "0028_spreadsheet_import_history"
+        "0029_programming_publication_safety"
     ]
 
 
@@ -147,6 +147,25 @@ def test_upgrade_and_schema_verification_on_empty_sqlite(tmp_path: Path):
             )
         }
         assert "exposure_role" in lift_slot_columns
+
+
+def test_0029_upgrades_an_existing_0028_database(tmp_path: Path):
+    app = migration_app(f"sqlite:///{tmp_path / 'upgrade-from-0028.db'}")
+    runner = app.test_cli_runner()
+
+    to_0028 = runner.invoke(
+        args=["db", "upgrade", "0028_spreadsheet_import_history"]
+    )
+    assert to_0028.exit_code == 0, to_0028.output
+    to_head = runner.invoke(args=["db", "upgrade"])
+    assert to_head.exit_code == 0, to_head.output
+
+    with app.app_context():
+        columns = {
+            column["name"]
+            for column in inspect(db.engine).get_columns("training_blocks")
+        }
+        assert "replaces_block_id" in columns
 
 
 def test_canonical_tenancy_migration_does_not_automatically_backfill_legacy_rows(tmp_path: Path):

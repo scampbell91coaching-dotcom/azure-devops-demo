@@ -11,6 +11,8 @@ from ..models.programming import (
     TrainingWeek,
 )
 from .prescriptions import copy as copy_prescriptions
+from .conflicts import require_current
+from .publication import publication_blockers
 from .revisions import append_revision
 from .warmups import copy as copy_warmups
 from .weeks import detach_history
@@ -50,13 +52,16 @@ def update(
     return block
 
 
-def duplicate(source: TrainingBlock) -> TrainingBlock:
+def duplicate(
+    source: TrainingBlock, *, as_revision: bool = False
+) -> TrainingBlock:
     try:
         target = TrainingBlock(
             athlete=source.athlete,
             name=f"{source.name} Copy",
             objective=source.objective,
             status="draft",
+            replaces_block=source if as_revision else None,
         )
         db.session.add(target)
         db.session.flush()
@@ -83,7 +88,14 @@ def duplicate(source: TrainingBlock) -> TrainingBlock:
                 lift_slots = copy_prescriptions(source_session, target_session)
                 copy_warmups(source_session, target_session, lift_slots)
 
-        append_revision(target, change_type="block_duplicated", summary=f'Duplicated from "{source.name}"')
+        append_revision(
+            target,
+            change_type="material_change_draft_created" if as_revision else "block_duplicated",
+            summary=(
+                f'Created review draft from active programme "{source.name}"'
+                if as_revision else f'Duplicated from "{source.name}"'
+            ),
+        )
         db.session.commit()
     except (SQLAlchemyError, ValueError):
         db.session.rollback()
@@ -91,7 +103,12 @@ def duplicate(source: TrainingBlock) -> TrainingBlock:
     return target
 
 
-def activate(block: TrainingBlock) -> None:
+def activate(
+    block: TrainingBlock,
+    *,
+    expected_revision: int | None = None,
+    reason: str | None = None,
+) -> None:
     """Publish one draft without replacing an existing active programme."""
     # Serialize activation decisions for this athlete on databases that support
     # row locks, so two concurrent draft publishes cannot both pass the check.
@@ -105,20 +122,58 @@ def activate(block: TrainingBlock) -> None:
     if block.status != "draft":
         raise BlockActivationError("Only draft programmes can be published.")
 
+    require_current(block, expected_revision)
+    blockers = publication_blockers(block)
+    if blockers:
+        raise BlockActivationError("Publication blocked: " + " ".join(blockers))
+
+    replaced = block.replaces_block
+    if replaced is not None:
+        if replaced.athlete_id != block.athlete_id:
+            raise BlockActivationError("The review draft does not match this athlete.")
+        if replaced.status != "active":
+            raise BlockActivationError(
+                "The athlete-visible programme changed while this draft was reviewed. "
+                "Reload and create a new review draft."
+            )
+        if not reason or not reason.strip():
+            raise BlockActivationError("A reason is required for a material programme change.")
+
     conflicting = TrainingBlock.query.filter(
         TrainingBlock.athlete_id == block.athlete_id,
         TrainingBlock.status == "active",
         TrainingBlock.id != block.id,
     ).first()
-    if conflicting is not None:
+    if conflicting is not None and conflicting is not replaced:
         raise BlockActivationError(
             f'Archive the active programme "{conflicting.name}" before publishing '
             "this draft."
         )
 
-    block.status = "active"
-    append_revision(block, change_type="block_published", summary="Published programme to athlete")
-    db.session.commit()
+    try:
+        if replaced is not None:
+            replaced.status = "archived"
+            append_revision(
+                replaced,
+                change_type="block_replaced",
+                summary=f'Replaced by reviewed programme "{block.name}"',
+                reason=reason,
+            )
+        block.status = "active"
+        summary = (
+            f'Published reviewed material changes replacing "{replaced.name}"'
+            if replaced is not None else "Published programme to athlete"
+        )
+        append_revision(
+            block,
+            change_type="material_change_published" if replaced is not None else "block_published",
+            summary=summary,
+            reason=reason,
+        )
+        db.session.commit()
+    except (SQLAlchemyError, ValueError):
+        db.session.rollback()
+        raise
 
 
 def archive(block: TrainingBlock) -> None:

@@ -198,6 +198,11 @@ def test_draft_publish_lifecycle_and_duplicate_active_conflict_persist():
             first_name="Sam", last_name="Lifter", email="sam@example.com"
         )
         draft = TrainingBlock(athlete=athlete, name="Next block")
+        draft_week = TrainingWeek(block=draft, name="Week 1", position=1)
+        draft_session = TrainingSession(week=draft_week, name="Day 1", position=1)
+        draft_session.prescriptions.append(
+            ExercisePrescription(exercise_name="Squat", position=1)
+        )
         other_draft = TrainingBlock(athlete=other, name="Private draft")
         db.session.add_all([draft, other_draft])
         db.session.commit()
@@ -219,6 +224,13 @@ def test_draft_publish_lifecycle_and_duplicate_active_conflict_persist():
         assert db.session.get(TrainingBlock, draft_id).status == "active"
         conflict = TrainingBlock(
             athlete_id=athlete_id, name="Conflicting draft", status="draft"
+        )
+        conflict_week = TrainingWeek(block=conflict, name="Week 1", position=1)
+        conflict_session = TrainingSession(
+            week=conflict_week, name="Day 1", position=1
+        )
+        conflict_session.prescriptions.append(
+            ExercisePrescription(exercise_name="Squat", position=1)
         )
         db.session.add(conflict)
         db.session.commit()

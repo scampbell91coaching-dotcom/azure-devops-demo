@@ -15,6 +15,9 @@ from ..models.warmup import WarmupAssignment, WarmupProtocol
 from ..services.persisted_warmups import resolve_warmup
 from ..services.movement_warmup_candidates import warmup_candidates
 from ..tenancy import require_programming_access
+from ..programming_services.conflicts import (
+    ActiveProgrammeEditError, ProgrammeConflictError, require_current, require_editable,
+)
 
 
 def _redirect_after_edit(session: TrainingSession):
@@ -30,10 +33,22 @@ def _redirect_after_edit(session: TrainingSession):
 
 
 def register_session_routes(blueprint: Blueprint) -> None:
+    def check_current(block: TrainingBlock) -> None:
+        raw = request.form.get("expected_revision")
+        try:
+            expected = int(raw) if raw not in (None, "") else None
+            require_editable(block)
+            require_current(block, expected)
+        except ValueError as error:
+            if isinstance(error, (ActiveProgrammeEditError, ProgrammeConflictError)):
+                abort(409, description=str(error))
+            abort(400, description="Invalid programme revision token.")
+
     @blueprint.post("/programming/weeks/<int:week_id>/sessions")
     def create_session(week_id: int):
         week = db.session.get(TrainingWeek, week_id)
         require_programming_access(week)
+        check_current(week.block)
         session = create(
             week,
             name=request.form.get("name", "").strip(),
@@ -45,6 +60,7 @@ def register_session_routes(blueprint: Blueprint) -> None:
     def insert_session_before(session_id: int):
         source = db.session.get(TrainingSession, session_id)
         require_programming_access(source)
+        check_current(source.week.block)
         target = insert_blank(source, after=False)
         return _redirect_after_edit(target)
 
@@ -52,6 +68,7 @@ def register_session_routes(blueprint: Blueprint) -> None:
     def insert_session_after(session_id: int):
         source = db.session.get(TrainingSession, session_id)
         require_programming_access(source)
+        check_current(source.week.block)
         target = insert_blank(source, after=True)
         return _redirect_after_edit(target)
 
@@ -92,6 +109,7 @@ def register_session_routes(blueprint: Blueprint) -> None:
     def duplicate_session(session_id: int):
         source = db.session.get(TrainingSession, session_id)
         require_programming_access(source)
+        check_current(source.week.block)
         target = duplicate(source)
         return _redirect_after_edit(target)
 
@@ -99,5 +117,6 @@ def register_session_routes(blueprint: Blueprint) -> None:
     def delete_session(session_id: int):
         item = db.session.get(TrainingSession, session_id)
         require_programming_access(item)
+        check_current(item.week.block)
         week_id = delete(item)
         return redirect(url_for("programming.week", week_id=week_id))

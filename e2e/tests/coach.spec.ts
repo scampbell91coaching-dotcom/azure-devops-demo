@@ -107,12 +107,20 @@ test('coach duplicates and safely deletes programme structure', async ({ page })
   await page.getByRole('button', { name: 'Delete draft' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Alex Rivera' })).toBeVisible();
 
-  await page.goto('/programming/weeks/401');
+  await page.goto('/programming/blocks/301');
+  await page.getByRole('button', { name: 'Create review draft' }).click();
+  await expect(page.getByText('Material change review')).toBeVisible();
+
+  const firstWeek = page.getByTestId('programming-week').first();
+  await firstWeek.getByRole('link', { name: 'Edit week' }).click();
+
   await page.getByRole('button', { name: 'Duplicate week' }).click();
   await expect(page.getByRole('heading', { name: 'Foundation week Copy' })).toBeVisible();
+
   page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: 'Delete week' }).click();
-  await expect(page.getByRole('heading', { name: 'Deterministic strength block' })).toBeVisible();
+
+  await expect(page.getByText('Material change review')).toBeVisible();
 });
 
 test('filters the exercise library', async ({ page }) => {

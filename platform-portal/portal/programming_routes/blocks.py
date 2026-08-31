@@ -12,11 +12,22 @@ from ..programming_services.blocks import (
     duplicate,
     update,
 )
+from ..programming_services.conflicts import (
+    ActiveProgrammeEditError, ProgrammeConflictError, current_revision,
+    require_current, require_editable,
+)
 from ..programming_services.presentation import week_exposure_summary
 from ..tenancy import require_athlete_access, require_programming_access
 
 
 def register_block_routes(blueprint: Blueprint) -> None:
+    def expected_revision() -> int | None:
+        raw = request.form.get("expected_revision")
+        try:
+            return int(raw) if raw not in (None, "") else None
+        except ValueError:
+            abort(400, description="Invalid programme revision token.")
+
     @blueprint.post("/programming/blocks")
     def create_block():
         athlete_id = request.form.get("athlete_id", type=int)
@@ -38,16 +49,33 @@ def register_block_routes(blueprint: Blueprint) -> None:
         target = duplicate(source)
         return redirect(url_for("programming.block", block_id=target.id))
 
+    @blueprint.post("/programming/blocks/<int:block_id>/revise")
+    def revise_block(block_id: int):
+        source = db.session.get(TrainingBlock, block_id)
+        require_programming_access(source)
+        if source.status != "active":
+            abort(409, description="Only an active programme can start a review draft.")
+        try:
+            require_current(source, expected_revision())
+            target = duplicate(source, as_revision=True)
+        except ProgrammeConflictError as error:
+            abort(409, description=str(error))
+        return redirect(url_for("programming.block", block_id=target.id))
+
     @blueprint.post("/programming/blocks/<int:block_id>/edit")
     def edit_block(block_id: int):
         item = db.session.get(TrainingBlock, block_id)
         require_programming_access(item)
         try:
+            require_editable(item)
+            require_current(item, expected_revision())
             update(
                 item,
                 name=request.form.get("name", "").strip(),
                 objective=request.form.get("objective", "").strip() or None,
             )
+        except (ActiveProgrammeEditError, ProgrammeConflictError) as error:
+            abort(409, description=str(error))
         except ValueError:
             abort(400)
         return redirect(url_for("programming.block", block_id=item.id))
@@ -57,8 +85,12 @@ def register_block_routes(blueprint: Blueprint) -> None:
         item = db.session.get(TrainingBlock, block_id)
         require_programming_access(item)
         try:
-            activate(item)
-        except BlockActivationError as error:
+            activate(
+                item,
+                expected_revision=expected_revision(),
+                reason=request.form.get("revision_reason", "").strip() or None,
+            )
+        except (BlockActivationError, ProgrammeConflictError) as error:
             abort(409, description=str(error))
         return redirect(url_for("programming.block", block_id=item.id))
 
@@ -101,4 +133,5 @@ def register_block_routes(blueprint: Blueprint) -> None:
             week_exposures={
                 week.id: week_exposure_summary(week) for week in item.weeks
             },
+            current_revision=current_revision(item),
         )

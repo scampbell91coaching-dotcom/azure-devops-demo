@@ -34,6 +34,12 @@ class TrainingBlock(db.Model):  # type: ignore[name-defined]
     name = db.Column(db.String(160), nullable=False)
     objective = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(40), nullable=False, default="draft", index=True)
+    replaces_block_id = db.Column(
+        db.Integer,
+        db.ForeignKey("training_blocks.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.now(UTC)
     )
@@ -57,6 +63,9 @@ class TrainingBlock(db.Model):  # type: ignore[name-defined]
         cascade="save-update, merge",
         order_by="ProgrammeRevision.revision_number.desc()",
         passive_deletes=True,
+    )
+    replaces_block = db.relationship(
+        "TrainingBlock", remote_side=[id], foreign_keys=[replaces_block_id]
     )
 
 

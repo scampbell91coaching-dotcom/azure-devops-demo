@@ -22,13 +22,30 @@ from ..programming_services.weeks import (
 )
 from ..services.weekly_programming_intelligence import map_athlete_programming_context
 from ..tenancy import require_programming_access
+from ..programming_services.conflicts import (
+    ActiveProgrammeEditError, ProgrammeConflictError, current_revision,
+    require_current, require_editable,
+)
 
 
 def register_week_routes(blueprint: Blueprint) -> None:
+    def check_current(block: TrainingBlock) -> None:
+        raw = request.form.get("expected_revision")
+        try:
+            expected = int(raw) if raw not in (None, "") else None
+        except ValueError:
+            abort(400, description="Invalid programme revision token.")
+        try:
+            require_editable(block)
+            require_current(block, expected)
+        except (ActiveProgrammeEditError, ProgrammeConflictError) as error:
+            abort(409, description=str(error))
+
     @blueprint.post("/programming/blocks/<int:block_id>/weeks")
     def create_week(block_id: int):
         block = db.session.get(TrainingBlock, block_id)
         require_programming_access(block)
+        check_current(block)
         week = create(
             block,
             name=request.form.get("name", "").strip(),
@@ -63,12 +80,14 @@ def register_week_routes(blueprint: Blueprint) -> None:
             lift_exercises=Exercise.query.filter(
                 Exercise.active.is_(True), Exercise.lift_family.isnot(None)
             ).order_by(Exercise.lift_family, Exercise.name).all(),
+            current_revision=current_revision(item.block),
         )
 
     @blueprint.post("/programming/weeks/<int:week_id>/duplicate")
     def duplicate_week(week_id: int):
         source = db.session.get(TrainingWeek, week_id)
         require_programming_access(source)
+        check_current(source.block)
         target = duplicate(source)
         return redirect(url_for("programming.week", week_id=target.id))
 
@@ -77,6 +96,7 @@ def register_week_routes(blueprint: Blueprint) -> None:
         item = db.session.get(TrainingWeek, week_id)
         require_programming_access(item)
         try:
+            check_current(item.block)
             update(
                 item,
                 name=request.form.get("name", "").strip(),
@@ -91,6 +111,7 @@ def register_week_routes(blueprint: Blueprint) -> None:
         item = db.session.get(TrainingWeek, week_id)
         require_programming_access(item)
         try:
+            check_current(item.block)
             position = int(request.form.get("position", ""))
             reorder(item, position=position)
         except (TypeError, ValueError):
@@ -101,6 +122,7 @@ def register_week_routes(blueprint: Blueprint) -> None:
     def extend_block(block_id: int):
         block = db.session.get(TrainingBlock, block_id)
         require_programming_access(block)
+        check_current(block)
         raw_count = (
             request.form.get("weeks")
             or request.form.get("week_count")
@@ -122,6 +144,7 @@ def register_week_routes(blueprint: Blueprint) -> None:
     def delete_week(week_id: int):
         item = db.session.get(TrainingWeek, week_id)
         require_programming_access(item)
+        check_current(item.block)
         try:
             block_id = delete(item)
         except FinalWeekDeletionError:

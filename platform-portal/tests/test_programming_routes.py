@@ -3,6 +3,11 @@ from portal.programming import programming_bp
 
 EXPECTED_PROGRAMMING_ROUTES = {
     (
+        "programming.revise_block",
+        "/programming/blocks/<int:block_id>/revise",
+        "POST",
+    ),
+    (
         "programming.activate_block",
         "/programming/blocks/<int:block_id>/activate",
         "POST",
