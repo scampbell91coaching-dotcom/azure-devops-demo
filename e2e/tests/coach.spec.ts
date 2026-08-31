@@ -502,6 +502,24 @@ test('Block Factory rejects an edit without the required reason', async ({ page 
   await expect(overrideReason).toBeFocused();
 });
 
+test('Block Factory dirty listener is active before DOMContentLoaded observers edit a preview', async ({ page }) => {
+  await page.goto('/programming/factory');
+  await page.locator('select[name="athlete_id"]').selectOption({ label: 'Alex Rivera' });
+  await page.addInitScript(() => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const name = document.querySelector<HTMLInputElement>('#block-factory-form input[name="name"]');
+      if (!name) throw new Error('Block name input is missing');
+      name.value = 'DOMContentLoaded observer edit';
+      name.dispatchEvent(new Event('input', { bubbles: true }));
+    }, { once: true });
+  });
+  await page.getByRole('button', { name: 'Preview' }).click();
+
+  await expect(page.getByRole('button', { name: 'Accept proposal' })).toBeDisabled();
+  await expect(page.getByText('This preview is out of date. Generate preview again before accepting.')).toBeVisible();
+  await expect(page.getByLabel('Coach override reason (required)')).toBeVisible();
+});
+
 test('Block Factory re-preview enables acceptance after a proposal edit', async ({ page }) => {
   await page.goto('/programming/factory');
   await page.locator('select[name="athlete_id"]').selectOption({ label: 'Alex Rivera' });

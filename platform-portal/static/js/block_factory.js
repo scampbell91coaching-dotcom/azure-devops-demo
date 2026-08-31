@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", () => {
+const initialiseBlockFactory = () => {
   const form = document.querySelector("#block-factory-form");
   const factory = document.querySelector("[data-factory-accessories]");
   if (!form || !factory) return;
@@ -49,6 +49,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (reason instanceof HTMLTextAreaElement) reason.required = true;
   };
 
+  // Install the safety boundary before optional factory UI setup. Delegation on
+  // the canonical form also covers controls added or replaced after preview.
+  const invalidateForMaterialInput = (event) => {
+    if (event.target.name !== "override_reason") markPreviewStale();
+  };
+  form.addEventListener("input", invalidateForMaterialInput);
+  form.addEventListener("change", invalidateForMaterialInput);
+
   const rows = factory.querySelector("[data-accessory-rows]");
   const template = factory.querySelector("[data-accessory-template]");
   const summary = factory.querySelector("[data-accessory-summary]");
@@ -72,13 +80,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const query = event.target.value.toLowerCase();
     factory.querySelectorAll("option[data-search]").forEach((option) => option.hidden = !option.dataset.search.toLowerCase().includes(query));
   });
-  form.addEventListener("input", (event) => {
-    if (event.target.name !== "override_reason") markPreviewStale();
-  });
-  form.addEventListener("change", (event) => {
-    if (event.target.name !== "override_reason") markPreviewStale();
-  });
-
   const errorSummary = form.querySelector("[data-error-summary]");
   if (errorSummary) {
     errorSummary.focus();
@@ -94,4 +95,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
   updateSummary();
-});
+};
+
+// `defer` normally runs before DOMContentLoaded. Initialise immediately when
+// the form has already been parsed so input produced by another DOMContentLoaded
+// observer cannot beat the dirty-state listener. Keep a fallback for non-defer
+// or asynchronously injected use of this script.
+if (document.readyState === "loading" && !document.querySelector("#block-factory-form")) {
+  document.addEventListener("DOMContentLoaded", initialiseBlockFactory, { once: true });
+} else {
+  initialiseBlockFactory();
+}
