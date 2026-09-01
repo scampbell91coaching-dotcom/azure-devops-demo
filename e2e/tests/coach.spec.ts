@@ -99,6 +99,22 @@ test('navigates from a programming block to its week', async ({ page }) => {
   ).toBeVisible();
 });
 
+test('athlete switching preserves programming context without stale ids', async ({ page }) => {
+  await page.goto('/programming/weeks/401');
+  await page.getByLabel('Switch athlete').selectOption({ label: 'Sam Morgan' });
+  await expect(page).toHaveURL(/\/athletes\/202\/programming$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Sam Morgan' })).toBeVisible();
+  expect(page.url()).not.toContain('/301');
+  expect(page.url()).not.toContain('/401');
+});
+
+test('legacy Block Factory entry redirects to the canonical signed factory', async ({ page }) => {
+  await page.goto('/programming/block-factory?athlete_id=101');
+  await expect(page).toHaveURL(/\/programming\/factory\?athlete_id=101$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Block Factory' })).toBeVisible();
+  await expect(page.locator('select[name="athlete_id"]')).toHaveValue('101');
+});
+
 test('coach duplicates and safely deletes programme structure', async ({ page }) => {
   await page.goto('/programming/blocks/301');
   await page.getByRole('button', { name: 'Duplicate block' }).click();

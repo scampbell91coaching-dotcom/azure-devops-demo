@@ -1,10 +1,10 @@
-from datetime import date
+from datetime import UTC, date, datetime
 
 from portal import create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.programming import TrainingBlock, TrainingSession, TrainingSessionLog, TrainingWeek
-from portal.services.training_schedule import project_training_schedule
+from portal.services.training_schedule import local_today, project_training_schedule
 
 
 def _schedule_fixture():
@@ -81,3 +81,23 @@ def test_completed_dated_session_does_not_hide_future_next_session():
         assert schedule.today_session is None
         assert schedule.next_session.session is sessions[1]
 
+
+def test_programme_anchor_derives_week_session_and_end_dates_at_year_boundary():
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
+    with app.app_context():
+        _, block, sessions = _schedule_fixture()
+        block.start_date = date(2026, 12, 28)
+        block.timezone = "Europe/London"
+        schedule = project_training_schedule(block, {}, today=date(2027, 1, 4))
+        assert [item.planned_on for item in schedule.sessions] == [
+            date(2026, 12, 28), date(2026, 12, 29), date(2027, 1, 4)
+        ]
+        assert block.weeks[1].starts_on == date(2027, 1, 4)
+        assert schedule.programme_end == date(2027, 1, 10)
+        assert schedule.current_week.position == 1  # earliest unfinished session is deterministic
+
+
+def test_local_today_uses_explicit_timezone_at_utc_boundary():
+    instant = datetime(2027, 1, 1, 0, 30, tzinfo=UTC)
+    assert local_today("America/New_York", now=instant) == date(2026, 12, 31)
+    assert local_today("Pacific/Auckland", now=instant) == date(2027, 1, 1)

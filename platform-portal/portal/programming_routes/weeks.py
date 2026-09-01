@@ -2,6 +2,7 @@ from flask import Blueprint, abort, redirect, render_template, request, url_for
 from sqlalchemy.orm import joinedload, selectinload
 
 from ..extensions import db
+from ..models.athlete import Athlete
 from ..models.exercise_library import Exercise
 from ..models.programming import (
     ProgrammingLiftSlot,
@@ -21,7 +22,7 @@ from ..programming_services.weeks import (
     update,
 )
 from ..services.weekly_programming_intelligence import map_athlete_programming_context
-from ..tenancy import require_programming_access
+from ..tenancy import athlete_query_for_request, require_programming_access
 from ..programming_services.conflicts import (
     ActiveProgrammeEditError, ProgrammeConflictError, current_revision,
     require_current, require_editable,
@@ -81,6 +82,7 @@ def register_week_routes(blueprint: Blueprint) -> None:
                 Exercise.active.is_(True), Exercise.lift_family.isnot(None)
             ).order_by(Exercise.lift_family, Exercise.name).all(),
             current_revision=current_revision(item.block),
+            workspace_athletes=athlete_query_for_request().order_by(Athlete.last_name.asc()).all(),
         )
 
     @blueprint.post("/programming/weeks/<int:week_id>/duplicate")

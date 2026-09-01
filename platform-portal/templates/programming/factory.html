@@ -52,6 +52,7 @@
     {% endif %}
     <section id="factory-step-1" class="factory-context factory-step" aria-labelledby="factory-context-heading">
       <div class="factory-step__heading"><span>Step 1</span><div><h2 id="factory-context-heading">Athlete + starting point</h2><p>Choose who you are programming and whether to begin from a validated structure.</p></div></div>
+      <label><span>Programme start <small>optional until scheduled</small></span><input type="date" name="start_date" value="{{ form.get('start_date', '') }}"></label><label><span>Timezone (IANA)</span><input name="timezone" value="{{ form.get('timezone', 'Europe/London') }}" required></label>
       <div class="factory-context__fields">
     <label>
       <span>Start from</span>

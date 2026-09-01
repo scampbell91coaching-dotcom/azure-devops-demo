@@ -1,4 +1,6 @@
+from datetime import date
 from typing import cast
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -27,8 +29,11 @@ def create(
     *,
     name: str,
     objective: str | None,
+    start_date: date | None = None,
+    timezone: str = "UTC",
 ) -> TrainingBlock:
-    block = TrainingBlock(athlete=athlete, name=name, objective=objective)
+    _validate_timezone(timezone)
+    block = TrainingBlock(athlete=athlete, name=name, objective=objective, start_date=start_date, timezone=timezone)
     db.session.add(block)
     db.session.flush()
     append_revision(block, change_type="block_created", summary="Created programme block")
@@ -37,12 +42,16 @@ def create(
 
 
 def update(
-    block: TrainingBlock, *, name: str, objective: str | None
+    block: TrainingBlock, *, name: str, objective: str | None,
+    start_date: date | None = None, timezone: str = "UTC",
 ) -> TrainingBlock:
     if not name:
         raise ValueError("block name is required")
     block.name = name
     block.objective = objective
+    _validate_timezone(timezone)
+    block.start_date = start_date
+    block.timezone = timezone
     append_revision(block, change_type="block_updated", summary="Updated block metadata")
     try:
         db.session.commit()
@@ -62,6 +71,8 @@ def duplicate(
             objective=source.objective,
             status="draft",
             replaces_block=source if as_revision else None,
+            start_date=source.start_date,
+            timezone=source.timezone,
         )
         db.session.add(target)
         db.session.flush()
@@ -152,7 +163,7 @@ def activate(
 
     try:
         if replaced is not None:
-            replaced.status = "archived"
+            replaced.status = "superseded"
             append_revision(
                 replaced,
                 change_type="block_replaced",
@@ -176,9 +187,21 @@ def activate(
         raise
 
 
-def archive(block: TrainingBlock) -> None:
-    block.status = "archived"
-    append_revision(block, change_type="block_archived", summary="Archived programme")
+def _validate_timezone(value: str) -> None:
+    try:
+        ZoneInfo(value)
+    except ZoneInfoNotFoundError as error:
+        raise ValueError("Choose a valid IANA timezone.") from error
+
+
+def close(block: TrainingBlock, *, outcome: str) -> None:
+    """Close a current programme with an explicit historical meaning."""
+    if block.status != "active":
+        raise BlockActivationError("Only the current programme can be closed.")
+    if outcome not in {"completed", "abandoned"}:
+        raise BlockActivationError("Choose completed or abandoned.")
+    block.status = outcome
+    append_revision(block, change_type=f"block_{outcome}", summary=f"Marked programme {outcome}")
     db.session.commit()
 
 

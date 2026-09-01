@@ -289,11 +289,14 @@ def test_archive_block_removes_it_from_current_programme():
     app = app_with_db()
     athlete_id, block_id = _athlete_with_programme(app)
 
-    response = app.test_client().post(f"/programming/blocks/{block_id}/archive")
+    with app.app_context():
+        db.session.get(TrainingBlock, block_id).status = "active"
+        db.session.commit()
+    response = app.test_client().post(f"/programming/blocks/{block_id}/archive", data={"outcome": "abandoned"})
 
     assert response.status_code == 302
     with app.app_context():
-        assert db.session.get(TrainingBlock, block_id).status == "archived"
+        assert db.session.get(TrainingBlock, block_id).status == "abandoned"
     page = app.test_client().get(f"/athletes/{athlete_id}/programming").data
     assert b"Current block" not in page
     assert b"Development" in page

@@ -3,9 +3,11 @@ from portal.extensions import db
 from portal.models.athlete import Athlete
 from portal.models.exercise_library import Exercise
 from portal.models.programming import (
-    ExercisePrescription, ProgrammeRevision, TrainingBlock, TrainingSession, TrainingWeek,
+    ExercisePrescription, ProgrammeRevision, TrainingBlock, TrainingSession,
+    TrainingSessionLog, TrainingWeek,
 )
 from portal.programming_services.blocks import activate, duplicate
+from portal.programming_services.sessions import move
 
 
 def _app():
@@ -68,7 +70,7 @@ def test_valid_publish_and_material_review_are_atomic_and_reasoned():
     )
     assert published.status_code == 302
     with app.app_context():
-        assert db.session.get(TrainingBlock, original_id).status == "archived"
+        assert db.session.get(TrainingBlock, original_id).status == "superseded"
         assert db.session.get(TrainingBlock, draft_id).status == "active"
         revision = ProgrammeRevision.query.filter_by(
             block_id=draft_id, change_type="material_change_published"
@@ -109,3 +111,45 @@ def test_stale_block_week_reorder_and_publish_are_recoverable():
         saved = db.session.get(TrainingBlock, block_id)
         assert saved.name == "Programme" and saved.status == "draft"
         assert db.session.get(TrainingWeek, week_id).position == 2
+
+
+def test_session_move_preserves_structure_history_and_normalizes_both_weeks():
+    app = _app()
+    with app.app_context():
+        athlete = Athlete(first_name="Move", last_name="Lifter", email="move@test")
+        block = _valid_block(athlete)
+        source_week = block.weeks[0]
+        moved = source_week.sessions[0]
+        remaining = TrainingSession(week=source_week, name="Remain", position=2)
+        destination = TrainingWeek(block=block, name="Week 2", position=2)
+        existing = TrainingSession(week=destination, name="Existing", position=1)
+        log = TrainingSessionLog(athlete=athlete, session=moved, session_name=moved.name,
+                                 block_name=block.name, week_name=source_week.name)
+        db.session.add_all([remaining, destination, existing, log])
+        db.session.commit()
+        moved_id, log_id = moved.id, log.id
+        prescription_ids = [row.id for row in moved.prescriptions]
+        move(moved, destination)
+        assert [row.position for row in source_week.sessions] == [1]
+        assert [row.position for row in destination.sessions] == [1, 2]
+        assert db.session.get(TrainingSessionLog, log_id).session_id == moved_id
+        assert [row.id for row in moved.prescriptions] == prescription_ids
+
+
+def test_session_move_route_rejects_stale_active_and_cross_block_targets():
+    app = _app()
+    with app.app_context():
+        athlete = Athlete(first_name="Move", last_name="Lifter", email="move-route@test")
+        block = _valid_block(athlete)
+        target = TrainingWeek(block=block, name="Week 2", position=2)
+        db.session.add(target)
+        db.session.commit()
+        other = _valid_block(athlete, "Other")
+        session_id, target_id, other_week_id, block_id = block.weeks[0].sessions[0].id, target.id, other.weeks[0].id, block.id
+    client = app.test_client()
+    assert client.post(f"/programming/sessions/{session_id}/move", data={"target_week_id": target_id, "expected_revision": 999}).status_code == 409
+    assert client.post(f"/programming/sessions/{session_id}/move", data={"target_week_id": other_week_id}).status_code == 409
+    with app.app_context():
+        db.session.get(TrainingBlock, block_id).status = "active"
+        db.session.commit()
+    assert client.post(f"/programming/sessions/{session_id}/move", data={"target_week_id": target_id}).status_code == 409

@@ -107,7 +107,7 @@ def test_migration_cli_can_inspect_heads_with_local_validation_config(tmp_path: 
     config = Config(str(Path(__file__).parents[1] / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(Path(__file__).parents[1] / "migrations"))
     assert ScriptDirectory.from_config(config).get_heads() == [
-        "0029_programming_publication_safety"
+        "0030_programme_timing_lifecycle"
     ]
 
 

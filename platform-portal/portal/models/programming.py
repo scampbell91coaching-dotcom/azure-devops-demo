@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import event, inspect, text
 
@@ -33,6 +33,8 @@ class TrainingBlock(db.Model):  # type: ignore[name-defined]
     )
     name = db.Column(db.String(160), nullable=False)
     objective = db.Column(db.Text, nullable=True)
+    start_date = db.Column(db.Date, nullable=True)
+    timezone = db.Column(db.String(64), nullable=False, default="UTC")
     status = db.Column(db.String(40), nullable=False, default="draft", index=True)
     replaces_block_id = db.Column(
         db.Integer,
@@ -67,6 +69,24 @@ class TrainingBlock(db.Model):  # type: ignore[name-defined]
     replaces_block = db.relationship(
         "TrainingBlock", remote_side=[id], foreign_keys=[replaces_block_id]
     )
+
+    @property
+    def end_date(self) -> date | None:
+        """Inclusive programme end; weeks are seven-day calendar windows."""
+        if self.start_date is None or not self.weeks:
+            return None
+        return self.start_date + timedelta(days=(max(w.position for w in self.weeks) * 7) - 1)
+
+    @property
+    def lifecycle_label(self) -> str:
+        return {
+            "active": "Current",
+            "draft": "Next / review draft",
+            "completed": "Past · completed",
+            "abandoned": "Past · abandoned",
+            "superseded": "Past · replaced",
+            "archived": "Past · legacy archived",
+        }.get(self.status, self.status.replace("_", " ").title())
 
 
 class ProgrammeRevision(db.Model):  # type: ignore[name-defined]
@@ -148,6 +168,14 @@ class TrainingWeek(db.Model):  # type: ignore[name-defined]
             for slot in session.lift_slots:
                 counts[slot.lift_family] += 1
         return counts
+
+    @property
+    def starts_on(self) -> date | None:
+        return self.block.start_date + timedelta(weeks=self.position - 1) if self.block.start_date else None
+
+    @property
+    def ends_on(self) -> date | None:
+        return self.starts_on + timedelta(days=6) if self.starts_on else None
 
 
 class TrainingSession(db.Model):  # type: ignore[name-defined]

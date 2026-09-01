@@ -57,7 +57,7 @@
 {% block content %}
 {% from "programming/_workspace.html" import athlete_workspace_nav, week_tabs %}
 <div class="athlete-programming-shell">
-{{ athlete_workspace_nav(week.block.athlete) }}
+{{ athlete_workspace_nav(week.block.athlete, athletes=workspace_athletes) }}
 <section class="coach-page week-editor athlete-programming-main" data-programme-revision="{{ current_revision }}">
   <header class="coach-page__header coach-page__header--split">
     <div><a class="coach-back-link" href="{{ url_for('programming.block', block_id=week.block.id) }}">← {{ week.block.name }}</a><span class="coach-eyebrow">{{ week.block.athlete.full_name }} · Week {{ week.position }}</span><h1>{{ week.name }}</h1>{% if week.notes %}<p>{{ week.notes }}</p>{% endif %}</div>
@@ -91,6 +91,7 @@
           <form method="post" action="{{ url_for('programming.insert_session_before', session_id=session.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Insert before</button></form>
           <form method="post" action="{{ url_for('programming.insert_session_after', session_id=session.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Insert after</button></form>
           <form method="post" action="{{ url_for('programming.duplicate_session', session_id=session.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Duplicate</button></form>
+          {% if week.block.weeks|length > 1 %}<form method="post" action="{{ url_for('programming.move_session', session_id=session.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><select name="target_week_id" aria-label="Destination week" required><option value="">Move to…</option>{% for destination in week.block.weeks if destination.id != week.id %}<option value="{{ destination.id }}">Week {{ destination.position }} · {{ destination.name }}</option>{% endfor %}</select><button class="coach-link-button" type="submit">Move session</button></form>{% endif %}
           <form method="post" action="{{ url_for('programming.delete_session', session_id=session.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><button class="coach-link-button" type="submit">Delete</button></form>
         </div></div>
       <div class="session-day-structure" aria-label="Scheduled lift structure"><strong>Structure</strong>{% for slot in session.lift_slots %}<span>{{ slot.lift_family[0]|upper }} · {{ slot.lift_family|title }}</span>{% else %}<span>Assistance only</span>{% endfor %}</div>

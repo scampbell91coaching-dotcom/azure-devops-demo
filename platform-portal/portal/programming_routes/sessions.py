@@ -2,19 +2,21 @@ from flask import Blueprint, abort, redirect, render_template, request, url_for
 from sqlalchemy.orm import joinedload, selectinload
 
 from ..extensions import db
+from ..models.athlete import Athlete
 from ..models.programming import ProgrammingLiftSlot, TrainingBlock, TrainingSession, TrainingWeek
 from ..programming_services.sessions import (
     create,
     delete,
     duplicate,
     insert_blank,
+    move,
 )
 from ..programming_templates import day_templates
 from ..services.weekly_programming_intelligence import map_athlete_programming_context
 from ..models.warmup import WarmupAssignment, WarmupProtocol
 from ..services.persisted_warmups import resolve_warmup
 from ..services.movement_warmup_candidates import warmup_candidates
-from ..tenancy import require_programming_access
+from ..tenancy import athlete_query_for_request, require_programming_access
 from ..programming_services.conflicts import (
     ActiveProgrammeEditError, ProgrammeConflictError, require_current, require_editable,
 )
@@ -103,6 +105,7 @@ def register_session_routes(blueprint: Blueprint) -> None:
             warmup_assignments=WarmupAssignment.query.filter_by(session_id=item.id).all(),
             warmup_protocols=WarmupProtocol.query.order_by(WarmupProtocol.name, WarmupProtocol.version.desc()).all(),
             warmup_candidates=warmup_candidates(block.athlete_id, item),
+            workspace_athletes=athlete_query_for_request().order_by(Athlete.last_name.asc()).all(),
         )
 
     @blueprint.post("/programming/sessions/<int:session_id>/duplicate")
@@ -112,6 +115,21 @@ def register_session_routes(blueprint: Blueprint) -> None:
         check_current(source.week.block)
         target = duplicate(source)
         return _redirect_after_edit(target)
+
+    @blueprint.post("/programming/sessions/<int:session_id>/move")
+    def move_session(session_id: int):
+        source = db.session.get(TrainingSession, session_id)
+        require_programming_access(source)
+        check_current(source.week.block)
+        target = db.session.get(TrainingWeek, request.form.get("target_week_id", type=int))
+        if target is None:
+            abort(400, description="Choose an available destination week.")
+        require_programming_access(target)
+        try:
+            move(source, target)
+        except ValueError as error:
+            abort(409, description=str(error))
+        return redirect(url_for("programming.week", week_id=target.id, _anchor=f"session-{source.id}"))
 
     @blueprint.post("/programming/sessions/<int:session_id>/delete")
     def delete_session(session_id: int):

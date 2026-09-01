@@ -14,7 +14,7 @@
 {% block content %}
 {% from "programming/_workspace.html" import athlete_workspace_nav %}
 <div class="athlete-programming-shell">
-{{ athlete_workspace_nav(athlete) }}
+{{ athlete_workspace_nav(athlete, athletes=workspace_athletes) }}
 <section class="coach-page athlete-programming-main">
   <header class="coach-page__header">
     <span class="coach-eyebrow">Athlete programming</span>
@@ -61,7 +61,7 @@
             <h2>{{ current_block.name }}</h2>
           </div>
           <span class="coach-status coach-status--active">
-            {{ current_block.status | title }}
+            {{ current_block.lifecycle_label }}
           </span>
         </div>
 
@@ -84,9 +84,9 @@
           <form
             method="post"
             action="{{ url_for('programming.archive_block', block_id=current_block.id) }}"
-            data-confirm="Archive this block?"
+            data-confirm="Mark this programme completed?"
           >
-            <button class="coach-link-button" type="submit">Archive</button>
+            <input type="hidden" name="outcome" value="completed"><button class="coach-link-button" type="submit">Mark completed</button>
           </form>
           {% if current_block.status == "draft" %}
             <form
@@ -109,7 +109,7 @@
               <strong>{{ block.name }}</strong>
 
               <p>
-                {{ block.weeks | length }} weeks · {{ block.status | title }}
+                  {{ block.weeks | length }} weeks · {{ block.lifecycle_label }}
               </p>
             </div>
 
@@ -135,15 +135,6 @@
               >
                 <button class="coach-link-button" type="submit">Duplicate</button>
               </form>
-              {% if block.status != "archived" %}
-                <form
-                  method="post"
-                  action="{{ url_for('programming.archive_block', block_id=block.id) }}"
-                  data-confirm="Archive this block?"
-                >
-                  <button class="coach-link-button" type="submit">Archive</button>
-                </form>
-              {% endif %}
               {% if block.status == "draft" %}
                 <form
                   method="post"

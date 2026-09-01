@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 
 from ..models.athlete import Athlete
 from ..models.programming import TrainingBlock, TrainingSessionLog, TrainingWeek
-from ..services.training_schedule import project_training_schedule
+from ..services.training_schedule import local_today, project_training_schedule
 from ..services.weekly_programming_intelligence import map_athlete_programming_context
 from ..tenancy import athlete_query_for_request, require_athlete_access
 
@@ -31,7 +31,8 @@ def register_athlete_routes(blueprint: Blueprint) -> None:
             if item.session_id is not None
         }
         schedule = project_training_schedule(
-            current_block, logs, today=datetime.now(UTC).date()
+            current_block, logs,
+            today=local_today(current_block.timezone) if current_block else datetime.now(UTC).date(),
         )
 
         return render_template(
@@ -42,6 +43,7 @@ def register_athlete_routes(blueprint: Blueprint) -> None:
             current_week=schedule.current_week,
             schedule=schedule,
             athlete_context=map_athlete_programming_context(athlete),
+            workspace_athletes=athlete_query_for_request().order_by(Athlete.last_name.asc()).all(),
         )
 
     @blueprint.get("/programming")

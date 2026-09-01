@@ -60,7 +60,7 @@ def authored_snapshot(block: TrainingBlock) -> dict[str, Any]:
         ]
     return {
         "schema_version": 1,
-        "block": _values(block, ("id", "athlete_id", "name", "objective", "status")),
+        "block": _values(block, ("id", "athlete_id", "name", "objective", "status", "start_date", "timezone")),
         "weeks": weeks,
         "warmup_assignments": assignments,
         "warmup_overrides": overrides,

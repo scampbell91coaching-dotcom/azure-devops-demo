@@ -8,6 +8,7 @@ from dataclasses import asdict, dataclass, replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from flask import (
     Blueprint,
@@ -111,6 +112,8 @@ class FactoryRequest:
     deadlift_frequency: int
     deadlift_style: str
     meet_date: date | None
+    start_date: date | None = None
+    timezone: str = "UTC"
     accessory_exercise_ids: tuple[int, ...] = ()
     accessory_mode: str = "automatic"
     accessory_volume: str = "medium"
@@ -292,6 +295,11 @@ def _parse_factory_request() -> FactoryRequest:
     training_strap_usage = request.form.get("training_strap_usage", "none").strip().lower()
     if training_strap_usage not in {"none", "some", "most"}:
         training_strap_usage = "none"
+    timezone_name = request.form.get("timezone", "UTC").strip() or "UTC"
+    try:
+        ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError as error:
+        raise ValueError("Choose a valid IANA timezone.") from error
     return FactoryRequest(
         athlete_id=athlete_id,
         name=request.form.get("name", "").strip() or "Generated Block",
@@ -307,6 +315,8 @@ def _parse_factory_request() -> FactoryRequest:
             "conventional",
         ).strip(),
         meet_date=_parse_date(request.form.get("meet_date", "")),
+        start_date=_parse_date(request.form.get("start_date", "")),
+        timezone=timezone_name,
         accessory_exercise_ids=accessory_ids,
         accessory_mode=accessory_mode,
         accessory_volume=accessory_volume,
@@ -1116,6 +1126,8 @@ def _finalize_programme_graph(
     """Apply the existing acceptance transformations before signing the proposal."""
     graph: dict[str, Any] = {"schema_version": 1, "block": {
         "name": factory.name, "objective": None, "status": "draft",
+        "start_date": factory.start_date.isoformat() if factory.start_date else None,
+        "timezone": factory.timezone,
     }, "weeks": []}
     exercise_names = {name for day in scheduled_preview for name in day["exercises"]}
     exercise_rows = {
@@ -1284,6 +1296,10 @@ def _factory_from_payload(payload: dict[str, Any]) -> FactoryRequest:
     values["meet_date"] = (
         date.fromisoformat(values["meet_date"]) if values.get("meet_date") else None
     )
+    values["start_date"] = (
+        date.fromisoformat(values["start_date"]) if values.get("start_date") else None
+    )
+    values.setdefault("timezone", "UTC")
     values["accessory_exercise_ids"] = tuple(values.get("accessory_exercise_ids") or ())
     values.setdefault("accessory_mode", "automatic")
     values.setdefault("accessory_volume", "medium")
@@ -1366,6 +1382,8 @@ def _materialize_programme_graph(
     block = TrainingBlock(
         athlete=athlete, name=block_data["name"],
         objective=block_data.get("objective"), status=block_data.get("status", "draft"),
+        start_date=date.fromisoformat(block_data["start_date"]) if block_data.get("start_date") else None,
+        timezone=block_data.get("timezone", "UTC"),
     )
     db.session.add(block)
     db.session.flush()

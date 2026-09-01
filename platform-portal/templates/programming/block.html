@@ -5,7 +5,7 @@
 {% set athlete = block.athlete %}
 {% from "programming/_workspace.html" import athlete_workspace_nav, week_tabs %}
 <div class="athlete-programming-shell">
-{{ athlete_workspace_nav(athlete) }}
+{{ athlete_workspace_nav(athlete, athletes=workspace_athletes) }}
 <section class="coach-page programme-workspace athlete-programming-main" data-programme-revision="{{ current_revision }}">
   <nav class="programme-crumbs" aria-label="Programme hierarchy">
     <a href="{{ url_for('programming.athlete_program', athlete_id=athlete.id) }}">{{ athlete.full_name }}</a><span aria-hidden="true">/</span><span aria-current="page">{{ block.name }}</span>
@@ -13,7 +13,7 @@
   <header class="coach-page__header programme-hero">
     <div><span class="coach-eyebrow">Programme block</span><h1>{{ block.name }}</h1><p>{{ block.objective or 'Objective not yet recorded.' }}</p></div>
     <div class="coach-page__actions">
-      <span class="coach-status{% if block.status == 'active' %} coach-status--active{% endif %}">{{ block.status|title }}</span>
+      <span class="coach-status{% if block.status == 'active' %} coach-status--active{% endif %}">{{ block.lifecycle_label }}</span>
       {% if block.status == "draft" %}
         <form method="post" action="{{ url_for('programming.activate_block', block_id=block.id) }}" data-confirm="Publish this programme to {{ athlete.full_name }}?">
           <input type="hidden" name="expected_revision" value="{{ current_revision }}">
@@ -23,14 +23,14 @@
       {% endif %}
       {% if block.status == "active" %}<form method="post" action="{{ url_for('programming.revise_block', block_id=block.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><button class="coach-primary-button" type="submit">Create review draft</button></form>{% endif %}
       <form method="post" action="{{ url_for('programming.duplicate_block', block_id=block.id) }}"><button class="coach-link-button" type="submit">Duplicate block</button></form>
-      {% if block.status != 'archived' %}<form method="post" action="{{ url_for('programming.archive_block', block_id=block.id) }}" data-confirm="Archive this block? Athlete training history will remain available."><button class="coach-link-button" type="submit">Archive block</button></form>{% endif %}
+      {% if block.status == 'active' %}<form method="post" action="{{ url_for('programming.archive_block', block_id=block.id) }}"><label><span class="sr-only">Programme outcome</span><select name="outcome" required><option value="completed">Completed</option><option value="abandoned">Abandoned / cancelled</option></select></label><button class="coach-link-button" type="submit">Close programme</button></form>{% endif %}
       {% if block.status == 'draft' %}<form method="post" action="{{ url_for('programming.delete_draft_block', block_id=block.id) }}" data-confirm="Delete this draft programming structure? Completed and imported training history will not be deleted."><button class="coach-link-button" type="submit">Delete draft</button></form>{% endif %}
     </div>
   </header>
-  {% if block.status != 'active' %}<details class="quick-create"><summary class="coach-link-button">Edit block details</summary><form class="coach-form programming-form" method="post" action="{{ url_for('programming.edit_block', block_id=block.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><label><span>Name</span><input name="name" value="{{ block.name }}" required maxlength="160"></label><label><span>Objective</span><textarea name="objective" rows="3">{{ block.objective or '' }}</textarea></label><button class="coach-primary-button" type="submit">Save block</button></form></details>{% endif %}
+  {% if block.status == 'draft' %}<details class="quick-create"><summary class="coach-link-button">Edit block details and timing</summary><form class="coach-form programming-form" method="post" action="{{ url_for('programming.edit_block', block_id=block.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><label><span>Name</span><input name="name" value="{{ block.name }}" required maxlength="160"></label><label><span>Objective</span><textarea name="objective" rows="3">{{ block.objective or '' }}</textarea></label><label><span>Programme start</span><input name="start_date" type="date" value="{{ block.start_date.isoformat() if block.start_date else '' }}"></label><label><span>Timezone (IANA)</span><input name="timezone" value="{{ block.timezone or 'UTC' }}" required></label><button class="coach-primary-button" type="submit">Save block</button></form></details>{% endif %}
   {% if block.replaces_block %}<section class="coach-panel"><h2>Material change review</h2><p>This draft replaces <strong>{{ block.replaces_block.name }}</strong>. Review the programme below, then publish with a reason. The athlete continues to see the current active programme until publication succeeds.</p></section>{% endif %}
   <section class="programme-context-bar" aria-label="Programming context">
-    <dl><div><dt>Athlete</dt><dd>{{ athlete.full_name }}</dd></div><div><dt>Class</dt><dd>{{ athlete.weight_class or 'Not set' }}</dd></div><div><dt>Bodyweight</dt><dd>{{ athlete.bodyweight_kg ~ ' kg' if athlete.bodyweight_kg else 'Not set' }}</dd></div><div><dt>Federation</dt><dd>{{ athlete.federation or 'Not set' }}</dd></div><div><dt>Meet</dt><dd>{{ athlete.next_competition or 'Not selected' }}</dd></div><div><dt>Duration</dt><dd>{{ block.weeks|length }} weeks</dd></div></dl>
+    <dl><div><dt>Athlete</dt><dd>{{ athlete.full_name }}</dd></div><div><dt>State</dt><dd>{{ block.lifecycle_label }}</dd></div><div><dt>Start</dt><dd>{{ block.start_date.strftime('%d %b %Y') if block.start_date else 'Not scheduled' }}</dd></div><div><dt>End</dt><dd>{{ block.end_date.strftime('%d %b %Y') if block.end_date else 'Not scheduled' }}</dd></div><div><dt>Timezone</dt><dd>{{ block.timezone or 'UTC' }}</dd></div><div><dt>Duration</dt><dd>{{ block.weeks|length }} weeks</dd></div></dl>
   </section>
   <section class="programme-intent" aria-labelledby="reasoning-title"><h2 id="reasoning-title">Block intent</h2><p>{{ block.objective or 'No coach-authored objective is stored for this block.' }}</p><span>Coach-authored</span></section>
   {{ week_tabs(block) }}

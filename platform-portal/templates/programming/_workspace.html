@@ -1,9 +1,10 @@
-{% macro athlete_workspace_nav(athlete, active='programming') %}
+{% macro athlete_workspace_nav(athlete, active='programming', athletes=none) %}
 <aside class="athlete-workspace-nav" aria-label="{{ athlete.full_name }} workspace">
   <div class="athlete-workspace-nav__identity">
     <span aria-hidden="true">{{ athlete.first_name[:1] }}{{ athlete.last_name[:1] }}</span>
     <div><strong>{{ athlete.full_name }}</strong><small>{{ athlete.weight_class or 'Weight class not set' }}</small></div>
   </div>
+  {% if athletes %}<label class="athlete-workspace-switcher"><span>Switch athlete</span><select data-athlete-programming-switch>{% for item in athletes %}<option value="{{ url_for('programming.athlete_program', athlete_id=item.id) }}"{% if item.id == athlete.id %} selected{% endif %}>{{ item.full_name }}</option>{% endfor %}</select></label>{% endif %}
   <nav>
     <a href="{{ url_for('athletes.athlete_dashboard', athlete_id=athlete.id) }}">Overview</a>
     <a href="{{ url_for('programming.athlete_program', athlete_id=athlete.id) }}"{% if active == 'programming' %} aria-current="page"{% endif %}>Programming</a>

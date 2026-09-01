@@ -98,6 +98,26 @@ def duplicate(source: TrainingSession) -> TrainingSession:
     return target
 
 
+def move(source: TrainingSession, target_week: TrainingWeek) -> TrainingSession:
+    """Move structure only; the stable session id keeps all logs/results attached."""
+    source_week = cast(TrainingWeek, source.week)
+    if source_week.block_id != target_week.block_id:
+        raise ValueError("The destination must be a week in the same programme.")
+    if source_week.id == target_week.id:
+        raise ValueError("Choose a different destination week.")
+    try:
+        source.week = target_week
+        renumber(source_week, excluding=source)
+        renumber(target_week, excluding=source)
+        source.position = len([item for item in target_week.sessions if item is not source]) + 1
+        append_revision(target_week.block, change_type="session_moved", summary=f'Moved session "{source.name}" from week {source_week.position} to week {target_week.position}')
+        _commit_or_rollback()
+    except (SQLAlchemyError, ValueError):
+        db.session.rollback()
+        raise
+    return source
+
+
 def delete(session: TrainingSession) -> int:
     week = cast(TrainingWeek, session.week)
     week_id = week.id
