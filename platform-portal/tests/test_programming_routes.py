@@ -2,6 +2,10 @@ from portal import create_app
 from portal.programming import programming_bp
 
 EXPECTED_PROGRAMMING_ROUTES = {
+    ("programming.bulk_preview", "/programming/blocks/<int:block_id>/bulk-preview", "POST"),
+    ("programming.bulk_apply", "/programming/blocks/<int:block_id>/bulk-apply", "POST"),
+    ("programming.copy_session_forward_preview", "/programming/sessions/<int:session_id>/copy-forward-preview", "POST"),
+    ("programming.copy_session_forward", "/programming/sessions/<int:session_id>/copy-forward", "POST"),
     (
         "programming.revise_block",
         "/programming/blocks/<int:block_id>/revise",

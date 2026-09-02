@@ -4,7 +4,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from ..extensions import db
 from ..models.athlete import Athlete
-from ..models.programming import TrainingBlock, TrainingSession, TrainingWeek
+from ..models.programming import ProgrammingLiftSlot, TrainingBlock, TrainingSession, TrainingWeek
 from ..programming_services.blocks import (
     BlockActivationError,
     activate,
@@ -19,6 +19,8 @@ from ..programming_services.conflicts import (
     require_current, require_editable,
 )
 from ..programming_services.presentation import week_exposure_summary
+from ..programming_services.revisions import revision_diffs
+from ..services.programming_review import programming_review_context
 from ..tenancy import athlete_query_for_request, require_athlete_access, require_programming_access
 
 
@@ -137,7 +139,11 @@ def register_block_routes(blueprint: Blueprint) -> None:
                 joinedload(TrainingBlock.athlete),
                 selectinload(TrainingBlock.weeks)
                 .selectinload(TrainingWeek.sessions)
-                .selectinload(TrainingSession.lift_slots),
+                .selectinload(TrainingSession.lift_slots)
+                .selectinload(ProgrammingLiftSlot.prescriptions),
+                selectinload(TrainingBlock.weeks)
+                .selectinload(TrainingWeek.sessions)
+                .selectinload(TrainingSession.prescriptions),
             )
             .filter_by(id=block_id)
             .one_or_none()
@@ -152,5 +158,7 @@ def register_block_routes(blueprint: Blueprint) -> None:
                 week.id: week_exposure_summary(week) for week in item.weeks
             },
             current_revision=current_revision(item),
+            review=programming_review_context(item),
+            revision_diffs=revision_diffs(list(item.revisions)),
             workspace_athletes=athlete_query_for_request().order_by(Athlete.last_name.asc()).all(),
         )

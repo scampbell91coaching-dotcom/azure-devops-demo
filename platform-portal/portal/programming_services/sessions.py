@@ -98,6 +98,29 @@ def duplicate(source: TrainingSession) -> TrainingSession:
     return target
 
 
+def copy_to_week(source: TrainingSession, target_week: TrainingWeek) -> TrainingSession:
+    """Copy authored session structure to an explicitly selected later week."""
+    if source.week.block_id != target_week.block_id:
+        raise ValueError("The destination must be in the same programme.")
+    if target_week.position <= source.week.position:
+        raise ValueError("Copy-forward destinations must be later programme weeks.")
+    try:
+        renumber(target_week)
+        target = TrainingSession(week=target_week, name=source.name,
+            day_label=source.day_label, position=len(target_week.sessions) + 1, notes=source.notes)
+        db.session.add(target)
+        db.session.flush()
+        lift_slots = copy_prescriptions(source, target)
+        copy_warmups(source, target, lift_slots)
+        append_revision(target_week.block, change_type="session_copied_forward",
+            summary=f'Copied session "{source.name}" to week {target_week.position}')
+        _commit_or_rollback()
+        return target
+    except (SQLAlchemyError, ValueError):
+        db.session.rollback()
+        raise
+
+
 def move(source: TrainingSession, target_week: TrainingWeek) -> TrainingSession:
     """Move structure only; the stable session id keeps all logs/results attached."""
     source_week = cast(TrainingWeek, source.week)

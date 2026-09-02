@@ -309,6 +309,9 @@ def test_coach_cannot_read_other_org_programming_direct_ids(
         ("/programming/weeks/{week_b}/duplicate", {}),
         ("/programming/weeks/{week_b}/delete", {}),
         ("/programming/weeks/{week_b}/reorder", {"position": "1"}),
+        ("/programming/blocks/{block_b}/bulk-preview", {"expected_revision": "0", "week_id": "1", "field": "sets", "value": "4"}),
+        ("/programming/blocks/{block_b}/bulk-apply", {"expected_revision": "0", "week_id": "1", "field": "sets", "value": "4", "revision_reason": "tampered"}),
+        ("/programming/sessions/{session_b}/copy-forward-preview", {"expected_revision": "0", "target_week_id": "1"}),
     ],
 )
 def test_coach_cannot_mutate_other_org_programming_direct_id(tenant_app, path, data):

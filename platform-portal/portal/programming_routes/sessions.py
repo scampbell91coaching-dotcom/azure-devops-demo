@@ -5,6 +5,7 @@ from ..extensions import db
 from ..models.athlete import Athlete
 from ..models.programming import ProgrammingLiftSlot, TrainingBlock, TrainingSession, TrainingWeek
 from ..programming_services.sessions import (
+    copy_to_week,
     create,
     delete,
     duplicate,
@@ -115,6 +116,33 @@ def register_session_routes(blueprint: Blueprint) -> None:
         check_current(source.week.block)
         target = duplicate(source)
         return _redirect_after_edit(target)
+
+    @blueprint.post("/programming/sessions/<int:session_id>/copy-forward-preview")
+    def copy_session_forward_preview(session_id: int):
+        source = db.session.get(TrainingSession, session_id)
+        require_programming_access(source)
+        check_current(source.week.block)
+        target = db.session.get(TrainingWeek, request.form.get("target_week_id", type=int))
+        if target is None or target.block_id != source.week.block_id or target.position <= source.week.position:
+            abort(400, description="Choose a later week in this programme.")
+        require_programming_access(target)
+        return render_template("programming/copy_session_preview.html", source=source, target=target,
+            expected_revision=request.form.get("expected_revision", type=int))
+
+    @blueprint.post("/programming/sessions/<int:session_id>/copy-forward")
+    def copy_session_forward(session_id: int):
+        source = db.session.get(TrainingSession, session_id)
+        require_programming_access(source)
+        check_current(source.week.block)
+        target_week = db.session.get(TrainingWeek, request.form.get("target_week_id", type=int))
+        if target_week is None:
+            abort(400)
+        require_programming_access(target_week)
+        try:
+            target = copy_to_week(source, target_week)
+        except ValueError as error:
+            abort(409, description=str(error))
+        return redirect(url_for("programming.week", week_id=target_week.id, _anchor=f"session-{target.id}"))
 
     @blueprint.post("/programming/sessions/<int:session_id>/move")
     def move_session(session_id: int):
