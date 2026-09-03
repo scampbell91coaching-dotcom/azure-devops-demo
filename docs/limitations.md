@@ -50,6 +50,10 @@ Terraform and Git can reconstruct much of the platform, and PostgreSQL provides 
 
 Small pools, a burstable database SKU, single-region deployment, and limited telemetry retention control portfolio cost. Quota and capacity must account for upgrade/rotation surge as well as steady-state workload.
 
+### Programme hierarchy stops at blocks
+
+Programming currently models blocks, weeks, sessions, lift slots, and exercise prescriptions. It has no macrocycle entity or lifecycle, so cross-block macrocycle planning is future domain work rather than a label layered onto blocks. A future design must first define ownership, ordering, publication, archive, revision, and completed-history semantics.
+
 ## Priorities
 
 1. Close the host-encryption quota backlog and validate safe node-pool rotation.

@@ -2,12 +2,22 @@ from portal import create_app
 from portal.programming import programming_bp
 
 EXPECTED_PROGRAMMING_ROUTES = {
+    ("programming.bulk_preview", "/programming/blocks/<int:block_id>/bulk-preview", "POST"),
+    ("programming.bulk_apply", "/programming/blocks/<int:block_id>/bulk-apply", "POST"),
+    ("programming.copy_session_forward_preview", "/programming/sessions/<int:session_id>/copy-forward-preview", "POST"),
+    ("programming.copy_session_forward", "/programming/sessions/<int:session_id>/copy-forward", "POST"),
+    (
+        "programming.revise_block",
+        "/programming/blocks/<int:block_id>/revise",
+        "POST",
+    ),
     (
         "programming.activate_block",
         "/programming/blocks/<int:block_id>/activate",
         "POST",
     ),
     ("programming.archive_block", "/programming/blocks/<int:block_id>/archive", "POST"),
+    ("programming.archive_block", "/programming/blocks/<int:block_id>/close", "POST"),
     ("programming.athlete_program", "/athletes/<int:athlete_id>/programming", "GET"),
     ("programming.block", "/programming/blocks/<int:block_id>", "GET"),
     ("programming.create_block", "/programming/blocks", "POST"),
@@ -22,7 +32,10 @@ EXPECTED_PROGRAMMING_ROUTES = {
         "POST",
     ),
     ("programming.create_session", "/programming/weeks/<int:week_id>/sessions", "POST"),
+    ("programming.move_session", "/programming/sessions/<int:session_id>/move", "POST"),
     ("programming.create_week", "/programming/blocks/<int:block_id>/weeks", "POST"),
+    ("programming.edit_block", "/programming/blocks/<int:block_id>/edit", "POST"),
+    ("programming.edit_week", "/programming/weeks/<int:week_id>/edit", "POST"),
     (
         "programming.delete_draft_block",
         "/programming/blocks/<int:block_id>/delete",
@@ -51,6 +64,11 @@ EXPECTED_PROGRAMMING_ROUTES = {
     (
         "programming.delete_week",
         "/programming/weeks/<int:week_id>/delete",
+        "POST",
+    ),
+    (
+        "programming.reorder_week",
+        "/programming/weeks/<int:week_id>/reorder",
         "POST",
     ),
     (

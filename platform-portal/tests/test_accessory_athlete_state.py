@@ -56,7 +56,8 @@ def _signal(athlete_id: int, payload: dict, *source_refs: str) -> AthleteStateSi
         signal_type="assistance_selection_rule",
         value_json=payload,
         window_start=date(2026, 8, 1),
-        window_end=date(2026, 8, 31),
+        # Keep the explicitly active test rule valid independent of wall-clock date.
+        window_end=date(2099, 8, 31),
         calculation_version="coach-authored-rules-v1",
         source_refs_json=list(source_refs),
         explanation="Explicit non-diagnostic assistance rule.",

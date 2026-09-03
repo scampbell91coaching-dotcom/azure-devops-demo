@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from typing import Mapping
 
 from ..models.programming import TrainingBlock, TrainingSession, TrainingSessionLog, TrainingWeek
@@ -31,6 +32,32 @@ class TrainingSchedule:
     today_session: ScheduledSession | None
     next_session: ScheduledSession | None
     has_planned_dates: bool
+    programme_start: date | None
+    programme_end: date | None
+    timezone: str
+
+
+def local_today(timezone_name: str, *, now=None) -> date:
+    """Return today in the programme's explicit IANA timezone."""
+    from datetime import UTC, datetime
+    try:
+        zone = ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError as error:
+        raise ValueError("Unknown programme timezone.") from error
+    instant = now or datetime.now(UTC)
+    if instant.tzinfo is None:
+        raise ValueError("now must be timezone-aware")
+    return instant.astimezone(zone).date()
+
+
+def programme_dates(block: TrainingBlock) -> dict[int, date]:
+    """Project ordered sessions into their week window from one domain anchor."""
+    if block.start_date is None:
+        return {}
+    return {
+        session.id: block.start_date + timedelta(weeks=week.position - 1, days=session.position - 1)
+        for week in block.weeks for session in week.sessions
+    }
 
 
 def project_training_schedule(
@@ -46,8 +73,8 @@ def project_training_schedule(
     the persisted session order and prescriptions remain untouched.
     """
     if block is None:
-        return TrainingSchedule((), None, None, None, False)
-    dates = planned_dates or {}
+        return TrainingSchedule((), None, None, None, False, None, None, "UTC")
+    dates = planned_dates if planned_dates is not None else programme_dates(block)
     ordered = tuple(
         ScheduledSession(
             session,
@@ -69,4 +96,7 @@ def project_training_schedule(
         next((item for item in dated if item.planned_on == today), None),
         next_item,
         bool(dated),
+        block.start_date,
+        block.end_date,
+        block.timezone or "UTC",
     )

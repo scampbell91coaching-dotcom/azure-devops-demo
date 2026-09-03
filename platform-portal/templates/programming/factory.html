@@ -19,6 +19,18 @@
     </div>
     <p>Set the block intent, shape the weekly structure, then review before accepting.</p>
   </header>
+  <div class="factory-workflow-status" role="status" aria-live="polite">
+    <span class="factory-state-chip{% if errors %} is-error{% elif preview_stale %} is-dirty{% elif proposal %} is-ready{% endif %}" data-factory-state>
+      {% if errors %}Validation error{% elif preview_stale %}Preview stale{% elif proposal %}Preview ready{% else %}Editing{% endif %}
+    </span>
+    <ol aria-label="Block Factory progress">
+      <li><a href="#factory-step-1">1 <span>Starting point</span></a></li>
+      <li><a href="#factory-step-2">2 <span>Block intent</span></a></li>
+      <li><a href="#factory-step-3">3 <span>Weekly structure</span></a></li>
+      <li><a href="#factory-step-4">4 <span>Coach pins</span></a></li>
+      <li><a href="#factory-step-5">5 <span>Preview</span></a></li>
+    </ol>
+  </div>
 
   <form
     id="block-factory-form"
@@ -38,8 +50,9 @@
       <input type="hidden" name="proposal_id" value="{{ proposal.id }}">
       <input type="hidden" name="proposal_integrity" value="{{ proposal_integrity }}">
     {% endif %}
-    <section class="factory-context" aria-labelledby="factory-context-heading">
-      <h2 id="factory-context-heading">Block context</h2>
+    <section id="factory-step-1" class="factory-context factory-step" aria-labelledby="factory-context-heading">
+      <div class="factory-step__heading"><span>Step 1</span><div><h2 id="factory-context-heading">Athlete + starting point</h2><p>Choose who you are programming and whether to begin from a validated structure.</p></div></div>
+      <label><span>Programme start <small>optional until scheduled</small></span><input type="date" name="start_date" value="{{ form.get('start_date', '') }}"></label><label><span>Timezone (IANA)</span><input name="timezone" value="{{ form.get('timezone', 'Europe/London') }}" required></label>
       <div class="factory-context__fields">
     <label>
       <span>Start from</span>
@@ -74,6 +87,11 @@
       {% if errors and errors.get('athlete_id') %}<small class="coach-form-error" id="factory-athlete_id-error">{{ errors.athlete_id }}</small>{% endif %}
     </label>
 
+    </div></section>
+
+    <section id="factory-step-2" class="factory-context factory-step" aria-labelledby="factory-block-intent-heading">
+      <div class="factory-step__heading"><span>Step 2</span><div><h2 id="factory-block-intent-heading">Block intent</h2><p>Name the outcome, duration and programme shape.</p></div></div>
+      <div class="factory-context__fields factory-context__fields--intent">
     <label>
       <span>Block name</span>
       <input
@@ -142,11 +160,8 @@
       </div>
     </section>
 
-    <section class="factory-intent" aria-labelledby="factory-intent-heading" data-copilot-region="structured-intent">
-      <div class="factory-section-heading">
-        <h2 id="factory-intent-heading">Weekly structure</h2>
-        <p>Exposure frequency, pulling setup and competition timing.</p>
-      </div>
+    <section id="factory-step-3" class="factory-intent factory-step" aria-labelledby="factory-intent-heading" data-copilot-region="structured-intent">
+      <div class="factory-step__heading"><span>Step 3</span><div><h2 id="factory-intent-heading">Weekly structure</h2><p>Set exposure frequency, pulling setup and competition timing.</p></div></div>
       <div class="factory-intent__fields">
     <label>
       <span>Training days</span>
@@ -256,8 +271,8 @@
       </div>
     </section>
 
-    <fieldset class="factory-accessories" data-factory-accessories>
-      <legend>Assistance</legend>
+    <fieldset id="factory-step-4" class="factory-accessories factory-step" data-factory-accessories>
+      <legend><span class="factory-step__number">Step 4</span> Assistance + coach pins</legend>
       <p class="factory-section-note">Optional. Pinned choices replace automatic suggestions.</p>
       <label><span>Selection mode</span>
         <select name="accessory_mode">
@@ -307,11 +322,11 @@
   </form>
 
   {% if preview %}
-    <section class="factory-preview{% if preview_stale %} is-stale{% endif %}" aria-labelledby="factory-review-heading" data-copilot-region="review-evidence" data-factory-preview>
+    <section id="factory-step-5" class="factory-preview factory-step{% if preview_stale %} is-stale{% endif %}" aria-labelledby="factory-review-heading" data-copilot-region="review-evidence" data-factory-preview>
       <div class="factory-stale-notice" role="status" data-preview-stale{% if not preview_stale %} hidden{% endif %}>This preview is out of date. Generate preview again before accepting.</div>
       <div class="factory-review-heading">
         <div>
-          <span>Proposal review</span>
+          <span>Step 5 · Preview and accept</span>
           <h2 id="factory-review-heading">{{ selected_athlete.full_name }}</h2>
         </div>
         <p>Confirm session structure and available athlete-state evidence.</p>

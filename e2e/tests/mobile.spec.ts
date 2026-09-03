@@ -137,7 +137,7 @@ for (const width of [320, 390, 430]) {
     await page.context().clearCookies();
     await authenticatedState(page);
     await page.goto('/programming/factory');
-    await page.getByLabel('Athlete').selectOption({ label: 'Sam Morgan' });
+    await page.locator('select[name="athlete_id"]').selectOption({ label: 'Sam Morgan' });
     await page.getByLabel('Selection mode').selectOption('none');
     await page.getByRole('button', { name: 'Preview' }).click();
     const evidence = page.locator('.factory-decision-details');

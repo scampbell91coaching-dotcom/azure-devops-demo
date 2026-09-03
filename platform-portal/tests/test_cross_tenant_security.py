@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 
 import pytest
-
 from portal import create_app
 from portal.extensions import db
 from portal.models.athlete import Athlete
@@ -20,14 +19,19 @@ from portal.models.athlete_state import AthleteStateRecommendation
 from portal.models.checkins import AthleteCheckinSettings, WeeklyCheckin
 from portal.models.meal_plan import MealPlanAssignment, MealPlanTemplate
 from portal.models.nutrition_prescription import NutritionMacroPrescription
-from portal.models.programming import ExercisePrescription, TrainingBlock, TrainingSession, TrainingWeek
-from portal.models.user import User, UserRole
 from portal.models.organisation import (
     CoachAthleteOwnership,
     Organisation,
     OrganisationMembership,
     OrganisationRole,
 )
+from portal.models.programming import (
+    ExercisePrescription,
+    TrainingBlock,
+    TrainingSession,
+    TrainingWeek,
+)
+from portal.models.user import User, UserRole
 
 
 @dataclass(frozen=True)
@@ -294,11 +298,27 @@ def test_coach_cannot_read_other_org_programming_direct_ids(
     assert response.status_code == 404
 
 
-def test_coach_cannot_mutate_other_org_programming_block_direct_id(tenant_app):
+@pytest.mark.parametrize(
+    ("path", "data"),
+    [
+        ("/programming/blocks/{block_b}/archive", {}),
+        ("/programming/blocks/{block_b}/edit", {"name": "Tampered"}),
+        ("/programming/blocks/{block_b}/duplicate", {}),
+        ("/programming/blocks/{block_b}/delete", {}),
+        ("/programming/weeks/{week_b}/edit", {"name": "Tampered"}),
+        ("/programming/weeks/{week_b}/duplicate", {}),
+        ("/programming/weeks/{week_b}/delete", {}),
+        ("/programming/weeks/{week_b}/reorder", {"position": "1"}),
+        ("/programming/blocks/{block_b}/bulk-preview", {"expected_revision": "0", "week_id": "1", "field": "sets", "value": "4"}),
+        ("/programming/blocks/{block_b}/bulk-apply", {"expected_revision": "0", "week_id": "1", "field": "sets", "value": "4", "revision_reason": "tampered"}),
+        ("/programming/sessions/{session_b}/copy-forward-preview", {"expected_revision": "0", "target_week_id": "1"}),
+    ],
+)
+def test_coach_cannot_mutate_other_org_programming_direct_id(tenant_app, path, data):
     seed = tenant_app.config["TENANT_SEED"]
     response = _coach_a_client(tenant_app).post(
-        f"/programming/blocks/{seed.block_b}/archive",
-        data={"csrf_token": "tenant-a-csrf"},
+        path.format(**vars(seed)),
+        data={"csrf_token": "tenant-a-csrf", **data},
     )
     assert response.status_code == 404
 

@@ -55,40 +55,54 @@
 {% endmacro %}
 
 {% block content %}
-<section class="coach-page week-editor">
+{% from "programming/_workspace.html" import athlete_workspace_nav, week_tabs %}
+<div class="athlete-programming-shell">
+{{ athlete_workspace_nav(week.block.athlete, athletes=workspace_athletes) }}
+<section class="coach-page week-editor athlete-programming-main" data-programme-revision="{{ current_revision }}">
   <header class="coach-page__header coach-page__header--split">
     <div><a class="coach-back-link" href="{{ url_for('programming.block', block_id=week.block.id) }}">← {{ week.block.name }}</a><span class="coach-eyebrow">{{ week.block.athlete.full_name }} · Week {{ week.position }}</span><h1>{{ week.name }}</h1>{% if week.notes %}<p>{{ week.notes }}</p>{% endif %}</div>
     <div class="week-lifecycle" aria-label="Week controls">
-      <form method="post" action="{{ url_for('programming.duplicate_week', week_id=week.id) }}"><button class="coach-link-button" type="submit">Duplicate week</button></form>
-      <form method="post" action="{{ url_for('programming.extend_block', block_id=week.block.id) }}"><input type="hidden" name="weeks" value="1"><button class="coach-link-button" type="submit">Extend block</button></form>
-      <form method="post" action="{{ url_for('programming.delete_week', week_id=week.id) }}"><button class="coach-link-button" type="submit">Delete week</button></form>
+      <form method="post" action="{{ url_for('programming.duplicate_week', week_id=week.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><button class="coach-link-button" type="submit">Duplicate week</button></form>
+      <form method="post" action="{{ url_for('programming.extend_block', block_id=week.block.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><input type="hidden" name="weeks" value="1"><button class="coach-link-button" type="submit">Extend block</button></form>
+      <form method="post" action="{{ url_for('programming.delete_week', week_id=week.id) }}" data-confirm="Delete this week’s programming structure? Completed and imported training history will remain available."><input type="hidden" name="expected_revision" value="{{ current_revision }}"><button class="coach-link-button" type="submit">Delete week</button></form>
     </div>
   </header>
+  {{ week_tabs(week.block, week) }}
+  <details class="week-add-session">
+    <summary class="coach-link-button">Rename or edit week</summary>
+    <form class="coach-form programming-form" method="post" action="{{ url_for('programming.edit_week', week_id=week.id) }}">
+      <input type="hidden" name="expected_revision" value="{{ current_revision }}">
+      <label><span>Name</span><input name="name" value="{{ week.name }}" required maxlength="120"></label>
+      <label><span>Notes</span><textarea name="notes" rows="2">{{ week.notes or '' }}</textarea></label>
+      <button class="coach-primary-button" type="submit">Save week</button>
+    </form>
+  </details>
   <section class="week-context" aria-label="Week planning context">
     <div><span class="coach-eyebrow">Week focus</span><strong>{{ week.notes or week.block.objective or 'No focus recorded' }}</strong></div>
     <div class="exposure-strip" aria-label="Taxonomy-backed competition lift exposures"><span><b>S</b> Squat <strong>{{ exposure_summary.squat }}</strong></span><span><b>B</b> Bench <strong>{{ exposure_summary.bench }}</strong></span><span><b>D</b> Deadlift <strong>{{ exposure_summary.deadlift }}</strong></span></div>
     <div><span class="coach-eyebrow">Athlete state</span>{% if athlete_context.active_constraints %}<strong>{{ athlete_context.active_constraints|join(', ') }}</strong>{% else %}<strong>No active constraints reported</strong>{% endif %}{% if athlete_context.state_signals.get('reported_fatigue') is not none %}<small>Reported fatigue: {{ athlete_context.state_signals.get('reported_fatigue') }}</small>{% endif %}{% if athlete_context.missing %}<small class="context-warning">Incomplete data: {{ athlete_context.missing|join(', ') }}</small>{% endif %}</div>
   </section>
-  <details class="week-add-session"><summary class="coach-primary-button">Add session</summary><form class="coach-form programming-form" method="post" action="{{ url_for('programming.create_session', week_id=week.id) }}"><input type="hidden" name="week_editor" value="1"><label><span>Name</span><input name="name" placeholder="Session {{ week.sessions|length + 1 }}"></label><label><span>Day</span><input name="day_label" placeholder="Monday"></label><button class="coach-primary-button" type="submit">Add session</button></form></details>
+  <details class="week-add-session"><summary class="coach-primary-button">Add session</summary><form class="coach-form programming-form" method="post" action="{{ url_for('programming.create_session', week_id=week.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><input type="hidden" name="week_editor" value="1"><label><span>Name</span><input name="name" placeholder="Session {{ week.sessions|length + 1 }}"></label><label><span>Day</span><input name="day_label" placeholder="Monday"></label><button class="coach-primary-button" type="submit">Add session</button></form></details>
   <div class="week-editor__sessions">
   {% for session in week.sessions %}
     <article class="week-session" id="session-{{ session.id }}" data-testid="programming-session">
       <div class="week-session__heading"><div><span class="coach-eyebrow">Training session {{ session.position }} · {{ session.day_label or 'Day unassigned' }}</span><h2>{{ session.name }}</h2><p>{{ session.prescriptions|length }} programmed exercises · Assistance stays subordinate to competition-lift work</p></div>
         <div class="week-session__actions"><a class="coach-link-button" href="{{ url_for('programming.session', session_id=session.id) }}">Open session</a>
-          <form method="post" action="{{ url_for('programming.insert_session_before', session_id=session.id) }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Insert before</button></form>
-          <form method="post" action="{{ url_for('programming.insert_session_after', session_id=session.id) }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Insert after</button></form>
-          <form method="post" action="{{ url_for('programming.duplicate_session', session_id=session.id) }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Duplicate</button></form>
-          <form method="post" action="{{ url_for('programming.delete_session', session_id=session.id) }}"><button class="coach-link-button" type="submit">Delete</button></form>
+          <form method="post" action="{{ url_for('programming.insert_session_before', session_id=session.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Insert before</button></form>
+          <form method="post" action="{{ url_for('programming.insert_session_after', session_id=session.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Insert after</button></form>
+          <form method="post" action="{{ url_for('programming.duplicate_session', session_id=session.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Duplicate</button></form>
+          {% if week.block.weeks|length > 1 %}<form method="post" action="{{ url_for('programming.move_session', session_id=session.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><select name="target_week_id" aria-label="Destination week" required><option value="">Move to…</option>{% for destination in week.block.weeks if destination.id != week.id %}<option value="{{ destination.id }}">Week {{ destination.position }} · {{ destination.name }}</option>{% endfor %}</select><button class="coach-link-button" type="submit">Move session</button></form>{% endif %}
+          <form method="post" action="{{ url_for('programming.delete_session', session_id=session.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><button class="coach-link-button" type="submit">Delete</button></form>
         </div></div>
       <div class="session-day-structure" aria-label="Scheduled lift structure"><strong>Structure</strong>{% for slot in session.lift_slots %}<span>{{ slot.lift_family[0]|upper }} · {{ slot.lift_family|title }}</span>{% else %}<span>Assistance only</span>{% endfor %}</div>
       <section class="lift-slots"><h3>Main-lift prescriptions</h3>
       {% for slot in session.lift_slots %}
-        <details class="lift-slot" open data-testid="lift-slot"><summary><span class="lift-family-badge">{{ slot.lift_family[0]|upper }}</span><strong>{{ slot.lift_family|title }} exposure {{ loop.index }}</strong><span>{% for row in slot.prescriptions %}{{ 'Top' if row.slot_role == 'top_set' else 'Back-off' }}: {{ row.exercise_name }} {{ row.summary }}{% if not loop.last %} · {% endif %}{% endfor %}</span></summary>{{ lift_slot_form(session, slot) }}<form class="lift-slot-delete" method="post" action="{{ url_for('programming.delete_lift_slot', slot_id=slot.id) }}"><button class="coach-link-button" type="submit">Remove exposure</button></form></details>
+        <details class="lift-slot" open data-testid="lift-slot"><summary><span class="lift-family-badge">{{ slot.lift_family[0]|upper }}</span><span class="compact-exercise-title"><strong>{% set first_row = slot.prescriptions|first %}{{ first_row.exercise_name if first_row else slot.lift_family|title }}</strong><small>{{ slot.exposure_role|replace('_', ' ')|title if slot.exposure_role else slot.lift_family|title }} · click to edit</small></span><span>{% for row in slot.prescriptions %}{{ 'Top' if row.slot_role == 'top_set' else 'Back-off' }}: {{ row.exercise_name }} {{ row.summary }}{% if not loop.last %} + {% endif %}{% endfor %}</span></summary>{{ lift_slot_form(session, slot) }}<form class="lift-slot-delete" method="post" action="{{ url_for('programming.delete_lift_slot', slot_id=slot.id) }}"><button class="coach-link-button" type="submit">Remove exposure</button></form></details>
       {% else %}<p class="week-editor__empty">No squat, bench or deadlift exposures scheduled.</p>{% endfor %}
       <details class="lift-slot lift-slot--new"><summary><strong>Add S/B/D lift slot</strong><span>Top set with optional back-off</span></summary>{{ lift_slot_form(session) }}</details></section>
       <section class="assistance"><div class="assistance__heading"><div><span class="coach-eyebrow">Subordinate work</span><h3>Assistance</h3></div><span>Zero assistance is valid</span></div><div class="week-prescriptions">
       {% for item in session.prescriptions if item.lift_slot_id is none %}
-        <details class="week-prescription" open><summary><strong>{{ item.position }}. {{ item.exercise_name }}</strong><span>{{ item.summary or 'No prescription set' }}</span></summary>
+        <details class="week-prescription" open><summary><span class="compact-exercise-title"><strong>{{ item.position }}. {{ item.exercise_name }}</strong><small>{{ (item.provenance or 'coach_authored')|replace('_', ' ')|title }} · click to edit</small></span><span>{{ item.summary or 'No prescription set' }}</span></summary>
           <span class="provenance-badge" data-testid="assistance-provenance">{{ (item.provenance or 'coach_authored')|replace('_', ' ')|title }}</span>
           <form class="week-prescription__form" method="post" action="{{ url_for('programming.update_prescription', prescription_id=item.id) }}"><input type="hidden" name="week_editor" value="1">{{ prescription_fields(item) }}<button class="coach-primary-button" type="submit">Save exercise</button></form>
           <form class="week-prescription__delete" method="post" action="{{ url_for('programming.delete_prescription', prescription_id=item.id) }}"><input type="hidden" name="week_editor" value="1"><button class="coach-link-button" type="submit">Delete exercise</button></form>
@@ -99,6 +113,6 @@
     </article>
   {% else %}<section class="coach-panel"><p>No sessions yet. Add the first session above.</p></section>{% endfor %}
   </div>
-</section>
+</section></div>
 {% endblock %}
-{% block scripts %}<script src="{{ url_for('static', filename='js/programming_lift_slots.js') }}" defer></script>{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/programming_conflicts.js') }}" defer></script><script src="{{ url_for('static', filename='js/programming_lift_slots.js') }}" defer></script>{% endblock %}

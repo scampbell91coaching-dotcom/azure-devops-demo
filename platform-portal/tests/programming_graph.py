@@ -97,7 +97,9 @@ def normalize_persisted_programme(block: Any) -> dict[str, Any]:
     """Serialize the durable graph in the signed proposal's exact schema."""
     return {
         "schema_version": 1,
-        "block": {"name": block.name, "objective": block.objective, "status": block.status},
+        "block": {"name": block.name, "objective": block.objective, "status": block.status,
+                  "start_date": block.start_date.isoformat() if block.start_date else None,
+                  "timezone": block.timezone},
         "weeks": [{
             "name": week.name, "position": week.position, "notes": week.notes,
             "sessions": [{

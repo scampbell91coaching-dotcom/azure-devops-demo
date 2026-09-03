@@ -23,6 +23,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 document.addEventListener("change", (event) => {
+  const athleteSwitch = event.target.closest("select[data-athlete-programming-switch]");
+  if (athleteSwitch) {
+    const destination = athleteSwitch.value;
+    if (destination) {
+      window.location.assign(destination);
+    }
+    return;
+  }
+
   const select = event.target.closest("select[data-auto-submit]");
   if (!select || !select.form) {
     return;
