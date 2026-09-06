@@ -65,8 +65,9 @@ test('athlete records and finishes a session on a phone, then coach reviews it',
   await sets.first().locator('textarea').fill('Moved well on video.');
   await expect(page.locator('html')).toHaveJSProperty('scrollWidth', 412);
 
-  page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Finish session' }).click();
+  await page.getByRole('dialog', { name: 'Finish this session?' })
+    .getByRole('button', { name: 'Finish session' }).click();
   await expect(page.getByText('Session complete', { exact: true })).toBeVisible();
   await expect(
     page.getByText(/^Finished \d{2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2}$/)

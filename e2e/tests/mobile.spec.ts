@@ -4,11 +4,37 @@ import { test, expect } from '../fixtures/test';
 test.use({ mutationScope: 'training' });
 
 async function expectNoHorizontalOverflow(page: Page) {
+  const overflow = await page.evaluate(() => {
+    const viewportWidth = document.documentElement.clientWidth;
+    return {
+      viewportWidth,
+      bodyScrollWidth: document.body.scrollWidth,
+      documentScrollWidth: document.documentElement.scrollWidth,
+      elements: [...document.querySelectorAll<HTMLElement>('body *')]
+        .map(element => {
+          const rect = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return {
+            tag: element.tagName.toLowerCase(),
+            class: element.getAttribute('class') ?? '',
+            id: element.id,
+            testId: element.dataset.testid ?? '',
+            left: rect.left,
+            right: rect.right,
+            width: rect.width,
+            minWidth: style.minWidth,
+            computedWidth: style.width,
+            overflowX: style.overflowX,
+            whiteSpace: style.whiteSpace,
+          };
+        })
+        .filter(element => element.left < -0.5 || element.right > viewportWidth + 0.5),
+    };
+  });
   expect(
-    await page.evaluate(
-      () => document.body.scrollWidth <= document.documentElement.clientWidth,
-    ),
-  ).toBeTruthy();
+    Math.max(overflow.bodyScrollWidth, overflow.documentScrollWidth),
+    `Horizontal overflow diagnostics:\n${JSON.stringify(overflow, null, 2)}`,
+  ).toBeLessThanOrEqual(overflow.viewportWidth);
 }
 
 async function completeSession(page: Page) {
@@ -116,11 +142,12 @@ for (const width of [320, 390, 430]) {
     await page.goto('/athlete/programme/sessions/502');
     await completeSession(page);
     const finish = page.getByRole('button', { name: 'Finish session' });
-    page.once('dialog', dialog => dialog.dismiss());
     await finish.click();
+    const finishDialog = page.getByRole('dialog', { name: 'Finish this session?' });
+    await finishDialog.getByRole('button', { name: 'Keep editing' }).click();
     await expect(finish).toBeFocused();
-    page.once('dialog', dialog => dialog.accept());
     await finish.click();
+    await finishDialog.getByRole('button', { name: 'Finish session' }).click();
     await expect(page.getByText('Session complete', { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
@@ -137,7 +164,7 @@ for (const width of [320, 390, 430]) {
     await page.context().clearCookies();
     await authenticatedState(page);
     await page.goto('/programming/factory');
-    await page.getByLabel('Athlete').selectOption({ label: 'Sam Morgan' });
+    await page.locator('select[name="athlete_id"]').selectOption({ label: 'Sam Morgan' });
     await page.getByLabel('Selection mode').selectOption('none');
     await page.getByRole('button', { name: 'Preview' }).click();
     const evidence = page.locator('.factory-decision-details');
@@ -208,8 +235,14 @@ for (const width of [320, 390, 430]) {
     await expectNoHorizontalOverflow(page);
   });
 
-  test(`coach programming hierarchy remains usable at ${width}px`, async ({ page, authenticatedState }) => {
+  test(`coach programming hierarchy remains usable at ${width}px`, async ({
+    page,
+    request,
+    authenticatedState,
+    resetE2EFixture,
+  }) => {
     await page.setViewportSize({ width, height: 844 });
+    await resetE2EFixture(request, 'training');
     await authenticatedState(page);
     await page.goto('/programming');
     await page.getByTestId('programming-athlete').filter({ hasText: 'Alex Rivera' }).click();

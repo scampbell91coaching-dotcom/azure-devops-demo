@@ -124,6 +124,9 @@ def test_first_result_starts_session_and_reload_persists(training_app):
     assert response.status_code == 302
     assert b"In Progress" in page.data
     assert b'value="102.5"' in page.data
+    assert b'data-finish-session-dialog' in page.data
+    assert b"Your submitted training will become read-only" in page.data
+    assert b"Keep editing" in page.data
     with training_app.app_context():
         log = TrainingSessionLog.query.one()
         result = TrainingSetResult.query.one()

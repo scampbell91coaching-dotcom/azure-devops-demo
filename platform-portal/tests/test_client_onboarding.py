@@ -9,7 +9,9 @@ from portal.models.account_token import AccountToken
 from portal.models.athlete_state import AthleteStateFact
 from portal.models.client_service import ClientServiceChange
 from portal.models.checkins import AthleteCheckinSettings
-from portal.models.programming import TrainingBlock
+from portal.models.programming import (
+    ExercisePrescription, TrainingBlock, TrainingSession, TrainingWeek,
+)
 from portal.models.user import User, UserRole
 from portal.services.transactional_email import MemoryEmailTransport
 from portal.services.client_onboarding import build_client_onboarding
@@ -131,6 +133,11 @@ def test_complete_guided_onboarding_reaches_ready_without_schema_changes(onboard
     with onboarding_app.app_context():
         block = TrainingBlock(
             athlete_id=athlete_id, name="Foundation block", objective="Build work capacity"
+        )
+        week = TrainingWeek(block=block, name="Week 1", position=1)
+        training_session = TrainingSession(week=week, name="Day 1", position=1)
+        training_session.prescriptions.append(
+            ExercisePrescription(exercise_name="Squat", position=1)
         )
         db.session.add(block)
         db.session.commit()

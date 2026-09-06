@@ -7,6 +7,7 @@ from .lift_slots import register_lift_slot_routes
 from .sessions import register_session_routes
 from .warmups import register_warmup_routes
 from .weeks import register_week_routes
+from .bulk import register_bulk_routes
 
 
 def register_routes(blueprint: Blueprint) -> None:
@@ -17,3 +18,4 @@ def register_routes(blueprint: Blueprint) -> None:
     register_prescription_routes(blueprint)
     register_lift_slot_routes(blueprint)
     register_warmup_routes(blueprint)
+    register_bulk_routes(blueprint)

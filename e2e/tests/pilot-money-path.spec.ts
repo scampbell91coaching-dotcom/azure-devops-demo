@@ -82,10 +82,10 @@ test('first paying athlete money path: draft to immutable coach-reviewed trainin
   await signIn(page, 'coach.e2e@example.test', 'Coach E2E password!');
   await page.goto(`/athletes/${pilot.id}/programming`);
   await expect(page.getByRole('heading', { name: pilot.name })).toBeVisible();
-  const draft = page.locator('.coach-list__item').filter({ hasText: pilot.block });
-  await expect(draft).toContainText('Draft');
+  const draft = page.getByTestId('programming-block').filter({ hasText: pilot.block });
+  await expect(draft.getByRole('status', { name: 'Programme lifecycle: Next / review draft' })).toBeVisible();
   await draft.getByRole('link', { name: 'Open block' }).click();
-  await expect(page.getByText('Draft', { exact: true })).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Programme lifecycle: Next / review draft' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Pilot week 1' }).click();
   const sessionCard = page.getByTestId('programming-session').filter({ hasText: pilot.session });
@@ -103,13 +103,18 @@ test('first paying athlete money path: draft to immutable coach-reviewed trainin
 
   const prescriptions = sessionCard.locator('.week-prescription');
   await expect(prescriptions.first()).toContainText('Cable Row');
+  const cableRowEditor = prescriptions.first().locator('form').first();
+  await cableRowEditor.getByLabel('Notes').fill('Pilot-reviewed assistance prescription.');
+  await cableRowEditor.getByRole('button', { name: 'Save exercise' }).click();
+  await expect(prescriptions.first().getByLabel('Notes')).toHaveValue('Pilot-reviewed assistance prescription.');
 
-  await page.getByRole('link', { name: pilot.block, exact: true }).click();
+  await page.getByRole('link', { name: 'Review changes' }).click();
+  await expect(page.getByRole('heading', { name: 'Whole-block programming review' })).toBeVisible();
   page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: 'Publish programme' }).click();
-  await expect(page.getByText('Active', { exact: true })).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Programme lifecycle: Current' })).toBeVisible();
   await page.reload();
-  await expect(page.getByText('Active', { exact: true })).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Programme lifecycle: Current' })).toBeVisible();
 
   await changeAccount(page);
   await signIn(page, pilot.email, pilot.password);
@@ -138,8 +143,10 @@ test('first paying athlete money path: draft to immutable coach-reviewed trainin
   await rows.first().locator('textarea').fill('Top set moved cleanly; keep the same load next week.');
   await expect(page.locator('html')).toHaveJSProperty('scrollWidth', 390);
   await expect(page.getByRole('button', { name: 'Finish session' })).toBeVisible();
-  page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: 'Finish session' }).click();
+  const finishDialog = page.getByRole('dialog', { name: 'Finish this session?' });
+  await expect(finishDialog.getByText(/submitted training will become read-only/i)).toBeVisible();
+  await finishDialog.getByRole('button', { name: 'Finish session' }).click();
   await expect(page.getByText('Session complete', { exact: true })).toBeVisible();
 
   await page.reload();

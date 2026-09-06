@@ -9,6 +9,7 @@
       <span class="coach-eyebrow">Training performance</span>
       <h1>{{ log.session_name }}</h1>
       <p>{{ log.block_name }} · {{ log.week_name }}</p>
+      {% set imported = log.results|selectattr('import_provenance')|list %}{% if imported %}<p><strong>Spreadsheet import</strong> · {{ imported[0].import_provenance.batch.source_filename }}{% if imported[0].import_provenance.source_sheet %} · {{ imported[0].import_provenance.source_sheet }}{% endif %}</p>{% endif %}
     </div>
     <span class="coach-status coach-status--active">{{ log.status | replace('_', ' ') | title }}</span>
   </header>
@@ -28,6 +29,7 @@
             <header class="coach-checkin-card__header">
               <strong>{{ 'Extra set' if result.is_extra else 'Set ' ~ result.set_order }}</strong>
               <span class="coach-status {% if result.skipped %}coach-status--pending{% else %}coach-status--active{% endif %}">{{ 'Skipped' if result.skipped else 'Complete' }}</span>
+              {% if result.import_provenance %}<span class="coach-status coach-status--pending" title="Imported from {{ result.import_provenance.batch.source_filename }}, row {{ result.import_provenance.source_row }}">Imported</span>{% endif %}
             </header>
             <div class="coach-checkin-card__summary">
               <span>Load: {{ result.actual_load_kg ~ ' kg' if result.actual_load_kg is not none else '—' }} <small>(target {{ result.prescribed_load_kg ~ ' kg' if result.prescribed_load_kg is not none else '—' }})</small></span>

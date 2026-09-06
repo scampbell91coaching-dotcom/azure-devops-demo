@@ -14,12 +14,14 @@
       <label><span>Athlete</span><select name="athlete_id" required><option value="">Choose athlete</option>{% for athlete in athletes %}<option value="{{ athlete.id }}">{{ athlete.full_name }}</option>{% endfor %}</select></label>
       <label><span>Name</span><input name="name" placeholder="Meet prep" required></label>
       <label><span>Objective</span><input name="objective" placeholder="Build specificity"></label>
+      <label><span>Programme start</span><input name="start_date" type="date"></label>
+      <label><span>Timezone (IANA)</span><input name="timezone" value="Europe/London" required></label>
       <button class="coach-primary-button" type="submit">Create block</button>
     </form>
   </details>
   <section class="coach-panel">
     <div class="coach-panel__heading coach-panel__heading--split"><div><span class="coach-eyebrow">Current work</span><h2>Blocks</h2></div><span class="coach-count">{{ blocks|length }}</span></div>
-    <div class="programming-roster" role="list">{% for block in blocks %}<a href="{{ url_for('programming.block', block_id=block.id) }}" role="listitem"><strong>{{ block.name }}</strong><span>{{ block.athlete.full_name }}</span><em>{{ block.weeks|length }} weeks · {{ block.status|title }} →</em></a>{% else %}<div class="coach-empty-state"><h3>No blocks yet</h3><p>Build the first block from an athlete workspace.</p></div>{% endfor %}</div>
+    <div class="programming-roster" role="list">{% for block in blocks %}<a href="{{ url_for('programming.block', block_id=block.id) }}" role="listitem"><strong>{{ block.name }}</strong><span>{{ block.athlete.full_name }}</span><em>{{ block.weeks|length }} weeks · {{ block.lifecycle_label }} →</em></a>{% else %}<div class="coach-empty-state"><h3>No blocks yet</h3><p>Build the first block from an athlete workspace.</p></div>{% endfor %}</div>
   </section>
 </section>
 {% endblock %}

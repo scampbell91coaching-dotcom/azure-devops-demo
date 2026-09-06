@@ -1,9 +1,18 @@
 from flask import Blueprint, abort, redirect, request, url_for
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..extensions import db
 from ..models.programming import ExercisePrescription, TrainingSession
 from ..programming_services.prescriptions import create, delete, update
 from ..tenancy import require_programming_access
+from ..programming_services.conflicts import require_editable
+
+
+def _abort_invalid_prescription(error: Exception) -> None:
+    # Validation can be raised by SQLAlchemy's flush hooks. Always restore the
+    # request-scoped session before Flask renders the controlled error response.
+    db.session.rollback()
+    abort(400, description=str(error))
 
 
 def _redirect_to_editor(session: TrainingSession):
@@ -25,13 +34,17 @@ def register_prescription_routes(blueprint: Blueprint) -> None:
         if session is None:
             abort(404)
         require_programming_access(session)
+        try:
+            require_editable(session.week.block)
+        except ValueError as error:
+            abort(409, description=str(error))
         name = request.form.get("exercise_name", "").strip()
         if not name:
             abort(400)
         try:
             create(session, name=name, form=request.form)
-        except ValueError:
-            abort(400)
+        except (SQLAlchemyError, ValueError) as error:
+            _abort_invalid_prescription(error)
         return _redirect_to_editor(session)
 
     @blueprint.post("/programming/prescriptions/<int:prescription_id>")
@@ -40,6 +53,10 @@ def register_prescription_routes(blueprint: Blueprint) -> None:
         if item is None:
             abort(404)
         require_programming_access(item.session)
+        try:
+            require_editable(item.session.week.block)
+        except ValueError as error:
+            abort(409, description=str(error))
         if item.lift_slot_id is not None:
             abort(409, description="Edit main lifts through the lift-slot editor.")
         name = request.form.get("exercise_name", "").strip()
@@ -47,8 +64,8 @@ def register_prescription_routes(blueprint: Blueprint) -> None:
             abort(400)
         try:
             update(item, name=name, form=request.form)
-        except ValueError:
-            abort(400)
+        except (SQLAlchemyError, ValueError) as error:
+            _abort_invalid_prescription(error)
         return _redirect_to_editor(item.session)
 
     @blueprint.post("/programming/prescriptions/<int:prescription_id>/delete")
@@ -57,6 +74,10 @@ def register_prescription_routes(blueprint: Blueprint) -> None:
         if item is None:
             abort(404)
         require_programming_access(item.session)
+        try:
+            require_editable(item.session.week.block)
+        except ValueError as error:
+            abort(409, description=str(error))
         if item.lift_slot_id is not None:
             abort(409, description="Remove main lifts through the lift-slot editor.")
         session = item.session

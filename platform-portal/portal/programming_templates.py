@@ -129,61 +129,17 @@ def _apply_template(session: TrainingSession, template_key: str) -> None:
 
 @programming_templates_bp.get("/programming/block-factory")
 def block_factory():
-    athletes = athlete_query_for_request().order_by(
-        Athlete.last_name.asc(), Athlete.first_name.asc()
-    ).all()
-    return render_template("programming/block_factory.html", athletes=athletes)
+    athlete_id = request.args.get("athlete_id", type=int)
+    return redirect(url_for("block_factory.wizard", athlete_id=athlete_id))
 
 
 @programming_templates_bp.post("/programming/block-factory")
 def create_factory_block():
+    # Retired template-builder alias: all new work enters the signed canonical factory.
     athlete_id = request.form.get("athlete_id", type=int)
-    if athlete_id is None:
-        abort(400)
-    athlete = require_athlete_access(athlete_id)
-
-    factory = FactoryRequest(
-        squat_days=_bounded_int("squat_days", 1, 5),
-        bench_days=_bounded_int("bench_days", 1, 5),
-        deadlift_days=_bounded_int("deadlift_days", 1, 3),
-        weeks=_bounded_int("weeks", 1, 12),
-    )
-
-    name = request.form.get("name", "").strip()
-    if not name:
-        abort(400)
-
-    block = TrainingBlock(
-        athlete=athlete,
-        name=name,
-        objective=request.form.get("objective", "").strip() or None,
-        status="draft",
-    )
-    db.session.add(block)
-    db.session.flush()
-
-    day_keys = _build_day_keys(factory)
-    for week_number in range(1, factory.weeks + 1):
-        week = TrainingWeek(
-            block=block, name=f"Week {week_number}", position=week_number
-        )
-        db.session.add(week)
-        db.session.flush()
-        for day_number, key in enumerate(day_keys, start=1):
-            session = TrainingSession(
-                week=week,
-                name=str(DAY_TEMPLATES[key]["label"]),
-                day_label=f"Day {day_number}",
-                position=day_number,
-            )
-            db.session.add(session)
-            db.session.flush()
-            _apply_template(session, key)
-
-    append_revision(block, change_type="template_programme_created", summary="Created programme from block template")
-    db.session.commit()
-    return redirect(url_for("programming.block", block_id=block.id))
-
+    if athlete_id is not None:
+        require_athlete_access(athlete_id)
+    return redirect(url_for("block_factory.wizard", athlete_id=athlete_id), code=303)
 
 @programming_templates_bp.post(
     "/programming/sessions/<int:session_id>/apply-day-template"

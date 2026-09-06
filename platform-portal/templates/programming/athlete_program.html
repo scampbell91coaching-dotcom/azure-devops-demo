@@ -12,7 +12,10 @@
 {% endblock %}
 
 {% block content %}
-<section class="coach-page">
+{% from "programming/_workspace.html" import athlete_workspace_nav %}
+<div class="athlete-programming-shell">
+{{ athlete_workspace_nav(athlete, athletes=workspace_athletes) }}
+<section class="coach-page athlete-programming-main">
   <header class="coach-page__header">
     <span class="coach-eyebrow">Athlete programming</span>
 
@@ -39,8 +42,9 @@
     </div>
   </header>
   <section class="programme-context-grid" aria-label="Athlete programming context">
-    <article class="context-card"><span class="coach-eyebrow">Active block</span><h2>{{ current_block.name if current_block else 'None published' }}</h2><p>{{ current_block.objective if current_block and current_block.objective else 'No block intent recorded' }}</p></article>
+    <article class="context-card"><span class="coach-eyebrow">Current programme</span><h2>{{ current_block.name if current_block else 'No current programme' }}</h2>{% if current_block %}<p>{{ current_block.lifecycle_label }} · {{ schedule.programme_start.strftime('%d %b %Y') if schedule.programme_start else 'Start not scheduled' }} to {{ schedule.programme_end.strftime('%d %b %Y') if schedule.programme_end else 'end not scheduled' }}</p>{% else %}<p>Publish a review draft when the athlete is ready to train.</p>{% endif %}</article>
     <article class="context-card"><span class="coach-eyebrow">Current progress week</span><h2>{{ ('Week ' ~ current_week.position ~ ' · ' ~ current_week.name) if current_week else 'Block complete' }}</h2><p>{% if schedule.has_planned_dates %}Calendar dates available{% else %}No planned dates · first unfinished session determines this week{% endif %}</p>{% if current_week %}<div class="exposure-strip"><span><b>S</b> {{ current_week.lift_slot_frequencies().squat }}</span><span><b>B</b> {{ current_week.lift_slot_frequencies().bench }}</span><span><b>D</b> {{ current_week.lift_slot_frequencies().deadlift }}</span></div>{% endif %}</article>
+    <article class="context-card"><span class="coach-eyebrow">Next expected action</span>{% if schedule.next_session %}<h2>{{ schedule.next_session.session.name }}</h2><p>{{ schedule.next_session.planned_on.strftime('%A · %d %b %Y') if schedule.next_session.planned_on else 'Next unfinished session in programme order' }}</p>{% elif current_block %}<h2>Review completion</h2><p>All programmed sessions are complete.</p>{% else %}<h2>Build or publish a programme</h2><p>The athlete has no training available.</p>{% endif %}</article>
     <article class="context-card context-card--meet"><span class="coach-eyebrow">Athlete state & meet</span>{% if athlete_context.next_competition %}<h2>{{ athlete_context.next_competition }}</h2><p>Meet context recorded</p>{% else %}<h2>No meet date</h2>{% endif %}{% if athlete_context.active_constraints %}<p>{{ athlete_context.active_constraints|join(', ') }}</p>{% endif %}{% if athlete_context.state_signals.get('reported_fatigue') is not none %}<p>Reported fatigue: {{ athlete_context.state_signals.get('reported_fatigue') }}</p>{% endif %}{% if athlete_context.missing %}<small>Incomplete data: {{ athlete_context.missing|join(', ') }}</small>{% endif %}</article>
   </section>
 
@@ -51,14 +55,14 @@
     </div>
 
     {% if current_block %}
-      <section class="coach-panel">
+      <section class="coach-panel" data-testid="programming-block">
         <div class="coach-panel__heading coach-panel__heading--split">
           <div>
             <span class="coach-eyebrow">Current block</span>
             <h2>{{ current_block.name }}</h2>
           </div>
-          <span class="coach-status coach-status--active">
-            {{ current_block.status | title }}
+          <span class="coach-status coach-status--active" role="status" aria-label="Programme lifecycle: {{ current_block.lifecycle_label }}">
+            {{ current_block.lifecycle_label }}
           </span>
         </div>
 
@@ -81,9 +85,9 @@
           <form
             method="post"
             action="{{ url_for('programming.archive_block', block_id=current_block.id) }}"
-            data-confirm="Archive this block?"
+            data-confirm="Mark this programme completed?"
           >
-            <button class="coach-link-button" type="submit">Archive</button>
+            <input type="hidden" name="outcome" value="completed"><button class="coach-link-button" type="submit">Mark completed</button>
           </form>
           {% if current_block.status == "draft" %}
             <form
@@ -101,12 +105,12 @@
     {% if previous_blocks %}
       <div class="coach-list">
         {% for block in previous_blocks %}
-          <article class="coach-list__item">
+          <article class="coach-list__item" data-testid="programming-block">
             <div>
               <strong>{{ block.name }}</strong>
 
               <p>
-                {{ block.weeks | length }} weeks · {{ block.status | title }}
+                  {{ block.weeks | length }} weeks · <span class="coach-status{% if block.status == 'active' %} coach-status--active{% endif %}" role="status" aria-label="Programme lifecycle: {{ block.lifecycle_label }}">{{ block.lifecycle_label }}</span>
               </p>
             </div>
 
@@ -132,15 +136,6 @@
               >
                 <button class="coach-link-button" type="submit">Duplicate</button>
               </form>
-              {% if block.status != "archived" %}
-                <form
-                  method="post"
-                  action="{{ url_for('programming.archive_block', block_id=block.id) }}"
-                  data-confirm="Archive this block?"
-                >
-                  <button class="coach-link-button" type="submit">Archive</button>
-                </form>
-              {% endif %}
               {% if block.status == "draft" %}
                 <form
                   method="post"
@@ -171,5 +166,5 @@
       </div>
     {% endif %}
   </section>
-</section>
+</section></div>
 {% endblock %}

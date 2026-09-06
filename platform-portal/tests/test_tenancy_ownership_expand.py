@@ -15,12 +15,12 @@ def _app():
     return create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
 
 
-def test_0027_has_the_required_parent_and_0028_is_the_only_head():
+def test_0027_has_the_required_parent_and_0030_is_the_only_head():
     config = Config(str(Path(__file__).parents[1] / "migrations/alembic.ini"))
     config.set_main_option("script_location", str(Path(__file__).parents[1] / "migrations"))
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["0028_spreadsheet_import_history"]
+    assert scripts.get_heads() == ["0030_programme_timing_lifecycle"]
     assert scripts.get_revision("0027_tenancy_ownership_expand").down_revision == (
         "0026_programming_exposure_roles"
     )

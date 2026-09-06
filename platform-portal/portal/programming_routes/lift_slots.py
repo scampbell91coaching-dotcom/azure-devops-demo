@@ -4,6 +4,7 @@ from ..extensions import db
 from ..models.programming import ProgrammingLiftSlot, TrainingSession
 from ..programming_services.lift_slots import delete, save_from_form
 from ..tenancy import require_programming_access
+from ..programming_services.conflicts import require_editable
 
 
 def _redirect(session: TrainingSession):
@@ -18,6 +19,10 @@ def register_lift_slot_routes(blueprint: Blueprint) -> None:
             abort(404)
         require_programming_access(session)
         try:
+            require_editable(session.week.block)
+        except ValueError as error:
+            abort(409, description=str(error))
+        try:
             save_from_form(session, request.form)
         except (TypeError, ValueError):
             abort(400)
@@ -31,6 +36,10 @@ def register_lift_slot_routes(blueprint: Blueprint) -> None:
         session = slot.session
         require_programming_access(session)
         try:
+            require_editable(session.week.block)
+        except ValueError as error:
+            abort(409, description=str(error))
+        try:
             save_from_form(session, request.form, slot=slot)
         except (TypeError, ValueError):
             abort(400)
@@ -43,5 +52,9 @@ def register_lift_slot_routes(blueprint: Blueprint) -> None:
             abort(404)
         session = slot.session
         require_programming_access(session)
+        try:
+            require_editable(session.week.block)
+        except ValueError as error:
+            abort(409, description=str(error))
         delete(slot)
         return _redirect(session)

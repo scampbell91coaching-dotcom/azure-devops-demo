@@ -86,7 +86,9 @@ def preview_and_accept(client, data):
 def normalized_persisted_programme(block):
     return {
         "schema_version": 1,
-        "block": {"name": block.name, "objective": block.objective, "status": block.status},
+        "block": {"name": block.name, "objective": block.objective, "status": block.status,
+                  "start_date": block.start_date.isoformat() if block.start_date else None,
+                  "timezone": block.timezone},
         "weeks": [{
             "name": week.name, "position": week.position, "notes": week.notes,
             "sessions": [{
