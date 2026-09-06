@@ -16,6 +16,8 @@
   <label><span>Min reps</span><input name="reps_min" type="number" min="1" value="{{ value(item, 'reps_min') if item else '' }}"></label>
   <label><span>Max reps</span><input name="reps_max" type="number" min="1" value="{{ value(item, 'reps_max') if item else '' }}"></label>
   <label><span>RPE</span><input name="rpe" type="number" min="1" max="10" step="0.5" value="{{ value(item, 'rpe') if item else '' }}"></label>
+  <label><span>RPE min</span><input name="rpe_min" type="number" min="1" max="10" step="0.5" value="{{ value(item, 'rpe_min') if item else '' }}"></label>
+  <label><span>RPE max</span><input name="rpe_max" type="number" min="1" max="10" step="0.5" value="{{ value(item, 'rpe_max') if item else '' }}"></label>
   <label><span>RPE cap</span><input name="rpe_cap" type="number" min="1" max="10" step="0.5" value="{{ value(item, 'rpe_cap') if item else '' }}"></label>
   <label><span>Load (kg)</span><input name="load_kg" type="number" min="0" step="0.5" value="{{ value(item, 'load_kg') if item else '' }}"></label>
   <label><span>Load cap (kg)</span><input name="load_cap_kg" type="number" min="0" step="0.5" value="{{ value(item, 'load_cap_kg') if item else '' }}"></label>
@@ -62,6 +64,7 @@
   <header class="coach-page__header coach-page__header--split">
     <div><a class="coach-back-link" href="{{ url_for('programming.block', block_id=week.block.id) }}">← {{ week.block.name }}</a><span class="coach-eyebrow">{{ week.block.athlete.full_name }} · Week {{ week.position }}</span><h1>{{ week.name }}</h1>{% if week.notes %}<p>{{ week.notes }}</p>{% endif %}</div>
     <div class="week-lifecycle" aria-label="Week controls">
+      {% if week.block.status == 'draft' %}<a class="coach-primary-button" href="{{ url_for('programming.block', block_id=week.block.id) }}#whole-block-title">Review changes</a>{% endif %}
       <form method="post" action="{{ url_for('programming.duplicate_week', week_id=week.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><button class="coach-link-button" type="submit">Duplicate week</button></form>
       <form method="post" action="{{ url_for('programming.extend_block', block_id=week.block.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><input type="hidden" name="weeks" value="1"><button class="coach-link-button" type="submit">Extend block</button></form>
       <form method="post" action="{{ url_for('programming.delete_week', week_id=week.id) }}" data-confirm="Delete this week’s programming structure? Completed and imported training history will remain available."><input type="hidden" name="expected_revision" value="{{ current_revision }}"><button class="coach-link-button" type="submit">Delete week</button></form>

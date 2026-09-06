@@ -72,6 +72,18 @@
     {% endif %}
   </form>
 
+  {% if session.prescriptions and state != 'completed' %}
+    <dialog class="finish-session-dialog" data-finish-session-dialog aria-labelledby="finish-session-title" aria-describedby="finish-session-description">
+      <h2 id="finish-session-title">Finish this session?</h2>
+      <p id="finish-session-description">Your submitted training will become read-only. Ask your coach if a correction is needed after finishing.</p>
+      <p class="finish-session-dialog__warning" data-incomplete-set-warning hidden></p>
+      <div class="finish-session-dialog__actions">
+        <button class="button button--secondary" type="button" data-cancel-finish>Keep editing</button>
+        <button class="button" type="button" data-confirm-finish>Finish session</button>
+      </div>
+    </dialog>
+  {% endif %}
+
   <template id="extra-set-template">
     <section class="working-set" data-set-row>
       <input type="hidden" data-field="row" value="1">

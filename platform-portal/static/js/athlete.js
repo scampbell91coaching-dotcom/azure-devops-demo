@@ -53,9 +53,31 @@
     row.classList.toggle('is-skipped', skipped.checked);
   });
 
-  document.querySelector('[data-finish-session]')?.addEventListener('click', (event) => {
-    if (!window.confirm('Finish this session? Your submitted training will become read-only.')) {
+  const trainingForm = document.querySelector('[data-training-form]');
+  const finishButton = document.querySelector('[data-finish-session]');
+  const finishDialog = document.querySelector('[data-finish-session-dialog]');
+  if (trainingForm && finishButton && finishDialog) {
+    finishButton.addEventListener('click', (event) => {
       event.preventDefault();
-    }
-  });
+      const incompleteCount = [...trainingForm.querySelectorAll('[data-set-row]')]
+        .filter((row) => !row.querySelector('input[name$="-completed"]')?.checked
+          && !row.querySelector('input[name$="-skipped"]')?.checked).length;
+      const warning = finishDialog.querySelector('[data-incomplete-set-warning]');
+      const confirmFinish = finishDialog.querySelector('[data-confirm-finish]');
+      if (warning) {
+        warning.hidden = incompleteCount === 0;
+        warning.textContent = incompleteCount === 0 ? ''
+          : `${incompleteCount} prescribed set${incompleteCount === 1 ? ' is' : 's are'} neither complete nor skipped. Mark each one complete or skipped before finishing.`;
+      }
+      if (confirmFinish) confirmFinish.disabled = incompleteCount > 0;
+      finishDialog.showModal();
+    });
+    finishDialog.querySelector('[data-cancel-finish]')?.addEventListener('click', () => {
+      finishDialog.close();
+      finishButton.focus();
+    });
+    finishDialog.querySelector('[data-confirm-finish]')?.addEventListener('click', () => {
+      trainingForm.requestSubmit(finishButton);
+    });
+  }
 })();

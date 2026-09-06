@@ -128,8 +128,8 @@
 .athlete-workspace-nav nav a { border-left: 2px solid transparent; padding: .62rem .7rem; color: var(--coach-muted); font-size: .87rem; font-weight: 800; text-decoration: none; }
 .athlete-workspace-nav nav a:hover, .athlete-workspace-nav nav a:focus-visible { background: var(--coach-panel-soft); color: var(--coach-text); }
 .athlete-workspace-nav nav a[aria-current="page"] { border-left-color: var(--coach-accent); background: var(--coach-panel-soft); color: var(--coach-heading); }
-.programme-week-tabs { display: flex; min-width: 0; max-width: 100%; justify-content: space-between; gap: .5rem; align-items: stretch; margin: .4rem 0 1rem; overflow: hidden; border-bottom: 1px solid var(--coach-border-strong); }
-.programme-week-tabs__scroll { display: flex; flex: 1 1 auto; min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
+.programme-week-tabs { display: grid; grid-template-columns: minmax(0, 1fr) auto; min-width: 0; max-width: 100%; gap: .5rem; align-items: stretch; margin: .4rem 0 1rem; overflow: hidden; border-bottom: 1px solid var(--coach-border-strong); }
+.programme-week-tabs__scroll { display: flex; min-width: 0; max-width: none; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
 .programme-week-tabs a, .programme-week-tabs__add { display: block; min-height: 2.75rem; box-sizing: border-box; border: 0; border-bottom: 2px solid transparent; padding: .78rem .9rem; background: transparent; color: var(--coach-muted); font: inherit; font-size: .82rem; font-weight: 850; white-space: nowrap; text-decoration: none; cursor: pointer; }
 .programme-week-tabs a:hover, .programme-week-tabs__add:hover { color: var(--coach-heading); }
 .programme-week-tabs a[aria-current="page"] { border-bottom-color: var(--coach-accent); color: var(--coach-heading); }
@@ -150,21 +150,22 @@
 .lift-slot[open], .week-prescription[open] { box-shadow: inset 3px 0 var(--coach-accent); }
 .lift-slot summary:focus-visible, .week-prescription summary:focus-visible { outline: 2px solid var(--coach-focus); outline-offset: -2px; }
 .assistance { margin-top: .9rem; padding-top: .8rem; }
-.programme-context-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
+.programme-context-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
+.programme-action-hint { max-width: 24rem; margin: 0; color: var(--coach-muted); font-size: .78rem; }
 
 @media (max-width: 980px) {
   .athlete-programming-shell { grid-template-columns: 1fr; }
-  .athlete-workspace-nav { position: static; overflow: hidden; border-right: 0; border-bottom: 1px solid var(--coach-border); padding: 0; }
+  .athlete-workspace-nav { position: static; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow: hidden; border-right: 0; border-bottom: 1px solid var(--coach-border); padding: 0; }
   .athlete-workspace-nav__identity { padding-bottom: .55rem; }
-  .athlete-workspace-nav nav { display: flex; width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-inline: contain; }
-  .athlete-workspace-nav nav a { border-left: 0; border-bottom: 2px solid transparent; }
+  .athlete-workspace-nav nav { display: flex; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; }
+  .athlete-workspace-nav nav a { flex: 0 0 auto; border-left: 0; border-bottom: 2px solid transparent; }
   .athlete-workspace-nav nav a[aria-current="page"] { border-bottom-color: var(--coach-accent); }
   .programme-context-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 560px) {
   .athlete-programming-shell { gap: .85rem; }
   .athlete-workspace-nav__identity { padding-inline: .2rem; }
-  .programme-week-tabs { margin-inline: -.2rem; }
+  .programme-week-tabs { margin-inline: 0; }
   .programme-week-tabs__scroll { scroll-snap-type: x proximity; }
   .programme-week-tabs a { scroll-snap-align: start; }
   .week-session { padding: .75rem; }

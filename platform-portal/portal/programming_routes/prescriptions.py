@@ -1,10 +1,18 @@
 from flask import Blueprint, abort, redirect, request, url_for
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..extensions import db
 from ..models.programming import ExercisePrescription, TrainingSession
 from ..programming_services.prescriptions import create, delete, update
 from ..tenancy import require_programming_access
 from ..programming_services.conflicts import require_editable
+
+
+def _abort_invalid_prescription(error: Exception) -> None:
+    # Validation can be raised by SQLAlchemy's flush hooks. Always restore the
+    # request-scoped session before Flask renders the controlled error response.
+    db.session.rollback()
+    abort(400, description=str(error))
 
 
 def _redirect_to_editor(session: TrainingSession):
@@ -35,8 +43,8 @@ def register_prescription_routes(blueprint: Blueprint) -> None:
             abort(400)
         try:
             create(session, name=name, form=request.form)
-        except ValueError:
-            abort(400)
+        except (SQLAlchemyError, ValueError) as error:
+            _abort_invalid_prescription(error)
         return _redirect_to_editor(session)
 
     @blueprint.post("/programming/prescriptions/<int:prescription_id>")
@@ -56,8 +64,8 @@ def register_prescription_routes(blueprint: Blueprint) -> None:
             abort(400)
         try:
             update(item, name=name, form=request.form)
-        except ValueError:
-            abort(400)
+        except (SQLAlchemyError, ValueError) as error:
+            _abort_invalid_prescription(error)
         return _redirect_to_editor(item.session)
 
     @blueprint.post("/programming/prescriptions/<int:prescription_id>/delete")

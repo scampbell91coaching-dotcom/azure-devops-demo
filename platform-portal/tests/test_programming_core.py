@@ -83,6 +83,91 @@ def test_create_full_programming_hierarchy():
         assert item.rpe == 7
 
 
+def test_notes_only_prescription_update_preserves_rpe_range_and_appends_revision():
+    app = app_with_db()
+    with app.app_context():
+        athlete = Athlete(first_name="Alex", last_name="Lifter", email="alex@example.com")
+        block = TrainingBlock(athlete=athlete, name="Prep", status="draft")
+        week = TrainingWeek(block=block, name="Week 1", position=1)
+        session = TrainingSession(week=week, name="Lower 1", position=1)
+        item = ExercisePrescription(
+            session=session,
+            exercise_name="Cable Row",
+            position=1,
+            prescription_type="rpe",
+            sets=3,
+            reps="10",
+            rpe_min=7,
+            rpe_max=8,
+        )
+        db.session.add_all([athlete, block, week, session, item])
+        db.session.commit()
+        item_id = item.id
+
+    response = app.test_client().post(
+        f"/programming/prescriptions/{item_id}",
+        data={"exercise_name": "Cable Row", "notes": "Keep two reps in reserve."},
+    )
+
+    assert response.status_code == 302
+    with app.app_context():
+        updated = db.session.get(ExercisePrescription, item_id)
+        assert updated.notes == "Keep two reps in reserve."
+        assert (updated.prescription_type, updated.sets, updated.reps) == ("rpe", 3, "10")
+        assert (updated.rpe, updated.rpe_min, updated.rpe_max) == (None, 7, 8)
+        revision = ProgrammeRevision.query.one()
+        snapshot = revision.authored_snapshot["weeks"][0]["sessions"][0]["prescriptions"][0]
+        assert (snapshot["rpe_min"], snapshot["rpe_max"], snapshot["notes"]) == (
+            7,
+            8,
+            "Keep two reps in reserve.",
+        )
+
+
+def test_invalid_prescription_update_returns_400_and_rolls_back_session():
+    app = app_with_db()
+    with app.app_context():
+        athlete = Athlete(first_name="Alex", last_name="Lifter", email="alex@example.com")
+        block = TrainingBlock(athlete=athlete, name="Prep", status="draft")
+        week = TrainingWeek(block=block, name="Week 1", position=1)
+        session = TrainingSession(week=week, name="Lower 1", position=1)
+        item = ExercisePrescription(
+            session=session,
+            exercise_name="Cable Row",
+            position=1,
+            prescription_type="rpe",
+            sets=3,
+            reps="10",
+            rpe=7,
+        )
+        db.session.add_all([athlete, block, week, session, item])
+        db.session.commit()
+        item_id = item.id
+        week_id = week.id
+
+    client = app.test_client()
+    invalid = client.post(
+        f"/programming/prescriptions/{item_id}",
+        data={
+            "exercise_name": "Cable Row",
+            "prescription_type": "rpe",
+            "sets": "3",
+            "reps": "10",
+            "rpe": "",
+            "rpe_min": "",
+            "rpe_max": "",
+        },
+    )
+
+    assert invalid.status_code == 400
+    assert b"rpe requires rpe or an RPE range" in invalid.data
+    assert client.get(f"/programming/weeks/{week_id}").status_code == 200
+    with app.app_context():
+        unchanged = db.session.get(ExercisePrescription, item_id)
+        assert unchanged.rpe == 7
+        assert ProgrammeRevision.query.count() == 0
+
+
 def test_duplicate_week_copies_programming():
     app = app_with_db()
     with app.app_context():

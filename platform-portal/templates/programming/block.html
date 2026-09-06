@@ -13,12 +13,12 @@
   <header class="coach-page__header programme-hero">
     <div><span class="coach-eyebrow">Programme block</span><h1>{{ block.name }}</h1><p>{{ block.objective or 'Objective not yet recorded.' }}</p></div>
     <div class="coach-page__actions">
-      <span class="coach-status{% if block.status == 'active' %} coach-status--active{% endif %}">{{ block.lifecycle_label }}</span>
+      <span class="coach-status{% if block.status == 'active' %} coach-status--active{% endif %}" role="status" aria-label="Programme lifecycle: {{ block.lifecycle_label }}">{{ block.lifecycle_label }}</span>
       {% if block.status == "draft" %}
         <form method="post" action="{{ url_for('programming.activate_block', block_id=block.id) }}" data-confirm="Publish this programme to {{ athlete.full_name }}?">
           <input type="hidden" name="expected_revision" value="{{ current_revision }}">
           {% if block.replaces_block_id %}<label><span>Material-change reason</span><input name="revision_reason" required maxlength="500" placeholder="Why this programme changed"></label>{% endif %}
-          <button class="coach-primary-button" type="submit">Publish programme</button>
+          <p class="programme-action-hint">Review changes below, then publish when this programme is ready for the athlete.</p><button class="coach-primary-button" type="submit">Publish programme</button>
         </form>
       {% endif %}
       {% if block.status == "active" %}<form method="post" action="{{ url_for('programming.revise_block', block_id=block.id) }}"><input type="hidden" name="expected_revision" value="{{ current_revision }}"><button class="coach-primary-button" type="submit">Create review draft</button></form>{% endif %}

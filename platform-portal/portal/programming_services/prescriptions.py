@@ -62,11 +62,11 @@ def _commit_or_rollback() -> None:
         raise
 
 
-def _values(form: Mapping[str, str]) -> dict[str, object]:
+def _values(form: Mapping[str, str], *, partial: bool = False) -> dict[str, object]:
     mode = _text(form.get("prescription_type"))
     if mode is not None and mode not in PRESCRIPTION_TYPES:
         raise ValueError(f"Unknown prescription type: {mode}")
-    return {
+    values = {
         "prescription_type": mode,
         "sets": _int(form.get("sets")),
         "reps": _text(form.get("reps")),
@@ -87,6 +87,12 @@ def _values(form: Mapping[str, str]) -> dict[str, object]:
         "rest_seconds": _int(form.get("rest_seconds")),
         "notes": _text(form.get("notes")),
     }
+    if not partial:
+        return values
+    submitted = {field for field in values if field in form}
+    if "prescription_type" in submitted:
+        submitted.add("amrap")
+    return {field: value for field, value in values.items() if field in submitted}
 
 
 def renumber(
@@ -155,15 +161,23 @@ def update(
     name: str,
     form: Mapping[str, str],
 ) -> ExercisePrescription:
-    values = _values(form)
+    submitted_mode = _text(form.get("prescription_type"))
+    changes_mode = (
+        "prescription_type" in form and submitted_mode != item.prescription_type
+    )
+    values = _values(form, partial=not changes_mode)
     item.exercise_name = name
     if item.lift_slot_id is None:
         item.provenance = "coach_authored"
-    # Assign every editable value so switching modes cannot retain stale targets.
+    # A submitted blank clears a value, while an omitted field is preserved.
+    # Browser forms submit all rendered fields, so mode changes still clear stale
+    # targets without partial API-style updates erasing data they did not address.
     for field in _EDITABLE_FIELDS:
-        setattr(item, field, values[field])
-    item.prescription_type = cast(str | None, values["prescription_type"])
-    item.amrap = cast(bool, values["amrap"])
+        if field in values:
+            setattr(item, field, values[field])
+    if "prescription_type" in values:
+        item.prescription_type = cast(str | None, values["prescription_type"])
+        item.amrap = cast(bool, values["amrap"])
     append_revision(item.session.week.block, change_type="prescription_updated", summary=f'Updated prescription "{name}"')
     _commit_or_rollback()
     return item

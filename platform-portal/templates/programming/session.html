@@ -37,7 +37,7 @@
       <p>{{ session.day_label or "No day assigned" }}</p>
     </div>
 
-    <span class="autosave-status" data-autosave-status>Saved</span>
+    <div class="coach-page__actions"><span class="autosave-status" data-autosave-status>Saved</span>{% if block.status == 'draft' %}<a class="coach-primary-button" href="{{ url_for('programming.block', block_id=block.id) }}#whole-block-title">Review changes</a>{% endif %}</div>
   </header>
   <section class="session-context" aria-label="Session context"><div><span class="coach-eyebrow">Block intent</span><strong>{{ block.objective or 'Not recorded' }}</strong></div><div><span class="coach-eyebrow">Week focus</span><strong>{{ week.notes or 'Follow block intent' }}</strong></div><div><span class="coach-eyebrow">Athlete state</span>{% if athlete_context.active_constraints %}<strong>{{ athlete_context.active_constraints|join(', ') }}</strong>{% else %}<strong>No active constraints reported</strong>{% endif %}{% if athlete_context.state_signals.get('reported_fatigue') is not none %}<small>Reported fatigue: {{ athlete_context.state_signals.get('reported_fatigue') }}</small>{% endif %}</div></section>
 
